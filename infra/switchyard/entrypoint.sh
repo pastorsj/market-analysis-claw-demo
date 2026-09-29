@@ -1,0 +1,97 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Render routes/$SWITCHYARD_ROUTES.toml.tmpl from the environment, validate it with --dry-run and
+# serve it. Configuration mistakes exit 64 (EX_USAGE) before anything listens. Extra arguments
+# are passed to switchyard-server.
+#
+# The capable model may use its own OpenAI-compatible endpoint: CAPABLE_BASE_URL and
+# CAPABLE_API_KEY default to INFERENCE_BASE_URL and INFERENCE_API_KEY.
+set -eu
+
+here=$(dirname "$0")
+key_file=${INFERENCE_API_KEY_FILE:-/run/secrets/inference_api_key}
+capable_key_file=${CAPABLE_API_KEY_FILE:-/run/secrets/capable_api_key}
+state_dir=${SWITCHYARD_STATE_DIR:-/var/lib/switchyard}
+config=${TMPDIR:-/tmp}/routes.toml
+
+fail() {
+  echo "switchyard: $*" >&2
+  exit 64
+}
+
+require() {
+  for name in "$@"; do
+    [ -n "$(printenv "$name")" ] || fail "$name is empty; set it in .env (see .env.example)"
+  done
+}
+
+# Compose delivers the keys as secret files, which keeps them out of `docker inspect`. Compose
+# writes an empty capable_api_key file when CAPABLE_API_KEY is unset: empty means "the inference key".
+if [ -e "$key_file" ]; then
+  INFERENCE_API_KEY=$(cat "$key_file") || fail "cannot read $key_file"
+fi
+if [ -e "$capable_key_file" ]; then
+  CAPABLE_API_KEY=$(cat "$capable_key_file") || fail "cannot read $capable_key_file"
+fi
+capable_endpoint="the inference endpoint"
+if [ -n "${CAPABLE_BASE_URL:-}" ] && [ "$CAPABLE_BASE_URL" != "${INFERENCE_BASE_URL:-}" ]; then
+  capable_endpoint=$CAPABLE_BASE_URL
+fi
+capable_key="the inference key"
+if [ -n "${CAPABLE_API_KEY:-}" ] && [ "$CAPABLE_API_KEY" != "${INFERENCE_API_KEY:-}" ]; then
+  capable_key="its own key"
+fi
+CAPABLE_BASE_URL=${CAPABLE_BASE_URL:-${INFERENCE_BASE_URL:-}}
+CAPABLE_API_KEY=${CAPABLE_API_KEY:-${INFERENCE_API_KEY:-}}
+export INFERENCE_API_KEY CAPABLE_BASE_URL CAPABLE_API_KEY
+
+require SWITCHYARD_ROUTES
+template=$here/routes/$SWITCHYARD_ROUTES.toml.tmpl
+[ -f "$template" ] || fail "SWITCHYARD_ROUTES=$SWITCHYARD_ROUTES has no template in routes/"
+required=$(sed -n 's/^# requires://p' "$template")
+# shellcheck disable=SC2086 # the "# requires:" header is a space-separated list of names
+require INFERENCE_API_KEY $required
+
+# --dry-run accepts equal ids, but Switchyard then silently keeps only one of the targets. Only
+# the models the template uses must differ.
+models=""
+for name in AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL; do
+  case " $required " in
+    *" $name "*) models="$models $name" ;;
+  esac
+done
+for a in $models; do
+  for b in $models; do
+    if [ "$a" != "$b" ] && [ "$(printenv "$a")" = "$(printenv "$b")" ]; then
+      fail "$(echo "${models# }" | sed 's/ /, /g') must all differ"
+    fi
+  done
+done
+
+case ${SWITCHYARD_CONFIRMATIONS:-1} in
+  1 | 2) ;;
+  *) fail "SWITCHYARD_CONFIRMATIONS must be 1 or 2" ;;
+esac
+
+# The escalation templates inline the judge prompt, minus its leading comment block.
+JUDGE_PROMPT=$(sed '1,/^-->$/d' "$here/judge-prompt.md")
+export JUDGE_PROMPT
+
+# Only these names are substituted; any other "$" in a template stays as written.
+# shellcheck disable=SC2016
+envsubst '${INFERENCE_BASE_URL} ${CAPABLE_BASE_URL} ${AGENT_EFFICIENT_MODEL} ${AGENT_CAPABLE_MODEL}
+  ${AGENT_JUDGE_MODEL} ${SWITCHYARD_CONFIRMATIONS} ${JUDGE_PROMPT}' <"$template" >"$config"
+
+case " $required " in
+  *" AGENT_CAPABLE_MODEL "*)
+    capable="capable ${AGENT_CAPABLE_MODEL:-} on $capable_endpoint with $capable_key, "
+    ;;
+  *) capable="" ;;
+esac
+echo "switchyard: $SWITCHYARD_ROUTES on $INFERENCE_BASE_URL (efficient ${AGENT_EFFICIENT_MODEL:-}," \
+  "${capable}judge ${AGENT_JUDGE_MODEL:-})" >&2
+switchyard-server --config "$config" --dry-run
+exec switchyard-server --config "$config" --host 0.0.0.0 --port 4000 \
+  --routing-log-file "$state_dir/routing.jsonl" "$@"
