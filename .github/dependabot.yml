@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# One grouped pull request per ecosystem each month.
+version: 2
+
+updates:
+  - package-ecosystem: uv
+    directories:
+      - /agent
+      - /api
+      - /data
+      - /tools/market-analytics
+      - /tools/retrieval
+    schedule:
+      interval: monthly
+    groups:
+      python:
+        patterns: ["*"]
+    ignore:
+      # DuckDB files written by one version cannot be read by an older one: bump the
+      # writer (data) and every reader together, by hand.
+      - dependency-name: duckdb
+      # RAPIDS moves as one release train (26.8.*); bump it by hand with the CUDA base image.
+      - dependency-name: "cudf*"
+      - dependency-name: "cuml*"
+      - dependency-name: "*cugraph*"
+      - dependency-name: "rapids*"
+
+  - package-ecosystem: npm
+    directory: /ui
+    schedule:
+      interval: monthly
+    groups:
+      npm:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - /agent
+      - /api
+      - /data
+      - /infra/openshell
+      - /infra/switchyard
+      - /tools/market-analytics
+      - /tools/retrieval
+      - /ui
+    schedule:
+      interval: monthly
+    groups:
+      docker:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]

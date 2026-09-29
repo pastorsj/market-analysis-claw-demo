@@ -1,0 +1,37 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Scratch build contexts (tools/auto-ontology/prepare.sh)
+.build/
+
+# scripts/demo.sh lifecycle state
+.demo/
+
+# Data pack build outputs
+/data/builds/
+/data/active
+*.duckdb
+*.duckdb.wal
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+
+# Node and Next.js
+node_modules/
+.next/
+*.tsbuildinfo
+test-results/
+playwright-report/
+
+# OS
+.DS_Store
