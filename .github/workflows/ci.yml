@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Offline checks only: no keys, no GPU, no live endpoints. Checkout fetches no submodules
+# (vendor/auto-ontology is private) and no Git LFS objects. Actions are pinned by commit SHA.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUFF: ruff@0.16.9 # the version in .pre-commit-config.yaml
+  SHELLCHECK: shellcheck-py==0.11.0.1
+
+jobs:
+  guards:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: shellcheck
+        run: git ls-files -z '*.sh' | xargs -0 uvx --from "$SHELLCHECK" shellcheck -x
+      - name: Compose config for every profile set, with no .env
+        run: scripts/demo.sh test compose
+      - name: No Makefile, no Git LFS
+        run: |
+          if git ls-files | grep -E '(^|/)(GNUm|M|m)akefile$'; then
+            echo "Use scripts/demo.sh, not a Makefile." >&2
+            exit 1
+          fi
+          if git ls-files -z '.gitattributes' '*/.gitattributes' | xargs -0 grep -n 'filter=lfs'; then
+            echo "Git LFS is not used in this repository." >&2
+            exit 1
+          fi
+
+  python:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [agent, api, data, tools/retrieval, tools/market-analytics, tools/auto-ontology]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: ${{ matrix.project }}/uv.lock
+      - run: uv sync --locked
+      - name: ruff
+        run: |
+          uvx "$RUFF" check .
+          uvx "$RUFF" format --check .
+      - name: pytest
+        run: uv run --locked pytest -m "not gpu and not slow and not live"
+      - name: pytest (slow; builds the interactive data pack in seconds)
+        if: matrix.project == 'data'
+        run: uv run --locked pytest -m slow
+      - name: Skills lint
+        if: matrix.project == 'agent'
+        run: |
+          for skill in profile/skills/*/; do
+            uv run --locked agentskills validate "$skill"
+          done
+
+  contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Generated contracts are up to date
+        run: scripts/gen-contracts.sh --check
+
+  switchyard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45 # the image compiles Switchyard from crates.io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image and dry-run every route template
+        run: scripts/demo.sh test switchyard
+
+  ui:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run test:ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: e2e (live smoke; replay of the synthetic bundle and the pack's recordings)
+        run: npm run e2e
