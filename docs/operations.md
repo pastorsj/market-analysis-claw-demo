@@ -1,0 +1,319 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+-->
+
+# Operations
+
+Running the demo day to day: the lifecycle commands, Phoenix, jobs and recordings, troubleshooting, and
+running it on a Brev VM. Run `./scripts/demo.sh` with no arguments for the command list.
+
+## Lifecycle
+
+| Command | What it does |
+|---|---|
+| `./scripts/demo.sh up [--no-build]` | Builds the images, prepares the data, starts the tools, Switchyard, Phoenix and the API, then the sandbox, the Hermes forwarder and the UI. Idempotent: a repeat `up` recreates only what changed and keeps the sandbox |
+| `./scripts/demo.sh status` | Services, the sandbox and its endpoints, Switchyard's routes and the URLs |
+| `./scripts/demo.sh check` | Proves the sandbox boundary on the running stack ([OpenShell](openshell.md#proving-the-boundary)) |
+| `./scripts/demo.sh logs [agent\|routing\|SERVICE...] [-f]` | `agent`: Hermes in the sandbox; `routing`: Switchyard's per-call log; otherwise `docker compose logs` |
+| `./scripts/demo.sh restart switchyard` | Re-renders the routes from `.env`, clears latches and stats, refreshes the API's model ids |
+| `./scripts/demo.sh restart agent` | Recreates the sandbox |
+| `./scripts/demo.sh restart SERVICE` | `docker compose restart SERVICE` |
+| `./scripts/demo.sh down [--volumes] [--prune]` | Deletes the sandbox, then stops everything; `--volumes` also deletes the data, the index, the jobs and the traces; `--prune` also removes this project's untagged images and Docker's unused build cache, which is host-wide ([disk](#disk)) |
+
+The first `up` builds every image (Switchyard compiles from source), downloads about 1.4 GB of SEC EDGAR
+filings and embeds about 23,600 chunks through the retriever endpoint; `up` waits up to an hour for it. Later
+runs reuse the images, the download cache and the index.
+
+## Phoenix
+
+Phoenix runs at <http://127.0.0.1:6006>, on loopback only. All traces go to the project
+`market-analysis-agent`:
+
+| Source | Spans |
+|---|---|
+| Hermes, through NeMo Relay | The agent turn, each model call and each tool call. Run metadata (`aiq.job.ref`, `hermes.*`) is promoted to span attributes |
+| Switchyard | `libsy.run` per request, with `switchyard.route`, `session.id` (the job id) and `evidence.verdict` (`continue`, `pending`, `escalate` or `latched` on escalation templates) |
+| Retrieval | `embed`, `search` and `rerank`, under the MCP `tools/call retrieve_evidence` span |
+
+In the UI, each run's execution view links to its trace. The API finds it through
+`GET /v1/jobs/async/job/{id}/trace`, which looks the job up by `aiq.job.ref` and falls back to `session.id`;
+the link is `<PHOENIX_URL>/redirects/traces/<trace id>`. Set `PHOENIX_URL` in `.env` if the browser reaches
+Phoenix at another address, or to empty to hide the link.
+
+**What traces hold.** Relay exports without an allowlist or a collector. Model spans carry the system
+instructions and the current turn from the last user message on, including every tool result; only earlier
+conversation turns are dropped (`enable_full_payloads = false` in `agent/profile/relay-plugins.toml`). That is
+why Phoenix must stay on loopback. Traces persist in the `phoenix-data` volume until `down --volumes`.
+
+The export is bounded (a queue of 512 spans, batches of 32 every second), so a full queue drops new spans
+instead of growing. The agent image fails to build with NeMo Relay 0.9 or later, which cannot export plain
+HTTP to Phoenix from the sandbox.
+
+**Routing without Phoenix.**
+
+```bash
+./scripts/demo.sh logs routing -f                                          # one line per upstream call
+curl -s "127.0.0.1:4000/v1/routing/session-stats?session_id=<job id>"      # calls and tokens per model
+curl -s 127.0.0.1:4000/v1/stats                                            # totals, errors, routing overhead
+```
+
+## Jobs
+
+- One job runs at a time and four more may wait; a sixth gets `429` with `Retry-After`.
+- A job has a 1,200 s deadline and Hermes run budgets (idle, no progress, tool calls); on any of them it fails
+  with a message the UI shows, and its Hermes run is stopped.
+- Cancelling a queued job means it never starts; cancelling a running one stops its Hermes run.
+- When the API restarts, it fails every unfinished job ("The API restarted before this job finished; please
+  retry.") and stops its Hermes run.
+- Finished jobs stay for `JOB_RETENTION_SECONDS` (a day by default).
+
+The API's settings are in [`api/README.md`](../api/README.md#environment).
+
+## Recording and replay
+
+```bash
+./scripts/demo.sh record           # ask the featured questions on the running stack; writes the pack's bundle
+./scripts/demo.sh replay           # the UI alone on the bundle: no .env, keys, API or GPU
+./scripts/demo.sh up               # back to live mode (recreates only the UI)
+```
+
+`replay` swaps the UI container into replay mode on the same port. [Data packs](data-packs.md#recordings)
+covers the options and what to review before committing a bundle.
+
+## Disk
+
+Measured with `df` on a Brev A100 VM with every profile (`core,retrieval,analytics-gpu,kumo,ontology`),
+starting from an empty Docker host:
+
+| After | Disk used |
+|---|---|
+| The OS and Brev's tools | 9 GB |
+| Building the images: 24 GB of images (15 GB of it the RAPIDS market-analytics image) and 53 GB of build cache, as `docker system df` counts them | 76 GB |
+| Pulling the Kumo NIM (about 14 GB to download, 44 GB unpacked), Phoenix, Milvus, pgvector and OpenShell | 115 GB |
+| Preparing the data, the corpus and the index | 117 GB |
+| One rebuild of the RAPIDS image after a one-line code change | 132 GB |
+| Capping the build cache at 30 GB, then an `up` that rebuilt most images | 98 GB, peak 130 GB |
+| The GPU parity test's venv ([Brev VM mode](#brev-vm-mode), step 9) | +9 GB |
+| Another RAPIDS rebuild, with no prune in between | peak 161 GB, 153 GB after |
+
+So the first `up` takes about 110 GB. Plan for 150 GB free to run the demo, and for 200 GB, or a prune after
+each rebuild, if you change code and rebuild images on the host. The CPU tier builds no RAPIDS image and pulls
+no Kumo NIM. `docker system df` shows the current split.
+
+What grows is the build cache. Each rebuild of a changed image adds its new layers, and the RAPIDS image adds
+about 15 GB each time, even for a one-line change. With Docker's classic image store, each rebuild also
+leaves the previous image untagged. `./scripts/demo.sh down --prune` removes both: this project's untagged
+images, and Docker's unused build cache. The build cache is host-wide, not per project, so `--prune` also
+clears other projects' unused cache (never their images, containers or volumes), and the next build starts
+cold (about 15 minutes with every profile). To trim the cache instead while the stack runs, cap it:
+
+```bash
+docker builder prune --force --max-used-space 30gb   # keeps at most 30 GB, the most recently used
+```
+
+Either way, the next `up` pays for it. Built images keep their IDs only while their layers are cached, so
+after a prune or a cap `up` rebuilds most images and recreates their containers. On the A100 VM, that took
+10 minutes after capping the cache at 30 GB; the agent image kept its ID, so the sandbox stayed.
+
+`down --volumes` deletes the data, the index, the jobs and the traces; `up` rebuilds them (about 25 minutes,
+most of it embedding the corpus).
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| `error: no .env yet` | Run `./scripts/demo.sh init`, then add the keys |
+| `doctor` reports a problem | Each message names the variable or host requirement; fix it and run `doctor --keys` again |
+| `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations,market_briefs` (skips the SEC download and keeps the fictional briefs) |
+| Milvus restarts or is unhealthy | Docker has less than 8 GiB of memory. Give it more, or drop the retrieval profile |
+| `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `docker compose logs openshell-preflight openshell` |
+| `hermes-gateway` never turns healthy | The sandbox is not Ready, or `HERMES_API_SERVER_KEY` is shorter than 16 characters (run `init`) |
+| A tool call fails while the sandbox is Ready | `./scripts/demo.sh check`, then `./scripts/demo.sh logs agent`: `DENIED` lines name the binary, host and reason |
+| Model calls fail with 403 | The key's access group does not include a configured model. `doctor --keys` checks only that the endpoint lists it. See `./scripts/demo.sh logs switchyard` |
+| `429` when asking a question | The queue is full (one running, four waiting); wait or cancel a job |
+| A job fails: "the evidence for its tool calls was not recorded" | The API rejected a receipt that breaks the display-safe limits, or the plugin could not post it. See `./scripts/demo.sh logs api` and `./scripts/demo.sh logs agent` |
+| A job fails: "The API restarted before this job finished" | The API restarted during the job; ask again |
+| A job fails after about 10 minutes: "Hermes stopped after exceeding its idle budget; please retry." | A model call stalled upstream and never returned, so Hermes waited out `HERMES_RUN_IDLE_TIMEOUT_SECONDS` (600 s). Ask again. It happened once in 17 jobs on the A100 VM |
+| A run has no Phoenix link | Phoenix has no span for the job yet (Relay exports every second), or `PHOENIX_URL` is empty |
+| Market tools answer from old data | `./scripts/demo.sh data prepare` restarts market analytics on the new build; after a manual data change, `./scripts/demo.sh restart market-analytics` |
+| Every `up` recreates containers or the sandbox | An image got a new ID. Build through `demo.sh`, which turns off provenance attestations; a plain `docker build` retags the image with a different ID |
+| `the ontology profile needs the private submodule` | Run `git submodule update --init --checkout vendor/auto-ontology` (needs access), or drop the profile |
+
+For the sandbox specifically, see the troubleshooting table in
+[`infra/openshell/README.md`](../infra/openshell/README.md#troubleshooting).
+
+## Brev VM mode
+
+The GPU tier (`analytics-gpu`, the local Kumo NIM) runs on a Linux x86_64 VM with an NVIDIA GPU, such as a
+Brev A100 instance. Nothing about the demo changes: the same `demo.sh`, bound to the VM's loopback, reached
+over SSH. These steps were run on 2026-09-29 on a fresh Brev A100 (40 GB) VM with 12 vCPUs, 83 GiB of memory
+and a 533 GB disk (Ubuntu 22.04, kernel 6.8, Docker 29.8 with Compose 5.5, driver 595, NVIDIA Container
+Toolkit 1.20, as Brev provisions it), with every profile and the default corpora. `up` needed nothing else
+installed.
+
+1. **Check the host.** Docker Engine 28+ with Compose 2.30+, a kernel of 6.2 or later (for Landlock), and the
+   NVIDIA Container Toolkit (`docker info` lists the `nvidia` runtime). Plan for 150 GB of free disk with
+   every profile ([disk](#disk)).
+2. **Get the code** on the VM. With GitHub access there, `git clone` it; for the ontology profile, also run
+   `git submodule update --init --checkout vendor/auto-ontology`, which needs access to the private
+   repository. The VM needs no GitHub credentials if you ship git bundles from your machine instead. Bundle
+   the submodule from a checkout of it, because `git -C vendor/auto-ontology` in an empty submodule directory
+   would bundle the demo repository:
+
+   ```bash
+   # On your machine, in your clone, with vendor/auto-ontology checked out
+   git bundle create /tmp/demo.bundle --all
+   git -C vendor/auto-ontology bundle create /tmp/auto-ontology.bundle --all   # ontology profile only
+   scp /tmp/demo.bundle /tmp/auto-ontology.bundle <instance>:/tmp/
+
+   # On the VM
+   git clone /tmp/demo.bundle market-analysis-claw-demo && cd market-analysis-claw-demo
+   git submodule init vendor/auto-ontology
+   git config submodule.vendor/auto-ontology.url /tmp/auto-ontology.bundle
+   git -c protocol.file.allow=always submodule update --checkout vendor/auto-ontology
+   ```
+
+   Git refuses a local submodule URL without `protocol.file.allow`. To update later, bundle and copy again,
+   then run `git pull` on the VM: the clone's `origin` is the bundle's path. If the pull moved the submodule's
+   pin, copy a fresh submodule bundle too and run the `submodule update` line again.
+3. **Configure.** Run `./scripts/demo.sh init` on the VM, then edit `.env` there (it stays mode 600). Keep keys
+   off command lines, where the shell history and the process list would see them. Set `INFERENCE_API_KEY`
+   (your `nvapi-` key, which also serves the retriever) and `SEC_USER_AGENT`, then the profiles (leave out
+   `ontology` without the submodule):
+
+   ```bash
+   COMPOSE_PROFILES=core,retrieval,analytics-gpu,kumo,ontology
+   ```
+
+   Remove any hosted `KUMO_RELATIONAL_URL`, since the kumo profile runs its own NIM.
+4. **The Kumo NIM image.** `up` pulls `nvcr.io/nim/nvidia/kumo-relational:1.0.1`, and the pull worked
+   without a login (on 2026-09-29: about 14 GB to download in 5 minutes, 44 GB unpacked). If the pull is
+   denied, log in with an NGC API key, piped rather than typed on the command line:
+
+   ```bash
+   printf '%s' "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+   ```
+
+   The NIM has no GPU gate and needs no override on a GPU outside its support matrix, such as the A100. Its
+   only model profile (PyTorch, fp32) carries no GPU tag, so the NIM selects it on any GPU by hardware
+   filtering. It logs `TagsBasedProfileSelector not able to find the profile` and then
+   `ManifestProfileSelector compatible profile selected`, which is expected. `NIM_MODEL_PROFILE` would pin a
+   profile, but there is only one.
+5. **Start and prove it.**
+
+   ```bash
+   ./scripts/demo.sh doctor --keys
+   ./scripts/demo.sh up
+   ./scripts/demo.sh check
+   ```
+
+   The first `up` with every profile took about 43 minutes on the A100 VM:
+
+   | Step | Time |
+   |---|---|
+   | Building the images (Switchyard compiles from source; the RAPIDS image is 15 GB) | 14 min |
+   | Pulling the Kumo NIM, Milvus, Phoenix and pgvector | 5 min |
+   | The data pack (qualification profile, 2,000 issuers) | 1.5 min |
+   | Downloading the corpus (SEC EDGAR, eCFR and the briefs: 5,229 documents) | 5.5 min |
+   | Embedding and indexing 23,654 chunks through the retriever endpoint | 15 min |
+   | The OpenShell gateway, the sandbox, the Hermes forwarder and the UI | 40 s |
+
+   A later `up` that rebuilt only the RAPIDS image took 11 minutes, 9 of them rebuilding it. With nothing
+   changed, a repeat `up` took 36 s and recreated only what differed (after `replay`, just the UI), keeping the
+   sandbox. `down` took 46 s and the `up` after it 85 s, which recreates the sandbox and reuses the data and
+   the index. Updating the code from a new bundle (step 2) and running `up` took 31 s and recreated nothing
+   when only documentation changed; a change under `tools/market-analytics` rebuilds the RAPIDS image
+   (9 to 11 minutes).
+
+   Once the stack was up, `check` passed 8 of 8, and the hero questions in
+   [models and routing](models-and-routing.md) (H1 to H7) each finished in 21 s to 3 minutes with citations
+   and a Phoenix trace.
+6. **Footprint, and one GPU for both.** Sampled every 10 s with `df`, `free` and `nvidia-smi` through the
+   install and the tests:
+
+   | Resource | Whole stack, idle | Peak, and when |
+   |---|---|---|
+   | Disk | 108 GB above the OS after the first `up` | 152 GB above the OS, after two RAPIDS rebuilds without a prune and the parity test's venv ([disk](#disk)) |
+   | Memory | 9.3 GiB used, 6.7 GiB of it the containers (the Kumo NIM 1.8 GiB, the RAPIDS worker 1.9 GiB) | 14.0 GiB, while `up` built the images |
+   | GPU memory | 2.2 GiB before the first prediction, 4.3 GiB after | 5.6 GiB, with the benchmark's extra RAPIDS worker (step 7) running beside the stack |
+
+   `kumo-relational` and `market-analytics-gpu` both request `gpus: all` and share the GPU, and neither
+   preallocates a memory pool. At idle the Kumo NIM held 0.85 GiB and the RAPIDS worker 0.5 GiB. After its
+   first predictions the NIM kept about 3 GiB (PyTorch's cache). A single 40 GB GPU runs both with room to
+   spare; smaller GPUs were not tried.
+
+   **Kumo on the VM.** The NIM turned healthy about 40 s after it started. A prediction through
+   `predict_asset_outcomes` took 10.5 to 12.6 s for the two return templates and 0.6 s for `news_event`.
+   Each returned one probability per asset in the population (12 on the qualification pack) for the requested
+   anchor and horizon, and repeat calls returned identical probabilities. The pack's events are fictional and
+   planted, and the history before the anchor does not foretell them: present the probabilities as the
+   model's output, not as a forecast.
+7. **What the GPU buys here.** The RAPIDS worker gives the same answers as pandas (the parity test below, and
+   every tool on the real pack), but at this pack's size (1.36 million daily bars) it is slower. The method: a
+   throwaway container from the stack's own `market-analytics:gpu` image, with `--gpus all` and the prepared
+   pack mounted read-only, ran the service's worker with `MARKET_ANALYTICS_ENGINE=cpu` and then with `gpu`,
+   never both at once, while the stack sat idle. Each call ran once to warm up, then five timed repeats; the
+   time is the tool's own compute timer, the one receipts and the explorer show. All nine calls returned the
+   same results on both engines. Median compute per call:
+
+   | Call | CPU (pandas, scikit-learn, NetworkX) | GPU (cudf.pandas, cuml.accel, nx-cugraph) |
+   |---|---|---|
+   | `market_scan`, 2,000 issuers, 2024 to 2026 | 256 ms | 1,616 ms |
+   | `market_scan`, 2,000 issuers, volume z-score | 249 ms | 1,590 ms |
+   | `market_scan`, 12 reviewed assets, 20 sessions | 90 ms | 708 ms |
+   | `market_anomaly_scan`, 12 assets / 2,000 issuers | 79 / 306 ms | 491 / 1,568 ms |
+   | `price_context`, 3 assets | 70 ms | 674 ms |
+   | `sentiment_timeline` / `analyze_news_price_relationship` | 26 / 793 ms | 205 / 2,393 ms |
+   | `analyze_market_relationships` | 34 ms | 43 ms |
+
+   The worker also warms up: the first cudf.pandas call and the first cuml.accel call after it starts each took
+   about 11 s, and loading the pack takes 21 s instead of 8 s. The worker now makes one `market_scan` call
+   before it reports ready, so the cudf.pandas warm-up happens at startup (its time is in the worker's `ready`
+   log line); the first anomaly scan still pays the cuml.accel one. The worker runs one call at a time, so when the
+   agent asks for two tools at once, the second waits for the first. We did not profile the slowdown. One
+   known part: cudf.pandas falls back to pandas for the pack's time-zone-aware timestamps, and with
+   `CUDF_PANDAS_FAIL_ON_FALLBACK=1` the worker stops while it loads the pack. Choose `analytics-gpu` to show
+   RAPIDS running the same code, not for speed. The explorer shows each call's device, library and time.
+8. **Connect** from your machine with an SSH tunnel; every port stays on the VM's loopback:
+
+   ```bash
+   ssh -N -L 3100:127.0.0.1:3100 -L 6006:127.0.0.1:6006 <instance>
+   ```
+
+   Then open <http://127.0.0.1:3100> (UI) and <http://127.0.0.1:6006> (Phoenix). With Brev's CLI set up, the
+   instance name works as the SSH host.
+9. **Tests on the VM** (optional) need uv, which Brev's image has (in `~/.local/bin`, on a login shell's
+   `PATH`), and Node.js 22, which it lacks. `test e2e` installs Chromium's system libraries with apt through
+   sudo.
+
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
+   ./scripts/demo.sh test e2e
+   ```
+
+   The CPU/GPU parity test runs on the VM itself with Brev's uv, which fetches Python 3.12 and the RAPIDS
+   wheels (about 5 GB to download, 8.5 GB in `tools/market-analytics/.venv`; the sync took 1 minute, the tests
+   30 s):
+
+   ```bash
+   cd tools/market-analytics && uv sync --extra gpu-cu12 && uv run pytest -m gpu
+   ```
+
+**Troubleshooting on the VM.** What came up on the A100 VM, besides the [general table](#troubleshooting):
+
+| Symptom | Cause and fix |
+|---|---|
+| `fatal: transport 'file' not allowed` from `submodule update` | Git refuses a local submodule URL by default; use the `-c protocol.file.allow=always` line in step 2 |
+| The `kumo-relational` pull is denied | Log in to `nvcr.io` as in step 4 |
+| `no space left on device` while building | The build cache grows with each rebuild; cap it or run `down --prune` ([disk](#disk)) |
+| The Auto Ontology frontend build logs Prisma `DatabaseNotReachable` | Expected: it pre-renders pages without a database, and the build succeeds |
+| The Kumo NIM logs `TagsBasedProfileSelector not able to find the profile` | Expected on any GPU; it selects its only profile next (step 4) |
+| The first anomaly scan takes about 11 s longer | The GPU worker's cuml.accel warm-up (step 7); the cudf.pandas warm-up runs at worker startup |
+| `uv: command not found` in `ssh <instance> 'command'` | Brev's uv is in `~/.local/bin`, on the `PATH` of a login shell only; use `ssh <instance> 'bash -lc "command"'` |
+| `test e2e` fails before any test runs | It needs Node.js 22 and sudo for Chromium's libraries (step 9) |
+| Every GPU parity test errors while the worker loads the pack | `CUDF_PANDAS_FAIL_ON_FALLBACK` is set; unset it (step 7) |
+
+Do not publish the demo's ports on the VM's public interface or through a public port share. The UI has no
+sign-in and spends your inference credits, and Switchyard, Phoenix and the Auto Ontology MCP server have no
+authentication at all.
