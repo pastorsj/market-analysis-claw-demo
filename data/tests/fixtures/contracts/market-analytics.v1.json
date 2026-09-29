@@ -1,0 +1,46 @@
+{
+  "$comment": "Tools-to-schema contract owned by tools/market-analytics. A pack that sets analytics.contract = market-analytics/v1 must provide these tables/columns (extra columns and tables are allowed). Logical types map to DuckDB/Arrow types in the checker. `for` lists the operations that need the table.",
+  "id": "market-analytics/v1",
+  "entity": { "table": "assets", "key": "asset_id" },
+  "tables": {
+    "assets": {
+      "for": ["*"],
+      "columns": { "asset_id": "string", "company_name": "string" },
+      "optional_columns": { "sector": "string", "industry": "string", "region": "string", "is_reviewed": "boolean" },
+      "primary_key": ["asset_id"]
+    },
+    "ticker_history": {
+      "for": ["price_context", "sentiment_timeline", "analyze_news_price_relationship"],
+      "columns": { "asset_id": "string", "ticker": "string", "effective_to": "date" },
+      "notes": "Current ticker = row with effective_to IS NULL (asset_catalog artifact)."
+    },
+    "daily_prices": {
+      "for": ["*"],
+      "columns": {
+        "asset_id": "string", "trading_date": "date",
+        "raw_open": "float", "raw_high": "float", "raw_low": "float", "raw_close": "float",
+        "adjusted_close": "float", "volume": "integer", "total_return_1d": "float"
+      },
+      "unique": [["asset_id", "trading_date"]],
+      "notes": "Bar timestamp = trading_date + analytics.session_close_utc (UTC)."
+    },
+    "asset_relationships": {
+      "for": ["analyze_market_relationships"],
+      "columns": { "source_asset_id": "string", "target_asset_id": "string" },
+      "notes": "Required only when relationship_graph.mode is sparse_declared_peers."
+    },
+    "$news_table": {
+      "for": ["sentiment_timeline", "analyze_news_price_relationship"],
+      "columns": {
+        "news_id": "string", "primary_asset_id": "string", "published_at": "timestamp",
+        "source_name": "string", "sentiment_label": "string", "alignment_session_number": "integer"
+      },
+      "enums": { "sentiment_label": ["positive", "neutral", "negative"] },
+      "notes": "Table name comes from analytics.news_table. alignment_session_number is derived today by the generator; v2 derives it in the release builder."
+    }
+  },
+  "prediction": {
+    "for": ["predict_asset_outcomes"],
+    "requires": "pack.prediction with graph tables present as views in prediction.schema"
+  }
+}

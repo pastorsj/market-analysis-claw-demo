@@ -1,0 +1,131 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# yaml-language-server: $schema=../../schemas/questions.schema.json
+#
+# The demo questions: the UI scenario list, the README quickstart and the replay recording set (featured).
+# A question is offered only when every source it names is in the build (see DATA_CORPORA) and, if it lists
+# profiles, the build uses one of them.
+schema_version: "1"
+questions:
+- id: market-leaders
+  label: Market Leaders
+  tag: ANALYTICS
+  description: >-
+    Run a bounded market scan over the reviewed universe and inspect its observed engine and evidence.
+  question: >-
+    Which assets had the strongest and weakest adjusted returns over the 20 trading sessions ending August 31,
+    2026, and how did their daily volatility compare?
+  sources: [market_analysis_structured]
+  featured: true
+- id: market-event-reaction
+  label: Event Reaction
+  tag: ANALYTICS
+  description: >-
+    Combine governed event records with bounded price context for publication-session reactions.
+  question: >-
+    For each synthetic market event published from August 18 through August 28, 2026, show the asset's
+    adjusted-close price return on the publication session, excluding cash dividends, and over the following
+    two sessions.
+  sources: [market_analysis_structured]
+  featured: true
+- id: market-multivariate-anomalies
+  label: Unusual Market Sessions
+  tag: ANOMALY
+  description: >-
+    Use GPU-accelerated multivariate anomaly analysis to rank unusual observed return, volatility, and volume
+    combinations without presenting them as forecasts.
+  question: >-
+    Treat January 2 through June 30, 2026 as the historical baseline for the reviewed assets. Score July 1
+    through August 31, 2026 and return the 10 asset sessions with the most unusual combined one-day return,
+    five-day return, 20-session realized volatility, and trailing-volume behavior. Explain which observed
+    features made each session unusual, and state clearly that anomaly scores are neither forecasts nor causal
+    explanations.
+  sources: [market_analysis_structured]
+  featured: true
+- id: market-anomaly-filing-context
+  label: Anomalies & Filing Context
+  tag: HYBRID
+  description: >-
+    Combine observed market anomalies with independently cited public filings while preserving source and
+    causality boundaries.
+  question: >-
+    Treat January 2 through June 30, 2026 as the baseline and identify the most unusual reviewed asset
+    sessions in July and August 2026. Independently retrieve second-quarter 2026 public filings that document
+    cybersecurity or operational disruptions. Compare the observed feature patterns with the documented
+    themes, while explicitly preserving that the synthetic assets are not the filing issuers and that the
+    filings cannot explain or cause those anomalies.
+  sources: [market_analysis_structured, market_news]
+  featured: false
+- id: market-news-cybersecurity-disclosures
+  label: Cybersecurity Filings
+  tag: RETRIEVAL
+  description: >-
+    Search real SEC current reports and issuer exhibits with passage-level citations.
+  question: >-
+    Which companies disclosed cybersecurity incidents in current reports during the second quarter of 2026,
+    when were the reports filed, and what operational or financial effects did each issuer describe?
+  sources: [market_news]
+  featured: false
+- id: market-five-session-upside
+  label: Five-Session Outlook
+  tag: PREDICTION
+  description: >-
+    Rank assets using a governed five-session prediction anchored before held-out outcomes.
+  question: >-
+    At the August 24, 2026 market-close anchor, rank the reviewed assets by likelihood of a positive
+    adjusted-close return over the next five trading sessions.
+  sources: [market_analysis_structured]
+  featured: false
+- id: market-regulations-cybersecurity
+  label: Cybersecurity Rules
+  tag: RETRIEVAL
+  description: >-
+    Retrieve the current Title 17 requirements with section-level citations.
+  question: >-
+    What does Title 17 of the eCFR require public companies to disclose about material cybersecurity incidents
+    and cybersecurity risk management, strategy, and governance? Cite the relevant sections.
+  sources: [market_regulations]
+  featured: true
+- id: market-briefs-export-license
+  label: Export-License Review
+  tag: RETRIEVAL
+  description: >-
+    Retrieve a fictional market brief and report only what it says, with passage-level citations.
+  question: >-
+    What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention?
+  sources: [market_briefs]
+  featured: true
+- id: market-peer-network
+  label: Peer Network
+  tag: GRAPH
+  description: >-
+    Analyze the canonical return-correlation graph and relate network centrality to unusual recent returns.
+  question: >-
+    Which assets are most central in the reviewed June-through-August 2026 return-correlation network, which
+    relationships are strongest, and how do the leaders compare with unusual 20-session return behavior?
+  sources: [market_analysis_structured]
+  featured: false
+- id: market-comparison-cybersecurity
+  label: Filings vs. Rules
+  tag: HYBRID
+  description: >-
+    Compare real issuer disclosures with governing regulatory text in one attributed answer.
+  question: >-
+    Compare second-quarter 2026 issuer disclosures about cybersecurity incidents with the current Title 17
+    disclosure requirements. Which disclosed facts map to the regulatory requirements, and which conclusions
+    cannot be made from the retrieved evidence?
+  sources: [market_news, market_regulations]
+  featured: false
+- id: market-qualification-universe-scan
+  label: Large-Universe Scan
+  tag: ANALYTICS
+  description: >-
+    Qualify an observed GPU market scan over 2,000 independently generated issuers and 1,358,000 price
+    observations.
+  question: >-
+    Across the 2,000-issuer qualification universe, which assets had the strongest and weakest adjusted
+    returns from January 2, 2024 through August 31, 2026, and how did their volatility compare?
+  sources: [market_analysis_structured]
+  profiles: [qualification]
+  featured: true

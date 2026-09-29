@@ -1,0 +1,229 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# yaml-language-server: $schema=../../schemas/pack.schema.json
+#
+# The market-analysis demo world: a synthetic market (generated), SEC EDGAR filings and eCFR Title 17
+# (downloaded from pinned snapshots), and eight fictional briefs (committed). All three corpora build by default.
+# Paths are relative to this directory. See ../../README.md for the format and README.md for the data card.
+schema_version: "1"
+id: market-analysis
+version: "1.0.0"
+title: Synthetic Multi-Asset Market Analysis
+description: >-
+  Deterministic synthetic prices, events, peers and short-form news for 12 fictional issuers (plus a 2,000-issuer
+  scale universe), with real SEC EDGAR 8-K/6-K filings (2026 Q2) and eCFR Title 17 as document corpora.
+as_of: "2026-08-31"
+disclaimer: Synthetic market data for a software demonstration. Not investment advice.
+
+licenses:
+  - name: Apache-2.0
+    path: https://www.apache.org/licenses/LICENSE-2.0
+    redistribution: allowed
+    notes: The generated data and the fictional briefs are provided solely as synthetic demonstration assets.
+  - name: US-Government-Public-Information
+    title: United States government public information
+    path: https://www.govinfo.gov/about/policies
+    redistribution: allowed
+    notes: The eCFR is authoritative current regulatory information but is not the official legal edition of the CFR.
+  - name: SEC-EDGAR-Reuse
+    title: SEC website information reuse terms
+    path: https://www.sec.gov/about/webmaster-frequently-asked-questions
+    redistribution: unknown
+    notes: >-
+      Filings are fetched from EDGAR at prepare time and never committed. Issuer-authored content may carry
+      separate rights.
+
+provenance:
+  - id: synthetic-market-generator
+    title: Market analysis synthetic generator
+    kind: generated
+    synthetic: true
+    license: Apache-2.0
+    as_of: "2026-08-31"
+    notes: All companies, tickers, prices, events, relationships and articles are fictional.
+  - id: market-briefs
+    title: Fictional market-news briefs for the eight synthetic events
+    kind: committed
+    synthetic: true
+    license: Apache-2.0
+    as_of: "2026-08-31"
+  - id: ecfr-title-17
+    title: Electronic Code of Federal Regulations, Title 17 (versioned API snapshot)
+    kind: download
+    synthetic: false
+    license: US-Government-Public-Information
+    url: https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml
+    as_of: "2026-08-17"
+    retrieved_on: "2026-09-22"
+  - id: sec-edgar-2026-q2
+    title: SEC EDGAR 2026 Q2 master index and 1,000 sampled 8-K/6-K filings
+    kind: download
+    synthetic: false
+    license: SEC-EDGAR-Reuse
+    url: https://www.sec.gov/Archives/edgar/full-index/2026/QTR2/master.idx
+    as_of: "2026-06-30"
+    retrieved_on: "2026-09-22"
+    requires_env: [SEC_USER_AGENT]
+
+generator:
+  entrypoint: generator/build.py
+  default_profile: qualification
+  profiles:
+    interactive:
+      description: 12 issuers from 2025-01-02 (5,004 price rows); builds in seconds.
+      params:
+        asset_count: 12
+        history_start: "2025-01-02"
+        news_sample_every_sessions: 5
+        relationship_mode: full_correlation
+        relationship_neighbors: 0
+      expected_rows: { assets: 12, daily_prices: 5004, market_news: 960 }
+    qualification:
+      description: 2,000 issuers from 2024-01-02 (1,358,000 price rows); the scale the GPU analytics are shown at.
+      params:
+        asset_count: 2000
+        history_start: "2024-01-02"
+        news_sample_every_sessions: 16
+        relationship_mode: sparse_declared_peers
+        relationship_neighbors: 4
+      expected_rows: { assets: 2000, daily_prices: 1358000, market_news: 84000 }
+
+structured:
+  source: market_analysis_structured
+  database_name: market_analysis
+  schema: schema.sql
+  views: [views/prediction.sql]
+  tables:
+    - { name: assets, origin: synthetic-market-generator }
+    - { name: ticker_history, origin: synthetic-market-generator }
+    - { name: trading_sessions, origin: synthetic-market-generator }
+    - { name: daily_prices, origin: synthetic-market-generator }
+    - { name: corporate_actions, origin: synthetic-market-generator }
+    - { name: news_articles, origin: synthetic-market-generator }
+    - { name: asset_relationships, origin: synthetic-market-generator }
+    - { name: index_memberships, origin: synthetic-market-generator }
+    # The short-form news stream the sentiment tools read. It stays out of DuckDB (and so out of Auto Ontology).
+    - { name: market_news, origin: synthetic-market-generator, load_into_database: false }
+
+documents:
+  collection: aiq_market_intelligence_current
+  corpora:
+    - source: market_news
+      origin: sec-edgar-2026-q2
+      format: edgar-filings
+      manifest: corpus/sec-edgar-2026-q2.manifest.json
+    - source: market_regulations
+      origin: ecfr-title-17
+      format: ecfr-xml
+      manifest: corpus/ecfr-title17-2026-08-17.manifest.json
+    - source: market_briefs
+      origin: market-briefs
+      format: markdown
+      manifest: documents/manifest.json
+
+sources:
+  - id: market_analysis_structured
+    name: Market Prices & Events
+    description: Synthetic market history, events, and peer relationships in DuckDB.
+    agent_description: >-
+      Analyze deterministic synthetic market history through Auto Ontology and native market analytics. All
+      issuers, prices, and events are fictional.
+    kind: structured
+    capabilities: [structured_retrieval, structured_prediction, market_analytics]
+    synthetic: true
+    example_questions:
+      - Which assets led adjusted returns over the latest 20 trading sessions?
+      - Compare recent return, volume, and volatility for the reviewed market universe.
+      - Compare price reactions around reviewed market events without inferring causality.
+  - id: market_news
+    name: Market News & Disclosures
+    description: >-
+      Public SEC current reports and issuer exhibits retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.
+    agent_description: >-
+      Retrieve citation-ready public-company filings and market announcements from the reviewed SEC EDGAR
+      snapshot.
+    kind: documents
+    capabilities: [unstructured_retrieval]
+    synthetic: false
+    example_questions:
+      - Which recent public-company disclosures describe material cybersecurity incidents?
+  - id: market_regulations
+    name: Market Regulations
+    description: Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.
+    agent_description: >-
+      Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities
+      regulation research.
+    kind: documents
+    capabilities: [unstructured_retrieval]
+    synthetic: false
+    example_questions:
+      - What current SEC disclosure requirements apply to a material cybersecurity incident?
+  - id: market_briefs
+    name: Market Briefs
+    description: Fictional market-news briefs for the eight synthetic market events.
+    agent_description: >-
+      Retrieve the fictional briefs behind the synthetic market events; each cites its article_id and asset_id.
+      All companies and events are fictional.
+    kind: documents
+    capabilities: [unstructured_retrieval]
+    synthetic: true
+
+analytics:
+  contract: market-analytics/v1
+  news_table: market_news
+  session_close_utc: "21:00"
+  universes:
+    reviewed_assets:
+      description: The 12 named fictional issuers (the story universe).
+      where: is_reviewed
+    qualification_assets:
+      description: All 2,000 generated issuers (the scale universe).
+      where: "true"
+      profiles: [qualification]
+  relationship_graph:
+    window_start: "2026-06-01"
+    window_end: "2026-08-31"
+    mode_by_profile: { interactive: full_correlation, qualification: sparse_declared_peers }
+
+prediction:
+  schema: prediction
+  anchor: "2026-08-24T21:00:00+00:00"
+  horizon_sessions: 5
+  entity: { table: asset_entities, key: asset_id }
+  population:
+    view: reviewed_asset_population
+    ids: [asset-aether, asset-borealis, asset-cascade, asset-delta, asset-ember, asset-fathom,
+          asset-galena, asset-harbor, asset-ion, asset-juniper, asset-kestrel, asset-meridian]
+  tables:
+    asset_entities: { primary_key: asset_id }
+    price_events: { primary_key: price_id, time_column: observed_at, links_to_entity: asset_id }
+    news_events: { primary_key: article_id, time_column: published_at, links_to_entity: asset_id }
+    return_outcomes: { primary_key: outcome_id, time_column: realized_at, links_to_entity: asset_id }
+  forbidden_tables: [daily_prices, news_articles, corporate_actions]
+  templates:
+    - id: positive_return
+      name: Positive five-session return
+      description: >-
+        Rank reviewed assets by likelihood of a positive five-session adjusted-close return realized within
+        5 calendar days after the anchor.
+      pql: >-
+        PREDICT COUNT(return_outcomes.* WHERE return_outcomes.positive_return = true, 0, 5, days) > 0
+        FOR EACH asset_entities.asset_id
+    - id: material_downside
+      name: Material five-session downside
+      description: >-
+        Rank reviewed assets by likelihood of a five-session adjusted-close return below negative five percent
+        realized within 5 calendar days after the anchor.
+      pql: >-
+        PREDICT COUNT(return_outcomes.* WHERE return_outcomes.forward_return_5d < -0.05, 0, 5, days) > 0
+        FOR EACH asset_entities.asset_id
+    - id: news_event
+      name: News-event arrival
+      description: >-
+        Rank reviewed assets by likelihood of a new governed news event within 5 calendar days after the
+        anchor.
+      pql: PREDICT COUNT(news_events.*, 0, 5, days) > 0 FOR EACH asset_entities.asset_id
+
+ontology: ontology.yaml
+questions: questions.yaml

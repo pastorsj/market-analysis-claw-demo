@@ -1,0 +1,81 @@
+{
+  "schema_version": "1",
+  "suite_id": "market-intelligence-retrieval-v1",
+  "queries": [
+    {
+      "query_id": "news-cybersecurity-incidents",
+      "query": "Which public companies disclosed material cybersecurity incidents or unauthorized system access?",
+      "source_ids": ["market_news"]
+    },
+    {
+      "query_id": "news-operational-disruption",
+      "query": "What operational disruptions, outages, or business continuity problems were reported?",
+      "source_ids": ["market_news"]
+    },
+    {
+      "query_id": "news-supply-constraints",
+      "query": "Which filings describe supply constraints, component shortages, or manufacturing disruption?",
+      "source_ids": ["market_news"]
+    },
+    {
+      "query_id": "news-market-risk",
+      "query": "What market, liquidity, or customer concentration risks did issuers discuss?",
+      "source_ids": ["market_news"]
+    },
+    {
+      "query_id": "news-forward-outlook",
+      "query": "Which disclosures describe material changes to forward outlook or expected demand?",
+      "source_ids": ["market_news"]
+    },
+    {
+      "query_id": "reg-cybersecurity-disclosure",
+      "query": "What SEC requirements govern disclosure of material cybersecurity incidents?",
+      "source_ids": ["market_regulations"]
+    },
+    {
+      "query_id": "reg-market-access-controls",
+      "query": "What risk-management controls apply to broker-dealers with market access?",
+      "source_ids": ["market_regulations"]
+    },
+    {
+      "query_id": "reg-recordkeeping",
+      "query": "What books, records, and retention requirements apply to regulated market participants?",
+      "source_ids": ["market_regulations"]
+    },
+    {
+      "query_id": "reg-periodic-reporting",
+      "query": "What rules describe periodic reporting and material event disclosure obligations?",
+      "source_ids": ["market_regulations"]
+    },
+    {
+      "query_id": "reg-investor-protection",
+      "query": "Which provisions address investor protection, fair dealing, and market integrity?",
+      "source_ids": ["market_regulations"]
+    },
+    {
+      "query_id": "combined-cybersecurity",
+      "query": "How do recent company cybersecurity disclosures relate to SEC incident-reporting requirements?",
+      "source_ids": ["market_news", "market_regulations"]
+    },
+    {
+      "query_id": "combined-operational-resilience",
+      "query": "What public evidence and regulatory requirements address operational resilience and incident response?",
+      "source_ids": ["market_news", "market_regulations"]
+    },
+    {
+      "query_id": "combined-risk-controls",
+      "query": "Compare reported market or liquidity risks with the regulations governing risk controls and disclosure.",
+      "source_ids": ["market_news", "market_regulations"]
+    },
+    {
+      "query_id": "combined-supply-materiality",
+      "query": "What supply-chain disruptions were disclosed, and which rules help determine whether they are material to investors?",
+      "source_ids": ["market_news", "market_regulations"]
+    },
+    {
+      "query_id": "combined-governance",
+      "query": "What do company disclosures and market regulations say about governance, oversight, and accountability for material risks?",
+      "source_ids": ["market_news", "market_regulations"]
+    }
+  ]
+}

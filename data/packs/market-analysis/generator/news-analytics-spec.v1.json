@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-market-news-analytics-v1",
+  "description": "Deterministic short-form market events used only by the reviewed structured CPU/GPU analytics operations.",
+  "minimum_history_sessions": 20,
+  "sources": [
+    "Synthetic Market Monitor",
+    "Synthetic Sector Desk",
+    "Synthetic Trading Brief",
+    "Synthetic Risk Wire"
+  ],
+  "themes": [
+    {
+      "id": "demand",
+      "headline": "demand monitor",
+      "narrative": "The demand monitor reviews order momentum, customer interest, and deployment timing without asserting a causal link to the price move."
+    },
+    {
+      "id": "capacity",
+      "headline": "capacity update",
+      "narrative": "The capacity update tracks utilization, expansion timing, and execution constraints as descriptive operating context."
+    },
+    {
+      "id": "supply_chain",
+      "headline": "supply-chain watch",
+      "narrative": "The supply-chain watch covers component availability, lead times, and supplier concentration as potential operating constraints."
+    },
+    {
+      "id": "margin",
+      "headline": "margin monitor",
+      "narrative": "The margin monitor considers input costs, pricing, and product mix while keeping observed market behavior separate from business interpretation."
+    },
+    {
+      "id": "regulatory",
+      "headline": "regulatory review",
+      "narrative": "The regulatory review tracks licensing, compliance, and policy exposure without predicting a legal or financial outcome."
+    },
+    {
+      "id": "product",
+      "headline": "product-cycle note",
+      "narrative": "The product-cycle note reviews launch cadence, qualification milestones, and adoption signals as synthetic market context."
+    },
+    {
+      "id": "partnership",
+      "headline": "partnership tracker",
+      "narrative": "The partnership tracker summarizes ecosystem activity and customer commitments without treating announcements as realized revenue."
+    },
+    {
+      "id": "capital",
+      "headline": "capital-allocation brief",
+      "narrative": "The capital-allocation brief reviews investment, balance-sheet priorities, and program timing as descriptive evidence."
+    },
+    {
+      "id": "competition",
+      "headline": "competitive-position update",
+      "narrative": "The competitive-position update covers market-share signals, alternative offerings, and execution risk without investment recommendations."
+    },
+    {
+      "id": "operations",
+      "headline": "operating-execution pulse",
+      "narrative": "The operating-execution pulse tracks delivery, reliability, and schedule signals while distinguishing observation from explanation."
+    },
+    {
+      "id": "customer",
+      "headline": "customer-activity brief",
+      "narrative": "The customer-activity brief reviews adoption, renewal, and concentration signals as synthetic evidence rather than a forecast."
+    },
+    {
+      "id": "risk",
+      "headline": "risk-monitor update",
+      "narrative": "The risk monitor summarizes volatility, drawdown, and operating uncertainty without presenting correlation as causation."
+    }
+  ]
+}

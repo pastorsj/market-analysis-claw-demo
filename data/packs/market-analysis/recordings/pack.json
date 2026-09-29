@@ -1,0 +1,418 @@
+{
+  "schema_version": "1",
+  "build": "market-analysis@1.0.0+qualification+cdbc00d5dd69",
+  "id": "market-analysis",
+  "version": "1.0.0",
+  "title": "Synthetic Multi-Asset Market Analysis",
+  "description": "Deterministic synthetic prices, events, peers and short-form news for 12 fictional issuers (plus a 2,000-issuer scale universe), with real SEC EDGAR 8-K/6-K filings (2026 Q2) and eCFR Title 17 as document corpora.",
+  "as_of": "2026-08-31",
+  "disclaimer": "Synthetic market data for a software demonstration. Not investment advice.",
+  "profile": "qualification",
+  "licenses": [
+    {
+      "name": "Apache-2.0",
+      "path": "https://www.apache.org/licenses/LICENSE-2.0",
+      "redistribution": "allowed",
+      "notes": "The generated data and the fictional briefs are provided solely as synthetic demonstration assets."
+    },
+    {
+      "name": "US-Government-Public-Information",
+      "title": "United States government public information",
+      "path": "https://www.govinfo.gov/about/policies",
+      "redistribution": "allowed",
+      "notes": "The eCFR is authoritative current regulatory information but is not the official legal edition of the CFR."
+    },
+    {
+      "name": "SEC-EDGAR-Reuse",
+      "title": "SEC website information reuse terms",
+      "path": "https://www.sec.gov/about/webmaster-frequently-asked-questions",
+      "redistribution": "unknown",
+      "notes": "Filings are fetched from EDGAR at prepare time and never committed. Issuer-authored content may carry separate rights."
+    }
+  ],
+  "provenance": [
+    {
+      "id": "synthetic-market-generator",
+      "title": "Market analysis synthetic generator",
+      "kind": "generated",
+      "synthetic": true,
+      "license": "Apache-2.0",
+      "as_of": "2026-08-31",
+      "notes": "All companies, tickers, prices, events, relationships and articles are fictional."
+    },
+    {
+      "id": "market-briefs",
+      "title": "Fictional market-news briefs for the eight synthetic events",
+      "kind": "committed",
+      "synthetic": true,
+      "license": "Apache-2.0",
+      "as_of": "2026-08-31"
+    },
+    {
+      "id": "ecfr-title-17",
+      "title": "Electronic Code of Federal Regulations, Title 17 (versioned API snapshot)",
+      "kind": "download",
+      "synthetic": false,
+      "license": "US-Government-Public-Information",
+      "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml",
+      "as_of": "2026-08-17",
+      "retrieved_on": "2026-09-22"
+    },
+    {
+      "id": "sec-edgar-2026-q2",
+      "title": "SEC EDGAR 2026 Q2 master index and 1,000 sampled 8-K/6-K filings",
+      "kind": "download",
+      "synthetic": false,
+      "license": "SEC-EDGAR-Reuse",
+      "url": "https://www.sec.gov/Archives/edgar/full-index/2026/QTR2/master.idx",
+      "as_of": "2026-06-30",
+      "retrieved_on": "2026-09-22",
+      "requires_env": [
+        "SEC_USER_AGENT"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "market_analysis_structured",
+      "name": "Market Prices & Events",
+      "description": "Synthetic market history, events, and peer relationships in DuckDB.",
+      "agent_description": "Analyze deterministic synthetic market history through Auto Ontology and native market analytics. All issuers, prices, and events are fictional.",
+      "kind": "structured",
+      "capabilities": [
+        "structured_retrieval",
+        "structured_prediction",
+        "market_analytics"
+      ],
+      "synthetic": true,
+      "example_questions": [
+        "Which assets led adjusted returns over the latest 20 trading sessions?",
+        "Compare recent return, volume, and volatility for the reviewed market universe.",
+        "Compare price reactions around reviewed market events without inferring causality."
+      ]
+    },
+    {
+      "id": "market_news",
+      "name": "Market News & Disclosures",
+      "description": "Public SEC current reports and issuer exhibits retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
+      "agent_description": "Retrieve citation-ready public-company filings and market announcements from the reviewed SEC EDGAR snapshot.",
+      "kind": "documents",
+      "capabilities": [
+        "unstructured_retrieval"
+      ],
+      "synthetic": false,
+      "example_questions": [
+        "Which recent public-company disclosures describe material cybersecurity incidents?"
+      ]
+    },
+    {
+      "id": "market_regulations",
+      "name": "Market Regulations",
+      "description": "Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
+      "agent_description": "Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities regulation research.",
+      "kind": "documents",
+      "capabilities": [
+        "unstructured_retrieval"
+      ],
+      "synthetic": false,
+      "example_questions": [
+        "What current SEC disclosure requirements apply to a material cybersecurity incident?"
+      ]
+    },
+    {
+      "id": "market_briefs",
+      "name": "Market Briefs",
+      "description": "Fictional market-news briefs for the eight synthetic market events.",
+      "agent_description": "Retrieve the fictional briefs behind the synthetic market events; each cites its article_id and asset_id. All companies and events are fictional.",
+      "kind": "documents",
+      "capabilities": [
+        "unstructured_retrieval"
+      ],
+      "synthetic": true
+    }
+  ],
+  "questions": [
+    {
+      "id": "market-leaders",
+      "label": "Market Leaders",
+      "tag": "ANALYTICS",
+      "description": "Run a bounded market scan over the reviewed universe and inspect its observed engine and evidence.",
+      "question": "Which assets had the strongest and weakest adjusted returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare?",
+      "sources": [
+        "market_analysis_structured"
+      ],
+      "featured": true
+    },
+    {
+      "id": "market-event-reaction",
+      "label": "Event Reaction",
+      "tag": "ANALYTICS",
+      "description": "Combine governed event records with bounded price context for publication-session reactions.",
+      "question": "For each synthetic market event published from August 18 through August 28, 2026, show the asset's adjusted-close price return on the publication session, excluding cash dividends, and over the following two sessions.",
+      "sources": [
+        "market_analysis_structured"
+      ],
+      "featured": true
+    },
+    {
+      "id": "market-multivariate-anomalies",
+      "label": "Unusual Market Sessions",
+      "tag": "ANOMALY",
+      "description": "Use GPU-accelerated multivariate anomaly analysis to rank unusual observed return, volatility, and volume combinations without presenting them as forecasts.",
+      "question": "Treat January 2 through June 30, 2026 as the historical baseline for the reviewed assets. Score July 1 through August 31, 2026 and return the 10 asset sessions with the most unusual combined one-day return, five-day return, 20-session realized volatility, and trailing-volume behavior. Explain which observed features made each session unusual, and state clearly that anomaly scores are neither forecasts nor causal explanations.",
+      "sources": [
+        "market_analysis_structured"
+      ],
+      "featured": true
+    },
+    {
+      "id": "market-anomaly-filing-context",
+      "label": "Anomalies & Filing Context",
+      "tag": "HYBRID",
+      "description": "Combine observed market anomalies with independently cited public filings while preserving source and causality boundaries.",
+      "question": "Treat January 2 through June 30, 2026 as the baseline and identify the most unusual reviewed asset sessions in July and August 2026. Independently retrieve second-quarter 2026 public filings that document cybersecurity or operational disruptions. Compare the observed feature patterns with the documented themes, while explicitly preserving that the synthetic assets are not the filing issuers and that the filings cannot explain or cause those anomalies.",
+      "sources": [
+        "market_analysis_structured",
+        "market_news"
+      ],
+      "featured": false
+    },
+    {
+      "id": "market-news-cybersecurity-disclosures",
+      "label": "Cybersecurity Filings",
+      "tag": "RETRIEVAL",
+      "description": "Search real SEC current reports and issuer exhibits with passage-level citations.",
+      "question": "Which companies disclosed cybersecurity incidents in current reports during the second quarter of 2026, when were the reports filed, and what operational or financial effects did each issuer describe?",
+      "sources": [
+        "market_news"
+      ],
+      "featured": false
+    },
+    {
+      "id": "market-five-session-upside",
+      "label": "Five-Session Outlook",
+      "tag": "PREDICTION",
+      "description": "Rank assets using a governed five-session prediction anchored before held-out outcomes.",
+      "question": "At the August 24, 2026 market-close anchor, rank the reviewed assets by likelihood of a positive adjusted-close return over the next five trading sessions.",
+      "sources": [
+        "market_analysis_structured"
+      ],
+      "featured": false
+    },
+    {
+      "id": "market-regulations-cybersecurity",
+      "label": "Cybersecurity Rules",
+      "tag": "RETRIEVAL",
+      "description": "Retrieve the current Title 17 requirements with section-level citations.",
+      "question": "What does Title 17 of the eCFR require public companies to disclose about material cybersecurity incidents and cybersecurity risk management, strategy, and governance? Cite the relevant sections.",
+      "sources": [
+        "market_regulations"
+      ],
+      "featured": true
+    },
+    {
+      "id": "market-briefs-export-license",
+      "label": "Export-License Review",
+      "tag": "RETRIEVAL",
+      "description": "Retrieve a fictional market brief and report only what it says, with passage-level citations.",
+      "question": "What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention?",
+      "sources": [
+        "market_briefs"
+      ],
+      "featured": true
+    },
+    {
+      "id": "market-peer-network",
+      "label": "Peer Network",
+      "tag": "GRAPH",
+      "description": "Analyze the canonical return-correlation graph and relate network centrality to unusual recent returns.",
+      "question": "Which assets are most central in the reviewed June-through-August 2026 return-correlation network, which relationships are strongest, and how do the leaders compare with unusual 20-session return behavior?",
+      "sources": [
+        "market_analysis_structured"
+      ],
+      "featured": false
+    },
+    {
+      "id": "market-comparison-cybersecurity",
+      "label": "Filings vs. Rules",
+      "tag": "HYBRID",
+      "description": "Compare real issuer disclosures with governing regulatory text in one attributed answer.",
+      "question": "Compare second-quarter 2026 issuer disclosures about cybersecurity incidents with the current Title 17 disclosure requirements. Which disclosed facts map to the regulatory requirements, and which conclusions cannot be made from the retrieved evidence?",
+      "sources": [
+        "market_news",
+        "market_regulations"
+      ],
+      "featured": false
+    },
+    {
+      "id": "market-qualification-universe-scan",
+      "label": "Large-Universe Scan",
+      "tag": "ANALYTICS",
+      "description": "Qualify an observed GPU market scan over 2,000 independently generated issuers and 1,358,000 price observations.",
+      "question": "Across the 2,000-issuer qualification universe, which assets had the strongest and weakest adjusted returns from January 2, 2024 through August 31, 2026, and how did their volatility compare?",
+      "sources": [
+        "market_analysis_structured"
+      ],
+      "profiles": [
+        "qualification"
+      ],
+      "featured": true
+    }
+  ],
+  "structured": {
+    "source": "market_analysis_structured",
+    "database_name": "market_analysis",
+    "database": "structured/market_analysis.duckdb",
+    "tables": {
+      "assets": "tables/assets.parquet",
+      "ticker_history": "tables/ticker_history.parquet",
+      "trading_sessions": "tables/trading_sessions.parquet",
+      "daily_prices": "tables/daily_prices.parquet",
+      "corporate_actions": "tables/corporate_actions.parquet",
+      "news_articles": "tables/news_articles.parquet",
+      "asset_relationships": "tables/asset_relationships.parquet",
+      "index_memberships": "tables/index_memberships.parquet",
+      "market_news": "tables/market_news.parquet"
+    }
+  },
+  "analytics": {
+    "contract": "market-analytics/v1",
+    "news_table": "market_news",
+    "session_close_utc": "21:00",
+    "universes": {
+      "reviewed_assets": {
+        "description": "The 12 named fictional issuers (the story universe).",
+        "where": "is_reviewed"
+      },
+      "qualification_assets": {
+        "description": "All 2,000 generated issuers (the scale universe).",
+        "where": "true"
+      }
+    },
+    "relationship_graph": {
+      "window_start": "2026-06-01",
+      "window_end": "2026-08-31",
+      "mode": "sparse_declared_peers"
+    }
+  },
+  "prediction": {
+    "schema": "prediction",
+    "anchor": "2026-08-24T21:00:00+00:00",
+    "horizon_sessions": 5,
+    "entity": {
+      "table": "asset_entities",
+      "key": "asset_id"
+    },
+    "population": {
+      "view": "reviewed_asset_population",
+      "ids": [
+        "asset-aether",
+        "asset-borealis",
+        "asset-cascade",
+        "asset-delta",
+        "asset-ember",
+        "asset-fathom",
+        "asset-galena",
+        "asset-harbor",
+        "asset-ion",
+        "asset-juniper",
+        "asset-kestrel",
+        "asset-meridian"
+      ]
+    },
+    "tables": {
+      "asset_entities": {
+        "primary_key": "asset_id"
+      },
+      "price_events": {
+        "primary_key": "price_id",
+        "time_column": "observed_at",
+        "links_to_entity": "asset_id"
+      },
+      "news_events": {
+        "primary_key": "article_id",
+        "time_column": "published_at",
+        "links_to_entity": "asset_id"
+      },
+      "return_outcomes": {
+        "primary_key": "outcome_id",
+        "time_column": "realized_at",
+        "links_to_entity": "asset_id"
+      }
+    },
+    "forbidden_tables": [
+      "daily_prices",
+      "news_articles",
+      "corporate_actions"
+    ],
+    "templates": [
+      {
+        "id": "positive_return",
+        "name": "Positive five-session return",
+        "description": "Rank reviewed assets by likelihood of a positive five-session adjusted-close return realized within 5 calendar days after the anchor.",
+        "pql": "PREDICT COUNT(return_outcomes.* WHERE return_outcomes.positive_return = true, 0, 5, days) > 0 FOR EACH asset_entities.asset_id"
+      },
+      {
+        "id": "material_downside",
+        "name": "Material five-session downside",
+        "description": "Rank reviewed assets by likelihood of a five-session adjusted-close return below negative five percent realized within 5 calendar days after the anchor.",
+        "pql": "PREDICT COUNT(return_outcomes.* WHERE return_outcomes.forward_return_5d < -0.05, 0, 5, days) > 0 FOR EACH asset_entities.asset_id"
+      },
+      {
+        "id": "news_event",
+        "name": "News-event arrival",
+        "description": "Rank reviewed assets by likelihood of a new governed news event within 5 calendar days after the anchor.",
+        "pql": "PREDICT COUNT(news_events.*, 0, 5, days) > 0 FOR EACH asset_entities.asset_id"
+      }
+    ]
+  },
+  "documents": {
+    "collection": "aiq_market_intelligence_current",
+    "sources": [
+      "market_news",
+      "market_regulations",
+      "market_briefs"
+    ],
+    "path": "corpus/documents.jsonl"
+  },
+  "parts": {
+    "structured": {
+      "rows": {
+        "assets": 2000,
+        "ticker_history": 2000,
+        "trading_sessions": 1358,
+        "daily_prices": 1358000,
+        "corporate_actions": 3,
+        "news_articles": 8,
+        "asset_relationships": 8000,
+        "index_memberships": 2000,
+        "market_news": 84000
+      },
+      "files": {
+        "tables/asset_relationships.parquet": "2e1a9d39f2afd0cfbcfc7741d19a24c5a4f04dca28ae3991bce099a173a5d046",
+        "tables/assets.parquet": "978a2aa2a80f05dfc36f3d64851d9669bf71f9b31dafbdc2ef9ab7ee017adf75",
+        "tables/corporate_actions.parquet": "eca0c82ebd503fece894f44ffccf53b9cc309b84655ecb6234a97f6075a286fa",
+        "tables/daily_prices.parquet": "17d849a40adda9f57e13cc9ae0221cfe2f5dd5c3618100b8002b5deeca4ef4de",
+        "tables/index_memberships.parquet": "802617ce3dd54862d47d45d3859e4456da897c3a41636952d5569acf165bb2c1",
+        "tables/market_news.parquet": "711ac5c56829174aef4b9f29bc9adc458b71c194f2bb370c546ff278031964ae",
+        "tables/news_articles.parquet": "d10a5716432730980645424494e0f074f5446a6ec0ca704b2e513477668f2af0",
+        "tables/ticker_history.parquet": "80e76474e40086407a59c30aee54176a4eae72030408d8f1afe94ba11b945e3b",
+        "tables/trading_sessions.parquet": "31a6d270e4c4e9d7356221965bb2491f550b0619f4c7fc35e251f1ce3d0ed64a",
+        "structured/market_analysis.duckdb": "b5718044549f54f45be806d5a9966a3ed8edcbf8e28b382bbde0450e9fdc193c",
+        "ontology/model.yaml": "61a4403775d4a74fabfd1468bd963ab67aa3ca405869cf99226458250063050f",
+        "prediction/graph.json": "a82b53231beb7ca068966499f1f71efc9c5f0848255f150fa54701fb8e2e581b",
+        "prediction/templates.json": "600afcde418700d758f7040dd1ced267633b873e5d934f8c7c72ecc0ce81a2c3"
+      }
+    },
+    "corpus": {
+      "documents": {
+        "market_briefs": 8,
+        "market_news": 1696,
+        "market_regulations": 3525
+      },
+      "files": {
+        "corpus/documents.jsonl": "386e61400cd84d0f1fe58a775243127d32f3cab6f84a796b3460b1964aa8a565"
+      }
+    }
+  }
+}

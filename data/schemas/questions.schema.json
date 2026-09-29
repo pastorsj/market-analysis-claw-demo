@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pastorsj/market-analysis-claw-demo/data/schemas/questions.schema.json",
+  "title": "Pack demo questions (questions.yaml)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "questions"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "tag", "question", "sources"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "tag": {
+            "description": "The capability badge the UI shows.",
+            "enum": ["ANALYTICS", "ANOMALY", "GRAPH", "HYBRID", "PQL", "PREDICTION", "RAG", "RETRIEVAL", "ROUTER", "SQL"]
+          },
+          "description": { "type": "string", "maxLength": 300 },
+          "question": { "type": "string", "minLength": 10, "maxLength": 2000 },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$" }
+          },
+          "profiles": {
+            "description": "Offer the question only in these generator profiles.",
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }
+          },
+          "featured": {
+            "description": "Shown on the landing page and README quickstart; part of the replay recording set.",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    }
+  }
+}

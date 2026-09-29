@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Descriptions for the Auto Ontology model (ontology/model.yaml in the build). Keys come from schema.sql
+# and the `prediction` section of pack.yaml; a column without a description here is described by its name.
+tables:
+  assets:
+    description: >-
+      Synthetic listed-company entities with stable IDs and point-in-time market identifiers.
+      Use is_reviewed=true for the governed 12-issuer story; qualification-only issuers remain explicit.
+    columns:
+      is_reviewed: True only for the governed 12-issuer structured and prediction cohort.
+  ticker_history:
+    description: Effective-dated ticker assignments; join on asset_id and the requested observation date.
+  trading_sessions:
+    description: Reviewed exchange-session calendar. Closed dates are absent from price history.
+  daily_prices:
+    description: >-
+      Synthetic daily OHLCV observations. adjusted_close is comparable across modeled splits; raw prices
+      preserve the post-split quotation. This data is not investment advice.
+    columns:
+      raw_close: Unadjusted closing quotation in USD; modeled splits can create a mechanical step.
+      adjusted_close: Split-adjusted close used for comparable return calculations.
+      total_return_1d: One-session total return based on adjusted close and modeled cash dividend.
+      ingested_at: Timestamp when this synthetic market observation became available.
+  corporate_actions:
+    description: Synthetic split and cash-dividend events used to explain raw-versus-adjusted prices.
+  news_articles:
+    description: >-
+      Synthetic market-news metadata with distinct publication and ingestion timestamps. Use published_at
+      for point-in-time reasoning and document_id to retrieve the reviewed article.
+    columns:
+      published_at: Timestamp when the synthetic source first published the article.
+      ingested_at: Timestamp when the article entered the governed corpus.
+  asset_relationships:
+    description: Effective-dated synthetic peer relationships used for market network analysis.
+  index_memberships:
+    description: Effective-dated membership in the synthetic Accelerated Economy 12 index.
+  asset_entities:
+    description: Assets eligible at the prediction anchor.
+  price_events:
+    description: Daily price features observable on or before the prediction anchor.
+  news_events:
+    description: News events published and ingested on or before the prediction anchor.
+  return_outcomes:
+    description: Historical five-session forward-return outcomes fully realized by the prediction anchor.
+    columns:
+      forward_return_5d: Historical adjusted-close return over the following five sessions.
+      realized_at: Fifth later trading session when the outcome became observable.
