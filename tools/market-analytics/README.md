@@ -88,9 +88,11 @@ uv run pytest -m gpu   # on a GPU host, after `uv sync --extra gpu-cu12`: CPU/GP
 KUMO_RELATIONAL_URL=... KUMO_API_KEY=... DATA_ACTIVE_DIR=/path/to/active uv run pytest -m live  # one real prediction
 ```
 
-cudf.pandas falls back to pandas where it has no GPU path. Loading a pack does so twice (`merge_asof` and
-`rename_axis`, once each at startup), so `CUDF_PANDAS_FAIL_ON_FALLBACK=1`, which turns the first fallback into
-an error, stops the worker while it loads and every GPU test errors; the parity run above passes without it. To
+cudf.pandas falls back to pandas where it has no GPU path. Starting the worker does so four times: loading a
+pack (`merge_asof` and `rename_axis`, once each) and reading the warm-up's window (`Timestamp.to_pydatetime`,
+twice). So `CUDF_PANDAS_FAIL_ON_FALLBACK=1`, which turns the first fallback into an error, stops the worker
+while it loads and every GPU test errors; the parity run above passes without it. The tool calls themselves do
+not fall back: the last GPU test sets the variable once the pack is loaded, so a fallback fails its call. To
 list fallbacks instead, set `LOG_FAST_FALLBACK=1` (cudf.pandas writes them to
 `cudf_pandas_unit_tests_debug.log` in the working directory) or run a call under `cudf.pandas.profiler.Profiler`.
 Lint with the repository's `ruff.toml`: `uv run ruff check . && uv run ruff format --check .`
@@ -115,10 +117,12 @@ repeats. The time is the tool's own compute timer, the one receipts show. Median
 | `analyze_news_price_relationship`, 2,000 news items | 746 | 92 | 8.1x |
 | `analyze_market_relationships`, top 10 | 37 | 37 | 1.0x |
 
-Both engines returned the same results for every call (floats within 1e-4). On the GPU, the first call after
-the worker reported ready took at most 140 ms, here and for a dozen other argument shapes, because the
-warm-up had paid the one-time cost: about 11 s, nearly all of it cudf.pandas compiling kernels for the first
-`market_scan`. Starting the worker, warm-up included, took 25 s on the GPU and 10 s on the CPU.
+Both engines returned the same results for every call (floats within 1e-4), here and for 26 other argument
+shapes (filters, frequencies, horizons, empty and invalid requests, non-UTC offsets). On the GPU, the first
+call of each shape after the worker reported ready took at most 270 ms (the 2,000-issuer anomaly scan, usually
+about 145 ms; every other call about 100 ms or less), because the warm-up had paid the one-time cost: about
+11 s, nearly all of it cudf.pandas compiling kernels for the first `market_scan`. Starting the worker, warm-up
+included, took 25 s on the GPU and 10 s on the CPU.
 
 `sentiment_timeline` is slower on the GPU and `analyze_market_relationships` breaks even. Their work is
 small: the first groups 22,000 news rows into 11 weekly points, the second runs PageRank on 2,000 nodes and

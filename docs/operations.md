@@ -272,10 +272,11 @@ installed.
 
    The CPU column is the current code; the CPU results are byte-for-byte those of the code before the change.
    Before it, every operation on a frame with a tz-aware timestamp fell back to pandas and paid a failed GPU
-   attempt on top. Now no tool call falls back; only loading the pack does, twice (`merge_asof` and
-   `rename_axis`, which cudf.pandas lacks), so `CUDF_PANDAS_FAIL_ON_FALLBACK=1` still stops the worker while it
-   loads. `sentiment_timeline` stays slower on the GPU and `analyze_market_relationships` breaks even: their
-   work is small (22,000 news rows into 11 weekly points; PageRank over 2,000 nodes), so the fixed cost of
+   attempt on top. Now no tool call falls back (the GPU tests check it). Only starting the worker does: once
+   each for `merge_asof` and `rename_axis` while it loads the pack (cudf.pandas lacks them), and twice while the
+   warm-up reads its window. So `CUDF_PANDAS_FAIL_ON_FALLBACK=1` still stops the worker while it loads.
+   `sentiment_timeline` stays slower on the GPU and `analyze_market_relationships` breaks even: their work is
+   small (22,000 news rows into 11 weekly points; PageRank over 2,000 nodes), so the fixed cost of
    launching GPU kernels and copying results back outweighs the arithmetic. The table and the method are also in the
    [market-analytics README](../tools/market-analytics/README.md#cpu-and-gpu-timings).
 
@@ -283,7 +284,8 @@ installed.
    kernels for the first `market_scan`. (cuml.accel's first PCA added 5 s more, and again for some input
    sizes; that was its input check compiling a kernel, and the anomaly tool now checks its input on the host
    instead.) The worker runs every tool once before it reports ready, so the first question does not pay it:
-   after the warm-up, every first call above, and a dozen other argument shapes, took at most 140 ms. Starting
+   after the warm-up, the first call of each shape above, and of 26 other argument shapes, took at most
+   270 ms (the 2,000-issuer anomaly scan, usually about 145 ms; the others about 100 ms or less). Starting
    the worker takes 25 s on the GPU and 10 s on the CPU, warm-up included (the worker's `ready` log line gives
    the warm-up's share). The worker runs one call at a time, so when the agent asks for two tools at once, the second waits
    for the first. The explorer shows each call's device, library and time.
@@ -324,7 +326,7 @@ installed.
 | `market-analytics-gpu` takes about 25 s to turn healthy | The worker loads the pack and warms up every tool on the GPU first (step 7) |
 | `uv: command not found` in `ssh <instance> 'command'` | Brev's uv is in `~/.local/bin`, on the `PATH` of a login shell only; use `ssh <instance> 'bash -lc "command"'` |
 | `test e2e` fails before any test runs | It needs Node.js 22 and sudo for Chromium's libraries (step 9) |
-| Every GPU parity test errors while the worker loads the pack | `CUDF_PANDAS_FAIL_ON_FALLBACK` is set, and loading the pack falls back twice; unset it (step 7) |
+| Every GPU parity test errors while the worker loads the pack | `CUDF_PANDAS_FAIL_ON_FALLBACK` is set, and starting the worker falls back four times; unset it (step 7) |
 
 Do not publish the demo's ports on the VM's public interface or through a public port share. The UI has no
 sign-in and spends your inference credits, and Switchyard, Phoenix and the Auto Ontology MCP server have no
