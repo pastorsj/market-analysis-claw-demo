@@ -3,10 +3,12 @@
 """The six tools, called through the same dispatcher the worker uses."""
 
 import math
+from dataclasses import replace
 from datetime import UTC
 from datetime import datetime
 from typing import Any
 
+import numpy as np
 import pytest
 from fixture_pack import GAMMA_SPIKE
 from fixture_pack import at
@@ -111,6 +113,25 @@ def test_anomaly_scan_ranks_the_planted_crash_first(data: MarketData) -> None:
     assert crash["is_anomaly"] and crash["decision_score"] < 0
     assert crash["observed_deviations"]["adjusted_return_1d"] < -10  # a far larger fall than in training
     assert crash["observed_deviations"]["log_volume_deviation_20d"] > 10
+
+
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
+def test_anomaly_scan_fails_on_non_finite_features(data: MarketData) -> None:
+    """PCA skips its own finiteness check (see anomaly.py), so the tool must still refuse NaN or infinity."""
+    features = data.features.copy()
+    features.loc[features["asset_id"] == "asset-gamma", "log_volume_deviation_20d"] = np.inf
+    result = run(
+        replace(data, features=features),
+        "market_anomaly_scan",
+        universe_id="reviewed_assets",
+        training_start=at(20, 0),
+        training_end=at(49, 23),
+        scoring_start=at(50, 0),
+        scoring_end=at(69, 23),
+    )
+
+    assert result["status"] == "failed"
+    assert result["error"]["code"] == "execution_failed"
 
 
 def test_anomaly_scan_filters_by_percentile_and_rejects_overlapping_windows(data: MarketData) -> None:

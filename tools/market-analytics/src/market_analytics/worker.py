@@ -7,7 +7,7 @@ of memory) kills the worker, and a fresh one replaces it, so the next call succe
 because forking a process that has initialized CUDA is unsafe. Calls run one at a time, in arrival order.
 
 Before it reports ready, the worker runs every tool once, so the first question does not pay the accelerators'
-first-call costs (CUDA kernels compiled on first use, cuml.accel's first PCA: seconds on an A100).
+first-call cost (CUDA kernels compiled on first use: about 11 s on an A100).
 """
 
 from __future__ import annotations
@@ -138,8 +138,8 @@ def serve(connection: Connection, root: Path) -> None:
 def warm_up(data: MarketData) -> str:
     """Run each tool once on the pack's own data and discard the results. Never raises.
 
-    The GPU libraries pay one-time costs on first use (cudf.pandas compiles CUDA kernels, cuml.accel sets up its
-    first PCA: about 15 s together on an A100); on the CPU engine this is about 2 s of pandas.
+    The GPU libraries pay a one-time cost on first use (cudf.pandas compiles CUDA kernels: about 11 s on an A100);
+    on the CPU engine this is about 2 s of pandas.
     """
     started = time.perf_counter()
     try:

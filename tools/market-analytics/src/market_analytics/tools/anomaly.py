@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import numpy as np
+from sklearn import config_context
 from sklearn.decomposition import PCA
 
 from ..data import FEATURES
@@ -61,9 +62,14 @@ def run(
     mean, scale = train.mean(axis=0), train.std(axis=0)
     scale[scale <= 1e-12] = 1.0
     train_z, score_z = (train - mean) / scale, (score - mean) / scale
-    model = PCA(n_components=min(3, len(FEATURES), len(train) - 1), svd_solver="full").fit(train_z)
-    train_error = np.mean((train_z - model.inverse_transform(model.transform(train_z))) ** 2, axis=1)
-    score_error = np.mean((score_z - model.inverse_transform(model.transform(score_z))) ** 2, axis=1)
+    # Checked once here, on the host, and not again inside PCA: cuml.accel's own check compiles a CUDA kernel for
+    # each new input size (about 5 s each on an A100), which no warm-up can cover. The error is scikit-learn's.
+    if not (np.isfinite(train_z).all() and np.isfinite(score_z).all()):
+        raise ValueError("the anomaly features contain NaN or infinity")
+    with config_context(assume_finite=True):
+        model = PCA(n_components=min(3, len(FEATURES), len(train) - 1), svd_solver="full").fit(train_z)
+        train_error = np.mean((train_z - model.inverse_transform(model.transform(train_z))) ** 2, axis=1)
+        score_error = np.mean((score_z - model.inverse_transform(model.transform(score_z))) ** 2, axis=1)
     threshold = np.quantile(train_error, FLAG_QUANTILE)
 
     ranked = scoring.assign(anomaly_score=score_error, decision_score=threshold - score_error).sort_values(
