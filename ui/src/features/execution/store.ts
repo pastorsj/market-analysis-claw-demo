@@ -1,0 +1,112 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+/**
+ * Execution runs by job id: the `execution.v2` events in stream order and the
+ * receipts they reference. Live SSE records, job exports and recorded turns
+ * all land here. Nothing is persisted; a reload refetches the export.
+ */
+
+import { create } from 'zustand'
+import { toExecutionEvent, toReceipt, type ExecutionEventV2, type ReceiptV2 } from './contract'
+
+/** Events kept per run. The stream replays from the start, so it can only repeat, not grow. */
+const MAX_EVENTS = 5000
+
+export interface ExecutionRun {
+  jobId: string
+  /** Unique by eventId, in the order the stream sent them */
+  events: ExecutionEventV2[]
+  /** By receiptId */
+  receipts: Record<string, ReceiptV2>
+  /** The job's latest status (`running`, `success`, `failure`, `interrupted`, …); null until known */
+  jobStatus: string | null
+}
+
+/** A job's execution record as the API exports it and a recording stores it. */
+export interface ExecutionRecord {
+  jobId: string
+  events: unknown[]
+  receipts: unknown[]
+  status?: string
+}
+
+interface ExecutionState {
+  runs: Record<string, ExecutionRun>
+  /** Records that failed the contract guard; they are never shown. */
+  dropped: number
+  addEvent: (jobId: string, value: unknown, cursor?: string | null) => void
+  addRecord: (record: ExecutionRecord) => void
+  setJobStatus: (jobId: string, status: string) => void
+}
+
+const emptyRun = (jobId: string): ExecutionRun => ({
+  jobId,
+  events: [],
+  receipts: {},
+  jobStatus: null,
+})
+
+const merge = (
+  run: ExecutionRun,
+  events: ExecutionEventV2[],
+  receipts: ReceiptV2[]
+): ExecutionRun => {
+  const seen = new Set(run.events.map((event) => event.eventId))
+  const fresh: ExecutionEventV2[] = []
+  for (const event of events) {
+    if (seen.has(event.eventId)) continue
+    seen.add(event.eventId)
+    fresh.push(event)
+  }
+  return {
+    ...run,
+    events: fresh.length ? [...run.events, ...fresh].slice(0, MAX_EVENTS) : run.events,
+    receipts: receipts.length
+      ? { ...run.receipts, ...Object.fromEntries(receipts.map((r) => [r.receiptId, r])) }
+      : run.receipts,
+  }
+}
+
+export const useExecutionStore = create<ExecutionState>()((set) => ({
+  runs: {},
+  dropped: 0,
+
+  addEvent: (jobId, value, cursor = null) => {
+    const event = toExecutionEvent(value, cursor)
+    set((state) =>
+      event
+        ? {
+            runs: {
+              ...state.runs,
+              [jobId]: merge(state.runs[jobId] ?? emptyRun(jobId), [event], []),
+            },
+          }
+        : { dropped: state.dropped + 1 }
+    )
+  },
+
+  addRecord: ({ jobId, events, receipts, status }) => {
+    const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
+    const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
+    const dropped = events.length + receipts.length - validEvents.length - validReceipts.length
+    set((state) => {
+      const run = merge(state.runs[jobId] ?? emptyRun(jobId), validEvents, validReceipts)
+      return {
+        runs: { ...state.runs, [jobId]: { ...run, jobStatus: status ?? run.jobStatus } },
+        dropped: state.dropped + dropped,
+      }
+    })
+  },
+
+  setJobStatus: (jobId, status) =>
+    set((state) => ({
+      runs: {
+        ...state.runs,
+        [jobId]: { ...(state.runs[jobId] ?? emptyRun(jobId)), jobStatus: status },
+      },
+    })),
+}))
+
+export const useExecutionRun = (jobId: string | null): ExecutionRun | undefined =>
+  useExecutionStore((state) => (jobId ? state.runs[jobId] : undefined))
