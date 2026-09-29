@@ -14,8 +14,8 @@ pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (c
 | Most central assets in the return-correlation graph | `analyze_market_relationships` | `nx.pagerank` | nx-cugraph |
 | Probability of a curated future outcome per asset | `predict_asset_outcomes` | Kumo Relational (a NIM) | same |
 
-The results are descriptive. This service makes no speedup claims: each result names the device, library and
-time it used, and nothing more.
+The results are descriptive. Each result names the device, library and time it used, and nothing more; the
+measured difference between the two engines is under [CPU and GPU timings](#cpu-and-gpu-timings).
 
 ## How it fits
 
@@ -26,8 +26,8 @@ time it used, and nothing more.
   so no dataset facts live in this code. The server resolves the `/data/active` symlink once at startup, and
   every worker, including a replacement, loads that build: restart the service after activating another pack.
 - **Worker.** One spawned process loads and derives the tables once (prices, anomaly features, news aligned to
-  sessions, the correlation graph), makes one warm-up `market_scan` call so the first question does not pay
-  cudf.pandas' first-call cost, and runs every call under a deadline. A call that overruns, or a crash,
+  sessions, the correlation graph), runs every tool once as a warm-up so the first question does not pay the GPU
+  libraries' first-call costs, and runs every call under a deadline. A call that overruns, or a crash,
   kills the worker and a fresh one replaces it, so the next call succeeds. The tools are async and wait for the
   worker on a thread, so `tools/list` and other requests stay responsive. `GET /health` is 200 while the
   worker is up.
@@ -37,6 +37,10 @@ time it used, and nothing more.
   `limitations`. This is what the execution receipt shows. Failures (bad arguments, deadlines, a dead worker)
   are results too, because MCP clients drop the structured content of an error response. An error message is
   at most 1,000 characters, the receipt's limit.
+- **Timestamps.** Inside the worker every timestamp is tz-naive UTC `datetime64[ns]`: `data.py` normalizes the
+  tables once at load, the dispatcher converts timezone-aware arguments to UTC, and the result models put the
+  UTC offset back, so results still read `2026-08-24T21:00:00Z`. cudf.pandas cannot keep a tz-aware column on
+  the GPU; with one, every operation on the frame fell back to pandas.
 - **Scope.** Every tool takes an optional `source_ids`, which the Hermes plugin sets to the run's selected
   sources. A market tool refuses (`source_not_selected`) when the pack's structured source is not among them.
 - **Prediction.** `predict_asset_outcomes(template_id, asset_ids?)` runs one of the pack's curated PQL
@@ -84,10 +88,46 @@ uv run pytest -m gpu   # on a GPU host, after `uv sync --extra gpu-cu12`: CPU/GP
 KUMO_RELATIONAL_URL=... KUMO_API_KEY=... DATA_ACTIVE_DIR=/path/to/active uv run pytest -m live  # one real prediction
 ```
 
-cudf.pandas falls back to pandas where it has no GPU path, and loading a pack already does (`tz_localize`
-with a string time zone). So `CUDF_PANDAS_FAIL_ON_FALLBACK=1`, which turns the first fallback into an error,
-stops the worker while it loads and every GPU test errors; the parity run above passes without it. Lint with
-the repository's `ruff.toml`: `uv run ruff check . && uv run ruff format --check .`
+cudf.pandas falls back to pandas where it has no GPU path. Loading a pack does so twice (`merge_asof` and
+`rename_axis`, once each at startup), so `CUDF_PANDAS_FAIL_ON_FALLBACK=1`, which turns the first fallback into
+an error, stops the worker while it loads and every GPU test errors; the parity run above passes without it. To
+list fallbacks instead, set `LOG_FAST_FALLBACK=1` (cudf.pandas writes them to
+`cudf_pandas_unit_tests_debug.log` in the working directory) or run a call under `cudf.pandas.profiler.Profiler`.
+Lint with the repository's `ruff.toml`: `uv run ruff check . && uv run ruff format --check .`
+
+## CPU and GPU timings
+
+Measured on a 40 GB A100 VM with 12 vCPUs, on the qualification pack (2,000 issuers, 1.36 million daily
+bars, 84,000 news items). The method: a throwaway container from the stack's own GPU image, with `--gpus all`
+and the pack mounted read-only, ran the service's worker with `MARKET_ANALYTICS_ENGINE=cpu` and then with
+`gpu`, never both at once, while the rest of the stack sat idle. Each call ran once to warm up, then five timed
+repeats. The time is the tool's own compute timer, the one receipts show. Median milliseconds:
+
+| Call | CPU | GPU | CPU/GPU |
+| --- | --- | --- | --- |
+| `market_scan`, 2,000 issuers, 2024 to 2026, return and volatility | 228 | 77 | 3.0x |
+| `market_scan`, 2,000 issuers, volume z-score | 224 | 83 | 2.7x |
+| `market_scan`, 12 reviewed assets, 20 sessions | 88 | 52 | 1.7x |
+| `market_anomaly_scan`, 12 assets | 79 | 41 | 1.9x |
+| `market_anomaly_scan`, 2,000 issuers | 330 | 118 | 2.8x |
+| `price_context`, 3 assets, 21 sessions | 69 | 33 | 2.1x |
+| `sentiment_timeline`, 22,000 news items, weekly | 26 | 41 | 0.6x |
+| `analyze_news_price_relationship`, 2,000 news items | 731 | 86 | 8.5x |
+| `analyze_market_relationships`, top 10 | 36 | 38 | 0.9x |
+
+Both engines returned the same results for every call (floats within 1e-4). On the GPU, the first call after
+the worker reported ready took at most 140 ms, because the warm-up had paid the one-time costs (about 10 s for
+cudf.pandas' first kernels and 5 s for cuml.accel's first PCA). Starting the worker, warm-up included, took
+29 s on the GPU and 10 s on the CPU.
+
+Two calls are slower on the GPU. Their work is small: `sentiment_timeline` groups 22,000 news rows into 11
+weekly points, and `analyze_market_relationships` runs PageRank on 2,000 nodes and sorts 16,000 edges. At
+that size the fixed cost of each GPU operation (launching kernels, waiting for them, copying results back to
+the host) outweighs the arithmetic, which pandas and NetworkX finish in about 30 ms.
+
+Before the [timestamp change](#how-it-fits) the GPU engine was slower on every call (0.1x to 0.9x; for
+example 1,560 ms against 250 ms for the first `market_scan` row), because every operation on a frame with a
+tz-aware column fell back to pandas. The CPU results did not change.
 
 ## Changing the contract
 
