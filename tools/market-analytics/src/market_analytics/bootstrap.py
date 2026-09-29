@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+"""Process entry points: the server (`market-analytics-server`) and the analytics worker it spawns.
+
+RAPIDS' zero-code-change accelerators only take effect if they are installed before pandas, scikit-learn or
+NetworkX is imported. So this module imports only the standard library, and the worker installs them before
+anything else. A spawned process re-imports this entry module and unpickles `worker_main` by reference, so
+neither step imports pandas early. Only the worker uses the GPU; the server process stays on the CPU.
+"""
+
+import os
+from multiprocessing.connection import Connection
+from pathlib import Path
+
+
+def main() -> None:
+    from .server import main as serve
+
+    serve()
+
+
+def worker_main(connection: Connection, root: Path) -> None:
+    if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu":
+        os.environ.setdefault("NX_CUGRAPH_AUTOCONFIG", "True")  # read when NetworkX is imported
+
+        import cudf.pandas
+
+        cudf.pandas.install()
+
+        import cuml.accel
+
+        cuml.accel.install()
+
+    from .worker import serve
+
+    serve(connection, root)

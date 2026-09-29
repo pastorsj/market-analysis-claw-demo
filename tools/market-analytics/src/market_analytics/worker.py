@@ -1,0 +1,152 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+"""The analytics worker: one spawned process that loads the pack once and runs tool calls under a deadline.
+
+A separate process gives each call a hard deadline: a call that overruns (or a native crash, or CUDA running out
+of memory) kills the worker, and a fresh one replaces it, so the next call succeeds. `spawn` rather than `fork`
+because forking a process that has initialized CUDA is unsafe. Calls run one at a time, in arrival order.
+
+Before it reports ready, the worker makes one warm-up call, so the first question does not pay the accelerators'
+first-call cost (about 11 s under cudf.pandas on an A100).
+"""
+
+from __future__ import annotations
+
+import logging
+import multiprocessing
+import threading
+import time
+from multiprocessing.connection import Connection
+from pathlib import Path
+from typing import Any
+
+from . import bootstrap
+from . import tools
+from .data import MarketData
+from .data import Pack
+
+logger = logging.getLogger(__name__)
+
+STARTUP_TIMEOUT_SECONDS = 300.0
+
+
+class WorkerError(RuntimeError):
+    """The worker could not start, or died during a call."""
+
+
+class Worker:
+    def __init__(self, root: Path, *, timeout: float) -> None:
+        self.root = root
+        self.timeout = timeout  # seconds one call may run before the worker is replaced
+        self._lock = threading.Lock()
+        self._process: multiprocessing.process.BaseProcess | None = None
+        self._connection: Connection | None = None
+
+    @property
+    def alive(self) -> bool:
+        return self._process is not None and self._process.is_alive()
+
+    @property
+    def pid(self) -> int | None:
+        return self._process.pid if self._process else None
+
+    def start(self) -> None:
+        with self._lock:
+            self._start()
+
+    def call(self, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Run one tool in the worker and return its MarketResult data. Blocks; call it from a thread."""
+        with self._lock:
+            if not self.alive:
+                self._start()
+            assert self._connection is not None
+            try:
+                self._connection.send((tool, arguments))
+                if self._connection.poll(self.timeout):
+                    return self._connection.recv()
+            except (EOFError, OSError):
+                self._restart(f"the worker exited during {tool}")
+                raise WorkerError(f"the analytics worker exited during {tool}") from None
+            self._restart(f"{tool} exceeded its {self.timeout:g} s deadline")
+            raise TimeoutError(f"{tool} exceeded its {self.timeout:g} s deadline")
+
+    def close(self) -> None:
+        with self._lock:
+            self._stop()
+
+    def _start(self) -> None:
+        self._stop()
+        context = multiprocessing.get_context("spawn")
+        self._connection, child = context.Pipe()
+        self._process = context.Process(
+            target=bootstrap.worker_main, args=(child, self.root), name="market-analytics-worker", daemon=True
+        )
+        self._process.start()
+        child.close()
+        if not self._connection.poll(STARTUP_TIMEOUT_SECONDS):
+            self._stop()
+            raise WorkerError(f"the analytics worker did not load the data within {STARTUP_TIMEOUT_SECONDS:g} s")
+        try:
+            status, detail = self._connection.recv()
+        except EOFError:
+            status, detail = "failed", "it exited while loading the data"
+        if status != "ready":
+            self._stop()
+            raise WorkerError(f"the analytics worker failed to start: {detail}")
+        logger.info("analytics worker %d ready: %s", self._process.pid, detail)
+
+    def _restart(self, reason: str) -> None:
+        logger.warning("replacing analytics worker %s: %s", self.pid, reason)
+        self._stop()
+        try:
+            self._start()
+        except WorkerError:
+            logger.exception("the replacement worker failed to start; the next call will try again")
+
+    def _stop(self) -> None:
+        if self._process is not None:
+            self._process.kill()
+            self._process.join()
+            self._process.close()
+        if self._connection is not None:
+            self._connection.close()
+        self._process = self._connection = None
+
+
+def serve(connection: Connection, root: Path) -> None:
+    """The worker process: load the pack, then answer (tool, arguments) requests until the pipe closes."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(processName)s %(name)s: %(message)s")
+    try:
+        data = MarketData.load(Pack.load(root))
+    except Exception as error:
+        logger.exception("loading %s failed", root)
+        connection.send(("failed", f"{type(error).__name__}: {error}"))
+        return
+    # The frame type shows whether cudf.pandas took effect: a proxy type on GPU, pandas.DataFrame on CPU.
+    frame = f"{type(data.prices).__module__}.{type(data.prices).__qualname__}"
+    engines = ", ".join(str(tools.engine(family)) for family in ("tabular", "ml", "graph"))
+    connection.send(("ready", f"{len(data.prices):,} price rows as {frame}; {engines}; {warm_up(data)}"))
+    while True:
+        try:
+            tool, arguments = connection.recv()
+        except EOFError:
+            return
+        connection.send(tools.run(data, tool, arguments))
+
+
+def warm_up(data: MarketData) -> str:
+    """Run one market_scan over the largest universe and every session, and discard it. Never raises."""
+    started = time.perf_counter()
+    try:
+        timestamps = data.prices["timestamp"]
+        arguments = {
+            "universe_id": max(sorted(data.universes), key=lambda name: len(data.universes[name])),
+            "start": timestamps.min().to_pydatetime(),
+            "end": timestamps.max().to_pydatetime(),
+            "metrics": ["return", "volatility"],
+        }
+        status = tools.run(data, "market_scan", arguments)["status"]
+    except Exception as error:  # a failed warm-up only means the first call pays the cost
+        logger.warning("the warm-up call failed: %s: %s", type(error).__name__, error)
+        status = "failed"
+    return f"warm-up market_scan {status} in {time.perf_counter() - started:.1f} s"
