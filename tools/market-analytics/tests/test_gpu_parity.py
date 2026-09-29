@@ -4,16 +4,19 @@
 
 Needs an NVIDIA GPU and `uv sync --extra gpu-cu12`; skipped otherwise. Loading the pack falls back to pandas twice
 (merge_asof and rename_axis, which cudf.pandas does not implement), which is expected, so
-CUDF_PANDAS_FAIL_ON_FALLBACK=1 makes every test here error at startup. The tool calls themselves run on the GPU.
+CUDF_PANDAS_FAIL_ON_FALLBACK=1 makes every test here error at startup. The tool calls themselves stay on the GPU,
+which the last test checks.
 """
 
 import importlib.util
 import math
+import multiprocessing
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import gpu_strict
 import pytest
 from fixture_pack import at
 
@@ -30,6 +33,7 @@ pytestmark = [
 ]
 
 JUNE = {"start": at(21, 0), "end": at(41, 23)}
+WIRE_A = {"source_names": ["Wire A"]}
 CALLS = [
     ("market_scan", {"universe_id": "all_assets", "metrics": ["return", "volatility"], **JUNE}),
     ("market_scan", {"universe_id": "all_assets", "metrics": ["volume"], "comparison": "zscore", **JUNE}),
@@ -47,6 +51,12 @@ CALLS = [
     ("sentiment_timeline", {"start": at(0, 0), "end": at(69, 23), "frequency": "weekly"}),
     ("analyze_news_price_relationship", {"published_from": at(0, 0), "published_to": at(69, 23)}),
     ("analyze_market_relationships", {"top_k": 4}),
+    # The asset and source filters of the two news tools.
+    ("sentiment_timeline", {"start": at(0, 0), "end": at(69, 23), "asset_ids": ["ALPH", "BETA"], **WIRE_A}),
+    (
+        "analyze_news_price_relationship",
+        {"published_from": at(0, 0), "published_to": at(69, 23), "asset_ids": ["ALPH", "BETA"], **WIRE_A},
+    ),
 ]
 
 
@@ -69,6 +79,18 @@ def test_gpu_matches_cpu(data: MarketData, gpu_worker: Worker, tool: str, argume
     assert gpu["engine"]["library"] in {"cudf.pandas", "cuml.accel", "nx-cugraph"}
     assert gpu["status"] == cpu["status"] == "succeeded"
     assert_close(gpu["payload"], cpu["payload"])
+
+
+def test_gpu_tool_calls_do_not_fall_back_to_pandas(pack_root: Path) -> None:
+    """A cudf.pandas fallback copies the frames to pandas and back on every call: the GPU engine was slower than
+    the CPU while the tools fell back. With CUDF_PANDAS_FAIL_ON_FALLBACK=1 once the pack is loaded, a fallback fails
+    its call."""
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        results = pool.apply(gpu_strict.run_without_fallbacks, (pack_root, CALLS))
+
+    assert [(tool, result["status"]) for (tool, _), result in zip(CALLS, results, strict=True)] == [
+        (tool, "succeeded") for tool, _ in CALLS
+    ]
 
 
 def assert_close(gpu: Any, cpu: Any, path: str = "payload") -> None:

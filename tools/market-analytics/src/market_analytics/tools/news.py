@@ -161,9 +161,10 @@ def _articles(
 ) -> pd.DataFrame:
     check_window(start, end)
     news = data.news
+    # `selected = selected & ...`, not `&=`: cudf.pandas has no in-place `&` and would fall back to pandas.
     selected = news["published_at"].between(start, end)
     if asset_ids:
-        selected &= news["asset_id"].isin(data.resolve_assets(asset_ids))
+        selected = selected & news["asset_id"].isin(data.resolve_assets(asset_ids))
     if source_names:
-        selected &= news["source_name"].isin(source_names)
+        selected = selected & news["source_name"].isin(source_names)
     return news[selected]

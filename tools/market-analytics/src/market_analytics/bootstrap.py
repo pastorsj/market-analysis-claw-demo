@@ -21,23 +21,28 @@ def main() -> None:
 
 def worker_main(connection: Connection, root: Path) -> None:
     if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu":
-        os.environ.setdefault("NX_CUGRAPH_AUTOCONFIG", "True")  # read when NetworkX is imported
-
-        # nx-cugraph's libcugraph links libcuvs, which needs NVRTC, and the wheels do not load it: until a cudf
-        # kernel happens to be compiled first, `import nx_cugraph` fails ("libcugraph.so: cannot open shared
-        # object file"). Load it up front, from the CUDA wheels RAPIDS installs.
-        from cuda.pathfinder import load_nvidia_dynamic_lib
-
-        load_nvidia_dynamic_lib("nvrtc")
-
-        import cudf.pandas
-
-        cudf.pandas.install()
-
-        import cuml.accel
-
-        cuml.accel.install()
+        install_gpu_accelerators()
 
     from .worker import serve
 
     serve(connection, root)
+
+
+def install_gpu_accelerators() -> None:
+    """cudf.pandas, cuml.accel and nx-cugraph. Call it before pandas, scikit-learn or NetworkX is imported."""
+    os.environ.setdefault("NX_CUGRAPH_AUTOCONFIG", "True")  # read when NetworkX is imported
+
+    # nx-cugraph's libcugraph links libcuvs, which needs NVRTC, and the wheels do not load it: until a cudf
+    # kernel happens to be compiled first, `import nx_cugraph` fails ("libcugraph.so: cannot open shared
+    # object file"). Load it up front, from the CUDA wheels RAPIDS installs.
+    from cuda.pathfinder import load_nvidia_dynamic_lib
+
+    load_nvidia_dynamic_lib("nvrtc")
+
+    import cudf.pandas
+
+    cudf.pandas.install()
+
+    import cuml.accel
+
+    cuml.accel.install()
