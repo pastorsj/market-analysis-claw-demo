@@ -260,30 +260,32 @@ installed.
 
    | Call | CPU | GPU before | GPU after | CPU/GPU after |
    |---|---|---|---|---|
-   | `market_scan`, 2,000 issuers, 2024 to 2026 | 228 ms | 1,560 ms | 77 ms | 3.0x |
-   | `market_scan`, 2,000 issuers, volume z-score | 224 ms | 1,556 ms | 83 ms | 2.7x |
-   | `market_scan`, 12 reviewed assets, 20 sessions | 88 ms | 686 ms | 52 ms | 1.7x |
-   | `market_anomaly_scan`, 12 assets | 79 ms | 502 ms | 41 ms | 1.9x |
-   | `market_anomaly_scan`, 2,000 issuers | 330 ms | 1,512 ms | 118 ms | 2.8x |
-   | `price_context`, 3 assets | 69 ms | 672 ms | 33 ms | 2.1x |
-   | `sentiment_timeline` | 26 ms | 200 ms | 41 ms | 0.6x |
-   | `analyze_news_price_relationship` | 731 ms | 2,171 ms | 86 ms | 8.5x |
-   | `analyze_market_relationships` | 36 ms | 39 ms | 38 ms | 0.9x |
+   | `market_scan`, 2,000 issuers, 2024 to 2026 | 229 ms | 1,560 ms | 77 ms | 3.0x |
+   | `market_scan`, 2,000 issuers, volume z-score | 228 ms | 1,556 ms | 82 ms | 2.8x |
+   | `market_scan`, 12 reviewed assets, 20 sessions | 86 ms | 686 ms | 56 ms | 1.5x |
+   | `market_anomaly_scan`, 12 assets | 76 ms | 502 ms | 41 ms | 1.8x |
+   | `market_anomaly_scan`, 2,000 issuers | 291 ms | 1,512 ms | 119 ms | 2.5x |
+   | `price_context`, 3 assets | 70 ms | 672 ms | 33 ms | 2.1x |
+   | `sentiment_timeline` | 29 ms | 200 ms | 40 ms | 0.7x |
+   | `analyze_news_price_relationship` | 746 ms | 2,171 ms | 92 ms | 8.1x |
+   | `analyze_market_relationships` | 37 ms | 39 ms | 37 ms | 1.0x |
 
    The CPU column is the current code; the CPU results are byte-for-byte those of the code before the change.
    Before it, every operation on a frame with a tz-aware timestamp fell back to pandas and paid a failed GPU
    attempt on top. Now no tool call falls back; only loading the pack does, twice (`merge_asof` and
    `rename_axis`, which cudf.pandas lacks), so `CUDF_PANDAS_FAIL_ON_FALLBACK=1` still stops the worker while it
-   loads. `sentiment_timeline` and `analyze_market_relationships` stay slower on the GPU: their work is small
-   (22,000 news rows into 11 weekly points; PageRank over 2,000 nodes), so the fixed cost of launching GPU
-   kernels and copying results back outweighs the arithmetic. The table and the method are also in the
+   loads. `sentiment_timeline` stays slower on the GPU and `analyze_market_relationships` breaks even: their
+   work is small (22,000 news rows into 11 weekly points; PageRank over 2,000 nodes), so the fixed cost of
+   launching GPU kernels and copying results back outweighs the arithmetic. The table and the method are also in the
    [market-analytics README](../tools/market-analytics/README.md#cpu-and-gpu-timings).
 
-   The GPU libraries pay one-time costs on first use (about 10 s for cudf.pandas' first kernels, 5 s for
-   cuml.accel's first PCA). The worker runs every tool once before it reports ready, so the first question
-   does not pay them: after the warm-up, every first call above took at most 140 ms. Starting the worker takes
-   29 s on the GPU and 10 s on the CPU, warm-up included (the worker's `ready` log line gives the warm-up's
-   share). The worker runs one call at a time, so when the agent asks for two tools at once, the second waits
+   The GPU libraries pay a one-time cost on first use: about 11 s, nearly all of it cudf.pandas compiling
+   kernels for the first `market_scan`. (cuml.accel's first PCA added 5 s more, and again for some input
+   sizes; that was its input check compiling a kernel, and the anomaly tool now checks its input on the host
+   instead.) The worker runs every tool once before it reports ready, so the first question does not pay it:
+   after the warm-up, every first call above, and a dozen other argument shapes, took at most 140 ms. Starting
+   the worker takes 25 s on the GPU and 10 s on the CPU, warm-up included (the worker's `ready` log line gives
+   the warm-up's share). The worker runs one call at a time, so when the agent asks for two tools at once, the second waits
    for the first. The explorer shows each call's device, library and time.
 8. **Connect** from your machine with an SSH tunnel; every port stays on the VM's loopback:
 
@@ -319,7 +321,7 @@ installed.
 | `no space left on device` while building | The build cache grows with each rebuild; cap it or run `down --prune` ([disk](#disk)) |
 | The Auto Ontology frontend build logs Prisma `DatabaseNotReachable` | Expected: it pre-renders pages without a database, and the build succeeds |
 | The Kumo NIM logs `TagsBasedProfileSelector not able to find the profile` | Expected on any GPU; it selects its only profile next (step 4) |
-| `market-analytics-gpu` takes about 30 s to turn healthy | The worker loads the pack and warms up every tool on the GPU first (step 7) |
+| `market-analytics-gpu` takes about 25 s to turn healthy | The worker loads the pack and warms up every tool on the GPU first (step 7) |
 | `uv: command not found` in `ssh <instance> 'command'` | Brev's uv is in `~/.local/bin`, on the `PATH` of a login shell only; use `ssh <instance> 'bash -lc "command"'` |
 | `test e2e` fails before any test runs | It needs Node.js 22 and sudo for Chromium's libraries (step 9) |
 | Every GPU parity test errors while the worker loads the pack | `CUDF_PANDAS_FAIL_ON_FALLBACK` is set, and loading the pack falls back twice; unset it (step 7) |

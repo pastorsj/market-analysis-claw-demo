@@ -105,25 +105,25 @@ repeats. The time is the tool's own compute timer, the one receipts show. Median
 
 | Call | CPU | GPU | CPU/GPU |
 | --- | --- | --- | --- |
-| `market_scan`, 2,000 issuers, 2024 to 2026, return and volatility | 228 | 77 | 3.0x |
-| `market_scan`, 2,000 issuers, volume z-score | 224 | 83 | 2.7x |
-| `market_scan`, 12 reviewed assets, 20 sessions | 88 | 52 | 1.7x |
-| `market_anomaly_scan`, 12 assets | 79 | 41 | 1.9x |
-| `market_anomaly_scan`, 2,000 issuers | 330 | 118 | 2.8x |
-| `price_context`, 3 assets, 21 sessions | 69 | 33 | 2.1x |
-| `sentiment_timeline`, 22,000 news items, weekly | 26 | 41 | 0.6x |
-| `analyze_news_price_relationship`, 2,000 news items | 731 | 86 | 8.5x |
-| `analyze_market_relationships`, top 10 | 36 | 38 | 0.9x |
+| `market_scan`, 2,000 issuers, 2024 to 2026, return and volatility | 229 | 77 | 3.0x |
+| `market_scan`, 2,000 issuers, volume z-score | 228 | 82 | 2.8x |
+| `market_scan`, 12 reviewed assets, 20 sessions | 86 | 56 | 1.5x |
+| `market_anomaly_scan`, 12 assets | 76 | 41 | 1.8x |
+| `market_anomaly_scan`, 2,000 issuers | 291 | 119 | 2.5x |
+| `price_context`, 3 assets, 21 sessions | 70 | 33 | 2.1x |
+| `sentiment_timeline`, 22,000 news items, weekly | 29 | 40 | 0.7x |
+| `analyze_news_price_relationship`, 2,000 news items | 746 | 92 | 8.1x |
+| `analyze_market_relationships`, top 10 | 37 | 37 | 1.0x |
 
 Both engines returned the same results for every call (floats within 1e-4). On the GPU, the first call after
-the worker reported ready took at most 140 ms, because the warm-up had paid the one-time costs (about 10 s for
-cudf.pandas' first kernels and 5 s for cuml.accel's first PCA). Starting the worker, warm-up included, took
-29 s on the GPU and 10 s on the CPU.
+the worker reported ready took at most 140 ms, here and for a dozen other argument shapes, because the
+warm-up had paid the one-time cost: about 11 s, nearly all of it cudf.pandas compiling kernels for the first
+`market_scan`. Starting the worker, warm-up included, took 25 s on the GPU and 10 s on the CPU.
 
-Two calls are slower on the GPU. Their work is small: `sentiment_timeline` groups 22,000 news rows into 11
-weekly points, and `analyze_market_relationships` runs PageRank on 2,000 nodes and sorts 16,000 edges. At
-that size the fixed cost of each GPU operation (launching kernels, waiting for them, copying results back to
-the host) outweighs the arithmetic, which pandas and NetworkX finish in about 30 ms.
+`sentiment_timeline` is slower on the GPU and `analyze_market_relationships` breaks even. Their work is
+small: the first groups 22,000 news rows into 11 weekly points, the second runs PageRank on 2,000 nodes and
+sorts 16,000 edges. At that size the fixed cost of each GPU operation (launching kernels, waiting for them,
+copying results back to the host) outweighs the arithmetic, which pandas and NetworkX finish in about 30 ms.
 
 Before the [timestamp change](#how-it-fits) the GPU engine was slower on every call (0.1x to 0.9x; for
 example 1,560 ms against 250 ms for the first `market_scan` row), because every operation on a frame with a

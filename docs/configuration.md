@@ -146,7 +146,7 @@ documented in each component's README, for example [`api/README.md`](../api/READ
 | `core` (always) | UI, API, OpenShell and the Hermes sandbox, Switchyard, Phoenix, the data build | the inference key |
 | `retrieval` | Milvus, the document corpus and index, `retrieve_evidence` | the retriever key; `SEC_USER_AGENT` for `market_news` |
 | `analytics` | the six market tools on CPU (pandas, scikit-learn, NetworkX) | – |
-| `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 with this pack, 1.7x to 8.5x faster than the CPU tools on seven of nine measured calls, and slightly slower on the two smallest ([measured](operations.md#brev-vm-mode)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit |
+| `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 with this pack, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls; the two smallest break even or run slower ([measured](operations.md#brev-vm-mode)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit |
 | `kumo` | Kumo Relational NIM behind `predict_asset_outcomes`; needs `analytics` or `analytics-gpu` | x86_64 and an NVIDIA GPU (it ran on an A100 with no override); the image from `nvcr.io`, which pulled without a login ([operations](operations.md#brev-vm-mode)) |
 | `ontology` | Auto Ontology and `ask_question` | access to the private `NVIDIA/auto-ontology` repository |
 | `replay` | the UI alone, on the recorded sessions | nothing |
