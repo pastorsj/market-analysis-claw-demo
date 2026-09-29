@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 import shutil
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,11 @@ from market_analytics.data import MarketData
 from market_analytics.data import Pack
 from market_analytics.data import validate
 from market_analytics.models import InvalidRequest
+
+
+def utc(day: int, hour: int) -> datetime:
+    """at() as the frames hold it: naive UTC (data.py)."""
+    return at(day, hour).replace(tzinfo=None)
 
 
 def test_fixture_pack_satisfies_the_contract(pack: Pack) -> None:
@@ -83,8 +89,8 @@ def test_news_aligns_to_the_first_session_at_or_after_publication(data: MarketDa
     sessions = data.news.set_index("news_id")["session"]
     assert sessions["n-01"] == 41  # published before the 21:00 close of SESSIONS[40]
     assert sessions["n-02"] == 47  # published after the close of SESSIONS[45]
-    assert pd.isna(sessions["n-08"])  # published after the last close
-    assert data.prices.set_index(["asset_id", "session"]).loc[("asset-alpha", 47), "timestamp"] == at(46, 21)
+    assert sessions["n-08"] == 0  # published after the last close
+    assert data.prices.set_index(["asset_id", "session"]).loc[("asset-alpha", 47), "timestamp"] == utc(46, 21)
 
 
 def test_features_match_a_per_asset_rolling_computation(data: MarketData) -> None:
@@ -107,7 +113,7 @@ def test_features_match_a_per_asset_rolling_computation(data: MarketData) -> Non
     expected_frame = pd.concat(expected).astype(dict.fromkeys(FEATURES, "float32")).reset_index(drop=True)
 
     pd.testing.assert_frame_equal(data.features, expected_frame)
-    assert data.features.groupby("asset_id")["timestamp"].min().eq(at(20, 21)).all()
+    assert data.features.groupby("asset_id")["timestamp"].min().eq(utc(20, 21)).all()
 
 
 def test_relationship_graph_links_every_pair_or_only_declared_peers(pack: Pack, data: MarketData) -> None:
@@ -126,7 +132,19 @@ def test_relationship_graph_links_every_pair_or_only_declared_peers(pack: Pack, 
 
 def test_price_bars_are_stamped_at_the_session_close(data: MarketData) -> None:
     first = data.prices.iloc[0]
-    assert first["timestamp"] == at(0, 21)
+    assert first["timestamp"] == utc(0, 21)
     assert first["session"] == 1
     assert pd.isna(first["adjusted_return_1d"])
     assert len(data.prices) == 4 * len(SESSIONS)
+
+
+def test_every_timestamp_is_naive_utc_nanoseconds(data: MarketData) -> None:
+    """One timestamp model for both engines: cudf.pandas falls back to pandas on tz-aware columns."""
+    frames = {"prices": data.prices, "features": data.features, "news": data.news}
+    dtypes = {f"{name}.{column}": str(kind) for name, frame in frames.items() for column, kind in frame.dtypes.items()}
+    assert {column: kind for column, kind in dtypes.items() if "datetime" in kind} == {
+        "prices.trading_date": "datetime64[ns]",
+        "prices.timestamp": "datetime64[ns]",
+        "features.timestamp": "datetime64[ns]",
+        "news.published_at": "datetime64[ns]",
+    }

@@ -6,8 +6,8 @@ A separate process gives each call a hard deadline: a call that overruns (or a n
 of memory) kills the worker, and a fresh one replaces it, so the next call succeeds. `spawn` rather than `fork`
 because forking a process that has initialized CUDA is unsafe. Calls run one at a time, in arrival order.
 
-Before it reports ready, the worker makes one warm-up call, so the first question does not pay the accelerators'
-first-call cost (about 11 s under cudf.pandas on an A100).
+Before it reports ready, the worker runs every tool once, so the first question does not pay the accelerators'
+first-call costs (CUDA kernels compiled on first use, cuml.accel's first PCA: seconds on an A100).
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import logging
 import multiprocessing
 import threading
 import time
+from datetime import timedelta
 from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
@@ -135,18 +136,45 @@ def serve(connection: Connection, root: Path) -> None:
 
 
 def warm_up(data: MarketData) -> str:
-    """Run one market_scan over the largest universe and every session, and discard it. Never raises."""
+    """Run each tool once on the pack's own data and discard the results. Never raises.
+
+    The GPU libraries pay one-time costs on first use (cudf.pandas compiles CUDA kernels, cuml.accel sets up its
+    first PCA: about 15 s together on an A100); on the CPU engine this is about 2 s of pandas.
+    """
     started = time.perf_counter()
     try:
-        timestamps = data.prices["timestamp"]
-        arguments = {
-            "universe_id": max(sorted(data.universes), key=lambda name: len(data.universes[name])),
-            "start": timestamps.min().to_pydatetime(),
-            "end": timestamps.max().to_pydatetime(),
-            "metrics": ["return", "volatility"],
-        }
-        status = tools.run(data, "market_scan", arguments)["status"]
-    except Exception as error:  # a failed warm-up only means the first call pays the cost
-        logger.warning("the warm-up call failed: %s: %s", type(error).__name__, error)
-        status = "failed"
-    return f"warm-up market_scan {status} in {time.perf_counter() - started:.1f} s"
+        calls = _warm_up_calls(data)
+    except Exception as error:  # a failed warm-up only means the first calls pay the cost
+        logger.warning("the warm-up could not start: %s: %s", type(error).__name__, error)
+        calls = []
+    statuses = []
+    for tool, arguments in calls:
+        status = tools.run(data, tool, arguments)["status"]  # never raises
+        statuses.append(f"{tool} {status}")
+    return f"warm-up in {time.perf_counter() - started:.1f} s: {', '.join(statuses) or 'failed'}"
+
+
+def _warm_up_calls(data: MarketData) -> list[tuple[str, dict[str, Any]]]:
+    """Every tool on the largest universe: the scans over the whole price history, the others over its last month."""
+    universe = max(sorted(data.universes), key=lambda name: len(data.universes[name]))
+    timestamps = data.prices["timestamp"]
+    start, end = timestamps.min().to_pydatetime(), timestamps.max().to_pydatetime()
+    middle = start + (end - start) / 2
+    month = {"start": end - timedelta(days=30), "end": end}
+    return [
+        ("market_scan", {"universe_id": universe, "start": start, "end": end, "metrics": ["return", "volatility"]}),
+        (
+            "market_anomaly_scan",
+            {
+                "universe_id": universe,
+                "training_start": start,
+                "training_end": middle,
+                "scoring_start": middle + timedelta(seconds=1),
+                "scoring_end": end,
+            },
+        ),
+        ("price_context", {"asset_ids": [data.universes[universe][0]], "frequency": "weekly", **month}),
+        ("sentiment_timeline", {"frequency": "weekly", **month}),
+        ("analyze_news_price_relationship", {"published_from": month["start"], "published_to": end}),
+        ("analyze_market_relationships", {}),
+    ]

@@ -54,8 +54,10 @@ def run(
     if scoring.empty:
         raise InvalidRequest("the scoring window contains no observations")
 
-    train = training[list(FEATURES)].to_numpy(np.float64)
-    score = scoring[list(FEATURES)].to_numpy(np.float64)
+    # Plain host arrays: PCA runs on them through cuml.accel, and the arithmetic below is small NumPy work that
+    # cudf.pandas would otherwise route through its array proxy.
+    train = np.asarray(training[list(FEATURES)].to_numpy(np.float64))
+    score = np.asarray(scoring[list(FEATURES)].to_numpy(np.float64))
     mean, scale = train.mean(axis=0), train.std(axis=0)
     scale[scale <= 1e-12] = 1.0
     train_z, score_z = (train - mean) / scale, (score - mean) / scale
@@ -67,8 +69,11 @@ def run(
     ranked = scoring.assign(anomaly_score=score_error, decision_score=threshold - score_error).sort_values(
         ["anomaly_score", "asset_id", "timestamp"], ascending=[False, True, True], ignore_index=True
     )
-    ranked["rank"] = ranked.index + 1
-    ranked["cohort_percentile"] = 100 * (len(ranked) - ranked.index) / len(ranked)
+    # NumPy positions, not index arithmetic: under cudf.pandas, dividing the index compiles a CUDA kernel on
+    # first use, again for some index lengths (seconds each on an A100), which a warm-up cannot cover.
+    position = np.arange(len(ranked))
+    ranked["rank"] = position + 1
+    ranked["cohort_percentile"] = 100 * (len(ranked) - position) / len(ranked)
     if minimum_percentile is not None:
         ranked = ranked[ranked["cohort_percentile"] >= minimum_percentile]
     top = ranked.head(limit)
@@ -76,7 +81,7 @@ def run(
     # Robust z-scores (median / MAD) against the training window explain which features moved.
     median = np.median(train, axis=0)
     mad = np.median(np.abs(train - median), axis=0) * 1.4826
-    deviations = (top[list(FEATURES)].to_numpy(np.float64) - median) / np.where(mad > 1e-12, mad, 1.0)
+    deviations = (np.asarray(top[list(FEATURES)].to_numpy(np.float64)) - median) / np.where(mad > 1e-12, mad, 1.0)
     observations = [
         AnomalyObservation(
             rank=row["rank"],

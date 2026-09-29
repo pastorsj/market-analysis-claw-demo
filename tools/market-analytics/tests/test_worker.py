@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from market_analytics import tools
 from market_analytics.worker import Worker
 from market_analytics.worker import WorkerError
 
@@ -36,7 +37,8 @@ def test_worker_warms_up_before_it_reports_ready(pack_root: Path, caplog: pytest
     with caplog.at_level("INFO", logger="market_analytics.worker"):
         worker.start()
     worker.close()
-    assert "warm-up market_scan succeeded in" in caplog.text
+    for tool in tools.TOOLS:
+        assert f"{tool} succeeded" in caplog.text
 
 
 def test_worker_is_replaced_after_a_deadline(worker: Worker) -> None:

@@ -9,6 +9,7 @@ content of an error response.
 
 from __future__ import annotations
 
+from datetime import UTC
 from datetime import date
 from datetime import datetime
 from typing import Annotated
@@ -25,6 +26,15 @@ Frequency = Literal["daily", "weekly", "monthly"]
 SentimentLabel = Literal["positive", "neutral", "negative"]
 ErrorCode = Literal["invalid_request", "source_not_selected", "deadline_exceeded", "execution_failed"]
 MAX_MESSAGE_LENGTH = 1_000  # what the execution receipt accepts for an error message
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
+# The worker computes on naive UTC timestamps (see data.py); results carry the UTC offset again, so they
+# serialize as ISO 8601 with "Z" (2026-08-24T21:00:00Z).
+UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
 
 
 class InvalidRequest(ValueError):
@@ -92,7 +102,7 @@ class MarketScanPayload(BaseModel):
 class AnomalyObservation(BaseModel):
     rank: int
     asset_id: str
-    timestamp: datetime
+    timestamp: UtcDatetime
     anomaly_score: float = Field(description="PCA reconstruction error; higher is more unusual")
     decision_score: float = Field(description="Threshold minus score; negative means flagged")
     cohort_percentile: float
@@ -114,8 +124,8 @@ class MarketAnomalyPayload(BaseModel):
 
 class AssetPriceSummary(BaseModel):
     asset_id: str
-    start_timestamp: datetime
-    end_timestamp: datetime
+    start_timestamp: UtcDatetime
+    end_timestamp: UtcDatetime
     start_price: float
     end_price: float
     total_return: float
@@ -127,7 +137,7 @@ class AssetPriceSummary(BaseModel):
 
 class PricePoint(BaseModel):
     asset_id: str
-    timestamp: datetime
+    timestamp: UtcDatetime
     adjusted_close: float
     volume: float
 
@@ -143,7 +153,7 @@ class PriceContextPayload(BaseModel):
 
 
 class SentimentPoint(BaseModel):
-    period_start: datetime
+    period_start: UtcDatetime
     article_count: int
     positive_count: int
     neutral_count: int
@@ -164,10 +174,10 @@ class SentimentTimelinePayload(BaseModel):
 class NewsPriceEvent(BaseModel):
     news_id: str
     asset_id: str
-    published_at: datetime
+    published_at: UtcDatetime
     sentiment_label: SentimentLabel
-    aligned_session: datetime
-    outcome_session: datetime
+    aligned_session: UtcDatetime
+    outcome_session: UtcDatetime
     forward_return: float
 
 

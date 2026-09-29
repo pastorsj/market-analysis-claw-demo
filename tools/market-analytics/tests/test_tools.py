@@ -23,9 +23,8 @@ def run(data: MarketData, tool: str, **arguments: Any) -> dict[str, Any]:
 
 
 def june_return(data: MarketData, asset_id: str) -> float:
-    bars = data.prices[
-        (data.prices["asset_id"] == asset_id) & data.prices["timestamp"].between(JUNE["start"], JUNE["end"])
-    ]
+    start, end = (JUNE[key].replace(tzinfo=None) for key in ("start", "end"))  # the frames hold naive UTC
+    bars = data.prices[(data.prices["asset_id"] == asset_id) & data.prices["timestamp"].between(start, end)]
     return bars["adjusted_close"].iloc[-1] / bars["adjusted_close"].iloc[0] - 1
 
 

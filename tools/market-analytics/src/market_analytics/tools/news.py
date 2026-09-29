@@ -53,7 +53,7 @@ def sentiment_timeline(
     periods = (
         articles.assign(
             period_start=period_start(articles["published_at"], frequency),
-            score=labels.map(SENTIMENT_SCORES),
+            score=sentiment_score(labels),
             positive=labels == "positive",
             neutral=labels == "neutral",
             negative=labels == "negative",
@@ -91,7 +91,7 @@ def news_price_relationship(
 ) -> Output:
     """Return from each article's first session at or after publication to `return_horizon_sessions` later."""
     articles = _articles(data, published_from, published_to, asset_ids, source_names)
-    prices = data.prices[data.prices["asset_id"].isin(articles["asset_id"].unique())]
+    prices = data.prices[data.prices["asset_id"].isin(articles["asset_id"])]
     aligned = prices[["asset_id", "session", "timestamp", "adjusted_close"]]
     outcome = aligned.assign(session=aligned["session"] - return_horizon_sessions)
     events = articles.merge(aligned, on=["asset_id", "session"]).merge(
@@ -112,12 +112,14 @@ def news_price_relationship(
         warning = "No article had a complete forward-return window." if len(articles) else "No articles matched."
         return Output(payload, rows_scanned=len(articles), empty=True, warnings=(warning,))
 
+    # A list of aggregations, renamed: cudf.pandas has no named aggregation on a single column.
     summaries = (
         events.groupby("sentiment_label")["forward_return"]
-        .agg(event_count="count", mean_forward_return="mean", median_forward_return="median")
+        .agg(["count", "mean", "median"])
+        .rename(columns={"count": "event_count", "mean": "mean_forward_return", "median": "median_forward_return"})
         .reset_index()
     )
-    correlation = events["sentiment_label"].map(SENTIMENT_SCORES).corr(events["forward_return"])
+    correlation = sentiment_score(events["sentiment_label"]).corr(events["forward_return"])
     events = events.sort_values(["published_at", "news_id"])
     payload = NewsPriceRelationshipPayload(
         return_horizon_sessions=return_horizon_sessions,
@@ -142,6 +144,12 @@ def news_price_relationship(
     )
     warnings = (f"Only the first {event_limit} aligned events are listed.",) if payload.events_truncated else ()
     return Output(payload, rows_scanned=len(articles), warnings=warnings)
+
+
+def sentiment_score(labels: pd.Series) -> pd.Series:
+    """negative=-1, neutral=0, positive=+1. Built from comparisons: under cudf.pandas, Series.map from strings to
+    numbers falls back to pandas. The contract limits the labels to these three."""
+    return sum((labels == label).astype("int64") * score for label, score in SENTIMENT_SCORES.items() if score)
 
 
 def _articles(

@@ -30,6 +30,8 @@ gpu-cu12 = [
     "cudf-cu12==26.6.*; sys_platform == 'linux'",
     "cuml-cu12==26.6.*; sys_platform == 'linux'",
     "nx-cugraph-cu12==26.6.*; sys_platform == 'linux'",
+    # bootstrap.py loads NVRTC with it before nx-cugraph is imported (RAPIDS already depends on it).
+    "cuda-pathfinder>=1.8,<2; sys_platform == 'linux'",
     # pypi.org carries only download-at-install stubs of these two; pin them to the NVIDIA index (below).
     "libcugraph-cu12==26.6.*; sys_platform == 'linux'",
     "pylibcugraph-cu12==26.6.*; sys_platform == 'linux'",

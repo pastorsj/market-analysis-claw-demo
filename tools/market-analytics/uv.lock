@@ -703,6 +703,7 @@ dependencies = [
 
 [package.optional-dependencies]
 gpu-cu12 = [
+    { name = "cuda-pathfinder", marker = "sys_platform == 'linux'" },
     { name = "cudf-cu12", marker = "sys_platform == 'linux'" },
     { name = "cuml-cu12", marker = "sys_platform == 'linux'" },
     { name = "libcugraph-cu12", marker = "sys_platform == 'linux'" },
@@ -723,6 +724,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anyio", specifier = ">=4.15,<5" },
+    { name = "cuda-pathfinder", marker = "sys_platform == 'linux' and extra == 'gpu-cu12'", specifier = ">=1.8,<2" },
     { name = "cudf-cu12", marker = "sys_platform == 'linux' and extra == 'gpu-cu12'", specifier = "==26.6.*", index = "https://pypi.nvidia.com/" },
     { name = "cuml-cu12", marker = "sys_platform == 'linux' and extra == 'gpu-cu12'", specifier = "==26.6.*", index = "https://pypi.nvidia.com/" },
     { name = "duckdb", specifier = "==1.5.5" },

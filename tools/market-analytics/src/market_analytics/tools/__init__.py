@@ -10,6 +10,8 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC
+from datetime import datetime
 from typing import Any
 from typing import Literal
 
@@ -67,13 +69,20 @@ def engine(family: Family) -> Engine:
     return Engine(device="gpu" if gpu else "cpu", library=label, version=importlib.import_module(module).__version__)
 
 
+def _naive_utc(value: Any) -> Any:
+    """Timezone-aware arguments as naive UTC, the frames' timestamp model (see data.py). Naive ones are UTC."""
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(UTC).replace(tzinfo=None)
+    return value
+
+
 def run(data: MarketData, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     """Run one tool and return its MarketResult as JSON-ready data. Never raises."""
     tool = TOOLS[name]
     started = time.perf_counter()
     outcome: dict[str, Any]
     try:
-        output = tool.run(data, **arguments)
+        output = tool.run(data, **{key: _naive_utc(value) for key, value in arguments.items()})
     except InvalidRequest as error:
         outcome = {"status": "failed", "error": Failure(code="invalid_request", message=str(error))}
     except Exception:

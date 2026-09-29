@@ -4,6 +4,11 @@
 
 `Pack` is the cheap part (pack.json only) and is what the server needs to describe its tools. `MarketData` loads
 and derives the tables once, in the worker process, so every tool call runs on warm in-memory frames.
+
+Every timestamp inside the worker is tz-naive UTC datetime64[ns]. cudf.pandas cannot hold a tz-aware column on
+the GPU: one such column sends every operation on its frame back to pandas, which made the GPU engine slower than
+the CPU. So `utc_naive` normalizes the tables once here, tools/__init__.py converts the arguments to naive UTC,
+and models.UtcDatetime restores the UTC offset ("Z") when a result is serialized.
 """
 
 from __future__ import annotations
@@ -11,6 +16,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import date
+from datetime import datetime
+from datetime import time
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -179,18 +186,30 @@ class MarketData:
         return resolved
 
 
+def utc_naive(values: pd.Series) -> pd.Series:
+    """Dates or timestamps as tz-naive UTC datetime64[ns], the worker's one timestamp model.
+
+    pandas reads a parquet DATE as Python dates and a TIMESTAMP WITH TIME ZONE as tz-aware; cudf reads them as
+    naive datetime64 (UTC). Both end up the same here.
+    """
+    if isinstance(values.dtype, pd.DatetimeTZDtype):
+        values = values.dt.tz_convert(None)
+    return values.astype("datetime64[ns]")
+
+
 def _prices(pack: Pack) -> pd.DataFrame:
     columns = ["asset_id", "trading_date", "adjusted_close", "volume", "total_return_1d"]
     prices = pd.read_parquet(pack.table("daily_prices"), columns=columns)
-    prices["trading_date"] = pd.to_datetime(prices["trading_date"])
+    prices["trading_date"] = utc_naive(prices["trading_date"])
     prices = prices.sort_values(["asset_id", "trading_date"], ignore_index=True)
-    prices["timestamp"] = prices["trading_date"].dt.tz_localize("UTC") + pack.session_close
+    prices["timestamp"] = prices["trading_date"] + pack.session_close
     prices["session"] = prices.groupby("asset_id").cumcount() + 1
     # Rows are sorted by asset, then date, so a shift or rolling window stays inside one asset exactly when the
     # asset has enough earlier sessions. `.where(session > n)` blanks the rows where it would not.
     previous_close = prices["adjusted_close"].shift(1).where(prices["session"] > 1)
     prices["adjusted_return_1d"] = prices["adjusted_close"] / previous_close - 1
-    return prices
+    # A copy consolidates the columns added one by one: pandas selects rows from it about 3x faster.
+    return prices.copy()
 
 
 def _features(prices: pd.DataFrame) -> pd.DataFrame:
@@ -218,7 +237,7 @@ def _news(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
     news = pd.read_parquet(pack.table(pack.news_table), columns=columns).rename(
         columns={"primary_asset_id": "asset_id"}
     )
-    news["published_at"] = pd.to_datetime(news["published_at"], utc=True).astype(prices["timestamp"].dtype)
+    news["published_at"] = utc_naive(news["published_at"])
     # Align each article with its asset's first session at or after publication.
     news = pd.merge_asof(
         news.sort_values("published_at"),
@@ -228,13 +247,15 @@ def _news(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
         by="asset_id",
         direction="forward",
     )
-    news["session"] = news["session"].astype("Int64")  # missing when no session follows the article
+    # 0 when no session follows the article (sessions start at 1). Not a nullable Int64: cudf.pandas cannot merge
+    # it with the int64 price sessions.
+    news["session"] = news["session"].fillna(0).astype("int64")
     return news.drop(columns="timestamp").sort_values(["published_at", "news_id"], ignore_index=True)
 
 
 def _edges(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
     """The return-correlation graph over the pack's window: every pair of assets, or only declared peers."""
-    start, end = (pd.Timestamp(day) for day in pack.graph_window)
+    start, end = (datetime.combine(day, time()) for day in pack.graph_window)
     window = prices[prices["trading_date"].between(start, end)]
     returns = window.pivot(index="trading_date", columns="asset_id", values="total_return_1d")
     matrix = returns.corr().rename_axis(index="source")
@@ -266,11 +287,18 @@ def _universes(pack: Pack) -> dict[str, tuple[str, ...]]:
 
 
 def _aliases(pack: Pack) -> dict[str, tuple[str, ...]]:
-    assets = pd.read_parquet(pack.table("assets"), columns=["asset_id", "company_name"])
-    tickers = pd.read_parquet(pack.table("ticker_history"), columns=["asset_id", "ticker", "effective_to"])
-    current = tickers.loc[tickers["effective_to"].isna(), ["asset_id", "ticker"]]
+    # A Python loop over every asset: DuckDB hands it the rows (iterating a cudf.pandas frame falls back to pandas).
+    with duckdb.connect() as db:
+        rows = db.execute(
+            """
+            SELECT a.asset_id, a.company_name, t.ticker
+            FROM read_parquet(?) AS a
+            LEFT JOIN (SELECT asset_id, ticker FROM read_parquet(?) WHERE effective_to IS NULL) AS t USING (asset_id)
+            """,
+            [str(pack.table("assets")), str(pack.table("ticker_history"))],
+        ).fetchall()
     aliases: dict[str, set[str]] = {}
-    for asset_id, company_name, ticker in assets.merge(current, on="asset_id", how="left").itertuples(index=False):
+    for asset_id, company_name, ticker in rows:
         words = _normalized(company_name).split()
         names = [asset_id, company_name, *([ticker] if isinstance(ticker, str) else [])]
         prefixes = [" ".join(words[:count]) for count in range(1, len(words))]

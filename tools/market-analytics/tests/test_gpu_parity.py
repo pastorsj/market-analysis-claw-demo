@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The GPU worker (cudf.pandas, cuml.accel, nx-cugraph) gives the same answers as pandas on the CPU.
 
-Needs an NVIDIA GPU and `uv sync --extra gpu-cu12`; skipped otherwise. Loading the pack falls back to pandas in
-places (tz_localize), which is expected, so CUDF_PANDAS_FAIL_ON_FALLBACK=1 makes every test here error at startup.
+Needs an NVIDIA GPU and `uv sync --extra gpu-cu12`; skipped otherwise. Loading the pack falls back to pandas twice
+(merge_asof and rename_axis, which cudf.pandas does not implement), which is expected, so
+CUDF_PANDAS_FAIL_ON_FALLBACK=1 makes every test here error at startup. The tool calls themselves run on the GPU.
 """
 
 import importlib.util
