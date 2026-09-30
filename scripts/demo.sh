@@ -278,8 +278,8 @@ cmd_data() {
         dc run --rm --no-deps data-corpus
         reindex
       fi
-      # market-analytics keeps the build it resolved at startup; restart it on the new one.
-      for service in market-analytics market-analytics-gpu; do
+      # Market analytics and retrieval keep the build they resolved at startup; restart them on the new one.
+      for service in market-analytics market-analytics-gpu retrieval; do
         if [ -n "$(dc ps -q --status running "$service" 2>/dev/null)" ]; then
           dc restart "$service"
         fi

@@ -336,6 +336,9 @@ services:
     volumes: [demo-data:/data:ro]
     depends_on:
       retrieval-index: { condition: service_completed_successfully }
+      # The server keeps the collection of the build it started on: restart it when the data one-shot is
+      # recreated for another build, as market analytics (demo.sh data prepare restarts it itself).
+      data: { condition: service_completed_successfully, restart: true }
 
   # ---------------------------------------------------------------- analytics and Kumo
   market-analytics:

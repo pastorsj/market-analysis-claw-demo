@@ -57,7 +57,8 @@ they are never committed. `us-equities`' data reaches a machine through a fetch 
 Each build lives in `/data/builds/<pack>@<version>+<profile>+<digest>`. The digest covers the pack's files
 (not its `README.md`, `eval/`, `recordings/` or `tests/`), the profile, the selected corpora and the builder
 itself, so preparing an unchanged pack is a no-op and any change starts a new build. `/data/active` switches
-atomically. `data prepare` also restarts market analytics, which keeps the build it resolved at startup.
+atomically. `data prepare` also restarts market analytics and retrieval, which keep the build they resolved at
+startup; switching `DATA_PACK` and running `up` restarts them too.
 
 `pack.json` in the build is what services read: the sources and questions this build can serve, the database
 name and paths, the analytics and prediction settings, the minute bars' location, and the digests of every file.
