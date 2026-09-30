@@ -227,6 +227,7 @@ vendor/                  the private Auto Ontology submodule (not checked out by
 | [OpenShell](docs/openshell.md) | The sandbox image, the policy, the providers, the lifecycle, known issues |
 | [Retrieval](docs/retrieval.md) | The retrieval pipeline and its documented configuration items |
 | [Data packs](docs/data-packs.md) | The pack contract, building, recording, adding a pack |
+| [Data platform](docs/data-platform.md) | External data, fetch, the importer and its cache, the Data Designer pack, per-pack questions |
 | [Customize](docs/customize.md) | Adding a tool, a server, a skill or a model |
 | [Operations](docs/operations.md) | Lifecycle, Phoenix, jobs, troubleshooting, Brev VM mode |
 | [Decisions](docs/decisions.md) | The decision log and the documented workarounds |
