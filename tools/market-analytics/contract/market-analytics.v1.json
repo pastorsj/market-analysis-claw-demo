@@ -66,6 +66,11 @@
       "for": ["predict_asset_outcomes"],
       "keys": "schema, anchor, entity {table, key}, population {ids}, tables {name: {primary_key, time_column?, links_to_entity?}}, templates [{id, name, description, pql}]",
       "notes": "The tables are views in structured/<database_name>.duckdb under `schema`. Each template's horizon is read from its PQL window, e.g. `, 0, 5, days)`."
+    },
+    "market": {
+      "for": ["minute-bar scans (src/market_analytics/bars.py)"],
+      "bars": "{root, files, symbol_from_path | symbol_column, columns {time, open, high, low, close, volume}, frequency: 1min, timezone, regular_session: [HH:MM, HH:MM]}",
+      "notes": "Optional. pack.yaml's market.bars plus `root`, the raw dataset's directory as the service sees it (read-only), which the data build resolves. The time column holds naive wall-clock times in `timezone`, ordered by time within each symbol; in month=YYYY-MM partitions, a part never splits one symbol's month."
     }
   }
 }
