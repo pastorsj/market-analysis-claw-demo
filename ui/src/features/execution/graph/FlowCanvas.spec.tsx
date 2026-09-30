@@ -8,7 +8,7 @@ import { FlowCanvas } from './FlowCanvas'
 const NODES = [
   { id: 'question', label: 'Question', state: 'completed' as const },
   { id: 'agent', label: 'Hermes agent', detail: '2 tool calls', state: 'running' as const },
-  { id: 'router', label: 'Switchyard router', badges: ['gpt-6-sol · capable'] },
+  { id: 'router', label: 'Switchyard router', badges: ['GPU · cudf.pandas'] },
   {
     id: 'tool:retrieve_evidence',
     label: 'Unstructured Retrieval',
@@ -34,7 +34,7 @@ describe('FlowCanvas', () => {
     )
     expect(screen.getByRole('figure', { name: 'Execution graph' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Hermes agent, running' })).toBeInTheDocument()
-    expect(screen.getByText('gpt-6-sol · capable')).toBeInTheDocument()
+    expect(screen.getByText('GPU · cudf.pandas')).toBeInTheDocument()
     expect(container.querySelectorAll('.react-flow__node-step')).toHaveLength(4)
     expect(container.querySelectorAll('.react-flow__node-group')).toHaveLength(1)
     expect(container.querySelectorAll('.react-flow__edge')).toHaveLength(2)

@@ -23,18 +23,13 @@ const readJson = <T>(file: string): T => JSON.parse(readFileSync(`${RECORDINGS}/
 
 const index = readJson<{ sessions: { id: string; title: string }[] }>('index.json')
 
-const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`
-
-/** The run summary the execution view shows: tool calls by invocation, one model call per `llm.call`. */
-const runSummary = (events: RecordedEvent[]): string => {
-  const toolCalls = new Set(
+/** Tool calls by invocation, as the run summary counts them. */
+const toolCallCount = (events: RecordedEvent[]): number =>
+  new Set(
     events
       .filter((event) => /^(tool|artifact)\./.test(event.eventKind))
       .map((event) => event.invocationId ?? event.eventId)
-  )
-  const modelCalls = events.filter((event) => event.eventKind === 'llm.call')
-  return `completed · ${plural(toolCalls.size, 'tool call')} · ${plural(modelCalls.length, 'model call')}`
-}
+  ).size
 
 test.use({ baseURL: PACK_REPLAY_URL })
 
@@ -58,8 +53,14 @@ for (const { id, title } of index.sessions) {
     await page.getByRole('button', { name: 'View execution for this response' }).click()
 
     const workspace = page.getByRole('region', { name: 'Execution workspace' })
-    await expect(workspace.getByText(runSummary(turn.events))).toBeVisible()
-    await expect(workspace.getByRole('figure', { name: 'Execution graph' })).toBeVisible()
+    const steps = turn.events.length
+    await expect(workspace.getByText(`Step ${steps} of ${steps}`)).toBeVisible()
+    const summary = workspace.getByRole('region', { name: 'Hermes run summary' })
+    await expect(
+      summary.getByText(`${toolCallCount(turn.events)} tool call(s) ·`, { exact: false })
+    ).toBeVisible()
+    await expect(workspace.getByRole('list', { name: 'Execution graph legend' })).toBeVisible()
+    await expect(workspace.getByRole('button', { name: 'Inspect Hermes Agent' })).toBeVisible()
     expect(apiCalls).toEqual([])
   })
 }

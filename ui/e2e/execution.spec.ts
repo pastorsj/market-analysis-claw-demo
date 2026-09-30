@@ -30,30 +30,36 @@ test('a recorded session replays its run as a graph and opens an explorer', asyn
   await page.getByRole('button', { name: 'View execution for this response' }).click()
 
   const workspace = page.getByRole('region', { name: 'Execution workspace' })
-  await expect(workspace.getByText(/completed · 2 tool calls · 2 model calls/)).toBeVisible()
-  const graph = workspace.getByRole('figure', { name: 'Execution graph' })
-  await expect(graph.getByRole('group', { name: 'Hermes agent, completed' })).toBeVisible()
-  await expect(graph.getByText('OpenShell sandbox')).toBeVisible()
-  await expect(graph.getByText('gpt-6-sol · capable')).toBeVisible()
-  await expect(graph.locator('.react-flow__edge')).toHaveCount(9)
+  await expect(workspace.getByRole('heading', { name: 'Execution Graph' })).toBeVisible()
+  await expect(workspace.getByText('Hermes Recorded')).toBeVisible()
+  await expect(workspace.getByText('Step 10 of 10')).toBeVisible()
+  const summary = workspace.getByRole('region', { name: 'Hermes run summary' })
+  await expect(summary.getByText('2 tool call(s) ·', { exact: false })).toBeVisible()
+  await expect(workspace.locator('[data-group-id]')).toHaveCount(5)
+  await expect(workspace.getByRole('button', { name: 'Inspect Hermes Agent' })).toBeVisible()
 
-  // The retrieval tool carries the LangChain logo, and it loads
-  const retrieval = graph.getByRole('group', { name: 'Unstructured Retrieval, completed' })
+  // Retrieve Evidence carries the LangChain logo, and it loads
+  const retrieval = workspace.locator('[data-node-id="retriever-tool"]')
+  await expect(retrieval).toHaveAttribute('data-state', 'completed')
   const langchain = retrieval.getByRole('img', { name: 'LangChain' })
   await expect(langchain).toHaveAttribute('src', '/ecosystem-logos/langchain.svg')
   await expect
     .poll(() => langchain.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0)
 
-  await graph.getByRole('group', { name: 'Market Anomaly Scan, completed' }).click()
+  // The anomaly scan ran on the GPU; its node says so and opens its explorer
+  const anomaly = workspace.locator('[data-node-id="market-anomaly-scan"]')
+  await expect(anomaly).toHaveAttribute('data-gpu-accelerated', 'true')
+  await anomaly.click()
   const explorer = workspace.getByRole('region', { name: 'Market Anomaly Scan explorer' })
   await expect(explorer.getByRole('img', { name: /Anomaly score by observation/ })).toBeVisible()
   await expect(explorer.getByText('GPU · cuml.accel 26.6.0')).toBeVisible()
+  await explorer.getByRole('button', { name: 'Close explorer' }).click()
 
   // Replay: step back to the start, where no tool has run yet
-  await workspace.getByRole('slider', { name: 'Replay step' }).press('Home')
+  await workspace.getByRole('slider', { name: 'Replay position' }).press('Home')
   await expect(workspace.getByText('Step 0 of 10')).toBeVisible()
-  await expect(graph.getByRole('group', { name: 'Market Anomaly Scan, idle' })).toBeVisible()
+  await expect(anomaly).toHaveAttribute('data-state', 'pending')
 
   expect(apiCalls).toEqual([])
 })

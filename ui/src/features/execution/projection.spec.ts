@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { ExecutionEventV2 } from './contract'
-import { buildExecutionGraph } from './graph/view-model'
+import { buildExecutionGraphViewModel, toGraphEvent, toGraphProjection } from './graph'
 import { describeRun, projectRun } from './projection'
 import { fixtureEvents } from './test-utils/fixtures'
 
@@ -77,8 +77,15 @@ describe('projectRun', () => {
       state: 'failed',
       receiptIds: failedReceipt.artifactRefs,
     })
-    const graph = buildExecutionGraph(run, run, {})
-    expect(graph.nodes.find((node) => node.id === 'tool:market_anomaly_scan')!.state).toBe('failed')
+    const events = [fixtureEvents[0], fixtureEvents[2], failedReceipt, fixtureEvents[6]].map(
+      toGraphEvent
+    )
+    const graph = buildExecutionGraphViewModel({
+      allEvents: events,
+      visibleEvents: events,
+      projection: toGraphProjection(run, events),
+    })
+    expect(graph.nodes.find((node) => node.id === 'market-anomaly-scan')!.state).toBe('failed')
   })
 
   it('ends the run with the job when no run event says how it ended', () => {

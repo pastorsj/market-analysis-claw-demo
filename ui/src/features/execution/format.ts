@@ -23,9 +23,6 @@ export const formatNumber = (value: number, digits = 3): string =>
 /** Milliseconds between two ISO timestamps. */
 export const elapsedMs = (from: string, to: string): number => Date.parse(to) - Date.parse(from)
 
-/** The model name without its provider path: `nvidia/nemotron-3-ultra-550b-a55b` → `nemotron-3-ultra-550b-a55b`. */
-export const shortModel = (model: string): string => model.split('/').pop() || model
-
 /** Any JSON value as one line of text for a table cell. */
 export const cellText = (value: unknown): string => {
   if (value === null || value === undefined) return '–'

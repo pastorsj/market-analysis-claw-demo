@@ -8,7 +8,6 @@ import Image from 'next/image'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { Badge, Text } from '@/adapters/ui'
 import type { NodeLogo } from '../registry'
-import type { NodeState } from './view-model'
 import styles from './graph.module.css'
 
 /** What a canvas node shows. `kind` only styles it. */
@@ -21,6 +20,9 @@ export type CanvasNodeData = {
   logos?: readonly NodeLogo[]
   kind?: string
 }
+
+/** A node's state in a canvas: `idle` until something runs it. */
+export type NodeState = 'idle' | 'running' | 'completed' | 'failed'
 
 export type CanvasNode = Node<CanvasNodeData, 'step'>
 export type GroupNode = Node<{ label: string }, 'group'>

@@ -27,7 +27,7 @@ describe('buildTimeline', () => {
     expect(timeline.rows[4]).toMatchObject({
       durationMs: null,
       detail: '41,870 in · 2,796 out',
-      badges: ['gpt-6-sol · capable'],
+      badges: [],
     })
   })
 

@@ -21,6 +21,8 @@ export interface ExecutionRun {
   receipts: Record<string, ReceiptV2>
   /** The job's latest status (`running`, `success`, `failure`, `interrupted`, …); null until known */
   jobStatus: string | null
+  /** Evidence (receipt) ids the answer cites; null until its report is known */
+  citedEvidenceIds: string[] | null
 }
 
 /** A job's execution record as the API exports it and a recording stores it. */
@@ -29,6 +31,7 @@ export interface ExecutionRecord {
   events: unknown[]
   receipts: unknown[]
   status?: string
+  report?: { citations: unknown[] } | null
 }
 
 interface ExecutionState {
@@ -45,7 +48,25 @@ const emptyRun = (jobId: string): ExecutionRun => ({
   events: [],
   receipts: {},
   jobStatus: null,
+  citedEvidenceIds: null,
 })
+
+/** The evidence ids of a report's citations (`{evidenceId, …}`), each once. */
+const citedEvidence = (report: ExecutionRecord['report']): string[] | null =>
+  report
+    ? [
+        ...new Set(
+          report.citations.flatMap((citation) =>
+            typeof citation === 'object' &&
+            citation !== null &&
+            'evidenceId' in citation &&
+            typeof citation.evidenceId === 'string'
+              ? [citation.evidenceId]
+              : []
+          )
+        ),
+      ]
+    : null
 
 const merge = (
   run: ExecutionRun,
@@ -86,14 +107,21 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     )
   },
 
-  addRecord: ({ jobId, events, receipts, status }) => {
+  addRecord: ({ jobId, events, receipts, status, report }) => {
     const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
     const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
     const dropped = events.length + receipts.length - validEvents.length - validReceipts.length
     set((state) => {
       const run = merge(state.runs[jobId] ?? emptyRun(jobId), validEvents, validReceipts)
       return {
-        runs: { ...state.runs, [jobId]: { ...run, jobStatus: status ?? run.jobStatus } },
+        runs: {
+          ...state.runs,
+          [jobId]: {
+            ...run,
+            jobStatus: status ?? run.jobStatus,
+            citedEvidenceIds: citedEvidence(report) ?? run.citedEvidenceIds,
+          },
+        },
         dropped: state.dropped + dropped,
       }
     })

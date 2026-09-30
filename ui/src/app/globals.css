@@ -160,6 +160,55 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * Keep every native select arrow inside a square end-cap. Centering the
+ * chevron in that square makes its top, bottom, and right optical insets
+ * identical regardless of the control height.
+ */
+.ui-select-shell {
+  position: relative;
+  display: inline-grid;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ui-select-shell > select {
+  appearance: none;
+  min-width: 0;
+  padding-right: 2rem !important;
+}
+
+.ui-select-chevron {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  height: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  color: var(--text-color-secondary);
+  pointer-events: none;
+  transition: color 120ms ease;
+}
+
+.ui-select-chevron::before {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: '';
+  transform: rotate(45deg);
+}
+
+.ui-select-shell > select:hover:not(:disabled) + .ui-select-chevron,
+.ui-select-shell > select:focus-visible + .ui-select-chevron {
+  color: var(--text-color-brand);
+}
+
+.ui-select-shell > select:disabled + .ui-select-chevron {
+  opacity: 0.38;
+}
+
 /* Hide scrollbar utility */
 @utility scrollbar-hide {
   -ms-overflow-style: none;

@@ -8,7 +8,7 @@
  */
 
 import type { ExecutionEventV2 } from '../contract'
-import { elapsedMs, formatCount, shortModel } from '../format'
+import { elapsedMs, formatCount } from '../format'
 import type { CallState, RunProjection } from '../projection'
 
 export type RowKind = 'run' | 'tool' | 'model' | 'event'
@@ -86,9 +86,7 @@ export const buildTimeline = (
       state: 'completed',
       startMs: offset(call.occurredAt),
       durationMs: null,
-      badges: call.servedModel
-        ? [[shortModel(call.servedModel), call.tier].filter(Boolean).join(' · ')]
-        : [],
+      badges: [],
       invocationId: null,
     })
   }
