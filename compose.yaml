@@ -519,4 +519,7 @@ volumes:
   switchyard-data: {}
   openshell-state: {}
   openshell-client: {}
-  auto-ontology-db: {}
+  # One per data pack: Auto Ontology keeps term names unique, and every pack names its tables alike (assets,
+  # daily_prices), so one pack's ontology cannot be imported over another's. Switching back reuses the old one.
+  auto-ontology-db:
+    name: market-demo_auto-ontology-db_${DATA_DATABASE_NAME:-synthetic_market}

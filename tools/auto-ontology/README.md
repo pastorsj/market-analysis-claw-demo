@@ -36,6 +36,10 @@ auto-ontology-db ──> auto-ontology-frontend-migrate ──> auto-ontology-fr
   (`data/src/demo_data/ontology.py`). The seed imports it (`POST /api/model/import?replace=true&embed=true`)
   before ingestion first starts, so ingestion reuses the imported IDs. The import replaces the previous model,
   so running the seed again is safe.
+- Each data pack has its own `auto-ontology-db` volume (`market-demo_auto-ontology-db_<database>`). The packs
+  name their tables alike, and Auto Ontology keeps term names unique, so one pack's model cannot be imported over
+  another's. Switching packs starts that pack's ontology database, empty the first time; `down --volumes`
+  removes every pack's.
 - Ingestion catalogs every relation in the DuckDB file, including the `prediction` views that exist for Kumo.
   Patch `backend/0001` keeps them out of search.
 - The database connection comes from `CONNECTION_STRINGS`, not from the catalog. As a result, upstream's

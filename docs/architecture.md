@@ -30,7 +30,7 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 
 The `build` and `tools` profiles hold the agent image build and the OpenShell CLI that `demo.sh` runs. Named
 volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `switchyard-data`, `openshell-state`,
-`openshell-client` and `auto-ontology-db`.
+`openshell-client` and `auto-ontology-db` (one per data pack).
 
 ## How a question is answered
 

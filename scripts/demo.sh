@@ -153,6 +153,9 @@ cmd_down() {
   log "stopping the stack"
   if $volumes; then
     dc --profile '*' down --volumes
+    # Compose removes only the active pack's Auto Ontology database; the other packs' go too.
+    docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" \
+      --filter label=com.docker.compose.volume=auto-ontology-db | xargs -r docker volume rm
   else
     dc --profile '*' down
   fi
