@@ -45,14 +45,16 @@ sandbox_state() {
 
 # Whatever the sandbox depends on. A change to any of it recreates the sandbox. Both Hermes keys
 # are in it: the server key is set at creation, and a new receipt key moves the provider revision.
-# Hermes lists each MCP server's tools once, when it starts, so the tool images and the data pack
-# (its universes and tables shape the tool schemas) are in it too: after a DATA_PACK switch the
-# model would otherwise still see the previous pack's universes.
+# Hermes lists each MCP server's tools once, when it starts, so the tool images, the data pack and
+# its profile are in it too: they shape the tool schemas (the universes, the relationship graph, the
+# minute bars). After a DATA_PACK or DATA_PACK_PROFILE switch the model would otherwise still see
+# the previous build's tools.
 sandbox_fingerprint() {
   {
     docker image inspect -f '{{.Id}}' "$AGENT_IMAGE"
     docker image inspect -f '{{.Id}}' "${TOOL_IMAGES[@]}" 2>/dev/null || true # absent profiles
     cat "$ROOT/data/packs/$DATA_PACK/pack.yaml"
+    echo "${DATA_PACK_PROFILE:-}"
     cat "$ROOT"/infra/openshell/providers/*.yaml "$ROOT/infra/openshell/gateway.toml" "$VERSIONS_FILE"
     echo "$AGENT_FEATURES"
     printf '%s' "$HERMES_API_SERVER_KEY" | sha256

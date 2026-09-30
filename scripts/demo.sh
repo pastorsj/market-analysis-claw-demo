@@ -41,9 +41,9 @@ Run
                           delete the sandbox, then stop everything (--volumes: also delete data;
                           --prune: also remove this project's untagged images and Docker's unused
                           build cache, which is host-wide)
-  restart SERVICE         agent: recreate the sandbox; switchyard: re-render its routes from
-                          .env and refresh the API's model ids; anything else:
-                          docker compose restart SERVICE
+  restart SERVICE         agent: recreate the sandbox; switchyard: apply section 1 of .env
+                          (routes, models, endpoints, keys) to Switchyard, the API, Auto Ontology
+                          and retrieval; anything else: docker compose restart SERVICE
   status                  services, the sandbox, Switchyard routes and URLs
   logs [agent|routing|SERVICE...] [-f]
                           agent: Hermes in the sandbox; routing: Switchyard's routing decisions
@@ -53,7 +53,8 @@ Data and recordings
   data fetch [DATASET...] [--verify-only]
                           fetch the pack's external datasets into DATA_SOURCE_DIR from each
                           DATA_SOURCE_<ID> in .env, and verify them file by file
-  data prepare            build the active data pack (and the corpus and index with retrieval)
+  data prepare            build the active data pack (and the corpus and index with retrieval);
+                          on a running stack, also restart the tools and, if needed, the sandbox
   data reindex            rebuild the retrieval index, e.g. after changing the embed model
   data generate [ARGS...]  write the synthetic-market text with NeMo Data Designer and Nemotron, with
                           uv on the host (ARGS go to demo-data-generate, e.g. --profile large)
@@ -184,10 +185,24 @@ cmd_restart() {
   require_env
   case $1 in
     agent) openshell_up --recreate ;;
-    # The API recreates only if its model ids changed; --no-deps leaves the data one-shot alone.
-    switchyard) dc up -d --wait --force-recreate switchyard && dc up -d --wait --no-deps api ;;
+    switchyard) restart_inference ;;
     *) dc restart "$1" ;;
   esac
+}
+
+# Apply section 1 of .env (the inference endpoint, its models and keys) to everything that reads it. The sandbox
+# is kept. The API recreates only if its model ids changed, and Auto Ontology if its settings did; --no-deps
+# leaves the one-shots alone. Compose never compares a secret's value, so the services holding the inference
+# key as a secret are always recreated: Switchyard, and retrieval (its key defaults to the inference key).
+restart_inference() {
+  dc up -d --wait --force-recreate switchyard
+  dc up -d --wait --no-deps api
+  if has_profile ontology; then
+    dc up -d --wait --no-deps auto-ontology auto-ontology-ingestion
+  fi
+  if has_profile retrieval; then
+    dc up -d --wait --no-deps --force-recreate retrieval
+  fi
 }
 
 cmd_status() {
@@ -278,12 +293,18 @@ cmd_data() {
         dc run --rm --no-deps data-corpus
         reindex
       fi
-      # Market analytics and retrieval keep the build they resolved at startup; restart them on the new one.
+      # Market analytics and retrieval keep the build they resolved at startup; restart them on the new one
+      # (`up --wait` waits until they are healthy again).
       for service in market-analytics market-analytics-gpu retrieval; do
         if [ -n "$(dc ps -q --status running "$service" 2>/dev/null)" ]; then
-          dc restart "$service"
+          dc restart "$service" && dc up -d --wait --no-deps "$service"
         fi
       done
+      # Hermes lists the tools once, when the sandbox starts: recreate the sandbox if the build changed them.
+      if gateway_ready && [ -n "$(sandbox_state)" ]; then
+        require_env
+        openshell_up
+      fi
       ;;
     reindex) reindex ;;
     generate)
