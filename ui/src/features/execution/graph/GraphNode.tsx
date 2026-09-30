@@ -48,8 +48,8 @@ export const StepNode = ({ data, selected }: NodeProps<CanvasNode>): ReactNode =
             alt={logo.brand}
             title={logo.brand}
             data-brand={logo.brand}
-            width={14}
-            height={14}
+            width={18}
+            height={18}
             unoptimized
           />
         ))}

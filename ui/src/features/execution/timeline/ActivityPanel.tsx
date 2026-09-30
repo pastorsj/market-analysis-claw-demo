@@ -1,17 +1,22 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-/** The Agent Activity side panel: the current job's timeline as it streams in. */
+/**
+ * The Agent Activity side panel: the current job's timeline as it streams in.
+ * A job of a reopened session streams nothing, so its events come from the
+ * job export.
+ */
 
 'use client'
 
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import { Button, Flex, Text } from '@/adapters/ui'
 import { ChartFlow } from '@/adapters/ui/icons'
 import { useLayoutStore } from '@/features/layout/store'
-import type { ActivityPanelProps } from '@/shared/context'
+import { useAppConfig, type ActivityPanelProps } from '@/shared/context'
 import type { ExecutionEventV2 } from '../contract'
 import { describeRun, projectRun } from '../projection'
+import { loadJobExport } from '../replay/sources'
 import { useExecutionRun } from '../store'
 import { buildTimeline } from './timeline-model'
 import { ExecutionTimeline } from './ExecutionTimeline'
@@ -19,7 +24,13 @@ import { ExecutionTimeline } from './ExecutionTimeline'
 const NO_EVENTS: ExecutionEventV2[] = []
 
 export const ActivityPanel = ({ jobId }: ActivityPanelProps): ReactNode => {
+  const { mode } = useAppConfig()
   const stored = useExecutionRun(jobId)
+  const known = stored !== undefined
+  useEffect(() => {
+    // Replay runs are already in the store; an export that fails leaves the panel as it was
+    if (mode === 'live' && jobId && !known) loadJobExport(jobId).catch(() => undefined)
+  }, [mode, jobId, known])
   const events = stored?.events ?? NO_EVENTS
   const jobStatus = stored?.jobStatus ?? null
   const run = useMemo(() => projectRun(events, jobStatus), [events, jobStatus])

@@ -103,6 +103,34 @@ describe('buildExecutionGraph', () => {
     expect(node(graph, 'answer').state).toBe('idle')
   })
 
+  it('fails a tool node only while its latest call has failed', () => {
+    const scan = fixtureEvents[6] // tool.completed of market_anomaly_scan
+    const failedScan = {
+      ...scan,
+      eventId: 'failed-scan',
+      invocationId: 'hermes-tool:failed-scan',
+      display: { ...scan.display, attributes: { reported_error: true } },
+    }
+    const states = (events: typeof fixtureEvents) => {
+      const run = projectRun(events)
+      const graph = buildExecutionGraph(run, run, receipts)
+      return [
+        node(graph, 'tool:market_anomaly_scan'),
+        node(graph, 'resource:market_analytics'),
+      ].map((n) => n.state)
+    }
+    // A failed scan, then the scan the agent retried it with
+    expect(states([...fixtureEvents.slice(0, 2), failedScan, ...fixtureEvents.slice(2)])).toEqual([
+      'completed',
+      'completed',
+    ])
+    // A scan, then a failed one nothing retried
+    expect(states([...fixtureEvents.slice(0, 8), failedScan, ...fixtureEvents.slice(8)])).toEqual([
+      'failed',
+      'failed',
+    ])
+  })
+
   it('links a tool the registry does not know straight to the answer', () => {
     const run = projectRun([{ ...fixtureEvents[2], toolName: 'web_search' }])
     const graph = buildExecutionGraph(run, run, {})

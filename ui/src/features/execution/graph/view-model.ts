@@ -49,9 +49,11 @@ const RUN_NODE_STATE: Record<RunProjection['status'], NodeState> = {
   cancelled: 'failed',
 }
 
+/** A failed call that a later call of the same tool retried successfully does not fail the node. */
 const combinedState = (calls: ToolCall[]): NodeState => {
   if (calls.some((call) => call.state === 'running')) return 'running'
-  if (calls.some((call) => call.state === 'failed')) return 'failed'
+  const latestByTool = new Map(calls.map((call) => [call.name, call]))
+  if ([...latestByTool.values()].some((call) => call.state === 'failed')) return 'failed'
   return calls.length ? 'completed' : 'idle'
 }
 
