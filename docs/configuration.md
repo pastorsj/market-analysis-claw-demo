@@ -98,9 +98,14 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 | `DATA_PACK` | `market-analysis` | A directory under `data/packs/` |
 | `DATA_PACK_PROFILE` | the pack's default (`qualification`) | The generator profile: `qualification` (2,000 issuers) or `interactive` (12, fast) |
 | `DATA_CORPORA` | the pack's defaults | Comma-separated corpus sources; empty means `market_news` (SEC EDGAR), `market_regulations` (eCFR) and `market_briefs` (fictional briefs) |
-| `SEC_USER_AGENT` | – | A name and an email, required by SEC EDGAR's fair-access policy for `market_news` |
+| `SEC_USER_AGENT` | – | A name and an email, required by SEC's fair-access policy for the EDGAR filings corpus and for SEC company data (`us-equities`) |
+| `DATA_SOURCE_DIR` | `$HOME/market-demo-data` | Where external datasets live on the host, outside the repository: one directory per dataset, mounted read-only at `/sources`. On a VM, the large disk |
+| `DATA_SOURCE_<ID>` | – | Where `data fetch` gets external dataset `<id>` (upper case, `-` as `_`; `us-equities` reads `DATA_SOURCE_MINUTE_BARS`): a directory or `host:/path` (rsync), or an `https`, `s3`, `gs` or `hf` URL. Empty: verify what is in place |
+| `DATA_SOURCE_HTTP_TOKEN`, `AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS`, `HF_TOKEN` | – | Credentials for those URLs, only when the source needs them. Each reaches only the one-shot fetch run, and only for its scheme |
+| `DATA_DUCKDB_MEMORY` | DuckDB's default | A memory cap for the data build, e.g. `8GB`; past it the rollup spills to the data volume |
 
-After changing any of them, run `./scripts/demo.sh data prepare`. See [data packs](data-packs.md).
+After changing any of them, run `./scripts/demo.sh data prepare` (and `data fetch` first for a new external
+dataset). See [data packs](data-packs.md) and [data platform](data-platform.md).
 
 ### 5. Internal secrets
 

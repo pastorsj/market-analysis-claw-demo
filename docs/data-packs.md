@@ -30,6 +30,22 @@ The synthetic market has planted facts (eight news events that move prices, a st
 prediction anchor) so answers can be checked; `eval/oracles/*.sql` computes them. The downloaded documents are
 fetched at build time from pinned URLs and checked against their SHA-256; they are never committed.
 
+## The us-equities pack
+
+[`us-equities`](../data/packs/us-equities/README.md) holds real prices: daily bars for about 1,600 US-listed
+stocks, rolled up from real split-adjusted one-minute bars, with SEC company names, CIKs and SIC codes. The bars
+are an external dataset that is never committed; fetch them before the first `prepare`:
+
+```bash
+# .env: DATA_PACK=us-equities, and DATA_SOURCE_MINUTE_BARS=<a directory, host:/path or URL>
+./scripts/demo.sh data fetch          # into $DATA_SOURCE_DIR/minute-bars, verified against the pinned manifest
+./scripts/demo.sh data prepare
+```
+
+SEC EDGAR filings and eCFR Title 17 are its document sources, separate from the prices. The pack has no
+ticker-linked news, so the two news tools report that they are unavailable. How the data is fetched, verified,
+rolled up and imported, and how it scales, is in [data platform](data-platform.md).
+
 ## How a pack is built
 
 ```text
@@ -61,7 +77,8 @@ Other commands, all run in the data image:
 ./scripts/demo.sh data validate       # the pack's schema, cross-references and tool contracts
 ./scripts/demo.sh data verify         # the active build still matches the digests in its pack.json
 ./scripts/demo.sh data list           # packs and builds
-./scripts/demo.sh data clean [--all]  # remove inactive builds (--all: also the download cache)
+./scripts/demo.sh data clean [--all]  # remove inactive builds and unused caches (--all: every cache)
+./scripts/demo.sh data fetch          # fetch and verify the pack's external datasets
 ./scripts/demo.sh data reindex        # rebuild only the retrieval index
 ```
 

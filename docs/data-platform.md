@@ -40,7 +40,7 @@ this page wins until the code catches up. Once it has, those pages describe the 
   /data/cache/rollups/<key>/      daily bars per symbol
         │  import: sessions, exclusions, companies, peers, news (if any)
         ▼
-  /data/builds/<build>/           tables/*.parquet, DuckDB (views over the Parquet), ontology, prediction
+  /data/builds/<build>/           tables/*.parquet, DuckDB, ontology, prediction
         ▲
   /data/active ──▶ api, market-analytics, Auto Ontology, retrieval (unchanged)
 ```
@@ -103,6 +103,7 @@ market:
   news: null                            # or a Parquet path in the dataset
   exclude: [warrants, units, rights, preferred]
   min_sessions: 20
+  peers: 8                              # declared peers per asset
 
 structured:
   source: market_data
@@ -113,8 +114,7 @@ structured:
     - { name: assets, origin: minute-bars }
     - { name: ticker_history, origin: minute-bars }
     - { name: trading_sessions, origin: minute-bars }
-    - { name: daily_prices, origin: minute-bars, storage: parquet,
-        primary_key: [price_id], foreign_keys: { asset_id: assets.asset_id } }
+    - { name: daily_prices, origin: minute-bars }
     - { name: asset_relationships, origin: minute-bars }
 
 analytics:
@@ -128,11 +128,14 @@ analytics:
 | `market.bars` | Where the bars are and how to read them in place: a glob, where the symbol comes from (a path pattern or a column), the column mapping, the bar frequency, the time zone of the timestamps and the regular session. |
 | `market.companies` | `sec` joins SEC company metadata to the symbols. A path reads a companies table from the dataset. |
 | `market.news` | A path to a ticker-linked news table in the dataset, or `null`. |
-| `market.exclude`, `min_sessions` | Which symbols the importer drops (see [import](#import)). |
-| `tables[].storage: parquet` | The DuckDB file gets a view over the build's Parquet instead of a copy of the rows. Keys for such a view are declared here, because a view carries no constraints. The ontology builder reads them, as it already does for the prediction views. |
-| `analytics.news_table` | May be `null`. |
+| `market.exclude`, `min_sessions`, `peers` | Which symbols the importer drops (see [import](#import)), and how many declared peers each asset gets. |
+| `analytics.news_table` | May be `null`: it must be set exactly when `market.news` is. |
 | `prediction.population` | May name only a `view`. The builder resolves the ids into `pack.json`, so readers still see `ids`. |
-| `provenance[].kind: external` | A new provenance kind, next to `generated`, `committed` and `download`. The importer writes every table whose `origin` is an `external` entry (in `synthetic-market`, the `generated` entry of its generator). |
+| `provenance[].kind: external` | A new provenance kind, next to `generated`, `committed` and `download`. The importer writes every table whose `origin` is `market.bars.dataset`: an `external` entry, or in `synthetic-market` the `generated` entry of its generator, whose raw output is cached in `/data/cache/generated/<key>/` and imported the same way. |
+| `license.path` | Now optional: a private dataset may have no public terms. |
+
+`validate` checks that the tables with that origin are exactly the importer's set, and `pack.json` gets
+`market.bars` with `root`, the raw dataset's directory as the services see it, for tools that read minute bars.
 
 The build digest already covers `pack.yaml`, so it covers the pinned fingerprints too. A build of a pack
 with external data starts only when every dataset it uses has been verified (next section).
@@ -184,29 +187,39 @@ it is empty, fetch only verifies what is already in place.
 
 | Source | Example | Credentials (`.env`) | Runs |
 |---|---|---|---|
-| Local directory | `/mnt/datasets/bfdmini` or `file:///mnt/…`, mounted read-only into the fetch run | – | in the data image |
-| rsync over SSH | `user@host:/srv/bfdmini` | the host's SSH agent and keys | on the host, then `--verify-only` in the image |
-| HTTPS | `https://example.com/bfdmini/` (a prefix; files are fetched as `<prefix><path>`), or one `.tar`, `.tar.gz` or `.tar.zst` archive (a pre-signed URL works) | `DATA_SOURCE_HTTP_TOKEN` (optional, sent as a bearer token) | in the data image |
+| Local directory | `/mnt/datasets/bfdmini` or `file:///mnt/…` | – | rsync on the host, then `--verify-only` in the image |
+| rsync over SSH | `user@host:/srv/bfdmini` | the host's SSH agent and keys | rsync on the host, then `--verify-only` in the image |
+| HTTPS | `https://example.com/bfdmini/` (a prefix; files are fetched as `<prefix><path>`), or one `.tar` or `.tar.gz` archive with the dataset at its top level (a pre-signed URL works) | `DATA_SOURCE_HTTP_TOKEN` (optional, sent as a bearer token) | in the data image |
 | S3 or S3-compatible | `s3://bucket/prefix` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optional `AWS_SESSION_TOKEN`, `AWS_REGION`, `AWS_ENDPOINT_URL` | in the data image |
 | Google Cloud Storage | `gs://bucket/prefix` | `GOOGLE_APPLICATION_CREDENTIALS`: a host path to a service-account JSON, mounted read-only (empty for a public bucket) | in the data image |
 | Hugging Face | `hf://datasets/<owner>/<name>@<revision>/<prefix>` | `HF_TOKEN` | in the data image |
 
-- The procedure: get the manifest and check its fingerprint (for an archive, after unpacking it into a
-  staging directory). Then fetch each missing or changed file to
-  `<path>.part`, hashing it while it streams, and rename it only when the hash matches. Downloads run in
-  parallel (`DATA_FETCH_JOBS`, default 8) with three retries each.
-- Remote schemes use fsspec, through `s3fs`, `gcsfs`, `huggingface_hub` and its HTTP filesystem. They are
-  the data project's `fetch` extra. rsync runs on the host because it needs the host's SSH identity.
+- The procedure (`data/src/demo_data/fetch.py`): get the manifest and check its fingerprint (for an
+  archive, after unpacking it into a staging directory). Then fetch each missing or changed file to a hidden
+  `.<name>.part`, hashing it while it streams, and rename it only when the hash matches. Downloads run in
+  parallel (`DATA_FETCH_JOBS`, default 8) with three attempts each.
+- Every URL is an fsspec URL, so one loop serves every scheme; the `data-fetch` one-shot (profile `tools`)
+  runs it with `DATA_SOURCE_DIR` writable, as the host user. The remote backends (`s3fs`, `gcsfs`,
+  `huggingface_hub`, and `aiohttp` for HTTPS) are the data project's `remote` extra, which the image
+  installs; they add about 190 MB to it (508 to 699 MB on x86_64). Local directories and rsync sources are copied on the host,
+  because only the host sees them and holds the SSH identity; `demo.sh` then makes them readable to the
+  services (`chmod a+rX`).
 - **Credentials.** They live only in `.env`, which is git-ignored. `demo.sh` passes only the variables of
   the chosen scheme to the one-shot fetch container, as `-e NAME` so the values never appear on a command
   line. No long-running service receives them.
 - NGC is not a scheme. Download an NGC resource with its CLI, then use it as a local directory.
 - `DATA_SOURCE_DIR` defaults to `$HOME/market-demo-data`, outside the repository, so the data cannot be
-  staged by accident. `.gitignore` also ignores `data/external/` for anyone who points it there. A CI step
-  fails if a `.parquet` or `.duckdb` file is committed outside `data/packs/*/text/` and the test fixtures.
+  staged by accident. Three guards back that up: `.gitignore` ignores `data/external/`, `.verified.json` and
+  Parquet, Arrow and Feather files outside `data/packs/*/text/` and the test fixtures; a pre-commit hook
+  refuses those files (and DuckDB files); and a CI step fails if any is committed.
+- `doctor` (and so `up`) stops when a pack's dataset has not been fetched, naming the variable to set, and
+  checks that `DATA_SOURCE_DIR` has room for it (its `bytes` plus 10%).
 - **Brev and other VMs.** Point `DATA_SOURCE_DIR` at the large disk. At setup, run `data fetch` from a
   bucket, or push from a laptop with `rsync -a <bfdmini>/benchmark-subset/ <vm>:$DATA_SOURCE_DIR/minute-bars/`
-  and then run `data fetch --verify-only` on the VM.
+  and then run `data fetch --verify-only` on the VM ([operations](operations.md#brev-vm-mode)).
+- Measured on `bfdmini` (2,206 files, 1.81 GB) on a 14-core laptop: a fetch from a local directory with
+  `demo-data` itself took 2.1 s; `demo.sh data fetch` (rsync on the host, then hashing every file in the
+  image on a 4-CPU colima VM) took 15 s; a rerun of `--verify-only` hashed nothing and took 0.1 s.
 
 ## Storage layout
 
@@ -216,9 +229,10 @@ the symbol can be found in a column or in the path, and when the files are order
 - **`bfdmini`** has one file per symbol (`<SYMBOL>_full_1min_adjsplit.parquet`), sorted by time. Its columns
   are `ts` (naive US/Eastern wall-clock time), `timestamp` (the same wall-clock time in microseconds), `open`,
   `high`, `low` and `close` (float32, split-adjusted), `volume` (float64), `symbol_id` and `asset_class_id`.
-  Bars run from 04:00 to 19:59. Reads are partitioned by symbol through the file list, and by date through
-  each file's row-group statistics. BFD's own Polars-GPU and cuDF loaders expect this layout, so the same
-  bytes serve them unchanged.
+  Bars run from 04:00 to 19:59. Reads are partitioned by symbol through the file list. Its files carry no
+  min/max statistics for `ts`, so a date window cannot prune row groups: each file (two row groups of about
+  120,000 bars) is read whole. BFD's own Polars-GPU and cuDF loaders expect this layout, so the same bytes
+  serve them unchanged.
 - **The canonical layout** is what `synthetic-market` writes, and what a new real dataset should use:
 
   ```text
@@ -237,23 +251,23 @@ the symbol can be found in a column or in the path, and when the files are order
   too many small files.
 
 **The build keeps v1's table layout:** one `tables/<table>.parquet` per table, sorted by its natural key, with
-row groups. Small dimension tables are loaded into DuckDB with their keys, as in v1. Tables marked
-`storage: parquet` (`daily_prices`, `company_news`) become views instead:
+row groups of 122,880 rows, and every table loaded into DuckDB with its keys, as in v1. The raw minute bars
+never enter the DuckDB file; only the rollup and the minute-bar tools read them.
 
-```sql
-CREATE VIEW main.daily_prices AS SELECT * FROM read_parquet('/data/builds/<build>/tables/daily_prices.parquet');
-```
-
-The path is absolute because DuckDB resolves relative paths from the reader's working directory. Every
-reader already mounts the volume at `/data`. The raw minute bars never enter the DuckDB file. Only the
-rollup and the optional intraday tool read them.
+The design proposed `storage: parquet`: DuckDB views over the build's Parquet instead of copies. It is not
+built, because the API opens the database with external access disabled (its data viewer runs user SQL), and a
+view over `read_parquet` would fail there. Copying is cheap at this scale. On `bfdmini`, the 452,837 daily rows
+are 14.9 MB of Parquet and 58 MB of DuckDB, most of it the key indexes (20 MB without them; the load takes 0.65 s
+with them and 0.1 s without). At 27 million rows that is about 3.4 GB and 40 s, so a pack that large should drop
+the `daily_prices` constraints from `schema.sql`.
 
 ## Import
 
 ### The daily rollup
 
-This is one DuckDB statement over the bars, read in place. It streams, and it spills to
-`/data/cache/tmp` under `DATA_DUCKDB_MEMORY` (default: half the container's memory).
+This is one DuckDB statement over the bars, read in place (`data/src/demo_data/market.py`). It streams, and it
+spills to `/data/cache/tmp` past `DATA_DUCKDB_MEMORY` (default: DuckDB's own limit, 80% of the memory it sees).
+Only files the manifest lists are read: a file that matches the glob but is not in the manifest stops the build.
 
 ```sql
 SELECT symbol, CAST(time AS DATE) AS trading_date,
@@ -269,9 +283,10 @@ GROUP BY ALL ORDER BY symbol, trading_date
 - On early-close days (for example 2025-11-28 and 2025-12-24), after-hours bars up to 16:00 are counted
   as regular. This is a known approximation; there is no holiday calendar.
 - Daily bars (`frequency: 1d`) pass through unchanged.
+- A `TIMESTAMP WITH TIME ZONE` time column is converted to wall-clock time in `market.bars.timezone` first.
 - Measured on `bfdmini`: the pass reads all 117,242,458 bars and keeps 106,348,392 regular-session bars. It
-  writes 572,995 daily rows (2,200 symbols, 305 dates) to a 16.6 MB file in 1.5 s on a 14-core laptop.
-  At 100 times the size, expect minutes, once.
+  writes 572,995 daily rows (2,200 symbols, 305 dates) to a 12 MB file in 0.9 s on a 14-core laptop, and in
+  3.3 s in the data image on a 4-CPU colima VM. At 100 times the size, expect minutes, once.
 
 **The cache is keyed by the manifest digest.** The key is
 `sha256(dataset fingerprint ‖ canonical JSON of market.bars ‖ ROLLUP_VERSION)`. The rollup is written to
@@ -284,35 +299,54 @@ that no build references, and `clean --all` removes every rollup.
 
 The importer turns the rollup, the companies and the news into the fixed table set:
 
-| Table | Rows (`us-equities` on `bfdmini`, approx.) | Built from |
+| Table | Rows (`us-equities` on `bfdmini`) | Built from |
 |---|---|---|
-| `trading_sessions` | 298 | Dates on which at least half the symbols have a regular-session bar. This drops holidays: on 2025-01-09, 2025-01-20, 2025-05-26 and 2025-06-19 only 2 symbols have bars. The result, 298 sessions, matches the exchange calendar. |
-| `assets` | at most 1,818 (before the SEC match) | The symbols left after exclusion, plus company metadata, `liquidity_rank` (median daily dollar volume, over the sessions before the prediction anchor) and `is_synthetic` |
-| `ticker_history` | one per asset | One row per asset: its current ticker, from its first session. Past ticker changes are not in the data. |
-| `daily_prices` | at most 498,845 (before the SEC match) | The rollup on sessions, for kept symbols: `price_id`, `open`, `high`, `low`, `close`, `adjusted_close` (equal to `close`: the bars are split-adjusted, dividends are not), `volume`, `dollar_volume`, `bar_count`, `total_return_1d` |
-| `asset_relationships` | at most 8 per asset | Declared peers: the 8 most liquid assets with the same 4-digit SIC code (`synthetic-market`: the generator's peers) |
-| `company_news` | `synthetic-market` only | The dataset's `news.parquet` |
+| `trading_sessions` | 298 | Dates on which at least half the symbols trading at the time (between their first and last bar) have a regular-session bar. This drops holidays: on 2025-01-09, 2025-01-20, 2025-05-26, 2025-06-19, 2025-07-04, 2025-11-27 and 2026-01-19 only 2 symbols have bars. The result, 298 sessions, matches the exchange calendar. `close_at` is the exact close in UTC (20:00 or 21:00, with daylight saving time). |
+| `assets` | 1,601 | The symbols left after exclusion, plus company metadata (`cik`, `sic_code`, `sector`, `industry`, `exchange`), `first_session`, `last_session`, `sessions`, `median_dollar_volume` and `liquidity_rank` (over the sessions up to the prediction anchor, so the ranked population leaks nothing), and `is_synthetic` |
+| `ticker_history` | 1,601 | One row per asset: its current ticker, from its first session. Past ticker changes are not in the data. |
+| `daily_prices` | 452,837 | The rollup on sessions, for kept symbols: `price_id`, `open`, `high`, `low`, `close` (rounded to 4 decimals from float32), `adjusted_close` (equal to `close`: the bars are split-adjusted, dividends are not), `volume`, `dollar_volume`, `bar_count`, `total_return_1d` (0 on an asset's first session) |
+| `asset_relationships` | 8,862 | Declared peers: up to `peers` (8) most liquid assets with the same four-digit SIC code, with `peer_rank` |
+| `company_news` | `synthetic-market` only | The dataset's `news.parquet`, for kept symbols |
 
 `asset_id` is the ticker as the data spells it, for example `NVDA` or `BRK.B`. The same `schema.sql` serves
 both packs.
 
-**Exclusions** are applied in order. Each reason is counted in `pack.json` under `import.dropped`.
+**Exclusions** are applied in order. Each reason is counted in `pack.json` under
+`parts.structured.import.dropped`.
 
-1. `preferred`: a symbol containing `.` is dropped, unless the SEC ticker list has it with `-` (so
-   `BRK.B` stays and `ABR.D` goes).
-2. `warrants`, `units`, `rights`: `X` plus `W` or `WS`, `U`, `R` or `RT`, where `X` is also a symbol.
-3. The symbol is not in the SEC ticker list (ETFs, funds, delisted issuers).
-4. It has fewer than `min_sessions` daily bars.
+1. `warrants`, `units`, `rights`, `preferred`: another security of an issuer whose stock ticker is its prefix.
+   For a symbol SEC lists, the issuer is its CIK: AGNC and AGNCL, AUR and AUROW, ALF and ALFUU share one, while
+   MU (Micron) and M (Macy's) do not. The suffix then says what it is: ending in `U` a unit, in `R` or `RT` a
+   right, containing `W` a warrant, and anything else a preferred share, depositary share or exchange-traded
+   note. Two kinds are share classes and stay: a dotted symbol SEC lists (`BRK.B`, SEC's `BRK-B`), and the
+   issuer's primary ticker, the first SEC lists for it (`GOOGL`, beside `GOOG`). A symbol SEC does not list
+   goes by the data alone: another symbol plus `W`, `WS`, `U`, `R` or `RT`.
+2. `preferred`: any other symbol with a dot that SEC does not list (`ABR.D`).
+3. `not_listed`: the symbol is not in SEC's ticker list (ETFs, funds, delisted issuers).
+4. `min_sessions`: it has fewer than `min_sessions` daily bars on sessions.
 
-On `bfdmini`, rules 1 and 2 drop 367 of the 2,200 symbols (130 dotted, 109 warrants, 59 units and 69
-rights). Rule 4 drops 15 more, leaving 1,818 symbols and 498,845 daily rows before rule 3.
+The first design matched suffixes only, which dropped real companies (MU as a unit of M, FR as a right of F)
+and kept notes and preferreds with five-letter tickers (AGNCL, BHFAN). Nasdaq share classes still cannot be told
+from notes by their symbol (CENTA and CMSA look alike), so a class share that is not its issuer's primary
+ticker is dropped as preferred.
 
-**SEC company metadata** (`companies: sec`) comes from `company_tickers_exchange.json` (CIK, name, ticker,
-exchange) and each CIK's `submissions/CIK##########.json` (`sic`, `sicDescription`). SEC allows 10
-requests a second, so about 1,800 CIKs take roughly 3 minutes the first time. Both need `SEC_USER_AGENT`.
-Sector is the SIC division (for example 20–39 Manufacturing, 60–67 Finance); industry is the SIC description.
-The files are cached under `/data/cache/sec/<date>/`, and `prepare` reuses the newest snapshot unless run with
-`--refresh-sec`. The snapshot's digest is part of the build key, and its date is recorded in `provenance`.
+On `bfdmini`, of 2,200 symbols, rule 1 drops 110 warrants, 50 units, 27 rights and 64 preferreds and notes,
+rule 2 drops 118 dotted preferreds, rule 3 drops 221 and rule 4 drops 9, leaving 1,601 symbols and 452,837 daily
+rows.
+
+**SEC company metadata** (`companies: sec`, `data/src/demo_data/sec.py`) comes from
+`company_tickers_exchange.json` (CIK, name, ticker, exchange; 10,431 tickers) and each kept CIK's
+`submissions/CIK##########.json` (`sic`, `sicDescription`). SEC allows 10 requests a second: on `bfdmini`, 1,574
+CIKs took 230 s the first time, the whole first build 237 s. Both need `SEC_USER_AGENT`. Sector is the SIC
+division (for example 20–39 Manufacturing, 60–67 Finance, and Nonclassifiable when SEC has no code); industry is
+the SIC description in title case. A snapshot is cached in `/data/cache/sec/<date>/`: the ticker file as
+fetched, and `sic.json` with every CIK looked up so far, saved as it goes so an interrupted lookup resumes.
+`prepare` reuses the newest snapshot unless run with `--refresh-sec`, and the ticker file's digest is part of
+the build key. This is company metadata only: SEC filings stay a separate document source.
+
+Measured end to end on `bfdmini`: with the rollup and the SEC snapshot cached, a new build of `us-equities`
+(tables, DuckDB, ontology, prediction) takes 1.1 s on the laptop and 5.1 s in the data image on colima; an
+unchanged pack is a no-op in 0.2 s. A build is 72 MB.
 
 ## Document sources
 
@@ -497,7 +531,7 @@ script regenerates it.
 
 | Fixture | Contents | Tests |
 |---|---|---|
-| `data/tests/fixtures/external/minute-bars/` (made by `make_minute_bars_fixture.py`, under 200 KB) | 6 made-up symbols in BFD's per-symbol layout: a base, its `W`, `U` and `.P` variants, and 2 others. 3 sessions plus 1 holiday, with bars from 04:00 to 19:59 and a heavy 16:00 bar. A BFD-format manifest, a stub SEC ticker file and stub submissions. | The fingerprint algorithm; fetch from `file://` and rejection of a corrupted copy; rollup values checked by hand (16:00 included, extended hours excluded); the session rule; each exclusion; import, then contract validation; a clear error when a pack's dataset is missing |
+| `data/tests/fixtures/external/minute-bars/` and `data/tests/fixtures/sec/` (made by `make_minute_bars_fixture.py`, 48 KB) | 11 made-up symbols in BFD's per-symbol layout: a base with its warrant, unit, dotted preferred and note, a peer and its class B shares, an unlisted fund, a one-session symbol, and two issuers whose tickers only look related (`XE`, `XEU`). 3 sessions plus 1 holiday, 8 bars a day from 04:00 to 19:59, with absurd prices outside the session and a heavy 16:00 bar. A BFD-format manifest and a stub SEC snapshot. | The fingerprint algorithm; fetch from a path, `file://` and a `.tar.gz`, a rerun that copies nothing, and rejection of a different dataset and of a corrupted file; verification that rehashes only changed files; rollup values checked by hand (16:00 included, extended hours excluded); the session rule; each exclusion; `us-equities` imported end to end through the CLI with its contract checked, the population resolved and the rollup reused; a clear error when a pack's dataset is missing |
 | `synthetic-market`, profile `ci` | The committed text plus seeds | An end-to-end `prepare` in seconds with no network, through the minute bars and the rollup (the `slow` marker, as today); rollup exactness; the planted-event oracles |
 | `tools/market-analytics/tests/fixture_pack.py` | A variant with `news_table: null` | Both news tools return `news_unavailable`; the other tools are unaffected |
 
@@ -550,13 +584,15 @@ featured question in `us-equities`.
 | Item | `bfdmini` | Scales with |
 |---|---|---|
 | `DATA_SOURCE_DIR/minute-bars` | 1.8 GB | the dataset |
-| Rollup cache | 17 MB | about 1% of the minute data |
-| A build (tables, DuckDB, ontology) | under 100 MB | the daily rows |
+| Rollup cache | 12 MB | about 1% of the minute data |
+| SEC snapshot | 0.6 MB | the issuers |
+| A build (tables 15 MB, DuckDB 58 MB, ontology) | 72 MB | the daily rows |
 | SEC and eCFR downloads, the Milvus index | about 2 GB | the corpus selection |
+| The data image, with the `remote` fetch backends | 699 MB (x86_64) | – |
 
-`doctor` compares the free space on `DATA_SOURCE_DIR` with the pack's `external.<id>.bytes`, plus 10%.
-It reads each dataset's needed variables from `provenance[].requires_env` of the selected pack, instead of
-hard-coding `market_news`. On Brev, the images and the Docker volumes stay where they are today
+`doctor` compares the free space on `DATA_SOURCE_DIR` with the pack's `external.<id>.bytes`, plus 10%, for
+every dataset not fetched yet. It asks for `SEC_USER_AGENT` when the pack looks up its companies at SEC or builds
+the SEC filings corpus. On Brev, the images and the Docker volumes stay where they are today
 ([operations](operations.md#disk)), and only `DATA_SOURCE_DIR` moves to the large disk.
 
 ## Where the work lands
@@ -564,10 +600,10 @@ hard-coding `market_news`. On Brev, the images and the Docker volumes stay where
 | Area | Change |
 |---|---|
 | `data/schemas/pack.schema.json` | v2: `external`, `market`, provenance kind `external`, `storage`, nullable `news_table`, `population` by view |
-| `data/src/demo_data/` | `external.py` (manifest, fingerprint, verification), `fetch.py` (sources), `market.py` (rollup, import), `sec.py`, `corpus/gdelt.py`; `structured.py` (views for `storage: parquet`); `ontology.py` (keys from `pack.yaml` for those views); `cli.py` (`fetch`) |
+| `data/src/demo_data/` | `external.py` (manifest, fingerprint, verification), `fetch.py` (sources), `market.py` (rollup, import), `sec.py`, `corpus/gdelt.py`; `structured.py` (the market dataset, external or generated; the population from its view); `cli.py` (`fetch`) |
 | `data/generate/` | New uv project: the Data Designer jobs and the checks |
 | `data/packs/` | `synthetic-market/` and `us-equities/` are added. `market-analysis/` shrinks to its recordings. |
 | `tools/market-analytics/` | The contract note for the optional news table; `data.py` and `server.py` (`news_unavailable`); the warm-up; the fixture |
 | `tools/retrieval/` | Resumable indexing |
 | `scripts/demo.sh`, `scripts/lib/doctor.sh`, `compose.yaml`, `.env.example` | `data fetch` and `data generate`, the `/sources` mounts, the `DATA_SOURCE_*`, `DATA_DESIGNER_*` and credential variables, pack-driven `requires_env`, the default `DATA_PACK` and `DATA_DATABASE_NAME` |
-| `.gitignore`, `.github/workflows/ci.yml` | `data/external/`; the committed-Parquet guard |
+| `.gitignore`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml` | `data/external/`; the committed-data guards |
