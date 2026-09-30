@@ -151,6 +151,14 @@ describe('market operations', () => {
       { central_assets: [{ rank: 1, asset_id: 'a', centrality: 0.3 }], strongest_edges: [] },
       'hbar',
     ],
+    [
+      'intraday_scan',
+      {
+        rank_by: 'intraday_range',
+        observations: [{ rank: 1, asset_id: 'a', session: '2026-03-09', intraday_range: 0.1 }],
+      },
+      'hbar',
+    ],
   ])('%s draws a %s chart the ResultChart accepts', (operation, payload, type) => {
     const list = result(operation, payload)
     expect(find(list, 'chart')!.spec.type).toBe(type)
@@ -167,6 +175,20 @@ describe('market operations', () => {
     const chart = find(list, 'chart')!
     expect(chart.spec.series.map((s) => s.key)).toEqual(['a', 'b'])
     expect(chart.spec.data).toEqual([{ date: '2026-07-01', a: 10, b: 20 }])
+  })
+
+  it('intraday scan charts the ranking metric per asset session', () => {
+    const chart = find(
+      result('intraday_scan', {
+        rank_by: 'max_drawdown',
+        observations: [
+          { asset_id: 'a', session: '2026-03-09', max_drawdown: -0.2, intraday_range: 0.3 },
+        ],
+      }),
+      'chart'
+    )!
+    expect(chart.spec.title).toBe('Sessions by max drawdown')
+    expect(chart.spec.data).toEqual([{ session: 'a 2026-03-09', value: -0.2 }])
   })
 
   it('an empty result keeps its parameters and computation facts only', () => {

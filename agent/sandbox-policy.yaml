@@ -63,6 +63,7 @@ network_policies:
                   - sentiment_timeline
                   - analyze_news_price_relationship
                   - analyze_market_relationships
+                  - intraday_scan
                   - predict_asset_outcomes
     binaries: *hermes
 

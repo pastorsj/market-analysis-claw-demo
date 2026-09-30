@@ -1,8 +1,8 @@
 ---
 name: analyzing-market-data
-description: Ranks assets and scans prices, anomalies, sentiment, news
+description: Ranks assets; scans prices, anomalies, news, minute bars
 license: Apache-2.0
-compatibility: Requires the market_analytics MCP server and its six market tools
+compatibility: Requires the market_analytics MCP server and its seven market tools
 metadata:
   author: NVIDIA
   version: "1.0"
@@ -12,6 +12,7 @@ metadata:
       - prices
       - anomalies
       - sentiment
+      - intraday
       - rapids
     related_skills:
       - querying-auto-ontology
@@ -28,8 +29,9 @@ right one and avoid common mistakes.
 
 - The selected sources include the `market_analytics` capability, and
 - the question ranks assets, looks for unusual sessions, summarizes prices or
-  news sentiment over a window, relates news sentiment to later returns, or
-  asks which assets are central in the return-correlation graph.
+  news sentiment over a window, relates news sentiment to later returns, asks
+  which assets are central in the return-correlation graph, or asks how
+  sessions traded minute by minute.
 
 For anything else, see "Use another skill" below.
 
@@ -43,6 +45,7 @@ For anything else, see "Use another skill" below.
 | Counts of positive, neutral, and negative news labels by day, week, or month | `sentiment_timeline` |
 | How news sentiment lined up with returns over the following sessions | `analyze_news_price_relationship` |
 | Most central assets and strongest links in the fixed return-correlation graph | `analyze_market_relationships` |
+| Intraday range, minute-level volatility, open-to-close move, drawdown from the high, or volume timing of sessions | `intraday_scan` |
 
 In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
 `mcp__market_analytics__market_scan`.
@@ -71,12 +74,21 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
 5. Pass tickers or asset IDs exactly as the user or an earlier result gave them.
    If a tool rejects an unknown or ambiguous asset, ask the user instead of
    guessing.
+6. For `intraday_scan`, name `asset_ids` or a `universe_id`, and keep the window
+   to the sessions asked about: it reads the raw minute bars.
+7. A tool whose description starts with "Unavailable in the active data pack"
+   fails with `news_unavailable` or `minute_bars_unavailable`. Do not call it or
+   retry it. Say that the pack has no ticker-linked news or no minute bars, and
+   answer with the other tools. SEC filings are documents, not news: search them
+   with `searching-documents`.
 
 ## Pitfalls
 
 - Anomaly scores measure how unusual a session was. They are not probabilities,
   forecasts, or evidence of wrongdoing.
 - News-versus-price statistics and graph links are correlations, not causes.
+- Intraday metrics cover the regular session only. The volume shares are of
+  the session's volume, and the last 30 minutes include the closing auction.
 - The relationship graph is fixed for the whole dataset and cannot be limited to
   a named group of assets. For correlations within a chosen group, use
   `querying-auto-ontology`.

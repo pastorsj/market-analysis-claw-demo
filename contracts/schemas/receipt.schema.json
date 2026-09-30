@@ -64,7 +64,8 @@
             "price_context",
             "sentiment_timeline",
             "analyze_news_price_relationship",
-            "analyze_market_relationships"
+            "analyze_market_relationships",
+            "intraday_scan"
           ],
           "type": "string"
         },

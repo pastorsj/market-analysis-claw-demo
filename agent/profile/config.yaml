@@ -100,6 +100,7 @@ mcp_servers:
         - sentiment_timeline
         - analyze_news_price_relationship
         - analyze_market_relationships
+        - intraday_scan
         - predict_asset_outcomes  # kumo feature
       resources: false
       prompts: false

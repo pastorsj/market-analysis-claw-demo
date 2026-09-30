@@ -78,6 +78,17 @@
       "profile": "analytics"
     },
     {
+      "id": "intraday_scan",
+      "server": "market_analytics",
+      "hermes_name": "mcp__market_analytics__intraday_scan",
+      "family": "market_analytics",
+      "label": "Intraday Scan",
+      "description": "Ranks asset sessions by intraday behavior from minute bars",
+      "explorer": "market",
+      "receipt_kind": "analytics_result",
+      "profile": "analytics"
+    },
+    {
       "id": "predict_asset_outcomes",
       "server": "market_analytics",
       "hermes_name": "mcp__market_analytics__predict_asset_outcomes",

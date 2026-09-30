@@ -47,7 +47,8 @@ and, when needed, `top_k`.
 ## Procedure
 
 1. Write one focused query per distinct topic. Name the concept you need, not
-   the answer you expect.
+   the answer you expect. To find one company's documents, put its name in the
+   query.
 2. Make one call even when several document sources are selected. Their
    passages are ranked together.
 3. Keep only passages that directly support a claim, and note each passage's
@@ -62,8 +63,9 @@ and, when needed, `top_k`.
 - Quote exact wording only when the wording matters. Otherwise paraphrase and
   cite.
 - Never answer a document question from general knowledge or web search.
-- A company name in a document does not prove it is the same entity as an asset
-  in the market data.
+- Link a document to a stock in the market data only through the passage's
+  `ticker` metadata. A matching company name alone does not prove it is the
+  same entity.
 
 ## Example
 

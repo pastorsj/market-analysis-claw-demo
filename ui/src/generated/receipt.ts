@@ -122,6 +122,7 @@ export interface AnalyticsResult {
     | 'sentiment_timeline'
     | 'analyze_news_price_relationship'
     | 'analyze_market_relationships'
+    | 'intraday_scan'
   status: 'succeeded' | 'empty' | 'failed'
   sourceId: string
   databaseName: string

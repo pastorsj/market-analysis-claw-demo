@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The six market analytics tools. `payload` is the tool's own result for the
+ * The market analytics tools. `payload` is the tool's own result for the
  * operation (snake_case, see tools/market-analytics/src/market_analytics/models.py);
  * each operation gets a chart for the upstream ResultChart and a table.
  */
@@ -177,6 +177,32 @@ const relationships = (payload: Payload) =>
     objectTable('Strongest correlations', records(payload.strongest_edges))
   )
 
+/** Ranked asset sessions from the minute bars, labelled by asset and trading date. */
+const intraday = (payload: Payload) => {
+  const observations = records(payload.observations)
+  return sections(
+    facts('Scan', [
+      ['Ranked by', payload.rank_by],
+      ['Direction', payload.direction],
+      ['Assets scanned', payload.assets_scanned],
+      ['Sessions scanned', payload.sessions_scanned],
+      ['Files read', payload.files_read],
+      ['Batches', payload.batches],
+    ]),
+    chart({
+      type: 'hbar',
+      title: `Sessions by ${String(payload.rank_by ?? 'metric').replaceAll('_', ' ')}`,
+      x: { key: 'session' },
+      series: [{ key: 'value', label: String(payload.rank_by ?? 'value') }],
+      data: observations.map((row) => ({
+        session: `${row.asset_id} ${day(row.session)}`,
+        value: numberOf(row[String(payload.rank_by)]),
+      })),
+    }),
+    objectTable('Sessions', observations)
+  )
+}
+
 const BY_OPERATION: Record<Operation, (payload: Payload) => EvidenceSection[]> = {
   market_scan: scan,
   market_anomaly_scan: anomalies,
@@ -184,6 +210,7 @@ const BY_OPERATION: Record<Operation, (payload: Payload) => EvidenceSection[]> =
   sentiment_timeline: sentiment,
   analyze_news_price_relationship: newsPrice,
   analyze_market_relationships: relationships,
+  intraday_scan: intraday,
 }
 
 export const marketSections = (content: AnalyticsResult): EvidenceSection[] =>

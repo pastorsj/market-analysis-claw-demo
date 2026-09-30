@@ -72,7 +72,7 @@ one variant per `receipt_kind` in the registry. Content mirrors the tool's own r
 | `artifactKind` | Tools | Content |
 | --- | --- | --- |
 | `retrieval_evidence` | `retrieve_evidence` | The tool's `RetrievalResult` |
-| `analytics_result` | the six market tools | The tool's `MarketResult`, plus `public_parameters` |
+| `analytics_result` | the seven market tools | The tool's `MarketResult`, plus `public_parameters` |
 | `structured_query` | `ask_question` | Question, SQL, rows, ontology lineage |
 | `structured_prediction` | `predict_asset_outcomes` | The tool's `PredictionResult` |
 

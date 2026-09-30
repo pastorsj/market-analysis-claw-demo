@@ -47,6 +47,7 @@ MarketOperation = Literal[
     "sentiment_timeline",
     "analyze_news_price_relationship",
     "analyze_market_relationships",
+    "intraday_scan",
 ]
 
 TraceId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
