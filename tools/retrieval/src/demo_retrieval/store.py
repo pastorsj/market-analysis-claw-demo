@@ -40,6 +40,11 @@ def create_collection(client: MilvusClient, name: str, dimension: int) -> None:
     client.create_collection(name, schema=schema, index_params=index, consistency_level="Strong")
 
 
+def present(client: MilvusClient, collection: str, chunk_ids: list[str]) -> set[str]:
+    """Which of these chunk ids the collection already holds (a primary-key lookup)."""
+    return {row["chunk_id"] for row in client.get(collection, ids=chunk_ids, output_fields=["chunk_id"])}
+
+
 def build_name(alias: str, digest: str) -> str:
     return f"{alias}__{digest}"
 

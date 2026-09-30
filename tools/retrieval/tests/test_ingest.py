@@ -89,11 +89,49 @@ def test_documents_of_sources_the_pack_does_not_declare_are_rejected(settings: S
         ingest.run(settings, data_dir)
 
 
-def test_duplicate_document_ids_are_rejected(settings: Settings, data_dir: Path):
-    write_pack(data_dir, [documents()[0], documents()[0]])
+def test_duplicate_document_ids_are_rejected_before_anything_is_embedded(
+    settings: Settings, data_dir: Path, nvidia_api: FakeNvidia
+):
+    write_pack(data_dir, [*documents(), documents()[0]])
 
-    with pytest.raises(ValueError, match="repeats document_id"):
+    with pytest.raises(ValueError, match="repeats document_id 'edgar:0'"):
         ingest.run(settings, data_dir)
+    assert nvidia_api.calls == []
+
+
+def test_an_interrupted_build_resumes_without_embedding_finished_chunks(
+    settings: Settings, data_dir: Path, nvidia_api: FakeNvidia, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(ingest, "EMBED_BATCH", 10)
+    embed = ingest._embed_passages
+    batches = []
+
+    def fail_on_the_third_batch(embedder, texts):
+        batches.append(texts)
+        if len(batches) == 3:
+            raise RuntimeError("[400] Bad Request")  # not transient, so the build stops
+        return embed(embedder, texts)
+
+    monkeypatch.setattr(ingest, "_embed_passages", fail_on_the_third_batch)
+    with pytest.raises(RuntimeError, match="400"):
+        ingest.run(settings, data_dir)
+    client = MilvusClient(uri=settings.milvus_uri)
+    assert store.alias_target(client, "test_pack") is None  # nothing serves the unfinished build
+    (unfinished,) = client.list_collections()
+    client.close()
+
+    monkeypatch.setattr(ingest, "_embed_passages", embed)
+    nvidia_api.calls.clear()
+    manifest = ingest.run(settings, data_dir)
+
+    assert manifest.physical_collection == unfinished
+    embedded = [text for call in nvidia_api.to(EMBED_URL) for text in call.body["input"]]
+    assert len(embedded) == manifest.chunk_count - 20  # the first two batches were in already
+    client = MilvusClient(uri=settings.milvus_uri)
+    stored = client.query(unfinished, filter='chunk_id != ""', output_fields=["chunk_id"], limit=1000)
+    assert len(stored) == len({row["chunk_id"] for row in stored}) == manifest.chunk_count
+    assert store.alias_target(client, "test_pack") == unfinished
+    client.close()
 
 
 def test_the_alias_is_the_packs_documents_collection(settings: Settings, data_dir: Path):

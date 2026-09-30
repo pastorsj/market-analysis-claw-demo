@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -57,15 +58,12 @@ class CorpusDocument(BaseModel):
         return metadata
 
 
-def read_documents(data_dir: Path) -> list[CorpusDocument]:
-    path = data_dir / DOCUMENTS
-    documents = [CorpusDocument.model_validate_json(line) for line in path.read_text().splitlines() if line.strip()]
-    if not documents:
-        raise ValueError(f"{path} has no documents")
-    ids = [document.document_id for document in documents]
-    if len(ids) != len(set(ids)):
-        raise ValueError(f"{path} repeats document_id values")
-    return documents
+def iter_documents(data_dir: Path) -> Iterator[CorpusDocument]:
+    """corpus/documents.jsonl, one validated row at a time, so a corpus never has to fit in memory."""
+    with (data_dir / DOCUMENTS).open(encoding="utf-8") as lines:
+        for line in lines:
+            if line.strip():
+                yield CorpusDocument.model_validate_json(line)
 
 
 class CollectionManifest(BaseModel):

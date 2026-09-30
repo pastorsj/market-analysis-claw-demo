@@ -12,7 +12,8 @@ One image, two commands:
 
 - `demo-retrieval ingest`: the `retrieval-index` one-shot. It reads `/data/active/corpus/documents.jsonl`,
   splits documents into chunks, embeds the chunks as passages, loads them into a new Milvus collection, points
-  the collection alias at it, and writes `/data/active/collection-manifest.json`.
+  the collection alias at it, and writes `/data/active/collection-manifest.json`. It streams the corpus and
+  resumes an interrupted build (see [data contract](#data-contract)).
 - `demo-retrieval serve` (default): the MCP server. It uses streamable HTTP at `:8120/mcp`, has a `GET /health`
   check, and runs as the `retrieval` service.
 
@@ -73,6 +74,12 @@ URL and model, the chunking and the index parameters.
 - Re-running `ingest` on unchanged input does nothing.
 - Changed input builds a new collection and moves the alias only when it is complete, so `serve` keeps answering
   from the previous build. Older builds are then dropped.
+- The corpus is streamed, never held in memory: one pass validates every row (the schema, unique
+  `document_id`s, declared sources) before anything is embedded, and a second chunks, embeds and inserts it in
+  batches of 50 chunks.
+- An interrupted build resumes. Its collection is still there, under the same fingerprint, so the next run
+  looks up each batch's chunk ids (which are stable: `<document_id>:<NNNN>`) and embeds only the missing
+  chunks.
 
 ## Tool result
 
@@ -122,8 +129,8 @@ Everything uses public API; there are no patches.
    - These are retried: dropped connections, timeouts, 408, 429 and 5xx. That includes the async client's
      `[###] Unknown Error`, which is how it reports a non-JSON error body, such as a gateway's 502/503/504 page.
    - A tool call gets 3 attempts, because an agent is waiting on it.
-   - `ingest` gets 8 attempts, with 0.5 s to 8 s of jittered backoff. One request that fails for good restarts
-     the whole build.
+   - `ingest` gets 8 attempts, with 0.5 s to 8 s of jittered backoff. A request that fails for good stops the
+     build; the next run resumes it.
 5. **Three explicit spans.** LangChain's instrumentation emits nothing for direct embed, search or rerank calls.
 6. **Pin `==1.4.3` and set `NVIDIA_USAGE_TELEMETRY_ENABLED=false`.** The next release turns on usage telemetry
    by default, and 1.4.3 is the floor for GHSA-g28h-2cmm-rj9x.
