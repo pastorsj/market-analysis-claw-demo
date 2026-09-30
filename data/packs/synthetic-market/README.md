@@ -27,6 +27,11 @@ Profiles (`DATA_PACK_PROFILE`), the scale knob:
 | `intraday` | 500 | from 2026-03-02 (127 sessions) | 1 minute (24,828,500) | 63,500 | committed |
 | `large` | 10,000 | from 2016-01-04 (2,680 sessions) | daily | 26,800,000 | `data generate --profile large` |
 
+`large` needs more text than is committed: `./scripts/demo.sh data generate --profile large` extends `text/` in
+place (the first 2,000 issuers stay as they are), and `./scripts/demo.sh up` rebuilds the data image with it.
+Measured on a laptop, its build takes about 80 s and peaks at about 11 GB of memory (1.3 million news items,
+a 4 GB build and a 1 GB raw dataset).
+
 ## How it is made
 
 Two stages, so a build is deterministic and offline while the text still comes from Nemotron:
@@ -34,8 +39,9 @@ Two stages, so a build is deterministic and offline while the text still comes f
 1. **`demo.sh data generate`** ([`data/generate`](../../generate/README.md)), run rarely. A seeded roster of
    issuer slots (industry, exchange, invented name root, ticker) goes to Data Designer as its seed dataset;
    Nemotron writes each company's name and profile, 12 headline templates per event type and sentiment, and
-   the 12 story items. Names and tickers are checked against SEC's ticker lists. The result is `text/`,
-   committed and reviewed like code, with `checks.json` recording the checks and the cost.
+   the 12 story items. Names and tickers are checked against SEC's ticker lists, and invented roots and
+   tickers against a list of unfit words. The result is `text/`, committed and reviewed like code, with
+   `checks.json` recording the checks and the cost.
 2. **`demo.sh data prepare`** runs `generator/build.py`: seeded numpy streams with the constants in
    `generator/model.yaml` make the prices, volumes and news timing, and write a raw dataset (month-partitioned
    bars, `companies.parquet`, `news.parquet`, a manifest) in the layout a real dataset uses. The market
@@ -70,7 +76,10 @@ the UI, and the disclaimer says the data is fictional.
 ## How it was made
 
 The committed text is for the `standard` profile (2,000 issuers), generated on 2026-09-29 with Data Designer
-0.9.3 and `nvidia/nemotron-3-super-120b-a12b` on build.nvidia.com. `text/checks.json` has the details.
+0.9.3 and `nvidia/nemotron-3-super-120b-a12b` on build.nvidia.com: 2,060 model calls, 566,403 input and
+103,191 output tokens, in 27 minutes. A second run the same day renamed 39 issuers in 39 calls: 25 whose
+invented root or ticker spelled an unfit word, and 14 whose ticker moved because of them. `text/checks.json`
+records the latest run.
 
 ## Files
 

@@ -49,8 +49,8 @@ tables:
   company_news:
     description: >-
       Ticker-linked company news from a fictional newswire. Background headlines fill Nemotron-written templates;
-      the 12 story items have their own Nemotron headline and summary. A positive item nudges its session's
-      return up and a negative one down; story items move their session by 6 to 12 percent.
+      the 12 story items have their own Nemotron headline and summary. A positive item nudges the next session's
+      return up and a negative one down; a story item moves its own session by 6 to 12 percent.
     columns:
       primary_asset_id: The issuer the item is about.
       published_at: When the item was published (UTC). It belongs to the first session that closes after it.

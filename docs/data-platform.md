@@ -424,7 +424,7 @@ is where `us-equities` can show GPU work.
   `ModelProvider(name="build", endpoint=DATA_DESIGNER_BASE_URL, provider_type="openai",
   api_key="DATA_DESIGNER_API_KEY")`.
 - **Dependencies conflict with the data project:** 0.9.3 needs `pyarrow>=24,<25`, and `demo-data` pins
-  `pyarrow==25.0.1`. Generation therefore gets its own uv project and image (below).
+  `pyarrow==25.0.1`. Generation therefore gets its own uv project, run on the host (below).
 - **A live preview** on build.nvidia.com with the nvapi key worked, once the model timeout was raised to
   120 s (the default health check timed out):
   - Plain text on `nvidia/nemotron-3.5-lightning-30b-a3b` produced one degenerate name out of three.
@@ -445,9 +445,10 @@ is where `us-equities` can show GPU work.
 
 The text for `standard` is committed in `data/packs/synthetic-market/text/`, at a few hundred kilobytes, and
 reviewed like any other change; `generate` rewrites it there for review, keeping every row that still passes
-the checks. A profile needing more issuers than the committed text needs `generate --profile <p> --out <dir>`
-outside the repository, and `SYNTHETIC_MARKET_TEXT=<dir>` for `prepare`, which otherwise stops and says so.
-Rosters are prefix-stable, so every smaller profile uses the first N rows of the committed text.
+the checks. A profile needing more issuers than the committed text needs `generate --profile <p>` first, which
+extends `text/` in place, and then `demo.sh up`, which rebuilds the data image that carries the pack;
+otherwise `prepare` stops and says so. Rosters are prefix-stable, so every smaller profile uses the first N rows
+of the text, and the pack digest covers the text, so a build never reuses stale text.
 
 `DATA_DESIGNER_BASE_URL` defaults to `https://integrate.api.nvidia.com/v1`, and `DATA_DESIGNER_MODEL` to
 `nvidia/nemotron-3-super-120b-a12b` (thinking off, temperature 0.7, timeout 120 s). `demo.sh` passes the key
@@ -534,6 +535,8 @@ A row that fails is asked again, for at most 5 rounds; after that, `generate` st
   - no `name_root` may appear as a word in any SEC title.
   A slot that fails draws its next root from its own stream, and that slot alone is regenerated, for at most
   5 rounds. So the output is deterministic for a given SEC snapshot.
+- **Fit to show.** Random syllables can spell profanity or slurs, in a root or in a ticker spelled from it.
+  A root or ticker containing a fragment from `roster.UNFIT` is skipped like a taken one.
 - **Labels.** `assets.is_synthetic` is true. News `source_name` is "Synthetic Newswire". The source is
   `synthetic: true`, so the UI shows its badge. The pack disclaimer says that the issuers, prices and news are
   fictional.

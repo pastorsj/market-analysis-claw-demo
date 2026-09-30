@@ -363,19 +363,18 @@ fetch_credentials() {
 }
 
 # data generate [ARGS...]: the synthetic-market pack's text (data/generate/README.md). The key is passed in
-# the environment of this one command only; it defaults to INFERENCE_API_KEY, like the retriever's.
+# the environment of this one command only; it defaults to INFERENCE_API_KEY, like the retriever's. Paths in
+# ARGS are relative to the current directory.
 data_generate() {
   command -v uv >/dev/null || die "$EXIT_CONFIG" "data generate runs with uv on the host: install uv"
   local key
   key=$(env_value DATA_DESIGNER_API_KEY)
-  (
-    cd "$ROOT/data/generate" &&
-      DATA_DESIGNER_API_KEY=${key:-$INFERENCE_API_KEY} \
-      DATA_DESIGNER_BASE_URL=$(env_value DATA_DESIGNER_BASE_URL) \
-      DATA_DESIGNER_MODEL=$(env_value DATA_DESIGNER_MODEL) \
-      SEC_USER_AGENT=$SEC_USER_AGENT \
-      uv run --locked demo-data-generate "$@"
-  )
+  DATA_DESIGNER_API_KEY=${key:-$INFERENCE_API_KEY} \
+    DATA_DESIGNER_BASE_URL=$(env_value DATA_DESIGNER_BASE_URL) \
+    DATA_DESIGNER_MODEL=$(env_value DATA_DESIGNER_MODEL) \
+    DATA_DESIGNER_PARALLEL=$(env_value DATA_DESIGNER_PARALLEL) \
+    SEC_USER_AGENT=$SEC_USER_AGENT \
+    uv run --project "$ROOT/data/generate" --locked demo-data-generate "$@"
 }
 
 reindex() {

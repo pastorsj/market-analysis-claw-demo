@@ -97,7 +97,7 @@ def test_minute_bars_roll_up_exactly_to_the_daily_bars(raw):
 
 
 def test_the_news_is_labelled_synthetic_and_linked_to_tickers(raw):
-    news = duckdb.sql(f"SELECT * FROM read_parquet('{raw['minutes']}/news.parquet')").fetch_arrow_table().to_pylist()
+    news = duckdb.sql(f"SELECT * FROM read_parquet('{raw['minutes']}/news.parquet')").to_arrow_table().to_pylist()
     companies = duckdb.sql(f"SELECT symbol, is_synthetic FROM read_parquet('{raw['minutes']}/companies.parquet')")
     symbols = dict(companies.fetchall())
     assert all(symbols.values()) and len(symbols) == 12
@@ -107,20 +107,22 @@ def test_the_news_is_labelled_synthetic_and_linked_to_tickers(raw):
     assert len(stories) == 12 and all(item["summary"] for item in stories)
 
 
+@pytest.fixture(scope="module")
+def build(tmp_path_factory) -> Path:
+    data = tmp_path_factory.mktemp("data")
+    command = ["--pack", "synthetic-market", "--data-dir", str(data), "prepare", "--structured", "--profile", "ci"]
+    assert main(command) == 0
+    return (data / "active").resolve()
+
+
+@pytest.fixture(scope="module")
+def database(build):
+    with duckdb.connect(str(build / "structured" / "synthetic_market.duckdb"), read_only=True) as connection:
+        yield connection
+
+
 @pytest.mark.slow
 class TestTheCiBuild:
-    @pytest.fixture(scope="class")
-    def build(self, tmp_path_factory) -> Path:
-        data = tmp_path_factory.mktemp("data")
-        command = ["--pack", "synthetic-market", "--data-dir", str(data), "prepare", "--structured", "--profile", "ci"]
-        assert main(command) == 0
-        return (data / "active").resolve()
-
-    @pytest.fixture(scope="class")
-    def database(self, build):
-        with duckdb.connect(str(build / "structured" / "synthetic_market.duckdb"), read_only=True) as connection:
-            yield connection
-
     def test_rows_and_verification(self, build):
         pack = json.loads((build / "pack.json").read_text())
         rows = pack["parts"]["structured"]["rows"]

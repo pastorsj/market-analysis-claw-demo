@@ -68,7 +68,7 @@ provenance:
 
 # The scale knob: issuers, the date window and the bar frequency. Every profile reads the first `issuers` rows
 # of the committed text, so an issuer is the same company with the same prices in every profile. `large` needs
-# more text than is committed: run `demo.sh data generate --profile large` first (docs/data-platform.md).
+# more text than is committed: `demo.sh data generate --profile large` extends text/ first (README.md).
 generator:
   entrypoint: generator/build.py
   default_profile: standard

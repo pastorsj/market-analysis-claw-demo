@@ -4,7 +4,8 @@
 
 A slot's industry, exchange and name root come from its own random stream, so a roster of N issuers is the first
 N rows of any larger one. Name roots are invented words; tickers are built from them. Both are checked against
-the real SEC lists (sec.py), and a slot whose root or ticker is taken draws the next candidate from its stream.
+the real SEC lists (sec.py) and for unfit words, and a slot whose root or ticker fails draws the next candidate from
+its stream.
 """
 
 from __future__ import annotations
@@ -23,6 +24,11 @@ ONSETS = ["b", "br", "c", "cl", "d", "dr", "f", "fl", "g", "gr", "h", "k", "l", 
 VOWELS = ["a", "e", "i", "o", "u", "a", "e", "o", "ae", "ia", "io", "ou", "ea"]
 CODAS = ["", "", "", "n", "r", "l", "x", "s", "m", "nt", "rk", "st", "nd"]
 ENDINGS = ["a", "ex", "on", "is", "ia", "ara", "ion", "ora", "ix", "en", "ar", "yn", "ant", "ent", "um", "o", "et"]
+# Random syllables can spell words unfit for a public demo, in a root or in a ticker built from it.
+UNFIT = ["anal", "anus", "ass", "boob", "butt", "clit", "cock", "coon", "crap", "cum", "cunt", "damn", "dick",
+         "fag", "fart", "fuc", "fuk", "fux", "hell", "homo", "jiz", "kike", "kkk", "nazi", "nig", "nude", "peni",
+         "piss", "poo", "porn", "rape", "sex", "shit", "slut", "spic", "sux", "tard", "tit", "turd", "twat", "vag",
+         "wank", "whor"]  # fmt: skip
 MAX_ROUNDS = 5  # candidate roots a slot may reject before generation stops
 
 
@@ -57,6 +63,10 @@ def sector(model: dict[str, Any], sic_code: int) -> str:
         if division["from"] <= major <= division["to"]:
             return division["sector"]
     raise ValueError(f"SIC code {sic_code} is in no division")
+
+
+def unfit(word: str) -> bool:
+    return any(fragment in word.casefold() for fragment in UNFIT)
 
 
 def name_roots(seed: int, slot: int) -> Iterator[str]:
@@ -114,11 +124,15 @@ def build(
             if attempt > 200 + len(refused):
                 raise RuntimeError(f"slot {slot}: no free name root")
             key = candidate.casefold()
-            if candidate in refused or key in used_roots or root_taken(candidate):
+            if candidate in refused or key in used_roots or unfit(candidate) or root_taken(candidate):
                 continue
             root = candidate
             break
-        ticker = next(t for t in ticker_candidates(root, seed, slot) if t not in used_tickers and not ticker_taken(t))
+        ticker = next(
+            t
+            for t in ticker_candidates(root, seed, slot)
+            if t not in used_tickers and not unfit(t) and not ticker_taken(t)
+        )
         used_roots.add(root.casefold())
         used_tickers.add(ticker)
         slots.append(Slot(slot, sic, names[sic], sector(model, sic), exchange, slot < len(story), root, ticker))

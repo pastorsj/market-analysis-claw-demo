@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -65,6 +66,12 @@ def test_roster_skips_taken_roots_and_tickers():
     assert second[0].name_root == first[0].name_root and second[0].ticker != first[0].ticker
     assert second[1].name_root != first[1].name_root
     assert second[2] == first[2]
+
+
+def test_no_root_or_ticker_spells_an_unfit_word():
+    assert roster.unfit("Fosex") and roster.unfit("NUDE") and not roster.unfit("Velbrook")
+    companies = [json.loads(line) for line in (PACK_DIR / "text" / "companies.jsonl").read_text().splitlines()]
+    assert [row["ticker"] for row in companies if roster.unfit(row["name_root"]) or roster.unfit(row["ticker"])] == []
 
 
 def test_sec_files_are_indexed():

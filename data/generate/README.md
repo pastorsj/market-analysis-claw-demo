@@ -19,8 +19,9 @@ SEC ticker lists ─────┴─▶ roster (seeded) ─▶ Data Designer +
 
 1. **Roster.** Each issuer slot gets an industry (a real SEC SIC code), an exchange, an invented name root and a
    four-letter ticker, all from seeded random streams (`roster.py`). A root that is a word in any SEC company
-   title, or a ticker SEC lists, is skipped for the slot's next candidate. Slot N is the same in every roster
-   with more than N slots, so every profile uses a prefix of the same text.
+   title, a ticker SEC lists, or a root or ticker that spells an unfit word (`roster.UNFIT`; random syllables
+   can) is skipped for the slot's next candidate. Slot N is the same in every roster with more than N slots, so
+   every profile uses a prefix of the same text.
 2. **Jobs** (`jobs.py`). The roster is Data Designer's seed dataset, read in order, so each answer belongs to one
    slot. Each job has one structured column, whose Pydantic `output_format` bounds the lengths:
 
@@ -57,12 +58,13 @@ after its content for that: Data Designer's resume fingerprint covers a seed fil
 
 ```bash
 ./scripts/demo.sh data generate                      # the default profile, into data/packs/synthetic-market/text
-./scripts/demo.sh data generate --profile large --out "$HOME/market-demo-data/synthetic-market-text-large"
+./scripts/demo.sh data generate --profile large      # extends text/ to 10,000 issuers; the first 2,000 stay
 git diff --stat data/packs/synthetic-market/text     # review the text like any other change
+./scripts/demo.sh data generate --out /tmp/trial     # a trial run elsewhere, starting from the pack's text
 ```
 
-`demo.sh` runs it with uv on the host, with the variables above from `.env`. A profile larger than the committed
-text reads its text from `SYNTHETIC_MARKET_TEXT` at `data prepare`.
+`demo.sh` runs it with uv on the host, with the variables above from `.env`. The data image carries the pack,
+so `./scripts/demo.sh up` (which rebuilds it) is what makes a build use new text.
 
 ## Test
 

@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import zlib
 from datetime import date
 from datetime import datetime
@@ -83,8 +82,7 @@ def main() -> None:
     pack = yaml.safe_load((PACK_DIR / "pack.yaml").read_text(encoding="utf-8"))
     model = yaml.safe_load((HERE / "model.yaml").read_text(encoding="utf-8"))
     params = pack["generator"]["profiles"][options.profile]["params"]
-    text_dir = Path(os.environ.get("SYNTHETIC_MARKET_TEXT") or PACK_DIR / "text")
-    generate(model, params, read_text(text_dir, model, params["issuers"]), options.out)
+    generate(model, params, read_text(PACK_DIR / "text", model, params["issuers"]), options.out)
 
 
 def read_text(directory: Path, model: dict[str, Any], issuers: int) -> Text:
@@ -96,7 +94,7 @@ def read_text(directory: Path, model: dict[str, Any], issuers: int) -> Text:
     if len(text["companies"]) < issuers:
         raise SystemExit(
             f"{directory} has text for {len(text['companies'])} issuers and this profile needs {issuers}: run "
-            "`demo.sh data generate --profile <profile>` and set SYNTHETIC_MARKET_TEXT to its output"
+            "`demo.sh data generate --profile <profile>`, which extends it"
         )
     text["companies"] = text["companies"][:issuers]
     for story, event in zip(text["stories"], model["story"], strict=True):

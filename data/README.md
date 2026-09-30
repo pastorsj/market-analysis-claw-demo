@@ -7,10 +7,12 @@ source catalog the UI and agent see, analytics and prediction settings, and the 
 the pack named by `DATA_PACK` into `/data` and points `/data/active` at the result. Services never read `packs/`;
 they read only `/data/active`, so swapping data means adding a pack, not editing code.
 
-The repository ships [`market-analysis`](packs/market-analysis/README.md) and
-[`us-equities`](packs/us-equities/README.md). `us-equities` holds real prices from an **external dataset**: data
-that lives outside the repository, is never committed, and reaches a machine through `demo-data fetch`
-([data platform](../docs/data-platform.md)).
+The repository ships [`market-analysis`](packs/market-analysis/README.md),
+[`synthetic-market`](packs/synthetic-market/README.md) and [`us-equities`](packs/us-equities/README.md).
+`synthetic-market` is a fictional market whose names and news text were written with NeMo Data Designer and
+Nemotron ([`generate`](generate/README.md)); it builds with no key and no download. `us-equities` holds real
+prices from an **external dataset**: data that lives outside the repository, is never committed, and reaches a
+machine through `demo-data fetch` ([data platform](../docs/data-platform.md)).
 
 ## How it fits
 

@@ -4,10 +4,10 @@
   "seed": 20260929,
   "model": "nvidia/nemotron-3-super-120b-a12b",
   "data_designer": "0.9.3",
-  "generated_at": "2026-09-30T03:07:58+00:00",
-  "seconds": 1639.5,
+  "generated_at": "2026-09-30T03:21:40+00:00",
+  "seconds": 49.8,
   "sec": {
-    "fetched_at": "2026-09-30T02:40:38+00:00",
+    "fetched_at": "2026-09-30T03:20:48+00:00",
     "files": [
       {
         "url": "https://www.sec.gov/files/company_tickers.json",
@@ -36,49 +36,25 @@
   "rounds": {
     "companies": [
       {
-        "requested": 2000,
-        "unanswered": 0,
-        "refused": {
-          "format": 3
-        },
-        "seconds": 1598.0
-      },
-      {
-        "requested": 3,
+        "requested": 39,
         "unanswered": 0,
         "refused": {},
-        "seconds": 3.9
+        "seconds": 49.6
       }
     ],
-    "headlines": [
-      {
-        "requested": 30,
-        "unanswered": 0,
-        "refused": {},
-        "seconds": 27.1
-      }
-    ],
-    "stories": [
-      {
-        "requested": 12,
-        "unanswered": 0,
-        "refused": {},
-        "seconds": 10.2
-      }
-    ]
+    "headlines": [],
+    "stories": []
   },
   "usage": {
-    "calls": 2060,
-    "input_tokens": 566403,
-    "output_tokens": 103191,
+    "calls": 39,
+    "input_tokens": 10688,
+    "output_tokens": 1832,
     "by_job": {
-      "companies": 2014,
-      "headlines": 32,
-      "stories": 14
+      "companies": 39
     }
   },
   "files": {
-    "companies.jsonl": "8064c532a7899b54c54d9078fc99238c70ffca92cbdce940861c4273514d124a",
+    "companies.jsonl": "4445681d5302aad1c367faa0bd0e13fa7159c304f70e34b218b523ed288690b8",
     "headlines.jsonl": "0a9f4870987cffef53aa32eec561cb79bcc10ae1b5dfd116766a64336ae8314e",
     "stories.jsonl": "72a53bb8dc7abcb86eb1d32ac34cd4854a5c664d021077f31625578b16184d3d"
   }
