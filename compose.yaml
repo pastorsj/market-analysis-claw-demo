@@ -357,6 +357,8 @@ services:
     environment:
       <<: *market-analytics-env
       MARKET_ANALYTICS_ENGINE: gpu
+      # Managed memory: a pack past the GPU's memory pages to host memory instead of failing (tools/market-analytics).
+      CUDF_PANDAS_RMM_MODE: managed_pool
     gpus: all
     networks:
       default: { aliases: [market-analytics] }

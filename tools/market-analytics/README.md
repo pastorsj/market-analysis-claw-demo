@@ -51,6 +51,45 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   MCP timeout (180 s). Never install the client's `[explain]` extra: it sends raw cell values to a third-party
   LLM.
 
+## Scale
+
+Two tiers, so that a pack larger than the GPU still runs.
+
+- **Daily tables** are loaded once, with only the columns the tools need. Before loading, the worker logs their
+  row counts from the Parquet footers and an estimate of the memory the frames will take: measured on the
+  qualification pack, about 225 bytes per daily price row on the CPU and 135 on the GPU, prices and anomaly
+  features together (cudf keeps strings in Arrow columns). 10,000 issuers over 10 years, about 27 million
+  rows, is about 3.6 GB of an A100's 40 GB. The GPU engine uses cudf.pandas' managed memory pool
+  (`CUDF_PANDAS_RMM_MODE=managed_pool`), so a pack past the GPU's memory pages to host memory, more slowly,
+  instead of failing.
+- **The correlation graph** in `sparse_declared_peers` mode is computed from the declared pairs alone, joined
+  on the date: its memory grows with the pairs, not with the square of the assets. On the qualification pack
+  (2,000 issuers, 16,000 directed edges) that took the graph from 3.1 s to 0.73 s on the CPU and from 4.5 s to
+  0.21 s on the GPU, with the same correlations (within 6e-16). `full_correlation` builds an assets x assets
+  matrix, so keep it for small packs.
+- **Minute bars** are never loaded whole. [`bars.py`](src/market_analytics/bars.py) scans them in place from
+  the pack's raw dataset (`pack.json` → `market.bars`). It picks the files by symbol (one file per symbol, BFD's
+  layout) or by month (`month=YYYY-MM/` partitions), skips those whose Parquet footers show no row group in the
+  window, and reads the rest in batches that stay under `MARKET_ANALYTICS_BATCH_BYTES`, estimated from the
+  footers. A batch is one `read_parquet` call over its files, as Polars' `scan_parquet` takes a file list: cudf
+  pays about 25 ms per call, so reading file by file was 16 to 46 times slower on the GPU. In month partitions
+  the window and the symbols go into the reader, which skips row groups by their statistics. One-symbol files
+  have no symbol column, so they are read whole, and each row's symbol follows from its file's row count. Each
+  batch is reduced, for example to one bar per symbol and session (`session_bars`), before the next is read, so
+  memory holds one batch whatever the dataset's size. Peak GPU memory was 5 to 7 times the batch's estimate.
+
+Minute-bar scans measured on the A100 VM, on `bfdmini` (2,200 US symbols, 117 million minute bars, 3.75 GB of
+uncompressed columns), reducing each symbol's regular sessions (09:30 to 16:00) to session bars. On both
+engines the 572,995 session bars match a DuckDB rollup of the same files exactly. The last row scans 12 copies
+of every file under new names, which is more data than the GPU holds:
+
+| Scan | Batches | CPU | GPU | Peak GPU memory |
+| --- | --- | --- | --- | --- |
+| All 2,200 symbols, 305 sessions, 2 GiB batches | 2 | 46.5 s | 2.9 s | 9.6 GB |
+| The same with 256 MiB batches | 15 | 43.7 s | 3.8 s | 1.6 GB |
+| The 50 largest symbols, 30 sessions | 1 | 1.14 s | 0.20 s | 0.8 GB |
+| 12 copies: 26,400 files, 45 GB, 1.28 billion bars, 1 GiB batches (the default) | 42 | 522 s | 30.2 s | 7.1 GB |
+
 ## Environment
 
 | Variable | Default | Meaning |
@@ -58,6 +97,8 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
 | `DATA_ACTIVE_DIR` | `/data/active` | The active data pack |
 | `MARKET_ANALYTICS_ENGINE` | `cpu` | `gpu` installs cudf.pandas, cuml.accel and nx-cugraph in the worker (GPU image only) |
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one call may run before the worker is replaced |
+| `MARKET_ANALYTICS_BATCH_BYTES` | `1073741824` (1 GiB) | The most a minute-bar scan reads at once, estimated from the Parquet footers ([scale](#scale)) |
+| `CUDF_PANDAS_RMM_MODE` | `managed_pool` | cudf.pandas' memory: managed memory past the GPU's pages to host memory. Compose sets it explicitly |
 | `KUMO_RELATIONAL_URL` | unset | Kumo Relational NIM, e.g. `http://kumo-relational:8000`; enables `predict_asset_outcomes` |
 | `KUMO_API_KEY` | unset | Only for an authenticating gateway in front of the NIM (sent as `X-API-Key`) |
 
@@ -84,15 +125,16 @@ heavy (a spawned process re-imports it first).
 ```bash
 cd tools/market-analytics
 uv run pytest          # offline: a tiny fixture pack and a stubbed Kumo client; the GPU tests skip without a GPU
-uv run pytest -m gpu   # on a GPU host, after `uv sync --extra gpu-cu12`: CPU/GPU parity for every tool
+uv run pytest -m gpu   # on a GPU host, after `uv sync --extra gpu-cu12`: CPU/GPU parity for every tool and bars.py
 KUMO_RELATIONAL_URL=... KUMO_API_KEY=... DATA_ACTIVE_DIR=/path/to/active uv run pytest -m live  # one real prediction
 ```
 
 cudf.pandas falls back to pandas where it has no GPU path. Starting the worker does so four times: loading a
-pack (`merge_asof` and `rename_axis`, once each) and reading the warm-up's window (`Timestamp.to_pydatetime`,
-twice). So `CUDF_PANDAS_FAIL_ON_FALLBACK=1`, which turns the first fallback into an error, stops the worker
-while it loads and every GPU test errors; the parity run above passes without it. The tool calls themselves do
-not fall back: the last GPU test sets the variable once the pack is loaded, so a fallback fails its call. To
+pack (`merge_asof`, and `rename_axis` for a `full_correlation` graph, once each) and reading the warm-up's window
+(`Timestamp.to_pydatetime`, twice). So `CUDF_PANDAS_FAIL_ON_FALLBACK=1`, which turns the first fallback into an
+error, stops the worker while it loads and every GPU test errors; the parity run above passes without it. The
+tool calls and minute-bar scans themselves do not fall back: the last two GPU tests set the variable once the
+accelerators are installed and the pack is loaded, so a fallback fails the call or the scan. To
 list fallbacks instead, set `LOG_FAST_FALLBACK=1` (cudf.pandas writes them to
 `cudf_pandas_unit_tests_debug.log` in the working directory) or run a call under `cudf.pandas.profiler.Profiler`.
 Lint with the repository's `ruff.toml`: `uv run ruff check . && uv run ruff format --check .`

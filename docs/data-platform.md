@@ -242,7 +242,8 @@ the symbol can be found in a column or in the path, and when the files are order
   <dataset>/
     manifest.json
     bars/month=YYYY-MM/part-NNN.parquet   symbol, time, open, high, low, close, volume; sorted by (symbol, time),
-                                          row groups of about 122,880 rows, parts of at most about 256 MB
+                                          row groups of about 122,880 rows, parts of at most about 256 MB that
+                                          never split one symbol's month
     companies.parquet                     symbol, company_name, sector, industry, sic_code, exchange, profile,
                                           is_synthetic
     news.parquet                          news_id, symbol, published_at (UTC), source_name, headline, summary,
@@ -251,7 +252,8 @@ the symbol can be found in a column or in the path, and when the files are order
 
   The data is partitioned by date: a month directory prunes a date window. Within each file it is clustered
   by symbol: row-group minimum and maximum values prune symbols. One file per symbol per day would create
-  too many small files.
+  too many small files. Because a part holds whole symbol-months, a scan that reduces each batch per symbol and
+  session never sees half a session.
 
 **The build keeps v1's table layout:** one `tables/<table>.parquet` per table, sorted by its natural key, with
 row groups of 122,880 rows, and every table loaded into DuckDB with its keys, as in v1. The raw minute bars
@@ -364,9 +366,10 @@ In `us-equities`, filings and prices describe the same companies. The agent conn
 across two sources, which is the point of keeping filings separate. In `synthetic-market`, the issuers are
 fictional and the filers are real, and questions keep that boundary explicit, as they do today.
 
-**Indexing is batched and resumable.** Today an interrupted index is dropped and rebuilt. Instead,
-`retrieval-index` writes to a staging collection named after the corpus digest, lists the chunk ids already
-in it, and embeds only the rest, in batches of 50. The collection is renamed only when it is complete.
+**Indexing is batched and resumable.** `retrieval-index` streams `documents.jsonl` (one pass validates it,
+a second chunks it) and writes to a build collection named after the corpus digest, in batches of 50 chunks.
+If that collection already exists, a run was interrupted: each batch looks up its chunk ids, and only the
+missing chunks are embedded. The alias moves to the collection only when it is complete.
 
 ## Tool contract and GPU reads
 
@@ -391,8 +394,8 @@ because no column changes.
 
 | Data | How it is read | Where the memory goes |
 |---|---|---|
-| Daily tables (the six market tools) | Loaded once into the worker at startup, as today: only the needed columns, and timestamps normalized to naive UTC. | About 100 bytes per daily row across the worker's frames, and a few times that at peak while deriving them. 10,000 symbols over 10 years (about 25 million rows) needs a few GB of an A100's 40 GB. The GPU service sets `CUDF_PANDAS_RMM_MODE=managed_pool`, so a larger pack pages to host memory instead of failing. At startup the worker logs the estimate from the Parquet metadata. |
-| Minute bars (the optional intraday tool; never the six daily tools) | Partition-scoped per request. The symbols map to files (one per symbol) or to month directories (canonical); the window becomes Parquet row-group filters. The files are read in batches whose estimated uncompressed size stays under `ANALYTICS_GPU_BATCH_BYTES` (default 2 GiB). Each batch is reduced to its per-symbol result before the next is read. | One batch at a time, whatever the dataset's size. Requests are bounded (for example 50 symbols × 30 sessions). |
+| Daily tables (the six market tools) | Loaded once into the worker at startup, as today: only the needed columns, and timestamps normalized to naive UTC. | Measured: about 135 bytes per daily price row on the GPU and 225 on the CPU, prices and anomaly features together, and a few times that at peak while deriving them. 10,000 symbols over 10 years (about 27 million rows) needs about 3.6 GB of an A100's 40 GB. The GPU service sets `CUDF_PANDAS_RMM_MODE=managed_pool` (cudf.pandas' default where the GPU supports managed memory), so a larger pack pages to host memory instead of failing. At startup the worker logs the estimate from the Parquet metadata. In `sparse_declared_peers` mode the correlation graph is computed from the declared pairs only, so it grows with the pairs, not the square of the symbols. |
+| Minute bars (the optional intraday tool; never the six daily tools) | Partition-scoped per request, by `tools/market-analytics/src/market_analytics/bars.py`. The symbols map to files (one per symbol) or to month directories (canonical), and files whose footers show no row group in the window are skipped. The files are read in batches whose estimated uncompressed size stays under `MARKET_ANALYTICS_BATCH_BYTES` (default 1 GiB), one multi-file read per batch (cudf pays about 25 ms per call). In the canonical layout the window and symbols become Parquet row-group filters; one-symbol files are read whole, each row's symbol following from its file's row count. Each batch is reduced to its per-symbol, per-session result before the next is read. `pack.json` carries `market.bars` with `root`, the dataset's directory as the services see it. | One batch at a time, whatever the dataset's size: about 5 to 7 times the batch estimate at peak. Measured on the A100: all of `bfdmini` to session bars in 2.9 s (CPU 46.5 s), and 12 copies of it (45 GB) in 30 s (CPU 522 s), peaking at 7.1 GB. Requests are bounded (for example 50 symbols × 30 sessions: 0.2 s). |
 
 The full minute set is scanned only by the rollup, which runs in DuckDB on the CPU, streams, and is cached.
 There is no GPU rollup: 1.5 s on `bfdmini` does not justify one. The tools stay on pandas code run by
@@ -620,7 +623,7 @@ the SEC filings corpus. On Brev, the images and the Docker volumes stay where th
 | `data/src/demo_data/` | `external.py` (manifest, fingerprint, verification), `fetch.py` (sources), `market.py` (rollup, import), `sec.py`, `corpus/gdelt.py`; `structured.py` (the market dataset, external or generated; the population from its view); `cli.py` (`fetch`) |
 | `data/generate/` | New uv project: the Data Designer jobs and the checks |
 | `data/packs/` | `synthetic-market/` and `us-equities/` are added. `market-analysis/` shrinks to its recordings. |
-| `tools/market-analytics/` | The contract note for the optional news table; `data.py` and `server.py` (`news_unavailable`); the warm-up; the fixture |
-| `tools/retrieval/` | Resumable indexing |
+| `tools/market-analytics/` | The contract note for the optional news table; `data.py` and `server.py` (`news_unavailable`); the warm-up; the fixture; `bars.py` (minute-bar scans); the sparse peer graph; the memory estimate |
+| `tools/retrieval/` | Streamed, resumable indexing |
 | `scripts/demo.sh`, `scripts/lib/doctor.sh`, `compose.yaml`, `.env.example` | `data fetch` and `data generate`, the `/sources` mounts, the `DATA_SOURCE_*`, `DATA_DESIGNER_*` and credential variables, pack-driven `requires_env`, the default `DATA_PACK` and `DATA_DATABASE_NAME` |
 | `.gitignore`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml` | `data/external/`; the committed-data guards |
