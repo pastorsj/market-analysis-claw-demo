@@ -435,20 +435,20 @@ is where `us-equities` can show GPU work.
 | | `demo.sh data generate [--profile P]` | `demo.sh data prepare` |
 |---|---|---|
 | Runs | Rarely: to change the text, or for a profile larger than the committed text | Every build |
-| Code | `data/generate/`: its own uv project, with `data-designer==0.9.3`, and image `market-demo/data-generate:local` (profile `tools`) | `data/packs/synthetic-market/generator/` in the data image (numpy and pyarrow; `numpy` is added to `demo-data`) |
+| Code | `data/generate/`: its own uv project, with `data-designer==0.9.3`, run with uv on the host | `data/packs/synthetic-market/generator/build.py` in the data image (numpy and pyarrow) |
 | Needs | `DATA_DESIGNER_API_KEY` (defaults to `INFERENCE_API_KEY`), `SEC_USER_AGENT` | Nothing: no key, no network |
-| Writes | The **text dataset**: `companies.parquet`, `headline_bank.parquet`, `story_news.parquet`, `checks.json` and a manifest | The raw dataset in the canonical layout, in `/data/cache/generated/<digest16>/`, then the normal import |
-| Deterministic | No: LLM output. It is reviewed, then pinned by its manifest digest. | Yes: identical bytes for identical seed, parameters, text and code |
+| Writes | The **text**: `companies.jsonl`, `headlines.jsonl`, `stories.jsonl` (one row per line, so a review sees each) and `checks.json` | The raw dataset in the canonical layout, in `/data/cache/generated/<key16>/`, then the normal import |
+| Deterministic | No: LLM output. It is reviewed and committed; the pack digest covers it. | Yes: identical bytes for identical seed, parameters, text and code |
 
 The text for `standard` is committed in `data/packs/synthetic-market/text/`, at a few hundred kilobytes, and
-reviewed like any other change; `generate --profile standard` rewrites it there for review. A profile
-needing more issuers than the committed text writes its text dataset to
-`$DATA_SOURCE_DIR/synthetic-market-text-<profile>/`. `prepare` then uses it, or asks you to run `generate`.
+reviewed like any other change; `generate` rewrites it there for review, keeping every row that still passes
+the checks. A profile needing more issuers than the committed text needs `generate --profile <p> --out <dir>`
+outside the repository, and `SYNTHETIC_MARKET_TEXT=<dir>` for `prepare`, which otherwise stops and says so.
 Rosters are prefix-stable, so every smaller profile uses the first N rows of the committed text.
 
 `DATA_DESIGNER_BASE_URL` defaults to `https://integrate.api.nvidia.com/v1`, and `DATA_DESIGNER_MODEL` to
-`nvidia/nemotron-3-super-120b-a12b` (thinking off, temperature 0.7, timeout 120 s). Like the other keys, the
-key reaches only the one-shot generate container.
+`nvidia/nemotron-3-super-120b-a12b` (thinking off, temperature 0.7, timeout 120 s). `demo.sh` passes the key
+in the environment of the one `uv run` only.
 
 ### The scale knob
 
@@ -457,58 +457,68 @@ a profile.
 
 | Profile | Issuers | Dates | Bars | Daily rows | Minute rows | Text |
 |---|---|---|---|---|---|---|
-| `ci` | 12 (the story issuers) | 2026-06-01 to 2026-08-31 | 1min | about 770 | about 300,000 | committed |
-| `interactive` | 50 | 2025-01-02 to 2026-08-31 | 1d | about 21,000 | – | committed |
-| `standard` (default) | 2,000 | 2024-01-02 to 2026-08-31 | 1d | about 1.34 million | – | committed |
-| `intraday` | 500 | 2026-03-02 to 2026-08-31 | 1min | about 64,000 | about 25 million | committed |
-| `large` | 10,000 | 2016-01-04 to 2026-08-31 | 1d | about 27 million | – | `data generate` |
+| `ci` | 12 (the story issuers) | 2026-06-01 to 2026-08-31 | 1min | 768 | 300,288 | committed |
+| `interactive` | 50 | 2025-01-02 to 2026-08-31 | 1d | 20,800 | – | committed |
+| `standard` (default) | 2,000 | 2024-01-02 to 2026-08-31 | 1d | 1,336,000 | – | committed |
+| `intraday` | 500 | 2026-03-02 to 2026-08-31 | 1min | 63,500 | 24,828,500 | committed |
+| `large` | 10,000 | 2016-01-04 to 2026-08-31 | 1d | 26,800,000 | – | `data generate` |
+
+The pack declares `frequency: 1min` for every profile: a daily-bar profile writes one bar per session, stamped
+at the 16:00 close, which the regular-session rollup keeps unchanged (`bar_count` 1).
 
 The committed text lives in `text/`, so the `.parquet` guard above allows `data/packs/*/text/`.
 
 ### Seeded numbers
 
-Every random draw comes from `np.random.default_rng([pack_seed, crc32(stream), *keys])`, with one named
-stream per concern (`roster`, `market`, `sector`, `issuer/<slot>`, `news/<slot>`, `story`). Because the keys
-are per issuer slot, a profile's first N issuers are identical in every profile, and adding issuers changes
-no existing series.
+Every random draw comes from `np.random.default_rng([seed, crc32(stream), *keys])`, with one named stream
+per concern (`roster` and `name-root` in `generate`; `market`, `industry`, `issuer`, `issuer-noise`, `news`
+and `minutes` in `prepare`), keyed by issuer slot. A profile's first N issuers are therefore identical in every
+profile, and adding issuers changes no existing series. The market is simulated over the whole 2016 to 2026
+calendar and each profile keeps its window, so an issuer also has the same prices in every profile.
 
 - **Roster** (the seed dataset handed to Data Designer): `slot`, a pronounceable invented `name_root`, a
-  `ticker`, `sector`, `industry`, a real `sic_code` for that industry, `exchange`, and `is_story` for slots 0
-  to 11. Price-model parameters: start price, drift, volatility, and betas to the market and the sector.
-- **Returns**: `r[i,t] = β_i·market_t + γ_i·sector_{s,t} + σ_i·ε[i,t] + shock[i,t]`. Each factor and ε
-  is Student-t with 4 degrees of freedom, scaled to its target volatility, over a calendar with the exchange
-  holidays for 2016 to 2026. Opens gap from the previous close; highs and lows come from a half-normal
-  intraday range.
-- **Volume**: log-normal around each issuer's base, rising with |r|/σ, and 2 to 4 times higher on news
-  sessions.
-- **News**: background events arrive per issuer as a Poisson process (the profile's
-  `news_per_issuer_month`), with a type and a sentiment label. The next session's return tilts ±0.3σ with
-  the label: a modest, planted relationship that `analyze_news_price_relationship` should find. There are 12
-  story events, one per story issuer, published from 2026-08-17 to 2026-08-28, each with a fixed shock of
-  ±6 to 12% on its publication session. Oracles check both.
-- **Minute bars** (1min profiles): 390 bars per session. Each is a Brownian bridge from the day's open to its
-  close, scaled to its high and low, with U-shaped volume. The rollup reproduces the daily bar exactly, and a
-  test proves it.
+  four-letter `ticker`, a real `sic_code`, its SEC `industry` and SIC-division `sector`, `exchange`, and
+  `is_story` for slots 0 to 11. The price-model parameters are drawn at `prepare` from the slot's stream.
+- **Returns**: `r[i,t] = β_i·market_t + γ_i·industry_{k,t} + drift_i + σ_i·ε[i,t] + news[i,t]`. Each
+  factor and ε is Student-t with 4 degrees of freedom scaled to unit variance, over a calendar with the NYSE
+  holidays for 2016 to 2026 (computed) and two unscheduled closures. Issuers in one SIC industry share its
+  factor, so same-SIC declared peers are correlated. Opens gap from the previous close; highs and lows come
+  from a half-normal range.
+- **Volume**: a daily dollar amount per issuer, rising with |r| over the issuer's total volatility, and 2 to 4
+  times higher on news sessions. The story issuers' dollar volume is far above every other issuer's, so they
+  are always the 12 most liquid: the `top_12` universe and the prediction population, with no extra column.
+- **News**: background items arrive per issuer as a Poisson process (1 a month; 3 for story issuers), with a
+  type and a sentiment label. The next session's return tilts ±0.3σ with the label: a modest, planted
+  relationship that `analyze_news_price_relationship` finds. There are 12 story items, one per story issuer,
+  published from 2026-08-17 to 2026-08-28, each with a fixed shock of ±6 to 12% on its publication session and
+  30% of that again over the next five sessions. The oracles in `eval/oracles/` and the tests check both.
+- **Minute bars** (1min profiles): 391 bars per session, 09:30 through the 16:00 closing auction. Each session
+  is a Brownian bridge from the day's open to its close, clipped to its range, with U-shaped volume; the bars
+  at its highest and lowest points take the day's high and low. The rollup reproduces the daily bar exactly,
+  and a test proves it.
 - Model constants live in `generator/model.yaml`, not in code.
 
 ### Nemotron text
 
-The roster is passed to Data Designer as an ordered `DataFrameSeedSource`, so each LLM row is tied to one
-seeded slot.
+The roster is Data Designer's seed dataset, read in order (`SamplingStrategy.ORDERED`), so each LLM row is
+tied to one seeded slot. The seed is written to a Parquet file named after its content and passed as a
+`LocalFileSeedSource`: Data Designer's resume fingerprint covers a seed file's path but leaves a
+`DataFrameSeedSource`'s rows out, so resuming with a DataFrame seed could return another seed's answers.
 
 | Data Designer job | Records | Column (structured, Pydantic `output_format`) |
 |---|---|---|
-| `companies` | one per issuer | `company_name` (at most 40 characters, built on `name_root`, no legal suffix) and `profile` (one sentence, at most 300 characters) |
-| `headline_bank` | event type × sentiment × 20 variants | `template`: at most 110 characters, with exactly one `{company}` placeholder |
-| `story_news` | the 12 story events (issuer, date, type, sentiment, shock) | `headline` (at most 110 characters) and `summary` (at most 600 characters) |
+| `companies` | one per issuer | `company_name` (at most 40 characters, built on `name_root`, no legal suffix) and `profile` (one sentence, at most 240 characters) |
+| `headlines` | event type × sentiment (30) | `templates`: 12 per record, each at most 110 characters with exactly one `{company}` placeholder |
+| `stories` | the 12 story events (issuer, date, type, sentiment) | `headline` (at most 110 characters) and `summary` (at most 600 characters) |
 
 A background news row's headline is a template drawn by its seeded stream and filled with the company name.
 The number of LLM calls therefore grows with the issuers, not with the news volume. build.nvidia.com's rate
-limit is what bounds `generate`, and `resume=IF_POSSIBLE` lets an interrupted run continue.
+limit is what bounds `generate`, and `resume=IF_POSSIBLE` lets an interrupted run continue. Rows already in
+the output are kept while they pass the checks, so a rerun asks only for what is missing or failed.
 
 ### Checks, at generate time
 
-Any failure stops `generate`.
+A row that fails is asked again, for at most 5 rounds; after that, `generate` stops.
 
 - **Shape.** The Pydantic formats enforce the lengths. A template must have exactly one placeholder.
 - **Unique.** Normalized names, tickers and roots must be unique within the pack. Normalizing means
@@ -525,8 +535,11 @@ Any failure stops `generate`.
   `synthetic: true`, so the UI shows its badge. The pack disclaimer says that the issuers, prices and news are
   fictional.
 - **Record.** `checks.json` records the SEC files' URLs, SHA-256 values and fetch time, the counts, the
-  rejects per round, the model id, the Data Designer version and the seed.
+  rejects per round, the model id, the Data Designer version, the seed, the calls and tokens used, and each
+  text file's SHA-256.
 - The contract tables are validated again at `prepare`, like every pack.
+- **Format.** A name must start with its root, have at most three more words and no legal suffix; a story
+  headline must name its company.
 
 ## The CI fixture
 

@@ -1,0 +1,94 @@
+# synthetic-market pack
+
+A fictional US equity market, made with [NeMo Data Designer](https://github.com/NVIDIA-NeMo/DataDesigner) and
+Nemotron, in the same format as the real-data pack [`us-equities`](../us-equities/pack.yaml). It needs no key,
+no download and no private data, so it is the public default. Real SEC EDGAR filings and eCFR Title 17 sit
+beside it as separate document sources. Every issuer, price and news item in `market_data` is fictional; none
+of it is investment advice.
+
+## What is in it
+
+| Source | Kind | Origin | Contents |
+|---|---|---|---|
+| `market_data` | structured | generated, synthetic | Fictional issuers, their daily prices, declared peers and ticker-linked company news, in DuckDB and Parquet, with leakage-safe prediction views |
+| `sec_filings` | documents | downloaded, real | SEC EDGAR 8-K and 6-K filings from 2026 Q2 (1,000 pinned filings) |
+| `market_regulations` | documents | downloaded, real | eCFR Title 17 as of 2026-08-17 |
+
+The filings are real companies and the issuers are fictional, so the two never mix: no filing is turned into
+news, and questions that use both keep them apart.
+
+Profiles (`DATA_PACK_PROFILE`), the scale knob:
+
+| Profile | Issuers | Window | Bars | `daily_prices` | Text |
+|---|---|---|---|---|---|
+| `ci` | 12 | 2026-06-01 to 2026-08-31 (64 sessions) | 1 minute (300,288) | 768 | committed |
+| `interactive` | 50 | from 2025-01-02 (416 sessions) | daily | 20,800 | committed |
+| `standard` (default) | 2,000 | from 2024-01-02 (668 sessions) | daily | 1,336,000 | committed |
+| `intraday` | 500 | from 2026-03-02 (127 sessions) | 1 minute (24,828,500) | 63,500 | committed |
+| `large` | 10,000 | from 2016-01-04 (2,680 sessions) | daily | 26,800,000 | `data generate --profile large` |
+
+## How it is made
+
+Two stages, so a build is deterministic and offline while the text still comes from Nemotron:
+
+1. **`demo.sh data generate`** ([`data/generate`](../../generate/README.md)), run rarely. A seeded roster of
+   issuer slots (industry, exchange, invented name root, ticker) goes to Data Designer as its seed dataset;
+   Nemotron writes each company's name and profile, 12 headline templates per event type and sentiment, and
+   the 12 story items. Names and tickers are checked against SEC's ticker lists. The result is `text/`,
+   committed and reviewed like code, with `checks.json` recording the checks and the cost.
+2. **`demo.sh data prepare`** runs `generator/build.py`: seeded numpy streams with the constants in
+   `generator/model.yaml` make the prices, volumes and news timing, and write a raw dataset (month-partitioned
+   bars, `companies.parquet`, `news.parquet`, a manifest) in the layout a real dataset uses. The market
+   importer then builds the tables from it exactly as it does for `us-equities`.
+
+Every random draw comes from `numpy.random.default_rng([seed, crc32(stream), *keys])`, with one stream per
+concern and issuer slot. The market is simulated over 2016-01-04 to 2026-08-31 and each profile keeps its
+window, so an issuer has the same prices and news in every profile that includes it.
+
+## What is planted
+
+- **Prices**: daily returns are `beta * market + gamma * industry + drift + volatility * noise`, each factor
+  Student-t with 4 degrees of freedom. Issuers in one SIC industry share a factor, so declared peers (the most
+  liquid issuers with the same SIC code) are correlated. There are no splits or dividends.
+- **The 12 story issuers** (slots 0 to 11) trade far more than any other, so they are always the 12 most liquid:
+  the `top_12` universe and the prediction population. Each has one story item between 2026-08-17 and
+  2026-08-28 (`model.yaml`, `story`) that moves its publication session by 6 to 12 percent, plus 30 percent of
+  that over the next five sessions.
+- **Background news**: about one item per issuer a month (three for story issuers), with an event type and a
+  sentiment label, published between 11:00 and 20:30 UTC on a session day. Each moves the next session's return
+  by 0.3 of the issuer's volatility with its sentiment, a modest relationship that
+  `analyze_news_price_relationship` finds. Its headline is a seeded template filled with the company's name.
+- **Volume** rises with the size of the day's move and is 2 to 4 times higher on news sessions.
+- **Minute bars** (`ci`, `intraday`): 391 per session, 09:30 through the 16:00 closing auction, from a Brownian
+  bridge between the day's open and close. Their rollup is exactly the daily bar; a test checks it.
+- **Prediction**: the anchor is 2026-08-24 21:00 UTC with a five-session horizon; the views expose only what was
+  observable then.
+
+Labels: `assets.is_synthetic` is true, news comes from "Synthetic Newswire", the source is marked synthetic in
+the UI, and the disclaimer says the data is fictional.
+
+## How it was made
+
+The committed text is for the `standard` profile (2,000 issuers), generated on 2026-09-29 with Data Designer
+0.9.3 and `nvidia/nemotron-3-super-120b-a12b` on build.nvidia.com. `text/checks.json` has the details.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `pack.yaml` | the manifest (see `data/README.md`) |
+| `schema.sql`, `views/prediction.sql` | the DuckDB schema (the `us-equities` one plus `company_news`) and the prediction views |
+| `ontology.yaml` | table and column descriptions for Auto Ontology |
+| `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set |
+| `generator/build.py`, `generator/model.yaml` | the seeded market and its constants |
+| `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
+| `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
+| `eval/oracles/` | SQL that computes the analytics questions' answers from a build; never read at runtime |
+
+## Licenses
+
+- Synthetic data and its Nemotron-written text: Apache-2.0.
+- eCFR: United States government public information. The eCFR is authoritative but is not the official legal
+  edition of the CFR.
+- SEC EDGAR: SEC website reuse terms; redistribution unknown. Filings are fetched at prepare time and never
+  committed; issuer-authored content may carry separate rights.

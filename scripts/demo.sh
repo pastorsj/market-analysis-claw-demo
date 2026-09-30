@@ -19,7 +19,7 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 readonly COMPOSE_PROJECT=market-demo # the name in compose.yaml
 readonly UP_TIMEOUT=3600 # the first data build downloads SEC EDGAR and embeds the corpus
-readonly PYTHON_PROJECTS="agent api data tools/retrieval tools/market-analytics tools/auto-ontology"
+readonly PYTHON_PROJECTS="agent api data data/generate tools/retrieval tools/market-analytics tools/auto-ontology"
 readonly RUFF=ruff@0.16.9 # the version in .pre-commit-config.yaml
 # Profile sets `test compose` renders; each must be valid with no .env.
 readonly PROFILE_SETS="core core,retrieval,analytics core,retrieval,analytics-gpu,kumo
@@ -55,6 +55,8 @@ Data and recordings
                           DATA_SOURCE_<ID> in .env, and verify them file by file
   data prepare            build the active data pack (and the corpus and index with retrieval)
   data reindex            rebuild the retrieval index, e.g. after changing the embed model
+  data generate [ARGS...]  write the synthetic-market text with NeMo Data Designer and Nemotron, with
+                          uv on the host (ARGS go to demo-data-generate, e.g. --profile large)
   data validate|verify|list|clean [--all]
   record [ARGS...]        record sessions from the running stack into
                           data/packs/$DATA_PACK/recordings (ARGS go to `demo-api record`)
@@ -274,11 +276,15 @@ cmd_data() {
       done
       ;;
     reindex) reindex ;;
+    generate)
+      shift
+      data_generate "$@"
+      ;;
     validate | verify | list | clean)
       shift
       dc run --rm --no-deps data "$action" "$@"
       ;;
-    *) die "$EXIT_USAGE" "usage: demo.sh data fetch|prepare|reindex|validate|verify|list|clean [--all]" ;;
+    *) die "$EXIT_USAGE" "usage: demo.sh data fetch|prepare|reindex|generate|validate|verify|list|clean [--all]" ;;
   esac
 }
 
@@ -354,6 +360,22 @@ fetch_credentials() {
       options+=(-e "$name")
     fi
   done
+}
+
+# data generate [ARGS...]: the synthetic-market pack's text (data/generate/README.md). The key is passed in
+# the environment of this one command only; it defaults to INFERENCE_API_KEY, like the retriever's.
+data_generate() {
+  command -v uv >/dev/null || die "$EXIT_CONFIG" "data generate runs with uv on the host: install uv"
+  local key
+  key=$(env_value DATA_DESIGNER_API_KEY)
+  (
+    cd "$ROOT/data/generate" &&
+      DATA_DESIGNER_API_KEY=${key:-$INFERENCE_API_KEY} \
+      DATA_DESIGNER_BASE_URL=$(env_value DATA_DESIGNER_BASE_URL) \
+      DATA_DESIGNER_MODEL=$(env_value DATA_DESIGNER_MODEL) \
+      SEC_USER_AGENT=$SEC_USER_AGENT \
+      uv run --locked demo-data-generate "$@"
+  )
 }
 
 reindex() {
