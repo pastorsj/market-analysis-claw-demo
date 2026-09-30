@@ -14,7 +14,8 @@
 # does not manage. By hand, pass the OpenShell pins along with .env:
 #   docker compose --env-file infra/openshell/versions.env --env-file .env ...
 #
-# Every host port is published on 127.0.0.1 only. The sandbox reaches services as
+# Every host port is published on 127.0.0.1 only, except the UI's when UI_BIND_HOST says
+# otherwise (for a trusted proxy such as a Brev secure link). The sandbox reaches services as
 # host.openshell.internal:<port>, which the host-networked OpenShell supervisor maps to
 # 127.0.0.1. No variable is required (never ${VAR:?}), so the replay profile needs no .env.
 # Keys reach services as Compose secrets (/run/secrets/<name>), not environment variables.
@@ -255,7 +256,7 @@ services:
     profiles: [core, replay]
     build: ui
     image: market-demo/ui:local
-    ports: ["127.0.0.1:${UI_PORT:-3100}:3000"]
+    ports: ["${UI_BIND_HOST:-127.0.0.1}:${UI_PORT:-3100}:3000"] # the only non-loopback opt-in
     environment:
       UI_MODE: ${UI_MODE:-live} # demo.sh replay sets replay
       API_URL: http://api:8000

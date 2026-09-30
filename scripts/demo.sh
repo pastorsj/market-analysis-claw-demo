@@ -326,8 +326,28 @@ test_compose() {
   local profiles
   for profiles in $PROFILE_SETS; do
     COMPOSE_PROFILES=$profiles docker compose -f "$ROOT/compose.yaml" --env-file "$VERSIONS_FILE" config -q
+    # Every port is on loopback; UI_BIND_HOST moves the UI's alone.
+    if UI_BIND_HOST='' published_hosts "$profiles" | grep -v ' 127\.0\.0\.1$' ||
+      UI_BIND_HOST=0.0.0.0 published_hosts "$profiles" | grep -v -e ' 127\.0\.0\.1$' -e '^ui 0\.0\.0\.0$'; then
+      die "$EXIT_CONFIG" "compose publishes a port beyond 127.0.0.1 (profiles $profiles)"
+    fi
+    case ,$profiles, in
+      *,core,* | *,replay,*)
+        UI_BIND_HOST=0.0.0.0 published_hosts "$profiles" | grep -qx 'ui 0\.0\.0\.0' ||
+          die "$EXIT_CONFIG" "UI_BIND_HOST does not reach the ui port (profiles $profiles)"
+        ;;
+    esac
     log "compose config: $profiles"
   done
+}
+
+# The host addresses Compose publishes on, one "service address" line per port.
+published_hosts() {
+  COMPOSE_PROFILES=$1 docker compose -f "$ROOT/compose.yaml" --env-file "$VERSIONS_FILE" config |
+    awk '/^services:/ { in_services = 1; next }
+      /^[^ ]/ { in_services = 0 }
+      in_services && /^  [^ ]/ { service = $1; sub(/:$/, "", service) }
+      in_services && $1 == "host_ip:" { print service, $2 }'
 }
 
 # Builds the image `up` runs: a plain `docker build` would retag it with a different ID.

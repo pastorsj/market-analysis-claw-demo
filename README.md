@@ -46,7 +46,8 @@ flowchart LR
     pack --- ontology
 ```
 
-Every port is published on 127.0.0.1 only. The sandbox reaches the services as `host.openshell.internal`,
+Every port is published on 127.0.0.1 only (`UI_BIND_HOST` can open the UI's alone to a trusted proxy, such as
+a Brev secure link: [operations](docs/operations.md#brev-vm-mode)). The sandbox reaches the services as `host.openshell.internal`,
 which the host-networked OpenShell supervisor maps to the host's loopback. The browser talks only to the UI,
 which proxies an allowlisted set of API routes. [Architecture](docs/architecture.md) describes the components,
 the request flow, the contracts and the trust boundaries.
@@ -254,8 +255,9 @@ Each component also has its own README with its environment and tests.
 ## Security considerations
 
 - **Loopback only.** Every port is published on `127.0.0.1`; on a remote host, use an SSH tunnel. Never
-  publish Switchyard (no authentication), Phoenix (full trace payloads), the Auto Ontology MCP server (trusted
-  service mode) or the UI (no sign-in, and it spends your inference credits).
+  publish Switchyard (no authentication), Phoenix (full trace payloads) or the Auto Ontology MCP server
+  (trusted service mode). The UI has no sign-in and spends your inference credits: open it with
+  `UI_BIND_HOST=0.0.0.0` only to a trusted proxy, such as a Brev secure link, and `doctor` warns while you do.
 - **Keys.** `.env` holds the keys; it is created with mode 600 and is gitignored. Services get keys as Compose
   secret files; only Auto Ontology and an optional hosted Kumo key are read from the environment. Switchyard is
   the only holder of the model key on the agent path. `doctor` never prints a key, and replay needs none.

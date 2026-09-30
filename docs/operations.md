@@ -147,10 +147,10 @@ For the sandbox specifically, see the troubleshooting table in
 
 The GPU tier (`analytics-gpu`, the local Kumo NIM) runs on a Linux x86_64 VM with an NVIDIA GPU, such as a
 Brev A100 instance. Nothing about the demo changes: the same `demo.sh`, bound to the VM's loopback, reached
-over SSH. These steps were run on 2026-09-29 on a fresh Brev A100 (40 GB) VM with 12 vCPUs, 83 GiB of memory
-and a 533 GB disk (Ubuntu 22.04, kernel 6.8, Docker 29.8 with Compose 5.5, driver 595, NVIDIA Container
-Toolkit 1.20, as Brev provisions it), with every profile and the default corpora. `up` needed nothing else
-installed.
+over SSH, or with the UI alone shared through a Brev secure link (step 8). These steps were run on 2026-09-29
+on a fresh Brev A100 (40 GB) VM with 12 vCPUs, 83 GiB of memory and a 533 GB disk (Ubuntu 22.04, kernel 6.8,
+Docker 29.8 with Compose 5.5, driver 595, NVIDIA Container Toolkit 1.20, as Brev provisions it), with every
+profile and the default corpora. `up` needed nothing else installed.
 
 1. **Check the host.** Docker Engine 28+ with Compose 2.30+, a kernel of 6.2 or later (for Landlock), and the
    NVIDIA Container Toolkit (`docker info` lists the `nvidia` runtime). Plan for 150 GB of free disk with
@@ -297,6 +297,33 @@ installed.
 
    Then open <http://127.0.0.1:3100> (UI) and <http://127.0.0.1:6006> (Phoenix). With Brev's CLI set up, the
    instance name works as the SSH host.
+
+   **Or share the UI through a Brev secure link**, for people without SSH access. The link's proxy does not
+   reach the VM's loopback: it connects over Brev's private network interface (`wt0`) to the link's port,
+   so with the default binding the link answers 503 (`Connection refused` on the error page). Publish the UI,
+   and only the UI, beyond loopback:
+
+   ```bash
+   # In .env on the VM
+   UI_BIND_HOST=0.0.0.0
+   ```
+
+   Then run `./scripts/demo.sh up --no-build`; of the running services, only `ui` changes, so only it is
+   recreated. To recreate it alone by hand, `docker compose --env-file infra/openshell/versions.env --env-file .env up -d
+   --no-deps ui` (`--no-deps` keeps Compose from recreating the API without the values `demo.sh` derives).
+
+   The link must point at the UI's host port, `UI_PORT` (3100 by default). If the instance has no link yet,
+   create one in the Brev console on the instance's page (**Access**, then share or expose port 3100). The UI
+   serves the page and proxies `/api/v1` to the API over the Compose network, so the link needs no other
+   port. The API, the tools, Switchyard and Phoenix stay on the VM's loopback whatever `UI_BIND_HOST` says,
+   and `doctor` and `up` warn while it is not `127.0.0.1`.
+
+   Security: the UI has no sign-in, and through it anyone who can open the link can run the agent and spend
+   your inference credits. Whether the link asks for a Brev sign-in is set in the Brev console, not here;
+   use `0.0.0.0` only for a proxy you trust, and set it back to `127.0.0.1` when you are done (then
+   `up --no-build` again). Phoenix stays tunnel-only: the UI's **Open in Phoenix** link points at
+   <http://127.0.0.1:6006> on the viewer's own machine, so it works only for someone running the SSH tunnel
+   above.
 9. **Tests on the VM** (optional) need uv, which Brev's image has (in `~/.local/bin`, on a login shell's
    `PATH`), and Node.js 22, which it lacks. `test e2e` installs Chromium's system libraries with apt through
    sudo.
@@ -328,6 +355,7 @@ installed.
 | `test e2e` fails before any test runs | It needs Node.js 22 and sudo for Chromium's libraries (step 9) |
 | Every GPU parity test errors while the worker loads the pack | `CUDF_PANDAS_FAIL_ON_FALLBACK` is set, and starting the worker falls back four times; unset it (step 7) |
 
-Do not publish the demo's ports on the VM's public interface or through a public port share. The UI has no
-sign-in and spends your inference credits, and Switchyard, Phoenix and the Auto Ontology MCP server have no
+Do not publish the demo's ports on the VM's public interface or through a public port share; the one
+exception is the UI behind a trusted proxy such as a Brev secure link (step 8). The UI has no sign-in and
+spends your inference credits, and Switchyard, Phoenix and the Auto Ontology MCP server have no
 authentication at all.

@@ -98,6 +98,9 @@ check_ports() {
 
 check_config() {
   [ -n "$(find "$ENV_FILE" -perm 600)" ] || warn ".env holds keys; restrict it with: chmod 600 .env"
+  # The UI has no sign-in and proxies /api/v1 to the agent: only a trusted proxy may reach it.
+  [ "$UI_BIND_HOST" = 127.0.0.1 ] ||
+    warn "UI_BIND_HOST is not 127.0.0.1: the UI, and the agent behind it, is open to every network that reaches port $UI_PORT; keep it only for a trusted proxy such as a Brev secure link"
   check_profiles
   check_inference
   if has_profile retrieval || has_profile ontology; then
