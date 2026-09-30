@@ -12,39 +12,34 @@ the recorded sessions. The `demo-data` builder turns the selected pack into file
 changing code.
 
 The format, the runtime layout and the builder's commands are specified in
-[`data/README.md`](../data/README.md). This page is the guide.
+[`data/README.md`](../data/README.md). How external data is fetched, imported and scaled is in
+[data platform](data-platform.md). This page is the guide.
 
-## The market-analysis pack
+## The packs
 
-The repository ships one pack, [`market-analysis`](../data/packs/market-analysis/README.md): a deterministic
-synthetic market beside real public documents.
+The repository ships two packs in one format: the same tables, built by the same importer from a raw market
+dataset. In both, SEC EDGAR filings are a separate document source, searched by retrieval. They are never
+converted into news events or written to a news table: the demo shows the agent combining a price database and
+a document corpus, each through its own tool.
 
-| Source | Kind | Origin | Contents |
-|---|---|---|---|
-| `market_analysis_structured` | structured | generated, synthetic | Prices, events, corporate actions, peers and short-form news for 12 fictional issuers (plus 1,988 more in the `qualification` profile) in DuckDB and Parquet, and leakage-safe prediction views |
-| `market_news` | documents | downloaded, real | SEC EDGAR 8-K and 6-K filings from 2026 Q2 (1,000 pinned filings) |
-| `market_regulations` | documents | downloaded, real | eCFR Title 17 as of 2026-08-17 |
-| `market_briefs` | documents | committed, synthetic | Eight fictional briefs, one per planted event |
+| | [`synthetic-market`](../data/packs/synthetic-market/README.md) (default) | [`us-equities`](../data/packs/us-equities/README.md) (optional) |
+|---|---|---|
+| Prices | Fictional issuers (2,000 at the default `standard` profile), seeded prices; one-minute bars in the `ci` and `intraday` profiles | About 1,600 real US stocks, January 2025 to March 2026, rolled up from real one-minute bars that stay outside the repository |
+| Company data | Names and profiles written by Nemotron with NeMo Data Designer, checked against SEC's ticker lists | SEC names, CIKs and SIC codes |
+| Ticker-linked news | `company_news`: seeded events with Nemotron headlines, and 12 planted stories | None: `sentiment_timeline` and `analyze_news_price_relationship` report that they are unavailable |
+| `sec_filings` | 1,000 real 8-K and 6-K filings from 2026 Q2, by any filer (the issuers are fictional) | 1,074 8-Ks filed by the pack's own companies over its price window |
+| Other documents | `market_regulations`: eCFR Title 17 | `market_regulations`, and `world_news`: 8,192 GDELT headlines (opt-in) |
+| Needs | Nothing for the structured part; `SEC_USER_AGENT` for `sec_filings` | `demo.sh data fetch` first; `SEC_USER_AGENT` for company data and `sec_filings` |
 
-The synthetic market has planted facts (eight news events that move prices, a stock split, dividends, a
-prediction anchor) so answers can be checked; `eval/oracles/*.sql` computes them. The downloaded documents are
-fetched at build time from pinned URLs and checked against their SHA-256; they are never committed.
-
-## The us-equities pack
-
-[`us-equities`](../data/packs/us-equities/README.md) holds real prices: daily bars for about 1,600 US-listed
-stocks, rolled up from real split-adjusted one-minute bars, with SEC company names, CIKs and SIC codes. The bars
-are an external dataset that is never committed; fetch them before the first `prepare`:
+The synthetic market has planted facts, so answers can be checked: `eval/oracles/*.sql` computes them from a
+build. The downloaded documents are fetched at build time from pinned URLs and checked against their SHA-256;
+they are never committed. `us-equities`' data reaches a machine through a fetch step:
 
 ```bash
 # .env: DATA_PACK=us-equities, and DATA_SOURCE_MINUTE_BARS=<a directory, host:/path or URL>
 ./scripts/demo.sh data fetch          # into $DATA_SOURCE_DIR/minute-bars, verified against the pinned manifest
 ./scripts/demo.sh data prepare
 ```
-
-SEC EDGAR filings and eCFR Title 17 are its document sources, separate from the prices. The pack has no
-ticker-linked news, so the two news tools report that they are unavailable. How the data is fetched, verified,
-rolled up and imported, and how it scales, is in [data platform](data-platform.md).
 
 ## How a pack is built
 
@@ -65,11 +60,12 @@ itself, so preparing an unchanged pack is a no-op and any change starts a new bu
 atomically. `data prepare` also restarts market analytics, which keeps the build it resolved at startup.
 
 `pack.json` in the build is what services read: the sources and questions this build can serve, the database
-name and paths, the analytics and prediction settings, and the digests of every file.
+name and paths, the analytics and prediction settings, the minute bars' location, and the digests of every file.
 
-Settings (`.env`, [configuration](configuration.md#4-data-pack)): `DATA_PACK`, `DATA_PACK_PROFILE`
-(`qualification` or `interactive`), `DATA_CORPORA` and `SEC_USER_AGENT`. An empty `DATA_CORPORA` builds every
-corpus the pack does not mark `opt_in`: for `market-analysis`, all three.
+Settings (`.env`, [configuration](configuration.md#4-data-pack)): `DATA_PACK`, `DATA_PACK_PROFILE`,
+`DATA_CORPORA` and `SEC_USER_AGENT`. An empty `DATA_CORPORA` builds every corpus the pack does not mark `opt_in`:
+`sec_filings` and `market_regulations` in both packs. Add `world_news` to build the GDELT headlines of
+`us-equities`.
 
 Other commands, all run in the data image:
 
@@ -79,6 +75,7 @@ Other commands, all run in the data image:
 ./scripts/demo.sh data list           # packs and builds
 ./scripts/demo.sh data clean [--all]  # remove inactive builds and unused caches (--all: every cache)
 ./scripts/demo.sh data fetch          # fetch and verify the pack's external datasets
+./scripts/demo.sh data generate       # write synthetic-market's Nemotron text (rarely; needs a key)
 ./scripts/demo.sh data reindex        # rebuild only the retrieval index
 ```
 
@@ -87,12 +84,19 @@ Other commands, all run in the data image:
 Each source in `pack.yaml` declares its `capabilities`, which are tool families from
 `contracts/tool-registry.json`: `unstructured_retrieval`, `market_analytics`, `structured_retrieval`,
 `structured_prediction`. The API offers a source with only the capabilities the running tools provide, and a
-job's selected sources decide which tools the agent gets. For example, `market_analysis_structured` offers
+job's selected sources decide which tools the agent gets. For example, `market_data` offers
 `structured_retrieval` only when the ontology profile runs.
 
-`questions.yaml` holds the demo questions. A question is offered only when every source it names is in the
-build and, if it lists `profiles`, the build uses one of them. `featured` questions are on the landing page
-and are what `record` asks by default.
+A tool whose data a pack lacks stays registered, so the registry, the sandbox policy and the UI never change with
+the pack. Its MCP description starts with "Unavailable in the active data pack", and a call fails at once with
+`news_unavailable` (no ticker-linked news table) or `minute_bars_unavailable` (no minute bars, as in
+`synthetic-market`'s daily-bar profiles). The market skill tells the agent not to call it.
+
+`questions.yaml` holds each pack's demo questions. A question is offered only when every source it names is in
+the build and, if it lists `profiles`, the build uses one of them. Six are `featured` in each pack: they need
+only the default profiles, fit the landing page on one screen, and are what `record` asks by default. Every
+analytics question has an oracle in `eval/oracles/`, and `eval/retrieval.yaml` names the documents a retrieval
+answer should cite.
 
 ## Recordings
 
@@ -101,26 +105,33 @@ The replay bundle lives with its pack, in `data/packs/<pack>/recordings/`, and i
 ```bash
 ./scripts/demo.sh record                          # the featured questions
 ./scripts/demo.sh record --all                    # every question the build offers
-./scripts/demo.sh record --question market-leaders --question market-peer-network
+./scripts/demo.sh record --question market-leaders --question peer-network
 ```
 
 `record` asks each question on the running stack, one at a time, and rewrites `index.json` with only the
 sessions it recorded, so `--question` makes a bundle of just those questions. A question that does not succeed
-is left out, and the command exits 1. Review the files before
-committing: they hold questions, answers, evidence excerpts and model names. `./scripts/demo.sh replay` then
-serves the UI on the bundle alone. The format is in [`api/README.md`](../api/README.md#recordings).
+is left out, and the command exits 1. Review the files before committing: they hold questions, answers, evidence
+excerpts and model names. `./scripts/demo.sh replay` then serves the UI on the bundle alone, and stops with a
+hint when the pack has none. The format is in [`api/README.md`](../api/README.md#recordings).
 
-The committed market-analysis bundle holds the six featured questions, recorded on 2026-09-29 with the
-`.env.example` models (Nemotron 3 Ultra alone, on build.nvidia.com) and every profile, including `ontology`
-and the local Kumo NIM, on a Brev A100 VM. It took two `record` runs on the same commit: the "Event Reaction"
-and "Large-Universe Scan" sessions come from a second run that asked just those two again. Ultra's known
-faults show in it, and the bundle keeps them rather than hiding them ([models and
-routing](models-and-routing.md#the-default-on-buildnvidiacom)).
+The current packs are not recorded yet. The committed bundle is the one recorded for the pack they replaced,
+`market-analysis` (a generated market of 12 fictional issuers), which is otherwise gone:
+
+```bash
+DATA_PACK=market-analysis ./scripts/demo.sh replay
+```
+
+It holds five sessions, recorded on 2026-09-29 with the `.env.example` models (Nemotron 3 Ultra alone, on
+build.nvidia.com) and every profile, including `ontology` and the local Kumo NIM, on a Brev A100 VM. Ultra's
+known faults show in it, and the bundle keeps them rather than hiding them ([models and
+routing](models-and-routing.md#the-default-on-buildnvidiacom)). In it, `market_news` names the SEC filings, a
+document source like `sec_filings` today.
 
 ## Adding or swapping a pack
 
-1. Copy `data/packs/market-analysis` to `data/packs/<new-id>`. Replace the generator, or delete it and commit
-   small Parquet tables under a `committed` origin.
+1. Copy `data/packs/us-equities` (bars you fetch) or `data/packs/synthetic-market` (a generator) to
+   `data/packs/<new-id>`. For your own bars, pin their dataset under `external` and describe their layout under
+   `market.bars` ([data platform](data-platform.md)).
 2. Edit `pack.yaml` (identity, licenses, provenance, sources, disclaimer, analytics universes, prediction),
    `schema.sql`, `ontology.yaml` and `questions.yaml`. Only the columns in the tool contracts are mandatory.
 3. Set `DATA_PACK=<new-id>` in `.env`, then run `./scripts/demo.sh data validate` and
@@ -133,9 +144,10 @@ built tables. The database name is the pack id in snake case.
 
 ## Licenses
 
-- The synthetic data and briefs are Apache-2.0.
+- The synthetic market data and its Nemotron-written text are Apache-2.0.
+- `us-equities`' minute bars and GDELT headlines are a private dataset, used as provided and never committed or
+  redistributed here.
 - eCFR is United States government public information. The eCFR is authoritative but is not the official legal
   edition of the CFR.
 - SEC EDGAR content falls under the SEC's website reuse terms, and issuer-authored content may carry its own
   rights; its redistribution terms are unknown. The filings are fetched at build time and never committed.
-  The committed recordings cite only eCFR sections and the fictional briefs.

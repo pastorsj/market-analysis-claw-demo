@@ -59,7 +59,7 @@ Anything the policy does not allow is denied.
 | Filesystem | `/opt/hermes` and `/opt/agent` read-only; `/opt/data` and the workspace read-write; OpenShell's baseline system paths |
 | Landlock | `hard_requirement`: the sandbox fails closed on a kernel without it |
 | `retrieval_mcp` | `host.openshell.internal:8120/mcp`: the MCP handshake, `tools/list`, `ping`, and `tools/call` for `retrieve_evidence` |
-| `market_analytics_mcp` | `:3010/mcp`: the same, for the six market tools and `predict_asset_outcomes` |
+| `market_analytics_mcp` | `:3010/mcp`: the same, for the seven market tools and `predict_asset_outcomes` |
 | `auto_ontology_mcp` | `:3003/mcp`: the same, for `ask_question` |
 | `phoenix_otlp` | `:6006`: `POST /v1/traces` only |
 | Provider `switchyard` | `:4000`: `POST /v1/chat/completions` and `GET /v1/models`. No credential: Switchyard holds the model key |

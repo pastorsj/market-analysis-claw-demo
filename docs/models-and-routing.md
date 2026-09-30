@@ -97,6 +97,10 @@ Kumo endpoint, the `market-analysis` pack at its default `qualification` profile
 v2026.9.24 and Switchyard 0.3.0. Auto Ontology was off, as it is by default, so `ask_question` was not
 available and "company announcements" meant the pack's short-form `market_news` stream.
 
+> **Note.** That pack has since been replaced by `synthetic-market` and `us-equities`, with new questions
+> ([data packs](data-packs.md)); its fictional briefs are gone. The bake-off below describes it as it was and has
+> not been re-run on the new packs.
+
 **Procedure.**
 1. Point `.env` at the arm (the table below) and run `./scripts/demo.sh restart switchyard`. That re-renders
    the routes, clears latches and `/v1/stats`, and refreshes the API's model ids. The sandbox is untouched.

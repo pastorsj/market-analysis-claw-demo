@@ -132,7 +132,7 @@ most of it embedding the corpus).
 |---|---|
 | `error: no .env yet` | Run `./scripts/demo.sh init`, then add the keys |
 | `doctor` reports a problem | Each message names the variable or host requirement; fix it and run `doctor --keys` again |
-| `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations,market_briefs` (skips the SEC download and keeps the fictional briefs) |
+| `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations` (skips the SEC download). `us-equities` also needs it for its SEC company data |
 | Milvus restarts or is unhealthy | Docker has less than 8 GiB of memory. Give it more, or drop the retrieval profile |
 | `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `docker compose logs openshell-preflight openshell` |
 | `hermes-gateway` never turns healthy | The sandbox is not Ready, or `HERMES_API_SERVER_KEY` is shorter than 16 characters (run `init`) |
@@ -236,14 +236,15 @@ profile and the default corpora. `up` needed nothing else installed.
    ./scripts/demo.sh check
    ```
 
-   The first `up` with every profile took about 43 minutes on the A100 VM:
+   The first `up` with every profile took about 43 minutes on the A100 VM, on 2026-09-29 with the pack the
+   repository then used (`market-analysis`, since replaced by `synthetic-market` at the same 2,000-issuer scale):
 
    | Step | Time |
    |---|---|
    | Building the images (Switchyard compiles from source; the RAPIDS image is 15 GB) | 14 min |
    | Pulling the Kumo NIM, Milvus, Phoenix and pgvector | 5 min |
-   | The data pack (qualification profile, 2,000 issuers) | 1.5 min |
-   | Downloading the corpus (SEC EDGAR, eCFR and the briefs: 5,229 documents) | 5.5 min |
+   | The data pack (2,000 issuers) | 1.5 min |
+   | Downloading the corpus (SEC EDGAR, eCFR and eight since-dropped briefs: 5,229 documents) | 5.5 min |
    | Embedding and indexing 23,654 chunks through the retriever endpoint | 15 min |
    | The OpenShell gateway, the sandbox, the Hermes forwarder and the UI | 40 s |
 
@@ -273,7 +274,7 @@ profile and the default corpora. `up` needed nothing else installed.
 
    **Kumo on the VM.** The NIM turned healthy about 40 s after it started. A prediction through
    `predict_asset_outcomes` took 10.5 to 12.6 s for the two return templates and 0.6 s for `news_event`.
-   Each returned one probability per asset in the population (12 on the qualification pack) for the requested
+   Each returned one probability per asset in the population (12 on that pack) for the requested
    anchor and horizon, and repeat calls returned identical probabilities. The pack's events are fictional and
    planted, and the history before the anchor does not foretell them: present the probabilities as the
    model's output, not as a forecast.
@@ -306,7 +307,9 @@ profile and the default corpora. `up` needed nothing else installed.
    `sentiment_timeline` stays slower on the GPU and `analyze_market_relationships` breaks even: their work is
    small (22,000 news rows into 11 weekly points; PageRank over 2,000 nodes), so the fixed cost of
    launching GPU kernels and copying results back outweighs the arithmetic. The table and the method are also in the
-   [market-analytics README](../tools/market-analytics/README.md#cpu-and-gpu-timings).
+   [market-analytics README](../tools/market-analytics/README.md#cpu-and-gpu-timings), with `intraday_scan` on the
+   real minute bars of `us-equities`: 4.1x faster on the GPU for its featured question, 9.7x for a scan of every
+   stock's 99 million regular-session bars.
 
    The GPU libraries pay a one-time cost on first use: about 11 s, nearly all of it cudf.pandas compiling
    kernels for the first `market_scan`. (cuml.accel's first PCA added 5 s more, and again for some input

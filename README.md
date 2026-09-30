@@ -13,8 +13,12 @@ points to, and the trace in Phoenix.
   pin a model or escalate a session from an efficient model to a capable one; a measured bake-off informed the
   default.
 - **NVIDIA retrieval and GPU analytics.** Nemotron embed and rerank models over Milvus find cited passages in
-  SEC filings and the eCFR. The market tools run on pandas or, with the same code, on RAPIDS. Kumo Relational
-  predicts outcomes, and NVIDIA Auto Ontology answers structured questions with SQL.
+  SEC filings and the eCFR, a document source separate from the prices. The market tools run on pandas or,
+  with the same code, on RAPIDS, down to scanning raw minute bars. Kumo Relational predicts outcomes, and NVIDIA
+  Auto Ontology answers structured questions with SQL.
+- **Swappable data.** The default market is fictional, made with NeMo Data Designer and Nemotron, so it builds
+  anywhere with no key. The same format holds real US equities from minute bars you fetch, which are never
+  committed.
 - **Evidence you can inspect.** Every tool call becomes a typed receipt, every citation opens its receipt, and
   recorded sessions replay without keys or a GPU.
 
@@ -117,27 +121,31 @@ use a different endpoint for every model, see [configuration](docs/configuration
 
 This serves the UI alone on the sessions recorded with the data pack, at <http://127.0.0.1:3100>: the answers,
 their evidence and the execution graphs, with no `.env`, keys, API or GPU. `./scripts/demo.sh up` returns to
-live mode.
+live mode. The current packs are not recorded yet; until they are, replay the bundle of the pack they replaced
+with `DATA_PACK=market-analysis ./scripts/demo.sh replay` ([data packs](docs/data-packs.md#recordings)).
 
 ## Example questions
 
-The featured questions (shortened here) are on the landing page and in the replay bundle.
+The default pack, `synthetic-market`, is a fictional US market written with NeMo Data Designer and Nemotron:
+2,000 issuers with seeded prices, ticker-linked company news and twelve planted stories, so answers can be
+checked. Real SEC EDGAR filings and eCFR Title 17 sit beside it as separate document sources. Its featured
+questions (shortened here) are on the landing page:
 
-| Question | Tool | Runs with |
+| Question | Tools | Runs with |
 |---|---|---|
-| Which assets had the strongest and weakest adjusted returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare? | `market_scan` | featured |
-| With January 2 to June 30, 2026 as the baseline, which 10 asset sessions in July and August were most unusual, and which features made them so? | `market_anomaly_scan` | featured |
-| What does Title 17 of the eCFR require public companies to disclose about material cybersecurity incidents and cybersecurity risk management, strategy, and governance? | `retrieve_evidence` | featured |
-| What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention? | `retrieve_evidence` over the fictional briefs | featured |
-| Across the 2,000-issuer qualification universe, which assets had the strongest and weakest adjusted returns from January 2, 2024 through August 31, 2026? | `market_scan` | featured |
-| For each synthetic market event published from August 18 through August 28, 2026, what was the asset's return on the publication session and over the next two sessions? | `ask_question` | featured; needs the ontology profile |
-| At the August 24, 2026 market-close anchor, rank the reviewed assets by likelihood of a positive return over the next five trading sessions. | `predict_asset_outcomes` | the kumo profile or a hosted Kumo endpoint |
-| Which assets are most central in the June-through-August 2026 return-correlation network, and how do the leaders compare with unusual 20-session returns? | `analyze_market_relationships` | default |
-| Compare second-quarter 2026 issuer disclosures about cybersecurity incidents with the current Title 17 requirements. | `retrieve_evidence` over both corpora | default |
+| Among the 12 most liquid issuers, which had the strongest and weakest returns over the 20 sessions ending August 31, 2026, and how did their volatility compare? | `market_scan` | featured |
+| For company news about those issuers published August 17 to 24, 2026, how did the sentiment labels line up with the next five sessions' returns? | `sentiment_timeline`, `analyze_news_price_relationship` | featured |
+| With January 2 to June 30, 2026 as the baseline, which 10 issuer sessions in July and August were most unusual, and why? | `market_anomaly_scan` | featured |
+| In the June-through-August 2026 return-correlation network, which issuers are most central, and which pairs moved together most closely? | `analyze_market_relationships` | featured |
+| What does Form 8-K Item 1.05 require after a material cybersecurity incident, and which second-quarter 2026 filings report one? | `retrieve_evidence` | featured |
+| Which issuers had the most negative company news in July and August 2026, and separately, which real 2026 Q2 filings describe operational disruptions? | `sentiment_timeline`, `price_context`, `retrieve_evidence` | featured |
+| At the August 24, 2026 market-close anchor, rank the 12 most liquid issuers by likelihood of a positive five-session return. | `predict_asset_outcomes` | the kumo profile or a hosted Kumo endpoint |
+| How many issuers are in each sector, and what was each sector's median 20-session return? | `ask_question` | the ontology profile |
 
-The market is synthetic: twelve fictional issuers (plus 1,988 generated ones) with planted events, so answers
-can be checked. The documents are real SEC filings and eCFR sections. All questions are in
-[`data/packs/market-analysis/questions.yaml`](data/packs/market-analysis/questions.yaml).
+The optional `us-equities` pack holds real prices for about 1,600 US stocks, rolled up from real one-minute
+bars that you fetch, with the companies' own 8-K filings as their document source. Its featured questions include
+the widest intraday swings of the 50 most liquid stocks, which `intraday_scan` answers from the minute bars
+themselves. All questions are in `data/packs/<pack>/questions.yaml`; see [data packs](docs/data-packs.md).
 
 ## How it works
 
@@ -205,7 +213,7 @@ agent/                   Hermes profile, skills, receipts plugin, patches, sandb
 api/                     Job API (FastAPI): jobs, execution.v2 events, receipts, reports, recordings
 ui/                      Next.js UI based on the upstream AI-Q UI; src/features/execution is the execution view
 tools/retrieval/         retrieve_evidence: LangChain NVIDIA embed and rerank over Milvus
-tools/market-analytics/  six market tools and Kumo prediction, on CPU or RAPIDS
+tools/market-analytics/  seven market tools and Kumo prediction, on CPU or RAPIDS
 tools/auto-ontology/     patches and seed for the optional Auto Ontology profile
 infra/openshell/         OpenShell pins, gateway config, provider profiles, CLI image
 infra/switchyard/        Switchyard image, route templates, judge prompt

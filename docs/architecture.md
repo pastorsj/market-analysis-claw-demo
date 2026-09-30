@@ -24,7 +24,7 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 | `phoenix` | core | 6006 | Arize Phoenix: trace UI and OTLP/HTTP collector | [`infra/phoenix/serve.py`](../infra/phoenix/serve.py) |
 | `data` (one-shot) | core | – | Builds the active data pack into the `demo-data` volume at `/data/active` | [`data/`](../data/README.md) |
 | `milvus`, `data-corpus`, `retrieval-index`, `retrieval` | retrieval | 8120 (`retrieval`) | Document corpus, vector index and the `retrieve_evidence` MCP server | [`tools/retrieval/`](../tools/retrieval/README.md) |
-| `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Six market tools on pandas or RAPIDS, plus `predict_asset_outcomes` when Kumo is configured | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
+| `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `kumo-relational` | kumo | – | Kumo Relational NIM (x86_64 and an NVIDIA GPU) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `auto-ontology-*` | ontology | 3003 (`auto-ontology-mcp`) | NVIDIA Auto Ontology: `ask_question` answers structured questions with SQL | [`tools/auto-ontology/`](../tools/auto-ontology/README.md) |
 

@@ -95,9 +95,9 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATA_PACK` | `market-analysis` | A directory under `data/packs/` |
-| `DATA_PACK_PROFILE` | the pack's default (`qualification`) | The generator profile: `qualification` (2,000 issuers) or `interactive` (12, fast) |
-| `DATA_CORPORA` | the pack's defaults | Comma-separated corpus sources; empty means `market_news` (SEC EDGAR), `market_regulations` (eCFR) and `market_briefs` (fictional briefs) |
+| `DATA_PACK` | `synthetic-market` | A directory under `data/packs/`: `synthetic-market` (fictional, made with NeMo Data Designer) or `us-equities` (real prices you fetch) |
+| `DATA_PACK_PROFILE` | the pack's default (`standard`) | `synthetic-market`'s scale: `standard` (2,000 issuers, daily bars), `interactive` (50, fast), `ci` (12, minute bars), `intraday` (500, minute bars) or `large` (10,000) |
+| `DATA_CORPORA` | the pack's defaults | Comma-separated corpus sources; empty means `sec_filings` (SEC EDGAR) and `market_regulations` (eCFR). `us-equities` adds the opt-in `world_news` (GDELT headlines) when it is named |
 | `SEC_USER_AGENT` | – | A name and an email, required by SEC's fair-access policy for the EDGAR filings corpus and for SEC company data (`us-equities`) |
 | `DATA_SOURCE_DIR` | `$HOME/market-demo-data` | Where external datasets live on the host, outside the repository: one directory per dataset, mounted read-only at `/sources`. On a VM, the large disk |
 | `DATA_SOURCE_<ID>` | – | Where `data fetch` gets external dataset `<id>` (upper case, `-` as `_`; `us-equities` reads `DATA_SOURCE_MINUTE_BARS`): a directory or `host:/path` (rsync), or an `https`, `s3`, `gs` or `hf` URL. Empty: verify what is in place |
@@ -139,7 +139,7 @@ Compose cannot compute these, so `demo.sh` exports them before every Compose cal
 | `AGENT_FEATURES` | The tools baked into the agent image, from the profiles: `retrieval`, `analytics` (also for analytics-gpu), `kumo` (the kumo profile or a hosted `KUMO_RELATIONAL_URL`) and `ontology` |
 | `KUMO_RELATIONAL_URL` | `http://kumo-relational:8000` under the kumo profile |
 | `AUTO_ONTOLOGY_URL` | `http://auto-ontology-frontend:3000` under the ontology profile, for the API's ontology view |
-| `DATA_DATABASE_NAME` | The pack id in snake case (`market-analysis` → `market_analysis`) |
+| `DATA_DATABASE_NAME` | The pack id in snake case (`synthetic-market` → `synthetic_market`) |
 
 The services' own settings (queue sizes, Hermes run budgets, timeouts) have working defaults and are
 documented in each component's README, for example [`api/README.md`](../api/README.md#environment).
@@ -149,9 +149,9 @@ documented in each component's README, for example [`api/README.md`](../api/READ
 | Profile | Adds | Needs |
 |---|---|---|
 | `core` (always) | UI, API, OpenShell and the Hermes sandbox, Switchyard, Phoenix, the data build | the inference key |
-| `retrieval` | Milvus, the document corpus and index, `retrieve_evidence` | the retriever key; `SEC_USER_AGENT` for `market_news` |
-| `analytics` | the six market tools on CPU (pandas, scikit-learn, NetworkX) | – |
-| `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 with this pack, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls; the two smallest break even or run slower ([measured](operations.md#brev-vm-mode)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit |
+| `retrieval` | Milvus, the document corpus and index, `retrieve_evidence` | the retriever key; `SEC_USER_AGENT` for `sec_filings` |
+| `analytics` | the seven market tools on CPU (pandas, scikit-learn, NetworkX) | – |
+| `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 at 2,000 issuers, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls, the two smallest breaking even or running slower ([measured](operations.md#brev-vm-mode)); `intraday_scan` over real minute bars, 4x to 12x ([measured](../tools/market-analytics/README.md#intraday_scan-on-real-minute-bars)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit |
 | `kumo` | Kumo Relational NIM behind `predict_asset_outcomes`; needs `analytics` or `analytics-gpu` | x86_64 and an NVIDIA GPU (it ran on an A100 with no override); the image from `nvcr.io`, which pulled without a login ([operations](operations.md#brev-vm-mode)) |
 | `ontology` | Auto Ontology and `ask_question` | access to the private `NVIDIA/auto-ontology` repository |
 | `replay` | the UI alone, on the recorded sessions | nothing |
@@ -177,7 +177,7 @@ needs neither.
 architecture for the GPU profiles, Docker memory for Milvus), that the published ports are free (skipped
 while the stack runs), and that
 `.env` is consistent: profile rules, required keys, distinct model ids for the template, an existing template,
-key and model id shapes on build.nvidia.com, `SEC_USER_AGENT` for `market_news`, and the generated secrets. `up` runs the same checks
+key and model id shapes on build.nvidia.com, `SEC_USER_AGENT` for `sec_filings`, and the generated secrets. `up` runs the same checks
 except ports and keys. Messages name variables, never their values.
 
 `doctor --keys` also asks each endpoint for its model list with your key and looks for every id the selected

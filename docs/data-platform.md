@@ -5,10 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # Data platform
 
-This is the design for the demo's data: two market packs in one format, external data that is never
-committed, a fetch step, an importer that scales past a few gigabytes, and the questions each pack answers.
-It extends [data packs](data-packs.md) and [`data/README.md`](../data/README.md). Where the three disagree,
-this page wins until the code catches up. Once it has, those pages describe the result.
+How the demo's data works: two market packs in one format, external data that is never committed, a fetch
+step, an importer that scales past a few gigabytes, the document sources beside the prices, and the questions
+each pack answers. [Data packs](data-packs.md) is the guide and [`data/README.md`](../data/README.md) the
+reference for the format and the commands.
 
 ## Rules
 
@@ -26,7 +26,8 @@ this page wins until the code catches up. Once it has, those pages describe the 
 6. **The news tools need a ticker-linked news table.** `synthetic-market` has one. A pack without one
    declares none, and `sentiment_timeline` and `analyze_news_price_relationship` report that they are
    unavailable.
-7. The fictional briefs are dropped. The UI name does not change.
+7. **Minute bars are read in place.** `intraday_scan` scans them from the raw dataset, batch by batch, and
+   reports that it is unavailable in a pack or profile without them.
 
 ## Overview
 
@@ -50,28 +51,28 @@ canonical layout into `/data/cache/generated/`, and the same rollup and import r
 
 ## The packs
 
-| | `synthetic-market` (default) | `us-equities` (optional) | `market-analysis` (retiring) |
-|---|---|---|---|
-| Prices | Generated from seeds, 1 day or 1 minute bars | Real split-adjusted 1-minute bars, rolled up to daily | Old generator |
-| Issuers | Fictional, named by Nemotron, checked against the SEC ticker list | Real, with SEC names, CIKs and SIC codes | Fictional |
-| Ticker-linked news | `company_news`: seeded events, Nemotron headlines | None; the news tools report unavailable | `market_news` |
-| Documents | `sec_filings` (SEC EDGAR 2026 Q2), `market_regulations` (eCFR Title 17) | `sec_filings` (8-Ks by the pack's issuers), `market_regulations`, `world_news` (GDELT, opt-in) | Also the briefs |
-| Committed | Everything, including the Nemotron text for the committed profiles | The pack definition and the dataset digest only | – |
-| Needs | No key for the structured part; `SEC_USER_AGENT` for `sec_filings`, as today | `data fetch`; `SEC_USER_AGENT` for company metadata and `sec_filings` | – |
+| | `synthetic-market` (default) | `us-equities` (optional) |
+|---|---|---|
+| Prices | Generated from seeds, 1 day or 1 minute bars | Real split-adjusted 1-minute bars, rolled up to daily |
+| Issuers | Fictional, named by Nemotron, checked against the SEC ticker list | Real, with SEC names, CIKs and SIC codes |
+| Ticker-linked news | `company_news`: seeded events, Nemotron headlines | None; the news tools report unavailable |
+| Documents | `sec_filings` (SEC EDGAR 2026 Q2), `market_regulations` (eCFR Title 17) | `sec_filings` (8-Ks by the pack's issuers), `market_regulations`, `world_news` (GDELT, opt-in) |
+| Committed | Everything, including the Nemotron text for the committed profiles | The pack definition, the dataset digest and the filings manifest only |
+| Needs | No key for the structured part; `SEC_USER_AGENT` for `sec_filings` | `data fetch`; `SEC_USER_AGENT` for company metadata and `sec_filings` |
 
-`market-analysis` is retired once `synthetic-market` validates. Its generator, briefs and questions go, and
+The first pack, `market-analysis`, is retired: its generator, fictional briefs and questions are gone and
 `DATA_PACK` defaults to `synthetic-market`. Its `recordings/` directory stays until the new packs are
 recorded, because replay needs only the bundle.
 
 The structured source is `market_data` in both packs. The SEC filings source is `sec_filings`, not
-`market_news`, so the name no longer suggests a news table.
+`market_news` as in the old pack, so the name no longer suggests a news table.
 
 ## Pack format v2
 
-`schema_version: "2"` adds two optional sections to v1: `external` (datasets outside the repository) and
-`market` (how the importer turns bars into tables). A v1 pack stays valid until `market-analysis` is removed,
-and then v1 support goes too. Everything else in the v1 format is kept (`structured`, `documents`, `sources`,
-`analytics`, `prediction`, `ontology`, `questions`), with the changes listed below.
+`schema_version: "2"` adds two sections to v1: `external` (datasets outside the repository) and `market` (how
+the importer turns bars into tables). The importer writes every table, so a pack with `structured` needs
+`market`; a pack of documents alone may stay at `"1"`. Everything else in the v1 format is kept (`structured`,
+`documents`, `sources`, `analytics`, `prediction`, `ontology`, `questions`), with the changes listed below.
 
 ```yaml
 schema_version: "2"
@@ -88,7 +89,7 @@ external:
     # Fetched from $DATA_SOURCE_MINUTE_BARS (the id, upper-cased, - to _)
 
 provenance:
-  - { id: minute-bars, kind: external, synthetic: false, requires_env: [SEC_USER_AGENT] }
+  - { id: minute-bars, kind: external, synthetic: false, license: Private-dataset }
 
 market:
   bars:
@@ -131,7 +132,9 @@ analytics:
 | `market.exclude`, `min_sessions`, `peers` | Which symbols the importer drops (see [import](#import)), and how many declared peers each asset gets. |
 | `analytics.news_table` | May be `null`: it must be set exactly when `market.news` is. |
 | `prediction.population` | May name only a `view`. The builder resolves the ids into `pack.json`, so readers still see `ids`. |
-| `provenance[].kind: external` | A new provenance kind, next to `generated`, `committed` and `download`. The importer writes every table whose `origin` is `market.bars.dataset`: an `external` entry, or in `synthetic-market` the `generated` entry of its generator, whose raw output is cached in `/data/cache/generated/<key>/` and imported the same way. |
+| `provenance[].kind: external` | A new provenance kind, next to `generated`, `committed` and `download`. The importer writes every table, each with the `origin` of `market.bars.dataset`: an `external` entry, or in `synthetic-market` the `generated` entry of its generator, whose raw output is cached in `/data/cache/generated/<key>/` and imported the same way. |
+| `generator.profiles.<p>.params.frequency` | The bars a generator profile writes (`1min` or `1d`). `pack.json` reports it as `market.bars.frequency`, so `intraday_scan` knows a daily-bar profile has no minute bars. |
+| `documents.corpora[].files` | Instead of a `manifest`: a glob inside the corpus's `external` origin, read in place (`gdelt-parquet`), only from files the dataset's manifest lists and `fetch` verified. |
 | `license.path` | Now optional: a private dataset may have no public terms. |
 
 `validate` checks that the tables with that origin are exactly the importer's set, and `pack.json` gets
@@ -358,13 +361,16 @@ unchanged pack is a no-op in 0.2 s. A build is 72 MB.
 
 | Source | Packs | Format | Notes |
 |---|---|---|---|
-| `sec_filings` | both | `edgar-filings` (unchanged) | `synthetic-market` reuses the pinned 2026 Q2 manifest (1,000 8-K and 6-K filings). `us-equities` gets its own pinned manifest, selected by a committed script from the pack's issuers over 2025-01-01 to 2026-03-31: the latest 8-Ks of the 150 most liquid issuers, plus every 8-K by any pack issuer that EDGAR full-text search returns for "Item 1.05", capped at 1,500. |
-| `market_regulations` | both | `ecfr-xml` (unchanged) | eCFR Title 17 as of 2026-08-17. |
-| `world_news` | `us-equities` | `gdelt-parquet` (new), `opt_in: true` | Read in place from the external dataset (`gdelt/*.parquet`, 8,192 headlines, 2025-01-01 to 2026-02-02). One document per headline: `document_id` is `gdelt:<id>`; `title` and `text` are the headline; `url`; `published_at` comes from `date` (`YYYYMMDDHHMMSS`, UTC); `metadata` holds the source domain, `tone` and `cluster_label`. The precomputed `embedding` column is ignored, so every document is embedded by the retriever's model. |
+| `sec_filings` | both | `edgar-filings` | `synthetic-market` pins a 2026 Q2 sample (1,000 8-K and 6-K filings by any filer, 1,696 documents). `us-equities` pins 1,074 8-Ks by its own companies from 2025-01-02 to 2026-03-12 (1,887 documents), which `corpus/select_filings.py` chose from each issuer's EDGAR submissions (they list the items each 8-K reports): every 8-K reporting Item 1.05 by any company in the pack (6), plus the latest 12 8-Ks of each of the 100 most liquid stocks, capped at 1,500. Each us-equities filing carries its `ticker` and `items` as citation metadata. |
+| `market_regulations` | both | `ecfr-xml` | eCFR Title 17 as of 2026-08-17 (3,525 sections). |
+| `world_news` | `us-equities` | `gdelt-parquet`, `opt_in: true` | Read in place from the external dataset (`files: gdelt/*.parquet`, 8,192 headlines, 2025-01-01 to 2026-02-02), only from files its manifest lists and `fetch` verified. One document per headline: `document_id` is `gdelt:<id>`; `title` and `text` are the headline; `url` only when it is https; `published_at` comes from `date` (`YYYYMMDDHHMMSS`, UTC); `metadata` holds `source_domain`, `tone` and `topic` (GDELT's cluster label). The precomputed `embedding` column is never read, so the retriever's model embeds every document. Blank headlines are skipped. |
 
-In `us-equities`, filings and prices describe the same companies. The agent connects them by issuer name
-across two sources, which is the point of keeping filings separate. In `synthetic-market`, the issuers are
-fictional and the filers are real, and questions keep that boundary explicit, as they do today.
+In `us-equities`, filings and prices describe the same companies. The agent connects them across the two
+sources through each passage's `ticker`, which is the point of keeping filings separate: a question such as
+"February's biggest movers and their 8-Ks" takes a market tool and a retrieval call, each cited on its own. In
+`synthetic-market`, the issuers are fictional and the filers are real, and questions keep that boundary
+explicit. A local build of `us-equities` with every corpus took 23 s once the filings were downloaded
+(1.4 GB, cached by the selection script's `--downloads`).
 
 **Indexing is batched and resumable.** `retrieval-index` streams `documents.jsonl` (one pass validates it,
 a second chunks it) and writes to a build collection named after the corpus digest, in batches of 50 chunks.
@@ -373,17 +379,19 @@ missing chunks are embedded. The alias moves to the collection only when it is c
 
 ## Tool contract and GPU reads
 
-**The contract changes in one place:** the news table becomes optional. It stays `market-analytics/v1`,
-because no column changes.
+**The contract changes in two places,** and stays `market-analytics/v1`, because no column changes: the news
+table becomes optional, and `pack.json`'s `market.bars` feeds `intraday_scan`.
 
 - `analytics.news_table` may be `null`. `$news_table` is then not required, and `validate` does not look
   for it.
 - With no news table, the worker holds an empty news frame with the contract's columns, and skips the news
-  call in its warm-up. `sentiment_timeline` and `analyze_news_price_relationship` stay registered, so the
+  calls in its warm-up. `sentiment_timeline` and `analyze_news_price_relationship` stay registered, so the
   tool registry, the OpenShell policy and the UI are unchanged. They return `status: "failed"` with
   `error.code: "news_unavailable"` and the message "The active data pack has no ticker-linked news table,
   so this tool is unavailable. Use retrieve_evidence for filings and other documents." Their MCP
-  descriptions start with "Unavailable in the active data pack.", and the market skill says not to retry.
+  descriptions start with "Unavailable in the active data pack", and the market skill says not to call them.
+- `intraday_scan` works the same way with `minute_bars_unavailable`, when `pack.json` has no `market.bars` or
+  its `frequency` is not `1min` (`synthetic-market`'s daily-bar profiles report `1d`).
 - The receipt's error code is an open identifier, so the API and the generated contracts do not change.
 - `session_close_utc` stays a fixed UTC time. `us-equities` uses 21:00, which is the eastern-standard-time
   close, so bar timestamps are an hour late while daylight saving time is in effect. Without a news table,
@@ -394,17 +402,17 @@ because no column changes.
 
 | Data | How it is read | Where the memory goes |
 |---|---|---|
-| Daily tables (the six market tools) | Loaded once into the worker at startup, as today: only the needed columns, and timestamps normalized to naive UTC. | Measured: about 135 bytes per daily price row on the GPU and 225 on the CPU, prices and anomaly features together, and a few times that at peak while deriving them. 10,000 symbols over 10 years (about 27 million rows) needs about 3.6 GB of an A100's 40 GB. The GPU service sets `CUDF_PANDAS_RMM_MODE=managed_pool` (cudf.pandas' default where the GPU supports managed memory), so a larger pack pages to host memory instead of failing. At startup the worker logs the estimate from the Parquet metadata. In `sparse_declared_peers` mode the correlation graph is computed from the declared pairs only, so it grows with the pairs, not the square of the symbols. |
-| Minute bars (the optional intraday tool; never the six daily tools) | Partition-scoped per request, by `tools/market-analytics/src/market_analytics/bars.py`. The symbols map to files (one per symbol) or to month directories (canonical), and files whose footers show no row group in the window are skipped. The files are read in batches whose estimated uncompressed size stays under `MARKET_ANALYTICS_BATCH_BYTES` (default 1 GiB), one multi-file read per batch (cudf pays about 25 ms per call). In the canonical layout the window and symbols become Parquet row-group filters; one-symbol files are read whole, each row's symbol following from its file's row count. Each batch is reduced to its per-symbol, per-session result before the next is read. `pack.json` carries `market.bars` with `root`, the dataset's directory as the services see it. | One batch at a time, whatever the dataset's size: about 5 to 7 times the batch estimate at peak. Measured on the A100: all of `bfdmini` to session bars in 2.9 s (CPU 46.5 s), and 12 symlinked copies of it (45 GB, read from the page cache) in 30 s (CPU 522 s), peaking at 7.1 GB. Requests are bounded (for example 50 symbols × 30 sessions: 0.2 s). |
+| Daily tables (the six daily market tools) | Loaded once into the worker at startup, as today: only the needed columns, and timestamps normalized to naive UTC. | Measured: about 135 bytes per daily price row on the GPU and 225 on the CPU, prices and anomaly features together, and a few times that at peak while deriving them. 10,000 symbols over 10 years (about 27 million rows) needs about 3.6 GB of an A100's 40 GB. The GPU service sets `CUDF_PANDAS_RMM_MODE=managed_pool` (cudf.pandas' default where the GPU supports managed memory), so a larger pack pages to host memory instead of failing. At startup the worker logs the estimate from the Parquet metadata. In `sparse_declared_peers` mode the correlation graph is computed from the declared pairs only, so it grows with the pairs, not the square of the symbols. |
+| Minute bars (`intraday_scan`; never the six daily tools) | Partition-scoped per request, by `tools/market-analytics/src/market_analytics/bars.py`. The symbols map to files (one per symbol) or to month directories (canonical), and files whose footers show no row group in the window are skipped. The files are read in batches whose estimated uncompressed size stays under `MARKET_ANALYTICS_BATCH_BYTES` (default 1 GiB), one multi-file read per batch (cudf pays about 25 ms per call). In the canonical layout the window and symbols become Parquet row-group filters; one-symbol files are read whole, each row's symbol following from its file's row count. Each batch is reduced to its per-symbol, per-session result before the next is read. `pack.json` carries `market.bars` with `root`, the dataset's directory as the services see it. | One batch at a time, whatever the dataset's size: about 5 to 7 times the batch estimate at peak. Measured on the A100: all of `bfdmini` to session bars in 2.9 s (CPU 46.5 s), and 12 symlinked copies of it (45 GB, read from the page cache) in 30 s (CPU 522 s), peaking at 7.1 GB. Requests are bounded (for example 50 symbols × 30 sessions: 0.2 s). `intraday_scan` on `us-equities`: the 50 most liquid over 9 sessions in 0.29 s (CPU 1.2 s), the 500 most liquid over 48 sessions in 1.0 s (CPU 12.3 s), and every stock over all 298 sessions, 99 million bars, in 7.5 s (CPU 73 s). |
 
-The full minute set is scanned only by the rollup, which runs in DuckDB on the CPU, streams, and is cached.
-There is no GPU rollup: 1.5 s on `bfdmini` does not justify one. The tools stay on pandas code run by
-cudf.pandas, and Polars is not added. Datasets use BFD's layout, so BFD's Polars-GPU benchmarks run on the
-same files.
+The rollup, which builds the daily tables, runs in DuckDB on the CPU, streams, and is cached. There is no GPU
+rollup: 1.5 s on `bfdmini` does not justify one. The tools stay on pandas code run by cudf.pandas, and Polars
+is not added. Datasets use BFD's layout, so BFD's Polars-GPU benchmarks run on the same files.
 
-At `bfdmini`'s daily size (about 500,000 rows), GPU margins will be smaller than the 1.5 to 8.1 times
-measured at 1.36 million rows. `synthetic-market`'s `standard` profile keeps that scale, and the minute tier
-is where `us-equities` can show GPU work.
+At `bfdmini`'s daily size (about 500,000 rows), GPU margins are smaller than the 1.5 to 8.1 times measured at
+1.36 million rows. `synthetic-market`'s `standard` profile keeps that scale, and the minute tier is where
+`us-equities` shows GPU work: `intraday_scan` runs 4 to 12 times faster on the A100 than on its 12 vCPUs, once
+a request covers more than a handful of stocks ([measurements](../tools/market-analytics/README.md#intraday_scan-on-real-minute-bars)).
 
 ## The Data Designer pack
 
@@ -540,12 +548,12 @@ A row that fails is asked again, for at most 5 rounds; after that, `generate` st
 - **Labels.** `assets.is_synthetic` is true. News `source_name` is "Synthetic Newswire". The source is
   `synthetic: true`, so the UI shows its badge. The pack disclaimer says that the issuers, prices and news are
   fictional.
+- **Format.** A name must start with its root, have at most three more words and no legal suffix; a story
+  headline must name its company.
 - **Record.** `checks.json` records the SEC files' URLs, SHA-256 values and fetch time, the counts, the
   rejects per round, the model id, the Data Designer version, the seed, the calls and tokens used, and each
   text file's SHA-256.
 - The contract tables are validated again at `prepare`, like every pack.
-- **Format.** A name must start with its root, have at most three more words and no legal suffix; a story
-  headline must name its company.
 
 ## The CI fixture
 
@@ -554,53 +562,59 @@ script regenerates it.
 
 | Fixture | Contents | Tests |
 |---|---|---|
-| `data/tests/fixtures/external/minute-bars/` and `data/tests/fixtures/sec/` (made by `make_minute_bars_fixture.py`, 48 KB) | 11 made-up symbols in BFD's per-symbol layout: a base with its warrant, unit, dotted preferred and note, a peer and its class B shares, an unlisted fund, a one-session symbol, and two issuers whose tickers only look related (`XE`, `XEU`). 3 sessions plus 1 holiday, 8 bars a day from 04:00 to 19:59, with absurd prices outside the session and a heavy 16:00 bar. A BFD-format manifest and a stub SEC snapshot. | The fingerprint algorithm; fetch from a path, `file://` and a `.tar.gz`, a rerun that copies nothing, and rejection of a different dataset and of a corrupted file; verification that rehashes only changed files; rollup values checked by hand (16:00 included, extended hours excluded); the session rule; each exclusion; `us-equities` imported end to end through the CLI with its contract checked, the population resolved and the rollup reused; a clear error when a pack's dataset is missing |
-| `synthetic-market`, profile `ci` | The committed text plus seeds | An end-to-end `prepare` in seconds with no network, through the minute bars and the rollup (the `slow` marker, as today); rollup exactness; the planted-event oracles |
-| `tools/market-analytics/tests/fixture_pack.py` | A variant with `news_table: null` | Both news tools return `news_unavailable`; the other tools are unaffected |
+| `data/tests/fixtures/external/minute-bars/` and `data/tests/fixtures/sec/` (made by `make_minute_bars_fixture.py`, 60 KB) | 11 made-up symbols in BFD's per-symbol layout: a base with its warrant, unit, dotted preferred and note, a peer and its class B shares, an unlisted fund, a one-session symbol, and two issuers whose tickers only look related (`XE`, `XEU`). 3 sessions plus 1 holiday, 8 bars a day from 04:00 to 19:59, with absurd prices outside the session and a heavy 16:00 bar. Three made-up headlines in GDELT's columns. A BFD-format manifest and a stub SEC snapshot. | The fingerprint algorithm; fetch from a path, `file://` and a `.tar.gz`, a rerun that copies nothing, and rejection of a different dataset and of a corrupted file; verification that rehashes only changed files; rollup values checked by hand (16:00 included, extended hours excluded); the session rule; each exclusion; `us-equities` imported end to end through the CLI with its contract checked, the population resolved, the rollup reused and its oracles run on the schema; the opt-in `world_news` corpus read in place (a blank headline skipped, an http link dropped); a clear error when a pack's dataset is missing |
+| `synthetic-market`, profile `ci` | The committed text plus seeds | An end-to-end `prepare` in seconds with no network, through the minute bars and the rollup (the `slow` marker); rollup exactness; the planted-event oracles |
+| `tools/market-analytics/tests/fixture_pack.py`, `fixture_bars.py` | The fixture pack with minute bars for three assets over three sessions, and a variant with neither news nor minute bars | `intraday_scan` against a hand reduction of the minute bars; the news tools and `intraday_scan` report that they are unavailable in the variant, whose descriptions say so and whose warm-up skips them; with a GPU, CPU/GPU parity for every tool with `CUDF_PANDAS_FAIL_ON_FALLBACK=1` |
 
-`us-equities` is checked in CI by `validate` only: the schema, cross-references and declared contracts, none
-of which needs the data. A live run on real data happens on a GPU VM, with the data fetched there.
+`us-equities` is checked in CI by `validate` and its fixture build: the schema, cross-references and declared
+contracts, none of which needs the data. A live run on real data happens on a GPU VM, with the data fetched
+there.
 
 ## Questions
 
 Each pack has its own `questions.yaml`. Six questions are featured, and all six need only the default
 profiles (`core,retrieval,analytics`), so the landing page stays on one screen. Kumo (PREDICTION) and Auto
-Ontology (SQL) questions are listed but not featured. Wording is final only after each question has been run
-against the built pack. Every analytics question gets an oracle in `eval/oracles/`, and every retrieval
-question gets expected document ids in `eval/`.
+Ontology (SQL) questions are listed but not featured. Every analytics question has an oracle in
+`eval/oracles/`, and `eval/retrieval.yaml` names the documents a retrieval answer should cite. The wording was
+checked against local builds: every oracle returns the answer it is meant to, and every filing an answer should
+cite is in the pack's manifest. The live runs come with the recordings.
 
-### `synthetic-market` (as of 2026-08-31; the story universe is the 12 story issuers)
+### `synthetic-market` (as of 2026-08-31; the 12 most liquid issuers are the story issuers)
 
-| Id | Tag | Sources | Question (draft) | Tools |
-|---|---|---|---|---|
-| `market-leaders` ★ | ANALYTICS | `market_data` | Which story issuers had the strongest and weakest returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare? | `market_scan` |
-| `news-sentiment-reaction` ★ | ANALYTICS | `market_data` | For company news about the story issuers published August 17–24, 2026, how did the sentiment labels line up with returns over the next five sessions? Describe the relationship without claiming causation. | `sentiment_timeline`, `analyze_news_price_relationship` |
-| `unusual-sessions` ★ | ANOMALY | `market_data` | Treat January 2 through June 30, 2026 as the baseline for all issuers. Which 10 sessions from July 1 through August 31 were most unusual in return, volatility and volume, and why? | `market_anomaly_scan` |
-| `peer-network` ★ | GRAPH | `market_data` | In the return-correlation network from June through August 2026, which issuers are the most central, and which pairs moved together most closely? | `analyze_market_relationships` |
-| `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and which 2026 Q2 filings in the corpus report one? | `retrieve_evidence` |
-| `news-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Which story issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real Q2 2026 SEC filings describe operational disruptions? Keep the fictional issuers and the real filers apart. | `sentiment_timeline`, `price_context`, `retrieve_evidence` |
-| `story-event-context` | ANALYTICS | `market_data` | Price context around each story event | `price_context` |
-| `outcome-prediction` | PREDICTION | `market_data` | As of August 24, 2026, which story issuers are most likely to post a positive five-session return? | `predict_asset_outcomes` |
-| `sector-sql` | SQL | `market_data` | Company count and median 20-session return by sector | `ask_question` |
+| Id | Tag | Sources | Question | Tools | Oracle |
+|---|---|---|---|---|---|
+| `market-leaders` ★ | ANALYTICS | `market_data` | Among the 12 most liquid issuers, which had the strongest and weakest returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare? | `market_scan` | `market_leaders.sql` |
+| `news-sentiment-reaction` ★ | ANALYTICS | `market_data` | For company news about the 12 most liquid issuers published August 17–24, 2026, how did the sentiment labels line up with the following five sessions' returns? Without claiming causation. | `sentiment_timeline`, `analyze_news_price_relationship` | `news_sentiment_reaction.sql` |
+| `unusual-sessions` ★ | ANOMALY | `market_data` | With January 2 to June 30, 2026 as the baseline for every issuer, which 10 issuer sessions from July 1 to August 31 were most unusual in return, volatility and volume, and why? | `market_anomaly_scan` | – (PCA) |
+| `peer-network` ★ | GRAPH | `market_data` | In the return-correlation network from June through August 2026, which issuers are most central, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` |
+| `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require after a material cybersecurity incident, and by when? Cite the regulation and any 2026 Q2 filings that report an incident. | `retrieve_evidence` | `retrieval.yaml`: 17 CFR 229.106 and 249.308; one filing (CB Financial Services) |
+| `news-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Which of the 12 most liquid issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real 2026 Q2 filings describe operational disruptions? Keep them apart. | `sentiment_timeline`, `price_context`, `retrieve_evidence` | `negative_news.sql` |
+| `story-event-context` | ANALYTICS | `market_data` | Each story's return on its publication session and the two after it | `price_context` | `story_event_context.sql` |
+| `outcome-prediction` | PREDICTION | `market_data` | At the August 24, 2026 anchor, the 12 most liquid issuers by likelihood of a positive five-session return | `predict_asset_outcomes` | – |
+| `sector-sql` | SQL | `market_data` | Issuers and median 20-session return by sector | `ask_question` | `sector_breakdown.sql` |
+| `large-universe-scan` | ANALYTICS | `market_data` | The 20 strongest and weakest of every issuer, January 2024 to August 2026 (`standard`, `large`) | `market_scan` | `large_universe_scan.sql` |
+| `intraday-ranges` | INTRADAY | `market_data` | The story issuers' widest intraday swings, August 17–28, 2026, with open-to-close moves and last-30-minute volume (`ci`, `intraday`) | `intraday_scan` | `intraday_ranges.sql` |
 
 ### `us-equities` (as of 2026-03-12)
 
-| Id | Tag | Sources | Question (draft) | Tools |
-|---|---|---|---|---|
-| `market-leaders` ★ | ANALYTICS | `market_data` | Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare? | `market_scan` |
-| `unusual-sessions` ★ | ANOMALY | `market_data` | Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were most unusual across all stocks in the pack, and which features made them unusual? | `market_anomaly_scan` |
-| `peer-network` ★ | GRAPH | `market_data` | Among declared industry peers, which stocks were the most central in the return-correlation network from December 2025 through March 12, 2026, and which pairs moved together most closely? | `analyze_market_relationships` |
-| `moves-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Which of the 50 most liquid stocks had the largest one-day moves in February 2026, and what did those same companies disclose in 8-K filings in those weeks? Report the moves and the filings separately, and do not claim that a filing caused a move. | `market_scan`, `price_context`, `retrieve_evidence` |
-| `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require, and by when? Cite the regulation, and any filings in the corpus that report an incident. | `retrieve_evidence` |
-| `large-universe-scan` ★ | ANALYTICS | `market_data` | Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2 to March 12, 2026, and how unusual was their volume? | `market_scan` |
-| `outcome-prediction` | PREDICTION | `market_data` | As of March 5, 2026, which of the 50 most liquid stocks are most likely to post a positive five-session return? | `predict_asset_outcomes` |
-| `sector-sql` | SQL | `market_data` | Stock count and median return by SIC division, first quarter of 2026 to date | `ask_question` |
-| `world-news-rates` | RETRIEVAL | `world_news` (opt-in) | What do the world news headlines in the corpus say about central banks and interest rates? | `retrieve_evidence` |
+| Id | Tag | Sources | Question | Tools | Oracle |
+|---|---|---|---|---|---|
+| `market-leaders` ★ | ANALYTICS | `market_data` | Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare? | `market_scan` | `market_leaders.sql` (CRCL +102%) |
+| `intraday-ranges` ★ | INTRADAY | `market_data` | Among the 50 most liquid, which sessions from March 2 to March 12, 2026 had the widest intraday ranges? How did each trade from open to close, and how much volume came in the last 30 minutes? | `intraday_scan` | `intraday_ranges.sql` (CRCL on March 2, 20.4%) |
+| `unusual-sessions` ★ | ANOMALY | `market_data` | With 2025 as the baseline, which 10 sessions from January 2 to March 12, 2026 were most unusual among the 500 most liquid, and which features made each unusual? | `market_anomaly_scan` | – (PCA) |
+| `peer-network` ★ | GRAPH | `market_data` | Among declared industry peers, which stocks were most central in the return-correlation network from December 2025 to March 12, 2026, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` (share classes lead: GOOG and GOOGL, 0.996) |
+| `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require, and by when? Cite the regulation, and any 8-Ks in the corpus that report an incident under Item 1.05. | `retrieve_evidence` | `retrieval.yaml`: 17 CFR 229.106 and 249.308; six filings (CNDT, COIN, DAIO twice, BAFN, CPNG) |
+| `moves-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Among the 50 most liquid, which three had the strongest and three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-Ks from January to March 2026? No causal claims. | `market_scan`, `retrieve_evidence` | `february_moves.sql` (CRCL, NFLX, AMAT; IBM, AMD, BMNR); `retrieval.yaml` |
+| `large-universe-scan` | ANALYTICS | `market_data` | The 20 strongest and weakest of the 500 most liquid, January 2 to March 12, 2026, and how unusual their volume was | `market_scan` | `large_universe_scan.sql` |
+| `outcome-prediction` | PREDICTION | `market_data` | As of the March 5, 2026 close, the 50 most liquid by likelihood of a positive five-session return | `predict_asset_outcomes` | – |
+| `sector-sql` | SQL | `market_data` | Stocks and median return by SIC division, January 2 to March 12, 2026 | `ask_question` | `sector_breakdown.sql` |
+| `world-news-rates` | RETRIEVAL | `world_news` (opt-in) | Which world headlines mention the Federal Reserve or another central bank, with their outlets and dates? | `retrieve_evidence` | – |
 
-The universes in `us-equities` are `top_50` (`liquidity_rank <= 50`), `liquid_500` and `all_assets`. The
-Kumo population is `top_50`, with the anchor at 2026-03-05 21:00 UTC and a horizon of 5 sessions. With no
-news table, the prediction graph has no `news_events` view and no news template. The news tools get no
-featured question in `us-equities`.
+The universes in `us-equities` are `top_50` (`liquidity_rank <= 50`), `liquid_500` and `all_assets`. Whole-market
+questions use `liquid_500`: the smallest stocks trade a few hundred dollars a day, and single trades give them
+absurd returns. The Kumo population is `top_50`, with the anchor at 2026-03-05 21:00 UTC and a horizon of 5
+sessions. With no news table, the prediction graph has no `news_events` view and no news template, and the news
+tools get no question in `us-equities`.
 
 ## Disk
 
@@ -618,15 +632,15 @@ every dataset not fetched yet. It asks for `SEC_USER_AGENT` when the pack looks 
 the SEC filings corpus. On Brev, the images and the Docker volumes stay where they are today
 ([operations](operations.md#disk)), and only `DATA_SOURCE_DIR` moves to the large disk.
 
-## Where the work lands
+## Where it lives
 
-| Area | Change |
+| Area | What |
 |---|---|
-| `data/schemas/pack.schema.json` | v2: `external`, `market`, provenance kind `external`, `storage`, nullable `news_table`, `population` by view |
-| `data/src/demo_data/` | `external.py` (manifest, fingerprint, verification), `fetch.py` (sources), `market.py` (rollup, import), `sec.py`, `corpus/gdelt.py`; `structured.py` (the market dataset, external or generated; the population from its view); `cli.py` (`fetch`) |
-| `data/generate/` | New uv project: the Data Designer jobs and the checks |
-| `data/packs/` | `synthetic-market/` and `us-equities/` are added. `market-analysis/` shrinks to its recordings. |
-| `tools/market-analytics/` | The contract note for the optional news table; `data.py` and `server.py` (`news_unavailable`); the warm-up; the fixture; `bars.py` (minute-bar scans); the sparse peer graph; the memory estimate |
+| `data/schemas/pack.schema.json` | v2: `external`, `market`, provenance kind `external`, in-place corpora (`files`), nullable `news_table`, `population` by view |
+| `data/src/demo_data/` | `external.py` (manifest, fingerprint, verification), `fetch.py` (sources), `market.py` (rollup, import), `sec.py` (company metadata), `corpus/` (`edgar.py`, `ecfr.py`, `gdelt.py`, `markdown.py`), `structured.py`, `cli.py` |
+| `data/generate/` | The Data Designer jobs and their checks |
+| `data/packs/` | `synthetic-market/` and `us-equities/` (with `corpus/select_filings.py`); `market-analysis/` holds only its recordings |
+| `tools/market-analytics/` | The contract (optional news table, minute bars); `bars.py` (minute-bar scans) and `tools/intraday.py` (`intraday_scan`); the availability of each tool per pack; the sparse peer graph; the memory estimate |
 | `tools/retrieval/` | Streamed, resumable indexing |
-| `scripts/demo.sh`, `scripts/lib/doctor.sh`, `compose.yaml`, `.env.example` | `data fetch` and `data generate`, the `/sources` mounts, the `DATA_SOURCE_*`, `DATA_DESIGNER_*` and credential variables, pack-driven `requires_env`, the default `DATA_PACK` and `DATA_DATABASE_NAME` |
+| `scripts/demo.sh`, `scripts/lib/doctor.sh`, `compose.yaml`, `.env.example` | `data fetch` and `data generate`, the `/sources` mounts, the `DATA_SOURCE_*`, `DATA_DESIGNER_*` and credential variables, the default `DATA_PACK` and `DATA_DATABASE_NAME` |
 | `.gitignore`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml` | `data/external/`; the committed-data guards |
