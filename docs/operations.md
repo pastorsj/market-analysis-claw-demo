@@ -314,7 +314,7 @@ profile and the default corpora. `up` needed nothing else installed.
    instead.) The worker runs every tool once before it reports ready, so the first question does not pay it:
    after the warm-up, the first call of each shape above, and of 26 other argument shapes, took at most
    270 ms (the 2,000-issuer anomaly scan, usually about 145 ms; the others about 100 ms or less). Starting
-   the worker takes 25 s on the GPU and 10 s on the CPU, warm-up included (the worker's `ready` log line gives
+   the worker takes about 20 s on the GPU and 8 s on the CPU, warm-up included (the worker's `ready` log line gives
    the warm-up's share). The worker runs one call at a time, so when the agent asks for two tools at once, the second waits
    for the first. The explorer shows each call's device, library and time.
 8. **Connect** from your machine with an SSH tunnel; every port stays on the VM's loopback:

@@ -80,8 +80,10 @@ Two tiers, so that a pack larger than the GPU still runs.
 
 Minute-bar scans measured on the A100 VM, on `bfdmini` (2,200 US symbols, 117 million minute bars, 3.75 GB of
 uncompressed columns), reducing each symbol's regular sessions (09:30 to 16:00) to session bars. On both
-engines the 572,995 session bars match a DuckDB rollup of the same files exactly. The last row scans 12 copies
-of every file under new names, which is more data than the GPU holds:
+engines the 572,995 session bars match a DuckDB rollup of the same files: prices and bar counts exactly, volumes
+to within 1e-14. The last row scans 12 copies of every file under new names, which is more data than the GPU
+holds. The copies are symlinks to the same files, so every read after the first came from the page cache: the
+time leaves out the disk reads a real dataset of that size would need.
 
 | Scan | Batches | CPU | GPU | Peak GPU memory |
 | --- | --- | --- | --- | --- |
