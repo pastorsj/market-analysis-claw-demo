@@ -348,7 +348,7 @@ def test_each_tool_gets_the_sources_its_family_allows(hooks, api):
     assert api.scope_reads == 1
 
 
-def test_ask_question_drops_the_thread_database_prediction_and_evidence(hooks):
+def test_ask_question_keeps_only_the_question(hooks):
     args = {
         "question": "Which asset closed highest?",
         "conversation_id": ",",
@@ -361,7 +361,7 @@ def test_ask_question_drops_the_thread_database_prediction_and_evidence(hooks):
 
     # Hermes dispatches this same dict; a modify directive could only add keys, never remove one.
     assert directive is None
-    assert args == {"question": "Which asset closed highest?", "source_ids": ["x"]}
+    assert args == {"question": "Which asset closed highest?"}
 
 
 def test_other_tools_keep_their_arguments(hooks):

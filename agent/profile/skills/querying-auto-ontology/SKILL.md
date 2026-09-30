@@ -41,7 +41,8 @@ the rankings and scans that its tools compute directly.
 | `question` | One complete, self-contained question |
 
 Auto Ontology answers over the data pack's database only. Pass only
-`question`: never `target_db`, `prediction`, `conversation_id`, or `evidence`.
+`question`: never `source_ids`, `target_db`, `prediction`, `conversation_id`,
+or `evidence`.
 
 ## Procedure
 

@@ -55,8 +55,9 @@ MAX_TEXT = 32_000
 SQL_ROWS = 25
 SQL_COLUMNS = 40
 LINEAGE_KEYS = ("phrase", "ontology_object", "table", "column")
-# ask_question takes only the question here: a model-supplied thread, database, prediction or evidence is dropped.
-ASK_QUESTION_DROPPED = ("conversation_id", "target_db", "prediction", "evidence")
+# ask_question takes only the question here: a model-supplied thread, database, prediction, evidence or source
+# scope is dropped (Auto Ontology has no source_ids argument, but the other data tools do, so the model may send it).
+ASK_QUESTION_DROPPED = ("conversation_id", "target_db", "prediction", "evidence", "source_ids")
 
 # Receipt fields whose keys are data (payload fields, source ids, SQL columns), so they keep their names.
 OPEN_FIELDS = {
