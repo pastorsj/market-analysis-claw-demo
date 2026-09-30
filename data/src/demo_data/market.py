@@ -113,9 +113,8 @@ def daily_rollup(
     dataset: Dataset, files: list[dict[str, Any]], bars: dict[str, Any], cache_dir: Path
 ) -> tuple[Path, dict[str, Any]]:
     """The daily bars of every symbol (cached): (path, what pack.json records about it)."""
-    key = hashlib.sha256(json.dumps([dataset.fingerprint, bars, ROLLUP_VERSION], sort_keys=True).encode()).hexdigest()[
-        :16
-    ]
+    inputs = json.dumps([dataset.fingerprint, bars, ROLLUP_VERSION], sort_keys=True)
+    key = hashlib.sha256(inputs.encode()).hexdigest()[:16]
     directory = cache_dir / "rollups" / key
     target, info_path = directory / "daily_bars.parquet", directory / "rollup.json"
     if target.is_file() and info_path.is_file():

@@ -219,7 +219,10 @@ it is empty, fetch only verifies what is already in place.
   and then run `data fetch --verify-only` on the VM ([operations](operations.md#brev-vm-mode)).
 - Measured on `bfdmini` (2,206 files, 1.81 GB) on a 14-core laptop: a fetch from a local directory with
   `demo-data` itself took 2.1 s; `demo.sh data fetch` (rsync on the host, then hashing every file in the
-  image on a 4-CPU colima VM) took 15 s; a rerun of `--verify-only` hashed nothing and took 0.1 s.
+  image on a 4-CPU colima VM) took 15 s; a rerun of `--verify-only` hashed nothing and took 0.1 s. On the
+  Brev A100 VM, after an rsync push from the laptop (11 minutes over its uplink), `--verify-only` hashed every
+  file in 1.3 s, and the whole `us-equities` build took 9.7 s with the SEC snapshot cached, with the same
+  build digest as on the laptop.
 
 ## Storage layout
 
@@ -285,8 +288,9 @@ GROUP BY ALL ORDER BY symbol, trading_date
 - Daily bars (`frequency: 1d`) pass through unchanged.
 - A `TIMESTAMP WITH TIME ZONE` time column is converted to wall-clock time in `market.bars.timezone` first.
 - Measured on `bfdmini`: the pass reads all 117,242,458 bars and keeps 106,348,392 regular-session bars. It
-  writes 572,995 daily rows (2,200 symbols, 305 dates) to a 12 MB file in 0.9 s on a 14-core laptop, and in
-  3.3 s in the data image on a 4-CPU colima VM. At 100 times the size, expect minutes, once.
+  writes 572,995 daily rows (2,200 symbols, 305 dates) to a 12 MB file in 0.9 s on a 14-core laptop, in
+  3.3 s in the data image on a 4-CPU colima VM, and in 3.6 s in the image on the 12-vCPU Brev A100 VM. At
+  100 times the size, expect minutes, once.
 
 **The cache is keyed by the manifest digest.** The key is
 `sha256(dataset fingerprint ‖ canonical JSON of market.bars ‖ ROLLUP_VERSION)`. The rollup is written to

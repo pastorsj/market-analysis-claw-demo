@@ -101,6 +101,13 @@ So the first `up` takes about 110 GB. Plan for 150 GB free to run the demo, and 
 each rebuild, if you change code and rebuild images on the host. The CPU tier builds no RAPIDS image and pulls
 no Kumo NIM. `docker system df` shows the current split.
 
+**External data** (a pack such as `us-equities`, [data platform](data-platform.md)) sits outside Docker, in
+`DATA_SOURCE_DIR` (default `~/market-demo-data`). Plan for the dataset itself (`bfdmini`: 1.8 GB), plus, in the
+`demo-data` volume, its daily rollup (about 1% of the minute data: 12 MB) and each build (72 MB for
+`us-equities`). The daily tables grow with symbols times sessions, not with the minute data: 10,000 symbols
+over 10 years is about 27 million daily rows, a few GB per build. `doctor` checks that each dataset not yet
+fetched fits in `DATA_SOURCE_DIR` with 10% to spare, and `data clean` removes rollups no build uses.
+
 What grows is the build cache. Each rebuild of a changed image adds its new layers, and the RAPIDS image adds
 about 15 GB each time, even for a one-line change. With Docker's classic image store, each rebuild also
 leaves the previous image untagged. `./scripts/demo.sh down --prune` removes both: this project's untagged
@@ -187,6 +194,27 @@ profile and the default corpora. `up` needed nothing else installed.
    ```
 
    Remove any hosted `KUMO_RELATIONAL_URL`, since the kumo profile runs its own NIM.
+
+   **Real data** (`DATA_PACK=us-equities`) is fetched once, at setup, before the first `up` (`doctor` stops
+   `up` until it is). `DATA_SOURCE_DIR` defaults to `~/market-demo-data`, which on a Brev VM is on its one large
+   disk; point it at a separate data disk if the VM has one. Either set `DATA_SOURCE_MINUTE_BARS` to a URL (a
+   bucket, a signed HTTPS link or a Hugging Face dataset, with its credentials in `.env`) and run
+   `./scripts/demo.sh data fetch` on the VM, which a Launchable's setup script can do too, or push the data
+   from your machine and verify it on the VM:
+
+   ```bash
+   # On your machine
+   rsync -a --partial --exclude '.*' <bfdmini>/benchmark-subset/ <instance>:market-demo-data/minute-bars/
+   # On the VM
+   ./scripts/demo.sh data fetch --verify-only
+   ```
+
+   Measured on 2026-09-30 with `bfdmini` (2,206 files, 1.8 GB) on this A100 VM: the push from a laptop took
+   11 minutes (the laptop's uplink); `--verify-only` hashed every file in 1.3 s, and a rerun, which hashes only
+   what changed, took 0.2 s. The first `data prepare` of `us-equities` then rolled the 117 million minute bars
+   up to daily bars in 3.6 s and built the pack in 8.2 s, plus about 4 minutes to look up SEC company data at
+   SEC's rate limit, once; an unchanged pack is a no-op in 1.5 s. The dataset takes 1.8 GB on the VM's disk,
+   and each build 73 MB in the `demo-data` volume.
 4. **The Kumo NIM image.** `up` pulls `nvcr.io/nim/nvidia/kumo-relational:1.0.1`, and the pull worked
    without a login (on 2026-09-29: about 14 GB to download in 5 minutes, 44 GB unpacked). If the pull is
    denied, log in with an NGC API key, piped rather than typed on the command line:
