@@ -62,7 +62,9 @@ efficient and judge models stay on build.nvidia.com.
 On each turn of a session that has not latched:
 1. Switchyard calls the efficient model and buffers its reply.
 2. The judge rates the completed turn using `judge-prompt.md`. It returns a JSON-schema verdict,
-   with thinking off, a 60 s deadline and 2 retries.
+   with thinking off, a 60 s deadline and 2 retries. It escalates only for a failure it can name:
+   a stuck or invalid tool loop, an error used as data, or a final report with a missing citation,
+   a wrong window or unit, an unanswered part, a contradiction or no evidence.
 3. After `SWITCHYARD_CONFIRMATIONS` consecutive "escalate" verdicts, the buffered reply is
    discarded. The capable model serves that turn and every later turn of the session.
 

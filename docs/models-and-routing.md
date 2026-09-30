@@ -75,6 +75,34 @@ two), unjudged, not a bake-off. What they showed:
 - The anomaly and Galena answers matched their receipts in every run. Auto Ontology took 68 to 186 s per
   query with Super and 3.5 Lightning on build.nvidia.com, and 332 s on each unanswerable request.
 
+### Tuning Ultra for the current packs
+
+On 2026-09-30 the featured questions of both packs ran with Ultra alone on build.nvidia.com, on the Brev
+A100 VM, before and after tuning: 14 runs before (one failed), 30 after, unjudged. What they showed, and what changed:
+
+| Gap | Cause | Change | After |
+|---|---|---|---|
+| A job failed after 5 minutes of "Service temporarily overloaded" | build.nvidia.com sends the error inside an HTTP 200 stream, and Switchyard 0.3.0 passes it through | Hermes falls back to `market-research-fallback` (Super) after two failed tries ([how](../infra/switchyard/README.md#routes)) | A simulated overload finished on Super in 15 s |
+| Universes the pack does not have (`top_50` on `synthetic-market`), or `all_assets` and Auto Ontology detours on `us-equities` | Hermes lists the tools once, when the sandbox starts, and a `DATA_PACK` switch kept the sandbox, so the model saw the previous pack's universes | A pack switch recreates the sandbox ([OpenShell](openshell.md)) | No invalid universe on a fresh sandbox |
+| "The 20 sessions ending August 31" scanned from August 3: 21 sessions, +24.74% instead of +22.11% | The model does not count trading days, even with a worked example | `market_scan` takes `sessions=20` with `end` | Both packs' Market Leaders match their oracles |
+| Anomaly deviations shown as percentages | Nothing said they are robust z-scores | The tool description and the result's limitation say so | No later run showed them as percentages |
+| A ranking sent to Auto Ontology, which returned dollar price changes as "returns" | The routing table did not say where leaders and laggards go | `SOUL.md` sends rankings over any window to the market tools | Moves and Filings matches its oracle |
+| Receipts named in prose ("evidence `hermes-receipt:<id>`") instead of cited | Ultra rarely writes the `[evidence:<id>]` token as instructed | The API counts a receipt id in code or bold as a citation | 20 of 30 answers were cited before this change; 27 of 30 would have been |
+
+Ultra loaded no skill in any of these runs, although `SOUL.md` asks it to before a tool's first call. Guidance
+that must reach it therefore lives in `SOUL.md` and the tool descriptions, not only in the skills.
+
+Still open:
+- **Form 8-K Item 1.05** searches 7 to 12 times for the four-business-day deadline, which the eCFR sections in
+  the corpus do not state, then says so. A "search each topic once" line in the tool description did not
+  change it.
+- Ultra reads "which had the strongest and weakest returns" as one of each.
+- Scope slips vary by run, for example news for every issuer instead of the 12 most liquid.
+
+The escalation judge's prompt now escalates only for a failure it can name: a stuck or invalid tool loop, an
+error used as data, or a report with a missing citation, a wrong window or unit, an unanswered part, a
+contradiction or no evidence. It has not been measured yet: re-run the bake-off below before relying on it.
+
 ## Models and ids
 
 | Role | Model | build.nvidia.com id (`https://integrate.api.nvidia.com/v1`) |
