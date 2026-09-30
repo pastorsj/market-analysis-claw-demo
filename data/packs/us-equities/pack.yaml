@@ -13,7 +13,7 @@ id: us-equities
 version: "0.1.0"
 title: US Equities
 description: >-
-  Daily prices for about 1,800 US-listed stocks from January 2025 to March 2026, rolled up from real
+  Daily prices for about 1,600 US-listed stocks from January 2025 to March 2026, rolled up from real
   split-adjusted one-minute bars, with SEC company names, CIKs and SIC codes, plus SEC EDGAR filings and eCFR
   Title 17 as separate document sources.
 as_of: "2026-03-12"
@@ -123,7 +123,7 @@ sources:
   - id: market_data
     name: US Equities
     description: >-
-      Daily prices for about 1,800 US-listed stocks, rolled up from real one-minute bars, with SEC company data.
+      Daily prices for about 1,600 US-listed stocks, rolled up from real one-minute bars, with SEC company data.
     agent_description: >-
       Real daily prices (January 2, 2025 to March 12, 2026) of US-listed stocks, with SEC names, CIKs and SIC
       codes, a liquidity rank and same-SIC peers. Analyze them with market analytics and SQL. There is no

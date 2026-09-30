@@ -109,9 +109,11 @@ BFD's benchmark bundle format. The repository never holds the data or even its m
 
 `fetch` reads the manifest from the source first and stops if the fingerprint differs. It then streams each
 missing or changed file to a hidden `.part` file while hashing it, and renames it into place only if the hash
-matches. `<dataset>/.verified.json` records every verified file's size, mtime and hash, so a rerun hashes only
-what changed and an interrupted fetch resumes. `prepare` sees the dataset read-only and only compares sizes and
-mtimes with that record; if anything changed it stops and asks for `fetch --verify-only`.
+matches; a file that still fails after three attempts does not stop the others. `<dataset>/.verified.json`
+records every verified file's size, mtime and hash, so a rerun hashes only what changed and an interrupted or
+failed fetch resumes. An https source is read with one plain GET per file, since some servers refuse Range
+requests. `prepare` sees the dataset read-only and only compares sizes and mtimes with that record; if anything
+changed it stops and asks for `fetch --verify-only`.
 
 Sources are fsspec URLs: a local path or `file://`, `https://host/prefix/` (each file is `<prefix><path>`) or one
 `.tar`/`.tar.gz` archive with the dataset at its top level, `s3://bucket/prefix` (`AWS_*`, including

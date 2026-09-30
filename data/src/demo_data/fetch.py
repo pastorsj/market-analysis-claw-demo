@@ -53,21 +53,37 @@ def fetch(dataset: Dataset, source: str, *, jobs: int = 8, attempts: int = 3) ->
     record = external.load_record(dataset)
     pending = [entry for entry in files if not external.recorded(record, dataset.root, entry)]
 
-    def download(entry: dict[str, Any]) -> tuple[str, list[Any]]:
+    def download(entry: dict[str, Any]) -> tuple[str, list[Any] | Exception]:
+        """The file's record, or the error of its last attempt."""
         target = dataset.root / entry["path"]
-        for attempt in range(1, attempts):
+        for attempt in range(1, attempts + 1):
             try:
                 return entry["path"], copy(fs, join(base, entry["path"]), target, entry["sha256"])
-            except Exception:  # each backend raises its own network errors; the last attempt reports it
+            except Exception as error:  # each backend raises its own network errors
+                if attempt == attempts:
+                    return entry["path"], error
                 time.sleep(2**attempt)
-        return entry["path"], copy(fs, join(base, entry["path"]), target, entry["sha256"])
+        return entry["path"], ExternalError("no attempts")
 
-    with ThreadPoolExecutor(max_workers=jobs) as pool:
-        for count, (path, seen) in enumerate(pool.map(download, pending), start=1):
-            record[path] = seen
-            if count % 100 == 0:  # resumable: keep the record current
-                external.save_record(dataset, record)
-    external.save_record(dataset, record)
+    # A file that fails does not stop the others, and everything verified is recorded, so a rerun fetches only
+    # what is still missing.
+    failed = []
+    try:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            for count, (path, seen) in enumerate(pool.map(download, pending), start=1):
+                if isinstance(seen, Exception):
+                    failed.append(f"{path}: {seen}")
+                else:
+                    record[path] = seen
+                if count % 100 == 0:  # keep the record current, even if the process is killed
+                    external.save_record(dataset, record)
+    finally:
+        external.save_record(dataset, record)
+    if failed:
+        raise ExternalError(
+            f"{dataset.id}: {len(failed):,} of {len(pending):,} files failed; a rerun retries only those. "
+            f"First: {failed[0]}"
+        )
     return external.verify(dataset, jobs=jobs)
 
 
@@ -115,8 +131,12 @@ def unpack(dataset: Dataset, source: str) -> None:
 def storage_options(url: str) -> dict[str, Any]:
     """Settings a scheme needs beyond what its library reads from the environment itself."""
     scheme = url.split("://", 1)[0] if "://" in url else "file"
-    if scheme in ("http", "https") and (token := os.environ.get("DATA_SOURCE_HTTP_TOKEN")):
-        return {"headers": {"Authorization": f"Bearer {token}"}}
+    if scheme in ("http", "https"):
+        # Stream each file in one GET. fsspec's default reads in Range requests, which some servers refuse.
+        options: dict[str, Any] = {"block_size": 0}
+        if token := os.environ.get("DATA_SOURCE_HTTP_TOKEN"):
+            options["headers"] = {"Authorization": f"Bearer {token}"}
+        return options
     if scheme == "s3" and (endpoint := os.environ.get("AWS_ENDPOINT_URL")):
         return {"endpoint_url": endpoint}
     if scheme in ("gs", "gcs") and not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):

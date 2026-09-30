@@ -36,8 +36,8 @@ symbols from 2025-01-02 to 2026-03-12):
 
 Of the 2,200 symbols, the importer drops 110 warrants, 50 units, 27 rights and 182 preferred shares, depositary
 shares and notes (other securities of an issuer whose stock is in the data), 221 symbols SEC does not list (ETFs,
-funds and delisted issuers), and 9 with fewer than 20 sessions. `pack.json` records the counts under
-`parts.structured.import`.
+funds, and issuers delisted or renamed since: BK is BNY now), and 9 with fewer than 20 sessions. `pack.json`
+records the counts under `parts.structured.import`.
 
 The pack has **no ticker-linked news**: `analytics.news_table` is null, so `sentiment_timeline` and
 `analyze_news_price_relationship` report that they are unavailable. SEC filings are not news and are never
@@ -55,6 +55,13 @@ to the anchor only; the build writes their ids into `pack.json`.
 - On early-close days (2025-11-28, 2025-12-24), after-hours bars up to 16:00 count as regular.
 - Nasdaq share classes cannot be told from notes by their symbol (CENTA and CMSA look alike), so a class share
   that is not its issuer's primary ticker is dropped as preferred. GOOGL, the primary ticker, stays beside GOOG.
+- The other way round, about 20 notes and preferreds stay: those whose ticker does not extend their issuer's stock
+  ticker (AOMN beside AOMR, CCZ beside CMCSA, DTB beside DTE) or whose issuer has no stock (the CHSC and BPYP
+  series), one that SEC lists first for its issuer (BIPH before BIP), and a warrant whose stock has a new ticker
+  (ABPWW).
+- SEC's ticker list is today's, so issuers delisted or renamed after the price window are dropped as not listed.
+- The smallest stocks trade a few hundred dollars a day, and single trades give them extreme daily returns
+  (CYCL: +26,167% on 2025-02-20). Whole-market scans need a liquidity floor, such as the `liquid_500` universe.
 - Prices are split-adjusted, not dividend-adjusted: `adjusted_close` equals `close`.
 
 ## Files
