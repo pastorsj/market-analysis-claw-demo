@@ -340,9 +340,10 @@ data_fetch() {
       log "$id: copying $source into $DATA_SOURCE_DIR/$id with rsync"
       mkdir -p "$DATA_SOURCE_DIR/$id"
       rsync -a --partial --exclude '.*' "${source%/}/" "$DATA_SOURCE_DIR/$id/"
-      chmod -R a+rX "$DATA_SOURCE_DIR/$id" # the data services run as their own user
       dc run "${options[@]}" data-fetch fetch "$id" --verify-only
     fi
+    # The services read it as their own users, whatever modes it arrived with (rsync -a keeps the source's).
+    chmod -R a+rX "$DATA_SOURCE_DIR/$id"
   done
 }
 

@@ -205,8 +205,9 @@ it is empty, fetch only verifies what is already in place.
   runs it with `DATA_SOURCE_DIR` writable, as the host user. The remote backends (`s3fs`, `gcsfs`,
   `huggingface_hub`, and `aiohttp` for HTTPS) are the data project's `remote` extra, which the image
   installs; they add about 190 MB to it (508 to 699 MB on x86_64). Local directories and rsync sources are copied on the host,
-  because only the host sees them and holds the SSH identity; `demo.sh` then makes them readable to the
-  services (`chmod a+rX`).
+  because only the host sees them and holds the SSH identity. After every fetch or verification, `demo.sh`
+  makes the dataset readable to the services (`chmod -R a+rX`), which run as their own users: a push with
+  `rsync -a` keeps the source's modes, and market analytics could not read a directory that arrived as `700`.
 - **Credentials.** They live only in `.env`, which is git-ignored. `demo.sh` passes only the variables of
   the chosen scheme to the one-shot fetch container, as `-e NAME` so the values never appear on a command
   line. No long-running service receives them.
