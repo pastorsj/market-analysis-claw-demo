@@ -75,13 +75,6 @@ const BrandMark = ({
   </span>
 )
 
-/** A text badge in a logo's place, for a technology without a logo file. */
-const TextMark = ({ brand, text }: { brand: string; text: string }): ReactNode => (
-  <span className={`${styles.brandMark} ${styles.textMark}`} data-brand={brand} aria-hidden="true">
-    {text}
-  </span>
-)
-
 const NimMark = (): ReactNode => (
   <BrandMark brand="NVIDIA NIM" src={LOGOS.nim} treatment="monochrome" />
 )
@@ -182,7 +175,7 @@ export const EcosystemLanding = ({
               </div>
               <div className={styles.technologyRow}>
                 <Technology mark={<NvidiaMark size="small" />}>Auto Ontology</Technology>
-                <Technology mark={<TextMark brand="Kumo" text="K" />}>NVIDIA Kumo</Technology>
+                <Technology mark={<NvidiaMark size="small" />}>NVIDIA Kumo</Technology>
                 <Technology mark={<BrandMark brand="DuckDB" src={LOGOS.duckdb} />}>
                   DuckDB
                 </Technology>

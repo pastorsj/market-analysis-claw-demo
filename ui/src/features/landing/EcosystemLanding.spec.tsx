@@ -28,7 +28,7 @@ describe('EcosystemLanding', () => {
     expect(screen.queryByRole('heading', { name: 'Featured questions' })).not.toBeInTheDocument()
   })
 
-  test('marks each technology with its logo, or a text badge when there is no logo file', () => {
+  test('marks each technology with its logo or the NVIDIA mark', () => {
     const { container } = render(<EcosystemLanding featuredQuestions={[]} disclaimer={null} />)
     const brands = (selector: string) =>
       [...container.querySelectorAll(selector)].map((mark) => mark.getAttribute('data-brand'))
@@ -52,7 +52,12 @@ describe('EcosystemLanding', () => {
       expect(image.getAttribute('src')).toMatch(/^\/ecosystem-logos\/[a-z]+\.(svg|png)$/)
       expect(image).toHaveAttribute('alt', '')
     }
-    expect(brands('[data-brand]:not(:has(img)):not([data-brand="NVIDIA"])')).toEqual(['Kumo'])
+    // Every mark without a logo file is the NVIDIA mark; no text badges remain.
+    expect(new Set(brands('[data-brand]:not(:has(img))'))).toEqual(new Set(['NVIDIA']))
+    expect(screen.queryByText('K')).not.toBeInTheDocument()
+    const mark = (name: string) => screen.getByText(name).parentElement!.firstElementChild!
+    expect(mark('NVIDIA Kumo')).toHaveAttribute('data-brand', 'NVIDIA')
+    expect(mark('NVIDIA Kumo').outerHTML).toBe(mark('Auto Ontology').outerHTML)
     expect(container.querySelector('[data-brand="LangChain"] img')).toHaveAttribute(
       'src',
       '/ecosystem-logos/langchain.svg'
