@@ -106,14 +106,15 @@ check_config() {
   if has_profile retrieval || has_profile ontology; then
     check_retriever
   fi
-  # The default corpora (DATA_CORPORA empty) include market_news, from SEC EDGAR.
-  case ,${DATA_CORPORA:-market_news}, in
-    *,market_news,*)
+  # The default corpora (DATA_CORPORA empty) include the SEC EDGAR filings (market_news or sec_filings).
+  case ,${DATA_CORPORA:-market_news,sec_filings}, in
+    *,market_news,* | *,sec_filings,*)
       if has_profile retrieval && [ -z "$SEC_USER_AGENT" ]; then
-        problem "SEC_USER_AGENT is empty: SEC EDGAR needs it for market_news (or set DATA_CORPORA=market_regulations,market_briefs)"
+        problem "SEC_USER_AGENT is empty: SEC EDGAR needs it for the filings corpus (or leave it out of DATA_CORPORA)"
       fi
       ;;
   esac
+  check_external_data
   # Hermes refuses an API server key under 16 characters; init generates 64.
   local key value
   for key in $GENERATED_SECRETS; do
@@ -126,6 +127,32 @@ check_config() {
     for key in AUTO_ONTOLOGY_REASONING_MODEL AUTO_ONTOLOGY_NON_REASONING_MODEL; do
       [ -n "${!key}" ] || problem "$key is empty (.env section 1)"
     done
+  fi
+}
+
+# A pack with external data (docs/data-platform.md) needs it fetched, room for it, and SEC company data.
+check_external_data() {
+  local pack=$ROOT/data/packs/$DATA_PACK/pack.yaml id bytes needed=0 free dir=$DATA_SOURCE_DIR
+  [ -f "$pack" ] || {
+    problem "DATA_PACK=$DATA_PACK has no data/packs/$DATA_PACK/pack.yaml"
+    return 0
+  }
+  if grep -q '^  companies: sec' "$pack" && [ -z "$SEC_USER_AGENT" ]; then
+    problem "SEC_USER_AGENT is empty: $DATA_PACK looks up its companies at SEC"
+  fi
+  while read -r id bytes; do
+    if [ ! -f "$DATA_SOURCE_DIR/$id/.verified.json" ]; then
+      problem "external dataset $id is not in $DATA_SOURCE_DIR yet: set" \
+        "DATA_SOURCE_$(printf '%s' "$id" | tr 'a-z-' 'A-Z_') in .env and run ./scripts/demo.sh data fetch"
+      needed=$((needed + bytes))
+    fi
+  done < <(pack_external)
+  if [ "$needed" -gt 0 ]; then
+    until [ -d "$dir" ]; do dir=$(dirname "$dir"); done
+    free=$(df -Pk "$dir" | awk 'NR == 2 { print $4 }') # KiB
+    [ "$free" -gt $(((needed + needed / 10) / 1024)) ] ||
+      problem "$DATA_SOURCE_DIR has $((free / 1048576)) GiB free; the external data needs" \
+        "$((needed / 1073741824 + 1)) GiB plus 10%"
   fi
 }
 

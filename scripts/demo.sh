@@ -50,6 +50,9 @@ Run
   check                   prove the sandbox boundary on the running stack
 
 Data and recordings
+  data fetch [DATASET...] [--verify-only]
+                          fetch the pack's external datasets into DATA_SOURCE_DIR from each
+                          DATA_SOURCE_<ID> in .env, and verify them file by file
   data prepare            build the active data pack (and the corpus and index with retrieval)
   data reindex            rebuild the retrieval index, e.g. after changing the embed model
   data validate|verify|list|clean [--all]
@@ -77,6 +80,7 @@ cmd_up() {
   load_env
   require_env
   doctor_for_up
+  mkdir -p "$DATA_SOURCE_DIR" # before Compose, which would create it as root
   if has_profile ontology; then
     "$ROOT/tools/auto-ontology/prepare.sh"
   fi
@@ -246,11 +250,16 @@ cmd_record() {
   log "review $out before committing: it holds questions, answers, evidence excerpts and model names"
 }
 
-# data prepare|reindex|validate|verify|list|clean [--all]
+# data fetch|prepare|reindex|validate|verify|list|clean [--all]
 cmd_data() {
   local action=${1:-} service
   load_env
+  mkdir -p "$DATA_SOURCE_DIR" # before Compose, which would create it as root
   case $action in
+    fetch)
+      shift
+      data_fetch "$@"
+      ;;
     prepare)
       dc run --rm --no-deps data prepare --structured
       if has_profile retrieval; then
@@ -269,8 +278,80 @@ cmd_data() {
       shift
       dc run --rm --no-deps data "$action" "$@"
       ;;
-    *) die "$EXIT_USAGE" "usage: demo.sh data prepare|reindex|validate|verify|list|clean [--all]" ;;
+    *) die "$EXIT_USAGE" "usage: demo.sh data fetch|prepare|reindex|validate|verify|list|clean [--all]" ;;
   esac
+}
+
+# data fetch [DATASET...] [--verify-only]: the pack's external datasets into DATA_SOURCE_DIR/<id>, each verified
+# file by file against the manifest the pack pins (docs/data-platform.md). DATA_SOURCE_<ID> in .env says where
+# dataset <id> comes from:
+#   a URL (https, s3, gs, hf)      fetched in the data image, which gets only that scheme's credentials
+#   a directory or host:/path      copied with rsync here on the host, which has the files and the SSH keys
+#   nothing                        what is already in place is verified
+data_fetch() {
+  local arg id variable source verify_only=false datasets=() options
+  for arg in "$@"; do
+    case $arg in
+      --verify-only) verify_only=true ;;
+      -*) die "$EXIT_USAGE" "usage: demo.sh data fetch [DATASET...] [--verify-only]" ;;
+      *) datasets+=("$arg") ;;
+    esac
+  done
+  if [ ${#datasets[@]} -eq 0 ]; then
+    # shellcheck disable=SC2207 # dataset ids have no spaces
+    datasets=($(pack_external | cut -d' ' -f1))
+  fi
+  if [ ${#datasets[@]} -eq 0 ]; then
+    log "data pack $DATA_PACK has no external datasets"
+    return 0
+  fi
+  for id in "${datasets[@]}"; do
+    variable=DATA_SOURCE_$(printf '%s' "$id" | tr 'a-z-' 'A-Z_')
+    source=$(env_value "$variable")
+    source=${source#file://}
+    # As the host user, so the files are the user's; HOME for the libraries' caches.
+    options=(--rm --no-deps --user "$(id -u):$(id -g)" -e HOME=/tmp)
+    if $verify_only || [ -z "$source" ]; then
+      log "$id: verifying $DATA_SOURCE_DIR/$id"
+      dc run "${options[@]}" data-fetch fetch "$id" --verify-only
+    elif [[ $source == *://* ]]; then
+      log "$id: fetching from ${source%%\?*}" # a pre-signed URL's query is a credential
+      export "$variable=$source"
+      options+=(-e "$variable")
+      fetch_credentials "$source"
+      dc run "${options[@]}" data-fetch fetch "$id"
+    else
+      log "$id: copying $source into $DATA_SOURCE_DIR/$id with rsync"
+      mkdir -p "$DATA_SOURCE_DIR/$id"
+      rsync -a --partial --exclude '.*' "${source%/}/" "$DATA_SOURCE_DIR/$id/"
+      chmod -R a+rX "$DATA_SOURCE_DIR/$id" # the data services run as their own user
+      dc run "${options[@]}" data-fetch fetch "$id" --verify-only
+    fi
+  done
+}
+
+# fetch_credentials URL: add to the caller's `options` the credentials URL's scheme reads, for those .env sets.
+# Values are exported and passed as -e NAME, so they never appear on a command line.
+fetch_credentials() {
+  local names="" name value
+  case $1 in
+    http://* | https://*) names=DATA_SOURCE_HTTP_TOKEN ;;
+    s3://*) names="AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION AWS_ENDPOINT_URL" ;;
+    hf://*) names=HF_TOKEN ;;
+    gs://* | gcs://*)
+      value=$(env_value GOOGLE_APPLICATION_CREDENTIALS) # a host path to a service-account file
+      if [ -n "$value" ]; then
+        options+=(-v "$value:/run/gcs.json:ro" -e GOOGLE_APPLICATION_CREDENTIALS=/run/gcs.json)
+      fi
+      ;;
+  esac
+  for name in $names; do
+    value=$(env_value "$name")
+    if [ -n "$value" ]; then
+      export "$name=$value"
+      options+=(-e "$name")
+    fi
+  done
 }
 
 reindex() {

@@ -42,6 +42,10 @@ x-openshell-cli: &openshell-cli
     - ./infra/openshell/providers:/providers:ro
   networks: [openshell]
 
+# External datasets (docs/data-platform.md): real data that is never committed. They live on the host in
+# DATA_SOURCE_DIR, outside the repository; `demo.sh data fetch` fills it, and everything else reads it read-only.
+x-sources: &sources ${DATA_SOURCE_DIR:-${HOME}/market-demo-data}:/sources:ro
+
 x-data: &data
   image: market-demo/demo-data:local
   # DATA_PACK_PROFILE and DATA_CORPORA are part of the build key: data and data-corpus must agree.
@@ -49,7 +53,10 @@ x-data: &data
     DATA_PACK: ${DATA_PACK:-market-analysis}
     DATA_PACK_PROFILE: ${DATA_PACK_PROFILE:-}
     DATA_CORPORA: ${DATA_CORPORA:-}
-  volumes: [demo-data:/data]
+    DATA_SOURCE_DIR: /sources
+    DATA_DUCKDB_MEMORY: ${DATA_DUCKDB_MEMORY:-} # empty: DuckDB's default; the rollup spills past it
+    SEC_USER_AGENT: ${SEC_USER_AGENT:-} # SEC company data (us-equities) and the SEC EDGAR corpus
+  volumes: [demo-data:/data, *sources]
 
 x-retrieval: &retrieval
   image: market-demo/retrieval:local
@@ -67,7 +74,7 @@ x-market-analytics: &market-analytics
   build: { context: tools/market-analytics, args: { ANALYTICS_EXTRAS: kumo } }
   image: market-demo/market-analytics:local
   ports: ["127.0.0.1:3010:3010"]
-  volumes: [demo-data:/data:ro]
+  volumes: [demo-data:/data:ro, *sources] # the sources: the minute bars, read in place
   depends_on:
     # The service keeps the build /data/active pointed at when it started: restart it when the data
     # one-shot is recreated (demo.sh data prepare restarts it itself).
@@ -216,8 +223,16 @@ services:
   data:
     <<: *data
     profiles: [core]
-    build: { context: ., dockerfile: data/Dockerfile } # also data-corpus's image
+    build: { context: ., dockerfile: data/Dockerfile } # also data-corpus's and data-fetch's image
     command: [prepare, --structured]
+
+  # `demo.sh data fetch`: a pack's external datasets into DATA_SOURCE_DIR, writable here only, then verified.
+  # demo.sh passes each source and the credentials its scheme needs as -e NAME, so no service keeps them.
+  data-fetch:
+    <<: *data
+    profiles: [tools]
+    command: [fetch]
+    volumes: ["${DATA_SOURCE_DIR:-${HOME}/market-demo-data}:/sources"]
 
   api:
     <<: *restart
@@ -295,9 +310,6 @@ services:
     <<: *data
     profiles: [retrieval]
     command: [prepare, --corpus]
-    environment:
-      <<: *data-env
-      SEC_USER_AGENT: ${SEC_USER_AGENT:-} # needed only for the SEC EDGAR corpus (market_news)
     depends_on:
       data: { condition: service_completed_successfully }
 
