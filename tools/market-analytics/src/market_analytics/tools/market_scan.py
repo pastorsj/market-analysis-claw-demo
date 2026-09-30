@@ -42,6 +42,8 @@ def run(
         raise InvalidRequest("metrics must be unique")
     prices = data.prices
     prices = prices[prices["asset_id"].isin(data.universe(universe_id))]
+    if sessions is not None and start is not None:
+        raise InvalidRequest("give start or sessions, not both: sessions counts back from end")
     if sessions is not None:
         # "The N sessions ending D": the N latest sessions on or before D. Selecting them by value keeps a
         # timestamp read from the frame out of scalar comparisons, which cudf.pandas runs on the CPU.

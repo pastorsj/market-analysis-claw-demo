@@ -65,6 +65,8 @@ def test_market_scan_counts_the_sessions_ending_at_end(data: MarketData) -> None
 
     neither = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], end=JUNE["end"])
     assert neither["error"]["code"] == "invalid_request"
+    both = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], sessions=5, **JUNE)
+    assert both["error"]["message"].startswith("give start or sessions, not both")
 
 
 def test_market_scan_reports_an_empty_window_and_invalid_arguments(data: MarketData) -> None:
