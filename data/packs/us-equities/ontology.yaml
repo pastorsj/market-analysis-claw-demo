@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Descriptions for the Auto Ontology model (ontology/model.yaml in the build). Keys come from schema.sql
+# and the `prediction` section of pack.yaml; a column without a description here is described by its name.
+tables:
+  assets:
+    description: >-
+      US-listed stocks with SEC company data. asset_id is the ticker as the market data spells it (BRK.B).
+      Warrants, units, rights, preferred shares, funds and symbols with too little history are excluded.
+    columns:
+      company_name: The registrant's name as SEC lists it.
+      cik: SEC Central Index Key, zero-padded to 10 digits; it links a stock to its SEC filings.
+      sic_code: Four-digit Standard Industrial Classification code from SEC; empty when SEC has none.
+      sector: The SIC division, e.g. Manufacturing or Finance, Insurance and Real Estate.
+      industry: SEC's description of the SIC code.
+      exchange: The listing exchange SEC reports, e.g. Nasdaq or NYSE.
+      profile: A short company description; empty for real companies.
+      first_session: The first trading session with a price for this stock.
+      last_session: The last trading session with a price for this stock.
+      sessions: Number of trading sessions with a price.
+      median_dollar_volume: Median daily dollar volume (close times volume, in USD) through the prediction anchor.
+      liquidity_rank: 1 for the highest median daily dollar volume; the 50 most liquid form the prediction population.
+      is_synthetic: False; every company here is real.
+  ticker_history:
+    description: One row per stock with its current ticker, effective from its first session.
+  trading_sessions:
+    description: >-
+      Exchange sessions: dates on which at least half the stocks trading at the time have a regular-session bar.
+      Holidays are absent.
+    columns:
+      close_at: The regular-session close (16:00 US/Eastern) as a UTC timestamp.
+      symbols: How many symbols in the raw data had a regular-session bar that day.
+  daily_prices:
+    description: >-
+      Daily bars rolled up from real one-minute bars of the regular session (09:30 through the 16:00 closing
+      auction). Prices are split-adjusted, not dividend-adjusted. This data is not investment advice.
+    columns:
+      open: The first regular-session minute's open, in USD.
+      high: The highest minute high of the regular session.
+      low: The lowest minute low of the regular session.
+      close: The 16:00 closing-auction minute's close, in USD.
+      adjusted_close: Equal to close; the bars are already split-adjusted.
+      volume: Shares traded in the regular session.
+      dollar_volume: Sum of minute close times minute volume over the regular session, in USD.
+      bar_count: Number of one-minute bars in the regular session (at most 391).
+      total_return_1d: Close over the previous session's close, minus 1; 0 on a stock's first session.
+  asset_relationships:
+    description: >-
+      Declared peers: for each stock, the most liquid other stocks with the same four-digit SIC code.
+    columns:
+      peer_rank: 1 for the most liquid peer.
+  asset_entities:
+    description: The 50 most liquid stocks listed at the prediction anchor.
+  price_events:
+    description: Daily price features observable on or before the prediction anchor.
+  return_outcomes:
+    description: Historical five-session forward-return outcomes fully realized by the prediction anchor.
+    columns:
+      forward_return_5d: Historical adjusted-close return over the following five sessions.
+      realized_at: Fifth later trading session when the outcome became observable.

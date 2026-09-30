@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Build the structured part of a pack: Parquet tables, the DuckDB database, the ontology and the prediction graph.
 
-tables/<table>.parquet               every table (the generator's output, or copied from the pack)
+tables/<table>.parquet               every table (the generator's output, the market importer's, or the pack's own)
 structured/<database_name>.duckdb    schema.sql, then the tables, then the rendered views
 ontology/model.yaml                  Auto Ontology model
 prediction/graph.json                prediction views, keys, time columns, anchor and population
@@ -23,6 +23,8 @@ from typing import Any
 import duckdb
 import yaml
 
+from demo_data import external
+from demo_data import market
 from demo_data import ontology
 from demo_data.pack import Pack
 from demo_data.pack import applicable_contracts
@@ -39,34 +41,79 @@ class BuildError(Exception):
     """The structured build produced data that does not match the pack."""
 
 
-def build(pack: Pack, profile: str, contracts: list[dict[str, Any]], out: Path) -> dict[str, Any]:
-    """Build every structured artifact under `out` and return row counts per table."""
+def build(
+    pack: Pack, profile: str, contracts: list[dict[str, Any]], out: Path, *, sources_dir: Path, cache_dir: Path
+) -> dict[str, Any]:
+    """Build every structured artifact under `out`; returns the part's receipt: row counts, and the import's."""
     tables_dir = out / "tables"
-    produce_tables(pack, profile, tables_dir)
-    rows = check_tables(pack, profile, contracts, tables_dir)
+    imported = produce_tables(pack, profile, tables_dir, sources_dir, cache_dir)
+    receipt: dict[str, Any] = {"rows": check_tables(pack, profile, contracts, tables_dir)}
+    if imported:
+        receipt["import"] = imported
     database = out / "structured" / f"{pack.database_name}.duckdb"
     load_database(pack, tables_dir, database)
     model = ontology.build_model(pack, database)
     write_text(out / "ontology" / "model.yaml", yaml.safe_dump(model, sort_keys=False, allow_unicode=True))
     if "prediction" in pack.manifest:
         write_prediction(pack, database, out / "prediction")
-    return rows
+    return receipt
 
 
-def produce_tables(pack: Pack, profile: str, tables_dir: Path) -> None:
-    """Run the generator for generated tables and copy committed ones."""
+def produce_tables(
+    pack: Pack, profile: str, tables_dir: Path, sources_dir: Path, cache_dir: Path
+) -> dict[str, Any] | None:
+    """Run the generator for generated tables, import external ones, and copy committed ones."""
     tables_dir.mkdir(parents=True, exist_ok=True)
     tables = pack.structured["tables"]
-    if any(pack.origins[table["origin"]]["kind"] == "generated" for table in tables):
-        entrypoint = pack.path(pack.manifest["generator"]["entrypoint"])
-        command = [sys.executable, str(entrypoint), "--profile", profile, "--out", str(tables_dir)]
-        subprocess.run(command, check=True, cwd=pack.directory)
+    imported = None
+    if "market" in pack.manifest:
+        dataset = market_dataset(pack, profile, sources_dir, cache_dir)
+        imported = market.import_tables(pack, dataset, tables_dir, cache_dir)
+    elif any(pack.origins[table["origin"]]["kind"] == "generated" for table in tables):
+        generate(pack, profile, tables_dir)
     for table in tables:
         if pack.origins[table["origin"]]["kind"] == "committed":
             shutil.copyfile(pack.path(f"tables/{table['name']}.parquet"), tables_dir / f"{table['name']}.parquet")
     missing = [name for name in pack.tables if not (tables_dir / f"{name}.parquet").is_file()]
     if missing:
-        raise BuildError(f"the generator did not write {missing}")
+        raise BuildError(f"no table was written for {missing}")
+    return imported
+
+
+def market_dataset(pack: Pack, profile: str, sources_dir: Path, cache_dir: Path) -> external.Dataset:
+    """The raw market dataset: an external one (verified by `fetch`), or the generator's, made once per input.
+
+    A generator that feeds the market importer writes a raw dataset with its own manifest.json (the layout a real
+    dataset uses). It is cached in <cache>/generated/<key>/, keyed by the pack's content and the profile.
+    """
+    dataset_id = pack.manifest["market"]["bars"]["dataset"]
+    if pack.origins[dataset_id]["kind"] == "external":
+        return external.datasets(pack.manifest, sources_dir)[dataset_id]
+    root = market_root(pack, profile, sources_dir, cache_dir)
+    if not (root / "manifest.json").is_file():
+        staging = root.with_name(f".{root.name}.staging")
+        shutil.rmtree(staging, ignore_errors=True)
+        generate(pack, profile, staging)
+        staging.rename(root)
+    files = json.loads((root / "manifest.json").read_text(encoding="utf-8"))["files"]
+    dataset = external.Dataset(dataset_id, root, "manifest.json", external.fingerprint(files), 0)
+    external.verify(dataset)  # records the hashes once; the import then checks sizes and mtimes only
+    return dataset
+
+
+def market_root(pack: Pack, profile: str, sources_dir: Path, cache_dir: Path) -> Path:
+    """Where the raw market dataset is: $DATA_SOURCE_DIR/<id>, or the generator's output in the cache."""
+    dataset_id = pack.manifest["market"]["bars"]["dataset"]
+    if pack.origins[dataset_id]["kind"] == "external":
+        return sources_dir / dataset_id
+    return cache_dir / "generated" / pack.digest(profile, [], "generated")[:16]
+
+
+def generate(pack: Pack, profile: str, out: Path) -> None:
+    """Run the pack's generator: `python <entrypoint> --profile <profile> --out <out>`."""
+    entrypoint = pack.path(pack.manifest["generator"]["entrypoint"])
+    command = [sys.executable, str(entrypoint), "--profile", profile, "--out", str(out)]
+    subprocess.run(command, check=True, cwd=pack.directory)
 
 
 def check_tables(pack: Pack, profile: str, contracts: list[dict[str, Any]], tables_dir: Path) -> dict[str, int]:
@@ -119,8 +166,9 @@ def render_view(pack: Pack, sql: str) -> str:
             "anchor_date": anchor.date().isoformat(),
             "anchor_timestamp": anchor.isoformat(),
             "horizon_sessions": str(prediction["horizon_sessions"]),
-            "population_literals": ", ".join(sql_literal(entity) for entity in prediction["population"]["ids"]),
         }
+        if "ids" in prediction["population"]:
+            values["population_literals"] = ", ".join(sql_literal(entity) for entity in prediction["population"]["ids"])
     for name, value in values.items():
         sql = sql.replace("{{" + name + "}}", value)
     if "{{" in sql:
@@ -141,15 +189,19 @@ def write_prediction(pack: Pack, database: Path, out: Path) -> None:
             row[0]
             for row in connection.execute(f"SELECT * FROM {schema}.{prediction['population']['view']}").fetchall()
         ]
-    missing = sorted(set(prediction["population"]["ids"]) - set(population))
+    # Without pinned ids, the population is whatever its view selects at the anchor (e.g. the 50 most liquid).
+    ids = prediction["population"].get("ids", population)
+    missing = sorted(set(ids) - set(population))
     if missing:
         raise BuildError(f"population ids are not entities at the anchor: {missing}")
+    if not ids or len(ids) > 1000:
+        raise BuildError(f"the population has {len(ids)} entities; Kumo needs 1 to 1,000")
     graph = {
         "schema": schema,
         "anchor": prediction["anchor"],
         "horizon_sessions": prediction["horizon_sessions"],
         "entity": prediction["entity"],
-        "population": prediction["population"],
+        "population": {"view": prediction["population"]["view"], "ids": ids},
         "tables": [
             {
                 "name": name,
@@ -164,6 +216,15 @@ def write_prediction(pack: Pack, database: Path, out: Path) -> None:
     }
     write_text(out / "graph.json", json.dumps(graph, indent=2) + "\n")
     write_text(out / "templates.json", json.dumps({"templates": prediction["templates"]}, indent=2) + "\n")
+
+
+def with_population(resolved: dict[str, Any], build_dir: Path) -> dict[str, Any]:
+    """The resolved pack with the population ids the build found, so pack.json readers always see `ids`."""
+    graph = build_dir / "prediction" / "graph.json"
+    if "prediction" in resolved and graph.is_file():
+        population = json.loads(graph.read_text(encoding="utf-8"))["population"]
+        resolved["prediction"] = resolved["prediction"] | {"population": population}
+    return resolved
 
 
 def write_text(path: Path, text: str) -> None:

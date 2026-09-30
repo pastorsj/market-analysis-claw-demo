@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# yaml-language-server: $schema=../../schemas/questions.schema.json
+#
+# Draft questions for the real-data pack (docs/data-platform.md, questions). Wording is final only once each
+# has been run against the built pack and has an oracle in eval/. Featured questions need only the default
+# profiles. The pack has no ticker-linked news, so no question uses the news tools.
+schema_version: "1"
+questions:
+- id: market-leaders
+  label: Market Leaders
+  tag: ANALYTICS
+  description: Scan the 50 most liquid US stocks for their strongest and weakest recent returns.
+  question: >-
+    Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions
+    ending March 12, 2026, and how did their daily volatility compare?
+  sources: [market_data]
+  featured: true
+- id: unusual-sessions
+  label: Unusual Sessions
+  tag: ANOMALY
+  description: Rank unusual return, volatility and volume combinations across every stock in the pack.
+  question: >-
+    Using 2025 as the baseline, which 10 stock sessions from January 2 through March 12, 2026 were the most
+    unusual across all stocks in the pack, and which features made each one unusual? Anomaly scores are neither
+    forecasts nor explanations.
+  sources: [market_data]
+  featured: true
+- id: peer-network
+  label: Peer Network
+  tag: GRAPH
+  description: Find the most central stocks in the return-correlation network of same-industry peers.
+  question: >-
+    Among declared industry peers, which stocks were the most central in the return-correlation network from
+    December 2025 through March 12, 2026, and which pairs moved together most closely?
+  sources: [market_data]
+  featured: true
+- id: large-universe-scan
+  label: Whole-Market Scan
+  tag: ANALYTICS
+  description: Scan every stock in the pack at once.
+  question: >-
+    Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2 to
+    March 12, 2026, and how unusual was their trading volume?
+  sources: [market_data]
+  featured: true
+- id: cyber-disclosure-rules
+  label: Cybersecurity Disclosures
+  tag: RETRIEVAL
+  description: Pair the Form 8-K Item 1.05 rule with filings that report an incident.
+  question: >-
+    What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by
+    when? Cite the regulation, and any filings in the corpus that report an incident.
+  sources: [sec_filings, market_regulations]
+  featured: true
+- id: leaders-and-filings
+  label: Leaders & Filings
+  tag: HYBRID
+  description: Price history and SEC filings as two separate sources, joined only by company name.
+  question: >-
+    How did the 10 most liquid stocks perform from January 2 to March 12, 2026? Separately, which of those
+    companies have second-quarter 2026 filings in the SEC filings corpus, and what did they disclose? Keep the
+    two sources apart, and do not claim that a filing explains a price move.
+  sources: [market_data, sec_filings]
+  featured: true
+- id: outcome-prediction
+  label: Five-Session Outlook
+  tag: PREDICTION
+  description: Rank the 50 most liquid stocks with a five-session prediction anchored before the outcomes.
+  question: >-
+    As of the March 5, 2026 market close, which of the 50 most liquid stocks are most likely to post a positive
+    five-session return?
+  sources: [market_data]
+- id: sector-sql
+  label: Sector Breakdown
+  tag: SQL
+  description: Count stocks and summarize returns by SIC division with SQL.
+  question: >-
+    How many stocks are in each SIC division, and what was each division's median return from January 2 to
+    March 12, 2026?
+  sources: [market_data]

@@ -30,7 +30,7 @@ def run(tmp_path, capsys):
 @pytest.fixture
 def no_tables(monkeypatch):
     """Skip the structured build (generator, DuckDB, ontology) in tests about what pack.json lists."""
-    monkeypatch.setattr(structured, "build", lambda pack, profile, contracts, out: {"assets": 0})
+    monkeypatch.setattr(structured, "build", lambda pack, profile, contracts, out, **_: {"rows": {"assets": 0}})
 
 
 def active(tmp_path: Path) -> Path:

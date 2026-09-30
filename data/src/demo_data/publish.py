@@ -8,6 +8,7 @@
       builds/<name>/{tables,structured,ontology,prediction}/      the structured part
       builds/<name>/corpus/documents.jsonl                        the corpus part
       downloads/sha256/<digest>                                   pinned public files, shared by every build
+      cache/{rollups,generated}/<key>/, cache/sec/<date>/         daily rollups, generated raw datasets, SEC snapshots
 
 A build is keyed by everything it depends on, so preparing an unchanged pack is a no-op and changing any input
 starts a new build. Each part is written to a staging directory and moved into place before pack.json records
@@ -145,15 +146,31 @@ def verify(directory: Path) -> list[str]:
 
 
 def clean(data_dir: Path, *, downloads: bool = False) -> list[Path]:
-    """Remove every build but the active one, leftover staging, and optionally the download cache."""
+    """Remove every build but the active one, leftover staging, and the cached rollups and generated datasets that
+    no remaining build uses.
+
+    With `downloads`, also remove the download cache and every other cache (rollups, SEC snapshots).
+    """
     active = active_build(data_dir)
     builds = data_dir / "builds"
     removed = [path for path in sorted(builds.iterdir()) if path.resolve() != active] if builds.is_dir() else []
-    if downloads and (data_dir / "downloads").is_dir():
-        removed.append(data_dir / "downloads")
     for path in removed:
         shutil.rmtree(path)
-    return removed
+    if downloads:
+        stale = [path for path in (data_dir / "downloads", data_dir / "cache") if path.is_dir()]
+    else:
+        used: set[str] = set()
+        for manifest in builds.glob("*/pack.json") if builds.is_dir() else []:
+            pack = json.loads(manifest.read_text(encoding="utf-8"))
+            used.add(pack.get("parts", {}).get("structured", {}).get("import", {}).get("rollup", {}).get("key"))
+            used.add(Path(pack.get("market", {}).get("bars", {}).get("root", "/")).name)
+        cached = [data_dir / "cache" / "rollups", data_dir / "cache" / "generated"]
+        stale = [
+            path for cache in cached if cache.is_dir() for path in sorted(cache.iterdir()) if path.name not in used
+        ]
+    for path in stale:
+        shutil.rmtree(path)
+    return removed + stale
 
 
 def write_json(path: Path, value: Any) -> None:

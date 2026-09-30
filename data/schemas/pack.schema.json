@@ -8,7 +8,7 @@
   "required": ["schema_version", "id", "version", "title", "description", "as_of", "licenses", "provenance", "sources", "questions"],
   "anyOf": [{ "required": ["structured"] }, { "required": ["documents"] }],
   "properties": {
-    "schema_version": { "const": "1" },
+    "schema_version": { "description": "2 adds `external` and `market`.", "enum": ["1", "2"] },
     "id": { "$ref": "#/$defs/pack_id" },
     "version": {
       "description": "SemVer of the pack content: minor for data changes, major for table or column changes.",
@@ -27,6 +27,14 @@
       "items": { "$ref": "#/$defs/origin" }
     },
     "generator": { "$ref": "#/$defs/generator" },
+    "external": {
+      "description": "Datasets outside the repository, in $DATA_SOURCE_DIR/<id>/, pinned by their manifest's fingerprint. Never committed.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/pack_id" },
+      "additionalProperties": { "$ref": "#/$defs/external_dataset" }
+    },
+    "market": { "$ref": "#/$defs/market" },
     "structured": { "$ref": "#/$defs/structured" },
     "documents": { "$ref": "#/$defs/documents" },
     "sources": {
@@ -59,10 +67,10 @@
       "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9._/-]+$"
     },
     "license": {
-      "description": "Data Package v2 license shape.",
+      "description": "Data Package v2 license shape. `path` links the terms; a private dataset may have none.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "path", "redistribution"],
+      "required": ["name", "redistribution"],
       "properties": {
         "name": { "description": "SPDX id or short license name.", "$ref": "#/$defs/text" },
         "title": { "$ref": "#/$defs/text" },
@@ -79,8 +87,8 @@
         "id": { "$ref": "#/$defs/pack_id" },
         "title": { "$ref": "#/$defs/text" },
         "kind": {
-          "description": "generated: written by the pack generator; committed: files in the pack; download: fetched at prepare time and verified against the sha256 pins in the corpus manifest.",
-          "enum": ["generated", "committed", "download"]
+          "description": "generated: written by the pack generator; committed: files in the pack; download: fetched at prepare time and verified against the sha256 pins in the corpus manifest; external: imported from the `external` dataset with the origin's id.",
+          "enum": ["generated", "committed", "download", "external"]
         },
         "synthetic": { "type": "boolean" },
         "license": { "description": "The name of a licenses[] entry.", "$ref": "#/$defs/text" },
@@ -98,6 +106,77 @@
       "if": { "properties": { "kind": { "const": "download" } } },
       "then": { "required": ["url"] }
     },
+    "external_dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "manifest", "fingerprint", "bytes"],
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "manifest": { "description": "The manifest's path inside the dataset.", "$ref": "#/$defs/pack_path" },
+        "fingerprint": {
+          "description": "sha256 of the manifest's `files`, as compact JSON with sorted keys.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": { "description": "The dataset's size, for the disk check.", "type": "integer", "minimum": 0 },
+        "notes": { "$ref": "#/$defs/text" }
+      }
+    },
+    "market": {
+      "description": "How the importer turns an external dataset's bars into the market tables (docs/data-platform.md).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bars", "companies", "news", "exclude", "min_sessions", "peers"],
+      "properties": {
+        "bars": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dataset", "files", "columns", "frequency", "timezone", "regular_session"],
+          "oneOf": [{ "required": ["symbol_from_path"] }, { "required": ["symbol_column"] }],
+          "properties": {
+            "dataset": { "description": "An `external` dataset id.", "$ref": "#/$defs/pack_id" },
+            "files": { "description": "A glob inside the dataset, e.g. market/*/*.parquet.", "$ref": "#/$defs/text" },
+            "symbol_from_path": { "description": "A regular expression whose first group is the symbol.", "$ref": "#/$defs/text" },
+            "symbol_column": { "type": "string", "minLength": 1 },
+            "columns": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["time", "open", "high", "low", "close", "volume"],
+              "properties": {
+                "time": { "type": "string", "minLength": 1 },
+                "open": { "type": "string", "minLength": 1 },
+                "high": { "type": "string", "minLength": 1 },
+                "low": { "type": "string", "minLength": 1 },
+                "close": { "type": "string", "minLength": 1 },
+                "volume": { "type": "string", "minLength": 1 }
+              }
+            },
+            "frequency": { "enum": ["1min", "1d"] },
+            "timezone": { "description": "The zone of the time column's wall-clock values (IANA name).", "$ref": "#/$defs/text" },
+            "regular_session": {
+              "description": "Open and close, both included; minute bars outside it are dropped.",
+              "type": "array",
+              "prefixItems": [{ "$ref": "#/$defs/clock" }, { "$ref": "#/$defs/clock" }],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "companies": { "description": "sec, or a companies table's path inside the dataset.", "$ref": "#/$defs/text" },
+        "news": {
+          "description": "A ticker-linked news table's path inside the dataset, or null (the news tools are then unavailable).",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/text" }]
+        },
+        "exclude": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["warrants", "units", "rights", "preferred"] }
+        },
+        "min_sessions": { "type": "integer", "minimum": 1 },
+        "peers": { "description": "Declared peers per asset: the most liquid with the same SIC code.", "type": "integer", "minimum": 0 }
+      }
+    },
+    "clock": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
     "generator": {
       "description": "A pack-local program run as `python <entrypoint> --profile <name> --out <dir>`. It writes <dir>/<table>.parquet for every table whose origin is generated.",
       "type": "object",
@@ -146,7 +225,7 @@
           "items": { "$ref": "#/$defs/pack_path" }
         },
         "tables": {
-          "description": "Each table is tables/<name>.parquet: written by the generator, or committed in the pack.",
+          "description": "Each table is tables/<name>.parquet: written by the generator, imported from an external dataset, or committed in the pack.",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -231,7 +310,10 @@
       "required": ["contract", "news_table", "session_close_utc", "universes", "relationship_graph"],
       "properties": {
         "contract": { "description": "A tool contract id, e.g. market-analytics/v1.", "type": "string", "pattern": "^[a-z][a-z0-9-]*/v[0-9]+$" },
-        "news_table": { "$ref": "#/$defs/identifier" },
+        "news_table": {
+          "description": "The ticker-linked news table, or null when the pack has none.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifier" }]
+        },
         "session_close_utc": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
         "universes": {
           "type": "object",
@@ -283,11 +365,11 @@
         "population": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["view", "ids"],
+          "required": ["view"],
           "properties": {
             "view": { "$ref": "#/$defs/identifier" },
             "ids": {
-              "description": "Kumo scores at most 1,000 entities per batch.",
+              "description": "Kumo scores at most 1,000 entities per batch. Without ids, the build takes them from the view.",
               "type": "array",
               "minItems": 1,
               "maxItems": 1000,
