@@ -103,6 +103,8 @@ def test_an_interrupted_build_resumes_without_embedding_finished_chunks(
     settings: Settings, data_dir: Path, nvidia_api: FakeNvidia, monkeypatch: pytest.MonkeyPatch
 ):
     monkeypatch.setattr(ingest, "EMBED_BATCH", 10)
+    # An id with an apostrophe in the first batch, which the resumed build must find.
+    write_pack(data_dir, [{**documents()[0], "document_id": "edgar:o'neil"}, *documents()])
     embed = ingest._embed_passages
     batches = []
 

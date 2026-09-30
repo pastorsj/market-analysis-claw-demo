@@ -41,8 +41,13 @@ def create_collection(client: MilvusClient, name: str, dimension: int) -> None:
 
 
 def present(client: MilvusClient, collection: str, chunk_ids: list[str]) -> set[str]:
-    """Which of these chunk ids the collection already holds (a primary-key lookup)."""
-    return {row["chunk_id"] for row in client.get(collection, ids=chunk_ids, output_fields=["chunk_id"])}
+    """Which of these chunk ids the collection already holds (a primary-key lookup).
+
+    The ids are JSON-quoted, as in `search`: MilvusClient.get wraps them in single quotes without escaping, so one
+    apostrophe in a document id breaks the expression.
+    """
+    rows = client.query(collection, filter=f"chunk_id in {json.dumps(chunk_ids)}", output_fields=["chunk_id"])
+    return {row["chunk_id"] for row in rows}
 
 
 def build_name(alias: str, digest: str) -> str:
