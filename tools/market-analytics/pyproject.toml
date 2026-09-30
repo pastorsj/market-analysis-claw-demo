@@ -4,7 +4,7 @@
 [project]
 name = "market-analytics"
 version = "0.1.0"
-description = "Market analytics MCP server: six read-only market tools on pandas, scikit-learn and NetworkX (RAPIDS on GPU), plus Kumo prediction."
+description = "Market analytics MCP server: seven read-only market tools on pandas, scikit-learn and NetworkX (RAPIDS on GPU), plus Kumo prediction."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"

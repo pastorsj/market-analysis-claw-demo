@@ -23,12 +23,15 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 | `switchyard` | core | 4000 | Model router; the only holder of `INFERENCE_API_KEY` on the agent path | [`infra/switchyard/`](../infra/switchyard/README.md) |
 | `phoenix` | core | 6006 | Arize Phoenix: trace UI and OTLP/HTTP collector | [`infra/phoenix/serve.py`](../infra/phoenix/serve.py) |
 | `data` (one-shot) | core | – | Builds the active data pack into the `demo-data` volume at `/data/active` | [`data/`](../data/README.md) |
+| `data-fetch` (one-shot) | tools | – | `demo.sh data fetch`: copies or downloads a pack's external datasets into `DATA_SOURCE_DIR`, the only writable mount of it, and verifies them against the pinned manifest | [`data/`](../data/README.md) |
 | `milvus`, `data-corpus`, `retrieval-index`, `retrieval` | retrieval | 8120 (`retrieval`) | Document corpus, vector index and the `retrieve_evidence` MCP server | [`tools/retrieval/`](../tools/retrieval/README.md) |
 | `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `kumo-relational` | kumo | – | Kumo Relational NIM (x86_64 and an NVIDIA GPU) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `auto-ontology-*` | ontology | 3003 (`auto-ontology-mcp`) | NVIDIA Auto Ontology: `ask_question` answers structured questions with SQL | [`tools/auto-ontology/`](../tools/auto-ontology/README.md) |
 
-The `build` and `tools` profiles hold the agent image build and the OpenShell CLI that `demo.sh` runs. Named
+The `build` and `tools` profiles hold the agent image build, the OpenShell CLI and `data-fetch`, which `demo.sh`
+runs. `demo.sh data generate` runs NeMo Data Designer with uv on the host, not in Compose: it rewrites the
+`synthetic-market` pack's committed text ([data platform](data-platform.md#the-data-designer-pack)). Named
 volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `switchyard-data`, `openshell-state`,
 `openshell-client` and `auto-ontology-db` (one per data pack).
 
@@ -78,14 +81,18 @@ decisions and the retrieval steps together.
 ## The data plane
 
 ```text
+DATA_SOURCE_DIR ──data-fetch──▶ /sources (read-only in data, data-corpus and market-analytics)
 data/packs/<pack>/ ──data (one-shot)──▶ /data/builds/<pack>@<version>+<profile>+<digest>/  ◀── /data/active
                      data-corpus ─────▶ corpus/documents.jsonl
                      retrieval-index ─▶ Milvus collection + collection-manifest.json
 ```
 
-Services read only `/data/active` (the `demo-data` volume): the API reads `pack.json` and the DuckDB file
+Services read `/data/active` (the `demo-data` volume): the API reads `pack.json` and the DuckDB file
 (read-only), market analytics reads the Parquet tables, Auto Ontology reads the DuckDB file, and retrieval
-reads the index. Swapping data means adding a pack, not changing code. See [data packs](data-packs.md).
+reads the index. External datasets, real data that is never committed, stay in `DATA_SOURCE_DIR` on the host:
+the builds read them from `/sources`, and `intraday_scan` reads a pack's minute bars there in place, batch by
+batch. Swapping data means adding a pack, not changing code. See [data packs](data-packs.md) and
+[data platform](data-platform.md).
 
 ## Contracts
 
@@ -105,12 +112,12 @@ enforces on them.
 ## Trust boundaries
 
 The demo is a single-user local application. It has no user accounts, so everything it serves stays on the
-host's loopback interface. Within that, the agent is treated as untrusted: it reads documents and tool results
-that could carry prompt injections.
+host's loopback interface, unless `UI_BIND_HOST` opens the UI to a trusted proxy. Within that, the agent is
+treated as untrusted: it reads documents and tool results that could carry prompt injections.
 
 | Boundary | What enforces it |
 |---|---|
-| Host network | Every Compose port is published on `127.0.0.1` only. Switchyard (no inbound authentication), Phoenix (full trace payloads) and the Auto Ontology MCP server (trusted service mode) must never be published further. On a remote host, use an SSH tunnel. |
+| Host network | Every port is published on `127.0.0.1`, except the UI's when `UI_BIND_HOST` is set for a trusted proxy (a Brev secure link). That exposes the UI and its `/api/v1` proxy (job submit, the data viewer's query) with no sign-in; `doctor` warns. Switchyard (no inbound authentication), Phoenix (trace payloads) and the Auto Ontology MCP server (trusted service mode) must never be published further. On a remote host, use an SSH tunnel. |
 | Browser → API | The UI proxies only `pack`, `data_sources/**`, job submit, job reads and cancel. `/internal/**` and everything else is a 404. In replay mode the proxy calls nothing. |
 | Sandbox network | The sandbox has no network interface. The host-networked OpenShell supervisor makes every connection after checking the policy: each MCP endpoint allows the handshake and an explicit tool list, Switchyard allows chat completions and the model list, the API allows only the three `/internal/hermes` routes, and Phoenix allows only `POST /v1/traces`. Only Hermes' interpreter may connect. |
 | Sandbox filesystem | Landlock (a hard requirement): Hermes and the skills are read-only, `HERMES_HOME` and the workspace are writable. The Hermes tools exposed to runs are the skills toolset and the MCP data tools only: no terminal, file, browser or web tools. |

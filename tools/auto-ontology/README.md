@@ -1,13 +1,13 @@
-# Auto Ontology (optional `ontology` profile)
+# Auto Ontology (`ontology` profile)
 
 NVIDIA Auto Ontology maps business terms onto database columns and answers questions with SQL. In this demo it
 answers structured questions over the active data pack's DuckDB database. The agent calls one tool,
 `ask_question`, which Hermes sees as `mcp__auto_ontology__ask_question`. The call returns the answer, the SQL,
 the rows and the resolution lineage (which phrase mapped to which ontology object, table and column).
 
-**Structured questions (Auto Ontology) currently need NVIDIA access; everything else runs without it.** The
-upstream repository, `NVIDIA/auto-ontology`, is private, and there are no public images. Without access, leave the
-`ontology` profile off. Replay still shows recorded structured answers, and every other profile works as usual.
+**Auto Ontology is a required component: it answers the demo's structured questions.** Until the upstream
+repository, `NVIDIA/auto-ontology`, is public, the `ontology` profile needs access to it, and there are no public
+images. Replay shows the recorded structured answers without it.
 
 This directory holds only what we add to upstream:
 

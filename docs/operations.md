@@ -16,7 +16,7 @@ running it on a Brev VM. Run `./scripts/demo.sh` with no arguments for the comma
 | `./scripts/demo.sh status` | Services, the sandbox and its endpoints, Switchyard's routes and the URLs |
 | `./scripts/demo.sh check` | Proves the sandbox boundary on the running stack ([OpenShell](openshell.md#proving-the-boundary)) |
 | `./scripts/demo.sh logs [agent\|routing\|SERVICE...] [-f]` | `agent`: Hermes in the sandbox; `routing`: Switchyard's per-call log; otherwise `docker compose logs` |
-| `./scripts/demo.sh restart switchyard` | Re-renders the routes from `.env`, clears latches and stats, refreshes the API's model ids |
+| `./scripts/demo.sh restart switchyard` | Applies section 1 of `.env`: re-renders the routes, clears latches and stats, refreshes the API's model ids, and recreates Auto Ontology (its models, endpoint and key) and retrieval (its key defaults to the inference key). The sandbox is kept |
 | `./scripts/demo.sh restart agent` | Recreates the sandbox |
 | `./scripts/demo.sh restart SERVICE` | `docker compose restart SERVICE` |
 | `./scripts/demo.sh down [--volumes] [--prune]` | Deletes the sandbox, then stops everything; `--volumes` also deletes the data, the index, the jobs and the traces; `--prune` also removes this project's untagged images and Docker's unused build cache, which is host-wide ([disk](#disk)) |

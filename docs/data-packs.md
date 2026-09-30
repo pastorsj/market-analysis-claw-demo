@@ -38,14 +38,14 @@ they are never committed. `us-equities`' data reaches a machine through a fetch 
 ```bash
 # .env: DATA_PACK=us-equities, and DATA_SOURCE_MINUTE_BARS=<a directory, host:/path or URL>
 ./scripts/demo.sh data fetch          # into $DATA_SOURCE_DIR/minute-bars, verified against the pinned manifest
-./scripts/demo.sh data prepare
+./scripts/demo.sh up                  # builds the pack; on a running stack, also switches everything to it
 ```
 
 ## How a pack is built
 
 ```text
 ./scripts/demo.sh up                  # runs the data one-shots as dependencies
-./scripts/demo.sh data prepare        # rebuild after changing the pack or its settings
+./scripts/demo.sh data prepare        # rebuild the active pack, e.g. after changing its files or DATA_CORPORA
 ```
 
 | Step | Service | Writes |
@@ -58,7 +58,9 @@ Each build lives in `/data/builds/<pack>@<version>+<profile>+<digest>`. The dige
 (not its `README.md`, `eval/`, `recordings/` or `tests/`), the profile, the selected corpora and the builder
 itself, so preparing an unchanged pack is a no-op and any change starts a new build. `/data/active` switches
 atomically. `data prepare` also restarts market analytics and retrieval, which keep the build they resolved at
-startup; switching `DATA_PACK` and running `up` restarts them too.
+startup, and recreates the sandbox when the new build changes the tools' schemas (Hermes lists them once, when
+the sandbox starts). After changing `DATA_PACK` or `DATA_PACK_PROFILE` on a running stack, run
+`./scripts/demo.sh up`, which does all of that and also recreates what names the pack's database.
 
 `pack.json` in the build is what services read: the sources and questions this build can serve, the database
 name and paths, the analytics and prediction settings, the minute bars' location, and the digests of every file.
@@ -136,7 +138,7 @@ document source like `sec_filings` today.
 2. Edit `pack.yaml` (identity, licenses, provenance, sources, disclaimer, analytics universes, prediction),
    `schema.sql`, `ontology.yaml` and `questions.yaml`. Only the columns in the tool contracts are mandatory.
 3. Set `DATA_PACK=<new-id>` in `.env`, then run `./scripts/demo.sh data validate` and
-   `./scripts/demo.sh data prepare`. Record its sessions with `./scripts/demo.sh record`.
+   `./scripts/demo.sh up`. Record its sessions with `./scripts/demo.sh record`.
 
 No code changes are needed while the pack satisfies the contracts its tools own. Market analytics requires what
 `tools/market-analytics/contract/market-analytics.v1.json` lists (a pack declares

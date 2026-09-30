@@ -12,7 +12,7 @@ definition and the dataset's pinned fingerprint. Fetch the data first ([data pla
 # in .env: DATA_PACK=us-equities, and where the bars come from, e.g. a local copy or a bucket
 DATA_SOURCE_MINUTE_BARS=/mnt/datasets/bfdmini/benchmark-subset
 ./scripts/demo.sh data fetch      # into $DATA_SOURCE_DIR/minute-bars, verified file by file
-./scripts/demo.sh data prepare
+./scripts/demo.sh up              # builds the pack; on a running stack, also switches everything to it
 ```
 
 ## What is in it

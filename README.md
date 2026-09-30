@@ -64,12 +64,13 @@ the request flow, the contracts and the trust boundaries.
 | Sandbox | NVIDIA OpenShell (gateway, supervisor, sandbox, CLI) | 0.1.2 |
 | Model router | NVIDIA Switchyard (`switchyard-server`) | 0.3.0 |
 | Models (default, build.nvidia.com) | Nemotron 3 Ultra 550B-A55B on every turn; Nemotron 3 Super 120B-A12B for auxiliary calls | hosted |
-| Models (optional escalation) | Nemotron 3 Ultra escalating to GPT-6 Sol from any OpenAI-compatible provider, judged by Nemotron 3 Super | hosted |
+| Models (with a GPT-6 Sol provider) | Sol pinned (`pinned-capable.nemotron-gpt`), or Nemotron 3 Ultra escalating to Sol, judged by Nemotron 3 Super | hosted |
 | Retrieval models | Nemotron 3 Embed 1B, Llama Nemotron Rerank VL 1B v2 | hosted |
 | Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone) | 1.4.3, 2.6.17, 2.6.25 |
 | Market analytics | pandas, scikit-learn, NetworkX; on GPU, RAPIDS cuDF, cuML and nx-cugraph | 2.3, 1.9, 3.6; 26.06 (CUDA 12) |
 | Prediction | Kumo Relational NIM, `kumo-relational-client` | 1.0.1, 1.0.2 |
-| Structured questions (optional) | NVIDIA Auto Ontology | 1.0.0 |
+| Synthetic data | NeMo Data Designer (`data-designer`) | 0.9.3 |
+| Structured questions | NVIDIA Auto Ontology (`ontology` profile, required) | 1.0.0 |
 | Tool protocol | Model Context Protocol, Python SDK over streamable HTTP | `mcp` 2.2 |
 | Tracing | NeMo Relay (bundled with Hermes), Arize Phoenix | Relay < 0.9, Phoenix 20.16.0 |
 | Job API | Python, FastAPI, uvicorn, Pydantic, SQLite, DuckDB | 3.12, 0.141, 0.54, 2.13, –, 1.5.5 |
@@ -84,8 +85,10 @@ the request flow, the contracts and the trust boundaries.
 | CPU (default) | `core,retrieval,analytics` | Docker Engine 28+ on a Linux 6.2+ kernel (OpenShell needs Landlock), at least 8 GiB of memory for Docker, x86_64 or arm64. Linux, or macOS with colima |
 | GPU | `core,retrieval,analytics-gpu,kumo` | Linux x86_64, an NVIDIA GPU (driver 535+), the NVIDIA Container Toolkit, the Kumo NIM image from `nvcr.io`, and 150 GB of free disk (200 GB to rebuild images on the host). Tested on a 40 GB A100, where the stack held 4.3 GiB of GPU memory once Kumo had predicted, and 9.3 GiB of RAM. For example a Brev A100 VM ([Brev VM mode](docs/operations.md#brev-vm-mode)) |
 
-The models are always hosted; no tier serves a model locally. Add the `ontology` profile to a live tier if you
-have access to Auto Ontology. Details: [configuration](docs/configuration.md#hardware-tiers).
+The language, embedding and rerank models are always hosted; only the kumo profile runs a model locally (the Kumo
+Relational NIM). Add the `ontology` profile to either live tier: Auto Ontology is required for the structured
+questions, and until `NVIDIA/auto-ontology` is public it needs repository access. Details:
+[configuration](docs/configuration.md#hardware-tiers).
 
 ## Quickstart
 
@@ -200,7 +203,8 @@ When you change the code:
 - Keep the wiring in sync: `agent/tests/test_wiring.py` fails when the registry, the agent config, the sandbox
   policy, the provider profiles and `compose.yaml` disagree about a tool or an endpoint.
 - Services share JSON contracts only; never import another service's code.
-- Publish ports on `127.0.0.1` only, and keep every Docker resource in the `market-demo` project.
+- Publish ports on `127.0.0.1` only (the UI's alone follows `UI_BIND_HOST`), and keep every Docker resource in
+  the `market-demo` project.
 - New files carry the SPDX header (`Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES`, `Apache-2.0`).
 - Run the tests of every project you touch.
 
@@ -214,7 +218,7 @@ api/                     Job API (FastAPI): jobs, execution.v2 events, receipts,
 ui/                      Next.js UI based on the upstream AI-Q UI; src/features/execution is the execution view
 tools/retrieval/         retrieve_evidence: LangChain NVIDIA embed and rerank over Milvus
 tools/market-analytics/  seven market tools and Kumo prediction, on CPU or RAPIDS
-tools/auto-ontology/     patches and seed for the optional Auto Ontology profile
+tools/auto-ontology/     patches and seed for Auto Ontology (the ontology profile)
 infra/openshell/         OpenShell pins, gateway config, provider profiles, CLI image
 infra/switchyard/        Switchyard image, route templates, judge prompt
 infra/phoenix/           Phoenix launcher
@@ -222,7 +226,7 @@ data/                    data packs and the demo-data builder; packs/<id>/record
 contracts/               tool registry, JSON Schemas and golden fixtures
 scripts/                 demo.sh lifecycle and gen-contracts.sh codegen
 docs/                    the guides below
-vendor/                  the private Auto Ontology submodule (not checked out by default)
+vendor/                  the Auto Ontology submodule (not checked out by default; private until it is published)
 ```
 
 ## Documentation
@@ -252,9 +256,9 @@ Each component also has its own README with its environment and tests.
 - **Hosted models, with their terms.** Every model call goes to a hosted endpoint and is subject to that
   provider's terms. The default endpoint, build.nvidia.com, is open to anyone with an NVIDIA account but
   serves no GPT model; the escalation templates take GPT-6 Sol from a provider you configure.
-- **Structured questions need Auto Ontology (the `ontology` profile); everything else runs without it.**
-  Without the ontology profile, the agent declines questions that need exact rows, such as the per-event price
-  reactions. The replay bundle was recorded with it.
+- **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
+  `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
+  need exact rows, such as the per-event price reactions. The replay bundle was recorded with it.
 - **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
 - **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
   person on one host.

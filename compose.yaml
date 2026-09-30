@@ -6,7 +6,7 @@
 #   retrieval      Milvus, the document corpus and index, the retrieval MCP server
 #   analytics      market analytics MCP server on CPU (analytics-gpu: on RAPIDS; never both)
 #   kumo           Kumo Relational NIM behind predict_asset_outcomes (x86_64 + NVIDIA GPU)
-#   ontology       Auto Ontology (needs the private vendor/auto-ontology submodule)
+#   ontology       Auto Ontology, required (the vendor/auto-ontology submodule, private until it is published)
 #   replay         the UI alone, on the recorded sessions: no keys, no API, no GPU
 #   build, tools   the agent sandbox image and the OpenShell CLI, used by scripts/demo.sh
 #

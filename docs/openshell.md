@@ -86,10 +86,12 @@ cannot reach at startup. Then it:
 4. starts the `hermes-gateway` forwarder.
 
 The sandbox carries a fingerprint label: a hash of the agent image ID, the tool servers' image IDs, the active
-data pack's `pack.yaml`, the provider profiles, `gateway.toml`, the OpenShell pins, `AGENT_FEATURES` and the two
-Hermes keys. `up` recreates the sandbox only when the fingerprint changes, so a repeat `up` keeps it. Hermes
-lists each MCP server's tools once, when it starts, so a new tool image or a `DATA_PACK` switch must recreate
-it: otherwise the model keeps seeing the previous pack's universes and fails its calls. `./scripts/demo.sh restart agent` recreates it on demand.
+data pack's `pack.yaml` and `DATA_PACK_PROFILE`, the provider profiles, `gateway.toml`, the OpenShell pins,
+`AGENT_FEATURES` and the two Hermes keys. `up` and `data prepare` recreate the sandbox only when the fingerprint
+changes, so a repeat `up` keeps it. Hermes lists each MCP server's tools once, when it starts, and the pack and
+its profile shape those tools (the universes, the relationship graph, whether there are minute bars). So a new
+tool image or a `DATA_PACK` or `DATA_PACK_PROFILE` switch must recreate it: otherwise the model keeps seeing the
+previous build's tools and fails its calls. `./scripts/demo.sh restart agent` recreates it on demand.
 `./scripts/demo.sh down` deletes the sandbox through the gateway before it stops Compose.
 
 The OpenShell CLI and `jq` run in the `openshell-cli` container with their own client volume, so the host

@@ -81,7 +81,7 @@ the workspace, because `/opt/data` is an image volume.
 | Variable | Source |
 |---|---|
 | `API_SERVER_KEY` | `openshell sandbox create --env "API_SERVER_KEY=$HERMES_API_SERVER_KEY"`, from `.env`. At least 16 characters, or Hermes' API server refuses to start. The job API sends it as a bearer token. |
-| `HERMES_RECEIPT_API_KEY` | The `receipts` provider: an OpenShell placeholder that the supervisor swaps for the real key on the two receipt routes only. The plugin sends it as `X-Receipt-Key`. |
+| `HERMES_RECEIPT_API_KEY` | The `receipts` provider: an OpenShell placeholder that the supervisor swaps for the real key on the three `/internal/hermes` routes only. The plugin sends it as `X-Receipt-Key`. |
 | `HERMES_RECEIPT_API_URL` | Image: `http://host.openshell.internal:8000` |
 | `SWITCHYARD_CLIENT_API_KEY` | Image: `not-a-secret`. Switchyard holds the model key. |
 | `HERMES_STREAM_READ_TIMEOUT`, `HERMES_STREAM_STALE_TIMEOUT` | Image: 900 and 600 s, because the escalation router buffers replies. |

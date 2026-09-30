@@ -104,10 +104,11 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 | `DATA_SOURCE_HTTP_TOKEN`, `AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS`, `HF_TOKEN` | – | Credentials for those URLs, only when the source needs them. Each reaches only the one-shot fetch run, and only for its scheme |
 | `DATA_DUCKDB_MEMORY` | DuckDB's default | A memory cap for the data build, e.g. `8GB`; past it the rollup spills to the data volume |
 
-After changing any of them, run `./scripts/demo.sh data prepare` (and `data fetch` first for a new external
-dataset). After changing `DATA_PACK` on a running stack, run `./scripts/demo.sh up`: it also recreates what
-names the pack's database, such as Auto Ontology, which keeps one database per pack, and the sandbox, so Hermes
-lists the new pack's tool schemas. See [data packs](data-packs.md) and [data platform](data-platform.md).
+After changing `DATA_PACK` or `DATA_PACK_PROFILE` on a running stack, run `./scripts/demo.sh up` (and
+`data fetch` first for a new external dataset). It rebuilds the data, and recreates what names the pack's
+database, such as Auto Ontology, which keeps one database per pack, and the sandbox, so Hermes lists the new
+build's tool schemas. After changing only `DATA_CORPORA`, `./scripts/demo.sh data prepare` is enough. See
+[data packs](data-packs.md) and [data platform](data-platform.md).
 
 ### 5. Internal secrets
 
@@ -155,7 +156,7 @@ documented in each component's README, for example [`api/README.md`](../api/READ
 | `analytics` | the seven market tools on CPU (pandas, scikit-learn, NetworkX) | – |
 | `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 at 2,000 issuers, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls, the two smallest breaking even or running slower ([measured](operations.md#brev-vm-mode)); `intraday_scan` over real minute bars, 4x to 12x ([measured](../tools/market-analytics/README.md#intraday_scan-on-real-minute-bars)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit |
 | `kumo` | Kumo Relational NIM behind `predict_asset_outcomes`; needs `analytics` or `analytics-gpu` | x86_64 and an NVIDIA GPU (it ran on an A100 with no override); the image from `nvcr.io`, which pulled without a login ([operations](operations.md#brev-vm-mode)) |
-| `ontology` | Auto Ontology and `ask_question` | access to the private `NVIDIA/auto-ontology` repository |
+| `ontology` | Auto Ontology and `ask_question`: required, it answers the structured questions | the `vendor/auto-ontology` submodule; until `NVIDIA/auto-ontology` is public, access to that repository |
 | `replay` | the UI alone, on the recorded sessions | nothing |
 
 After changing `COMPOSE_PROFILES`, run `./scripts/demo.sh up`: it rebuilds the agent image with the matching
@@ -169,9 +170,9 @@ tools and skills, and recreates the sandbox because the image changed.
 | CPU | `core,retrieval,analytics` (the default), optionally with a hosted `KUMO_RELATIONAL_URL` | Linux kernel 6.2 or later on the Docker host (OpenShell needs Landlock ABI 3), Docker Engine 28+, Compose 2.30+, at least 8 GiB of memory for Docker (Milvus), x86_64 or arm64. Verified on macOS with colima (arm64, 4 CPU, 9 GiB) |
 | GPU | `core,retrieval,analytics-gpu,kumo` | Linux x86_64 with an NVIDIA GPU, driver 535 or newer and the NVIDIA Container Toolkit. The Kumo NIM image is about 14 GB to download and 44 GB on disk, and runs with a 16 GB shared-memory segment. Plan for 150 GB of free disk, or 200 GB to rebuild images on the host ([disk](operations.md#disk)). On a 40 GB A100 the stack held 4.3 GiB of GPU memory once Kumo had predicted, and 9.3 GiB of RAM ([footprint](operations.md#brev-vm-mode)). Target: a Brev A100 VM ([operations](operations.md#brev-vm-mode)) |
 
-Models always run on the hosted endpoints; no tier serves a model locally. On macOS, Docker Desktop needs host
-networking on and Enhanced Container Isolation off (an OpenShell requirement, not verified here); colima
-needs neither.
+The language, embedding and rerank models are always hosted; only the kumo profile runs a model locally (the
+Kumo Relational NIM). On macOS, Docker Desktop needs host networking on and Enhanced Container Isolation off
+(an OpenShell requirement, not verified here); colima needs neither.
 
 ## `doctor`
 

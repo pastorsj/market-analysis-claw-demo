@@ -33,7 +33,8 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - Services share JSON contracts only; no service imports another service's Python code.
 - One `uv` project and `uv.lock` per service directory; Python 3.12.
 - Secrets live only in `.env` (never committed). Never use `NVIDIA_API_KEY` or `NVIDIA_BASE_URL`.
-- Host ports bind to 127.0.0.1 only. All Docker resources belong to the Compose project `market-demo`.
+- Host ports bind to 127.0.0.1, except the UI's via `UI_BIND_HOST`. All Docker resources belong to the
+  Compose project `market-demo`.
 - A cached rebuild must give the same image ID, or `demo.sh up` recreates the container (and, for the
   agent image, the sandbox). So no `EXPOSE`: Docker Engine 28's BuildKit writes a pointer into its
   history line. `demo.sh` also builds without provenance attestations.
