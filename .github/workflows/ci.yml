@@ -8,8 +8,7 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  pull_request: # into any branch, so a pull request stacked on another is checked too
   workflow_dispatch:
 
 permissions:
