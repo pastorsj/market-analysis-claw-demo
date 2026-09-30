@@ -106,7 +106,8 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 
 After changing any of them, run `./scripts/demo.sh data prepare` (and `data fetch` first for a new external
 dataset). After changing `DATA_PACK` on a running stack, run `./scripts/demo.sh up`: it also recreates what
-names the pack's database, such as Auto Ontology, which keeps one database per pack. See [data packs](data-packs.md) and [data platform](data-platform.md).
+names the pack's database, such as Auto Ontology, which keeps one database per pack, and the sandbox, so Hermes
+lists the new pack's tool schemas. See [data packs](data-packs.md) and [data platform](data-platform.md).
 
 ### 5. Internal secrets
 

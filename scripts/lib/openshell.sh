@@ -9,6 +9,9 @@
 
 readonly SANDBOX=hermes
 readonly AGENT_IMAGE=market-demo/hermes-sandbox:local
+# The MCP servers' images: Hermes lists their tools once, when the sandbox starts.
+readonly TOOL_IMAGES=(market-demo/retrieval:local market-demo/market-analytics:local market-demo/market-analytics:gpu
+  market-demo/auto-ontology-mcp:local)
 readonly NAMESPACE_LABEL=openshell.ai/sandbox-namespace=market-demo # gateway.toml sandbox_label
 readonly SANDBOX_TIMEOUT=180
 readonly STATE_DIR=$ROOT/.demo
@@ -42,9 +45,14 @@ sandbox_state() {
 
 # Whatever the sandbox depends on. A change to any of it recreates the sandbox. Both Hermes keys
 # are in it: the server key is set at creation, and a new receipt key moves the provider revision.
+# Hermes lists each MCP server's tools once, when it starts, so the tool images and the data pack
+# (its universes and tables shape the tool schemas) are in it too: after a DATA_PACK switch the
+# model would otherwise still see the previous pack's universes.
 sandbox_fingerprint() {
   {
     docker image inspect -f '{{.Id}}' "$AGENT_IMAGE"
+    docker image inspect -f '{{.Id}}' "${TOOL_IMAGES[@]}" 2>/dev/null || true # absent profiles
+    cat "$ROOT/data/packs/$DATA_PACK/pack.yaml"
     cat "$ROOT"/infra/openshell/providers/*.yaml "$ROOT/infra/openshell/gateway.toml" "$VERSIONS_FILE"
     echo "$AGENT_FEATURES"
     printf '%s' "$HERMES_API_SERVER_KEY" | sha256
