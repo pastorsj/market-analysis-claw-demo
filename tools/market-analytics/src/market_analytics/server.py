@@ -212,8 +212,8 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         annotations=READ_ONLY,
         description=(
             f"{news}Count positive, neutral and negative news labels per day, week or month over a publication "
-            "window. The labels are stored with the news; the timeline is descriptive and does not explain market "
-            "moves."
+            "window. Name asset_ids or a universe_id to count only their news. The labels are stored with the news; "
+            "the timeline is descriptive and does not explain market moves."
         ),
     )
     async def sentiment_timeline(
@@ -221,6 +221,7 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         start: Start,
         end: End,
         asset_ids: OptionalAssets = None,
+        universe_id: OptionalUniverse = None,
         source_names: SourceNames = None,
         frequency: Frequency = "weekly",
         point_limit: Annotated[int, Field(ge=1, le=500, description="Keep the most recent periods")] = 100,
@@ -233,6 +234,7 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
             start=start,
             end=end,
             asset_ids=asset_ids,
+            universe_id=universe_id,
             source_names=source_names,
             frequency=frequency,
             point_limit=point_limit,
@@ -243,8 +245,9 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         description=(
             f"{news}Relate news sentiment labels to the returns that followed them. Each article is aligned with "
             "its asset's first session at or after publication, and its forward return runs to "
-            "return_horizon_sessions sessions later. Reports per-label averages and the sentiment/return "
-            "correlation. Correlation does not establish causation."
+            "return_horizon_sessions sessions later. Name asset_ids or a universe_id to use only their news. "
+            "Reports per-label averages and the sentiment/return correlation. Correlation does not establish "
+            "causation."
         ),
     )
     async def analyze_news_price_relationship(
@@ -252,6 +255,7 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         published_from: Start,
         published_to: End,
         asset_ids: OptionalAssets = None,
+        universe_id: OptionalUniverse = None,
         source_names: SourceNames = None,
         return_horizon_sessions: Annotated[int, Field(ge=1, le=20)] = 2,
         event_limit: Annotated[int, Field(ge=1, le=500, description="How many aligned events to list")] = 25,
@@ -264,6 +268,7 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
             published_from=published_from,
             published_to=published_to,
             asset_ids=asset_ids,
+            universe_id=universe_id,
             source_names=source_names,
             return_horizon_sessions=return_horizon_sessions,
             event_limit=event_limit,

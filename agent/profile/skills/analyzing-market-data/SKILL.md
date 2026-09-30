@@ -82,7 +82,10 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
    If a tool rejects an unknown or ambiguous asset, ask the user instead of
    guessing.
 7. For `intraday_scan`, name `asset_ids` or a `universe_id`, and keep the window
-   to the sessions asked about: it reads the raw minute bars.
+   to the sessions asked about: it reads the raw minute bars. When a question
+   about news names a group, such as the most liquid issuers, pass that
+   `universe_id` to `sentiment_timeline` or `analyze_news_price_relationship`;
+   without one they cover every issuer's news.
 8. A tool whose description starts with "Unavailable in the active data pack"
    fails with `news_unavailable` or `minute_bars_unavailable`. Do not call it or
    retry it. Say that the pack has no ticker-linked news or no minute bars, and

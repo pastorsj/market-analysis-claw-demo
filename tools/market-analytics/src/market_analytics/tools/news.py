@@ -38,11 +38,12 @@ def sentiment_timeline(
     start: datetime,
     end: datetime,
     asset_ids: list[str] | None = None,
+    universe_id: str | None = None,
     source_names: list[str] | None = None,
     frequency: Frequency = "weekly",
     point_limit: int = 100,
 ) -> Output:
-    articles = _articles(data, start, end, asset_ids, source_names)
+    articles = _articles(data, start, end, asset_ids=asset_ids, universe_id=universe_id, source_names=source_names)
     if articles.empty:
         payload = SentimentTimelinePayload(
             frequency=frequency, articles_considered=0, points=[], points_truncated=False
@@ -85,12 +86,15 @@ def news_price_relationship(
     published_from: datetime,
     published_to: datetime,
     asset_ids: list[str] | None = None,
+    universe_id: str | None = None,
     source_names: list[str] | None = None,
     return_horizon_sessions: int = 2,
     event_limit: int = 25,
 ) -> Output:
     """Return from each article's first session at or after publication to `return_horizon_sessions` later."""
-    articles = _articles(data, published_from, published_to, asset_ids, source_names)
+    articles = _articles(
+        data, published_from, published_to, asset_ids=asset_ids, universe_id=universe_id, source_names=source_names
+    )
     prices = data.prices[data.prices["asset_id"].isin(articles["asset_id"])]
     aligned = prices[["asset_id", "session", "timestamp", "adjusted_close"]]
     outcome = aligned.assign(session=aligned["session"] - return_horizon_sessions)
@@ -156,7 +160,9 @@ def _articles(
     data: MarketData,
     start: datetime,
     end: datetime,
+    *,
     asset_ids: list[str] | None,
+    universe_id: str | None,
     source_names: list[str] | None,
 ) -> pd.DataFrame:
     check_window(start, end)
@@ -165,6 +171,8 @@ def _articles(
     selected = news["published_at"].between(start, end)
     if asset_ids:
         selected = selected & news["asset_id"].isin(data.resolve_assets(asset_ids))
+    if universe_id:
+        selected = selected & news["asset_id"].isin(data.universe(universe_id))
     if source_names:
         selected = selected & news["source_name"].isin(source_names)
     return news[selected]

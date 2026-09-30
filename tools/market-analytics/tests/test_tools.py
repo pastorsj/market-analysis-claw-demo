@@ -227,6 +227,17 @@ def test_news_price_relationship_measures_forward_returns(data: MarketData) -> N
     assert -1 <= payload["sentiment_return_correlation"] <= 1
 
 
+def test_news_tools_keep_only_a_universes_news(data: MarketData) -> None:
+    window = {"published_from": at(0, 0), "published_to": at(69, 23, 59)}
+    reviewed = run(data, "analyze_news_price_relationship", universe_id="reviewed_assets", **window)
+    timeline = run(data, "sentiment_timeline", universe_id="reviewed_assets", start=at(0, 0), end=at(69, 23, 59))
+
+    # n-07 is asset-omega's, which is not reviewed; the other seven articles are.
+    assert reviewed["payload"]["eligible_event_count"] == 7
+    assert {event["asset_id"] for event in reviewed["payload"]["events"]} == set(data.universe("reviewed_assets"))
+    assert timeline["payload"]["articles_considered"] == 7
+
+
 def test_news_price_relationship_without_aligned_events_is_empty(data: MarketData) -> None:
     result = run(data, "analyze_news_price_relationship", published_from=at(69, 22), published_to=at(69, 23))
     assert result["status"] == "empty"

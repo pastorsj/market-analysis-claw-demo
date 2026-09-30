@@ -64,6 +64,10 @@ CALLS = [
         "analyze_news_price_relationship",
         {"published_from": at(0, 0), "published_to": at(69, 23), "asset_ids": ["ALPH", "BETA"], **WIRE_A},
     ),
+    (
+        "analyze_news_price_relationship",
+        {"published_from": at(0, 0), "published_to": at(69, 23), "universe_id": "reviewed_assets"},
+    ),
     # The three sessions with minute bars (June 29 to July 1).
     ("intraday_scan", {"universe_id": "all_assets", "start": at(41, 0), "end": at(43, 23)}),
     ("intraday_scan", {"asset_ids": ["GAMA"], "rank_by": "max_drawdown", "direction": "lowest", **JUNE}),
