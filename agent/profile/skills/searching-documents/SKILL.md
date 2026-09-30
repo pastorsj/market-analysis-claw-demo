@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Requires the retrieval MCP server (retrieve_evidence tool)
 metadata:
   author: NVIDIA
-  version: "1.0"
+  version: "1.1"
   hermes:
     tags:
       - retrieval
@@ -55,6 +55,10 @@ and, when needed, `top_k`.
    title, citation, and date.
 4. If nothing relevant comes back, rephrase once with different key terms. Then
    say the selected documents do not cover the question.
+5. That makes at most two searches per topic. A question about a rule and the
+   filings that apply it has two topics: search the rule, then the filings.
+   When the passages cover only part of a rule, cite what they show and name
+   what is missing rather than searching again.
 
 ## Pitfalls
 

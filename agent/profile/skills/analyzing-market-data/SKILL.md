@@ -5,7 +5,7 @@ license: Apache-2.0
 compatibility: Requires the market_analytics MCP server and its seven market tools
 metadata:
   author: NVIDIA
-  version: "1.0"
+  version: "1.1"
   hermes:
     tags:
       - market
@@ -60,27 +60,48 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
 
 ## Procedure
 
-1. Take `universe_id` values, metric names, and limits only from the tool's own
-   schema and description. Never guess a universe or use a source ID in its
-   place.
+1. Copy `universe_id` exactly from the values listed in the tool's schema,
+   whose description says which assets each one holds. The values differ
+   between data packs, so never build one from the question's wording (a
+   question about "the 12 most liquid" does not make `top_50` valid). If no
+   listed universe matches, use the closest one and say which you used. Take
+   metric names and limits from the schema too, and never pass a source ID.
 2. Use timezone-aware RFC 3339 timestamps. For whole calendar days, start at
    `T00:00:00Z` on the first day and end at `T23:59:59Z` on the last day.
-3. When the question needs both ends of a ranking, make two `market_scan` calls
-   with the same universe, window, and metrics: one with `direction=highest`
-   and one with `direction=lowest`. Do not fetch the whole universe to find the
-   bottom.
-4. For `market_anomaly_scan`, end the training window before the scoring window
+3. Use the window the question states. For "the N trading sessions ending D",
+   set `end` to D and `start` about 1.5 × N calendar days earlier, then check
+   that `observation_count` is N in the result. If it is not, move `start` and
+   scan once more. Say which dates the window covers.
+4. When the question asks for leaders and laggards (strongest and weakest, best
+   and worst), make two `market_scan` calls with the same universe, window, and
+   metrics: one with `direction=highest` and one with `direction=lowest`. Use
+   the number of results the question asks for, and `limit=3` when it gives
+   none. Report both ends. Do not fetch the whole universe to find the bottom.
+5. For `market_anomaly_scan`, end the training window before the scoring window
    starts.
-5. Pass tickers or asset IDs exactly as the user or an earlier result gave them.
+6. Pass tickers or asset IDs exactly as the user or an earlier result gave them.
    If a tool rejects an unknown or ambiguous asset, ask the user instead of
    guessing.
-6. For `intraday_scan`, name `asset_ids` or a `universe_id`, and keep the window
+7. For `intraday_scan`, name `asset_ids` or a `universe_id`, and keep the window
    to the sessions asked about: it reads the raw minute bars.
-7. A tool whose description starts with "Unavailable in the active data pack"
+8. A tool whose description starts with "Unavailable in the active data pack"
    fails with `news_unavailable` or `minute_bars_unavailable`. Do not call it or
    retry it. Say that the pack has no ticker-linked news or no minute bars, and
    answer with the other tools. SEC filings are documents, not news: search them
    with `searching-documents`.
+
+## Units
+
+The tools return fractions, not percentages. Convert them when you write:
+
+- `return`, peer-relative return, `open_to_close_return`, `intraday_range`,
+  `max_drawdown` and volume shares: 0.2474 is 24.74%, and 1.0166 is +101.66%.
+- `volatility` is the standard deviation of daily returns: 0.0286 is 2.86% a
+  day.
+- `comparison=zscore` scores and the anomaly scan's `observed_deviations` are
+  robust z-scores: write "+4.2 robust z-score", never a percentage.
+- Never write a return as a multiple ("×") and never put a % sign on an
+  unconverted fraction.
 
 ## Pitfalls
 
@@ -102,10 +123,12 @@ Question: "Which assets had the strongest and weakest returns last month?"
 ```
 market_scan(universe_id="<value from the tool schema>", start="2026-08-01T00:00:00Z",
             end="2026-08-31T23:59:59Z", metrics=["return", "volatility"],
-            direction="highest", limit=5)
+            direction="highest", limit=3)
 market_scan(universe_id="<same value>", start="2026-08-01T00:00:00Z",
             end="2026-08-31T23:59:59Z", metrics=["return", "volatility"],
-            direction="lowest", limit=5)
+            direction="lowest", limit=3)
 ```
 
-Cite each ranking with the `evidence_id` of the call that produced it.
+Answer with the three leaders and the three laggards, their returns and
+volatilities as percentages, and the window. Cite each row with the
+`evidence_id` of the call that produced it.
