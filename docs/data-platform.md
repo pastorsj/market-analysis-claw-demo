@@ -627,6 +627,8 @@ question in `us-equities`.
 | Rollup cache | 12 MB | about 1% of the minute data |
 | SEC snapshot | 0.6 MB | the issuers |
 | A build (tables 15 MB, DuckDB 58 MB, ontology) | 72 MB | the daily rows |
+| The build's corpus text (`sec_filings`, `market_regulations`) | 47 MB | the corpus selection |
+| Auto Ontology's database for the pack (`ontology` profile; one per pack) | 72 MB | the tables and columns |
 | SEC and eCFR downloads, the Milvus index | about 2 GB | the corpus selection |
 | The data image, with the `remote` fetch backends | 699 MB (x86_64) | – |
 

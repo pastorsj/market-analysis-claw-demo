@@ -255,6 +255,15 @@ profile and the default corpora. `up` needed nothing else installed.
    when only documentation changed; a change under `tools/market-analytics` rebuilds the RAPIDS image
    (9 to 11 minutes).
 
+   **Both current packs**, built on the same VM on 2026-09-30 with the default corpora, one after the other
+   with `data prepare`: `us-equities` took 25 minutes (the structured part 3 minutes, nearly all of it the SEC
+   company lookup; downloading 1,887 filing documents 6 minutes; embedding 24,484 chunks 16 minutes), and
+   `synthetic-market` 17 minutes (the structured part 20 s; the corpus 53 s from the download cache; 23,646
+   chunks 15 minutes). Once both were built, switching `DATA_PACK` and running `up` took 42 to 65 s. Each
+   pack's six featured questions then succeeded through the Brev secure link, in 24 s to 6 minutes each; one
+   took 13 minutes, and one failed and succeeded when asked again, while build.nvidia.com answered most
+   Nemotron 3 Ultra requests with "Service temporarily overloaded".
+
    Once the stack was up, `check` passed 8 of 8, and the hero questions in
    [models and routing](models-and-routing.md) (H1 to H7) each finished in 21 s to 3 minutes with citations
    and a Phoenix trace.
