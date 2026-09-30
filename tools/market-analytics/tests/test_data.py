@@ -16,6 +16,7 @@ from market_analytics.data import ContractError
 from market_analytics.data import MarketData
 from market_analytics.data import Pack
 from market_analytics.data import _peer_correlations
+from market_analytics.data import footprint
 from market_analytics.data import validate
 from market_analytics.models import InvalidRequest
 
@@ -166,6 +167,11 @@ def test_price_bars_are_stamped_at_the_session_close(data: MarketData) -> None:
     assert first["session"] == 1
     assert pd.isna(first["adjusted_return_1d"])
     assert len(data.prices) == 4 * len(SESSIONS)
+
+
+def test_the_footprint_comes_from_the_parquet_footers(pack: Pack) -> None:
+    assert footprint(pack, "gpu") == "280 price rows and 8 news rows: about 0.0 GB on the gpu"
+    assert footprint(replace(pack, news_table=None), "cpu").startswith("280 price rows: ")
 
 
 def test_every_timestamp_is_naive_utc_nanoseconds(data: MarketData) -> None:

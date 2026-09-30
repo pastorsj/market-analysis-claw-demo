@@ -38,7 +38,7 @@ FEATURES = ("adjusted_return_1d", "adjusted_return_5d", "realized_volatility_20d
 SENTIMENT_SCORES = {"negative": -1, "neutral": 0, "positive": 1}
 # Bytes the loaded frames take per table row, measured on a 1.36-million-row pack: a daily price row counts its
 # prices and anomaly-feature rows. cudf keeps strings in Arrow columns, so the GPU needs less than pandas.
-BYTES_PER_ROW = {"cpu": {"prices": 225, "news": 310}, "gpu": {"prices": 135, "news": 130}}
+BYTES_PER_ROW = {"cpu": {"price": 225, "news": 310}, "gpu": {"price": 135, "news": 130}}
 
 
 class ContractError(Exception):
@@ -192,10 +192,11 @@ class MarketData:
 
 def footprint(pack: Pack, device: str) -> str:
     """Row counts from the Parquet footers, and about how much memory the frames will take once loaded."""
-    rows = {"prices": pq.read_metadata(pack.table("daily_prices")).num_rows}
-    rows["news"] = pq.read_metadata(pack.table(pack.news_table)).num_rows
-    size = sum(count * BYTES_PER_ROW[device][table] for table, count in rows.items())
-    return f"{rows['prices']:,} daily prices and {rows['news']:,} news rows, about {size / 1e9:.1f} GB on the {device}"
+    tables = {"price": "daily_prices", "news": pack.news_table}  # a pack may have no news table
+    rows = {kind: pq.read_metadata(pack.table(table)).num_rows for kind, table in tables.items() if table}
+    size = sum(count * BYTES_PER_ROW[device][kind] for kind, count in rows.items())
+    counts = " and ".join(f"{count:,} {kind} rows" for kind, count in rows.items())
+    return f"{counts}: about {size / 1e9:.1f} GB on the {device}"
 
 
 def utc_naive(values: pd.Series) -> pd.Series:

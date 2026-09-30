@@ -124,7 +124,8 @@ class MinuteBars:
             ]
         else:
             files = [(path, None) for path in sorted(self.root.glob(self.files)) if _month_overlaps(path, start, end)]
-        parts = [Part(path, symbol, self._estimate(path, sorted(set(symbols)), start, end)) for path, symbol in files]
+        ordered = sorted(set(symbols))
+        parts = [Part(path, symbol, self._estimate(path, ordered, start, end)) for path, symbol in files]
         return [part for part in parts if part.bytes]
 
     def local(self, moment: datetime) -> datetime:
