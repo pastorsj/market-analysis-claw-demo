@@ -31,7 +31,8 @@ endpoint of its own).
 ## Routes
 
 Every template serves the same route ids, so Hermes' configuration never changes. Hermes calls
-only `market-research` and `market-research-aux`.
+`market-research` and `market-research-aux`, and `market-research-fallback` when the agent's model is
+overloaded.
 
 | Route id | Caller | Served by |
 |---|---|---|
@@ -39,6 +40,7 @@ only `market-research` and `market-research-aux`.
 | `market-research-efficient` | bake-off baselines, debugging | the efficient model |
 | `market-research-capable` | bake-off baselines, debugging | the capable model (not in `passthrough.nemotron`) |
 | `market-research-aux` | Hermes auxiliary calls (compression and similar) | the judge model with thinking off. These calls are never judged. |
+| `market-research-fallback` | the rest of a run whose model is overloaded (below) | the same model as `market-research-aux` |
 
 | `SWITCHYARD_ROUTES` | `market-research` | For |
 |---|---|---|
@@ -75,6 +77,14 @@ What escalation costs:
 
 `.env.example` sets 1 confirmation. With 2, an escalate verdict on the final report can never
 latch, so a weak report is never rescued.
+
+**When a model is overloaded.** build.nvidia.com can answer "Service temporarily overloaded" inside
+an HTTP 200 stream. Switchyard 0.3.0 re-routes an in-stream error only when it is a context
+overflow, so it passes this one to Hermes. Hermes retries the call twice, then follows its
+`fallback_providers` chain (`agent/profile/config.yaml`) to `market-research-fallback`, which serves
+the rest of that run with the auxiliary model. The next job starts on `market-research` again. The
+switch shows in the execution graph: the router lists the fallback model's calls without a tier.
+Without the fallback, Hermes kept retrying for about 5 minutes and then failed the job.
 
 ## Environment
 

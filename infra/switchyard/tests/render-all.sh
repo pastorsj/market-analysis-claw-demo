@@ -78,7 +78,8 @@ expect() {
 
 not() { ! "$@"; }
 
-all_routes=$(printf '%s\n' market-research market-research-aux market-research-capable market-research-efficient)
+all_routes=$(printf '%s\n' market-research market-research-aux market-research-capable market-research-efficient \
+  market-research-fallback)
 
 for path in "$root"/routes/*.toml.tmpl; do
   name=$(basename "$path" .toml.tmpl)

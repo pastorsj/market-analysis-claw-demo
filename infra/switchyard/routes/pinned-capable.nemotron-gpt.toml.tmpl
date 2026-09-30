@@ -57,3 +57,8 @@ target = "capable"
 id = "market-research-aux"
 type = "passthrough"
 target = "aux"
+
+[routes.fallback]                     # Hermes moves a run here when its model is overloaded
+id = "market-research-fallback"
+type = "passthrough"
+target = "aux"

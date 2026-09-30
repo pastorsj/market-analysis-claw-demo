@@ -142,6 +142,7 @@ most of it embedding the corpus).
 | A job fails: "the evidence for its tool calls was not recorded" | The API rejected a receipt that breaks the display-safe limits, or the plugin could not post it. See `./scripts/demo.sh logs api` and `./scripts/demo.sh logs agent` |
 | A job fails: "The API restarted before this job finished" | The API restarted during the job; ask again |
 | A job fails after about 10 minutes: "Hermes stopped after exceeding its idle budget; please retry." | A model call stalled upstream and never returned, so Hermes waited out `HERMES_RUN_IDLE_TIMEOUT_SECONDS` (600 s). Ask again. It happened once in 17 jobs on the A100 VM |
+| The router shows a model without a tier, e.g. `nemotron-3-super-120b-a12b` | The agent's model answered "Service temporarily overloaded" twice, so Hermes finished the run on `market-research-fallback` ([how](../infra/switchyard/README.md#routes)). The next job starts on the usual model |
 | A run has no Phoenix link | Phoenix has no span for the job yet (Relay exports every second), or `PHOENIX_URL` is empty |
 | Market tools or retrieval answer from old data | `./scripts/demo.sh data prepare` restarts market analytics and retrieval on the new build; after a manual data change, `./scripts/demo.sh restart market-analytics` (or `retrieval`) |
 | Every `up` recreates containers or the sandbox | An image got a new ID. Build through `demo.sh`, which turns off provenance attestations; a plain `docker build` retags the image with a different ID |

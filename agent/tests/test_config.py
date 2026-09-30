@@ -47,6 +47,13 @@ def test_side_tasks_stay_off_the_escalation_route(config):
     assert config["memory"]["memory_enabled"] is False
 
 
+def test_an_overloaded_model_falls_back_to_a_switchyard_route(config):
+    # The chain entry must name the configured provider and one of its models, or Hermes skips it.
+    [fallback] = config["fallback_providers"]
+    assert fallback == {"provider": config["model"]["provider"], "model": "market-research-fallback"}
+    assert fallback["model"] in config["providers"]["switchyard"]["models"]
+
+
 def test_skill_writes_are_staged_not_applied(config):
     # The skills toolset includes skill_manage; a staged write never reaches a later job.
     assert config["skills"]["write_approval"] is True

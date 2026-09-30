@@ -23,7 +23,8 @@ endpoint and key (`CAPABLE_BASE_URL`, `CAPABLE_API_KEY`). Which template to use,
 before adopting it, is in [models and routing](models-and-routing.md).
 
 A new routing template is a new `infra/switchyard/routes/<name>.toml.tmpl` serving `market-research`,
-`market-research-aux` and `market-research-efficient` (plus `market-research-capable` if it has a capable model),
+`market-research-aux`, `market-research-fallback` and `market-research-efficient` (plus `market-research-capable`
+if it has a capable model),
 with a `# requires:` line naming every setting it substitutes. Templates are baked into the image, so rebuild it
 and dry-run every template:
 
