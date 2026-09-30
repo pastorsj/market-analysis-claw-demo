@@ -26,6 +26,8 @@ from jsonschema import FormatChecker
 DATA_ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = DATA_ROOT / "schemas"
 DIGEST_EXCLUDES = {"README.md", "eval", "recordings", "tests"}
+# Corpus formats read in place from an external dataset (`files`) rather than pinned by a manifest in the pack.
+IN_PLACE_FORMATS = ("gdelt-parquet",)
 # The tables the market importer (market.py) writes from an external dataset, besides an optional news table.
 MARKET_TABLES = ("assets", "ticker_history", "trading_sessions", "daily_prices", "asset_relationships")
 # How contract types map to DuckDB types, unless the contract carries its own `logical_types`.
@@ -177,7 +179,10 @@ class Pack:
         if "prediction" in m:
             resolved["prediction"] = m["prediction"]
         if "market" in m and market_root is not None:
-            resolved["market"] = {"bars": m["market"]["bars"] | {"root": str(market_root)}}
+            bars = m["market"]["bars"] | {"root": str(market_root)}
+            # A generator profile's `frequency` is the bars it writes: 1d profiles write one bar per session.
+            frequency = self.profiles.get(profile, {}).get("params", {}).get("frequency")
+            resolved["market"] = {"bars": bars | ({"frequency": frequency} if frequency else {})}
         if corpora:
             resolved["documents"] = {
                 "collection": m["documents"].get("collection", f"{self.id.replace('-', '_')}_documents"),
@@ -246,6 +251,8 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         dataset = m["market"]["bars"]["dataset"]
         if pack.origins.get(dataset, {}).get("kind") not in ("external", "generated"):
             errors.append(f"market.bars.dataset {dataset!r} must be an external or generated origin")
+        elif pack.origins[dataset]["kind"] == "generated" and "generator" not in m:
+            errors.append(f"market.bars.dataset {dataset!r} is generated, but there is no generator")
         imported = {table["name"] for table in m.get("structured", {}).get("tables", []) if table["origin"] == dataset}
         news_table = m.get("analytics", {}).get("news_table")
         expected = set(MARKET_TABLES) | ({news_table} if m["market"]["news"] and news_table else set())
@@ -273,18 +280,11 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         else:
             errors.append("a structured pack needs `ontology` (table and column descriptions)")
         errors += [f"table {name} is declared twice" for name in _duplicates(pack.tables)]
+        if "market" not in m:
+            errors.append("a structured pack needs `market`: the market importer writes its tables")
         for table in structured["tables"]:
-            kind = pack.origins.get(table["origin"], {}).get("kind")
-            if kind == "generated" and "generator" not in m:
-                errors.append(
-                    f"table {table['name']}: origin {table['origin']} is generated, but there is no generator"
-                )
-            elif kind == "committed":
-                require_file(f"tables/{table['name']}.parquet", f"table {table['name']}:")
-            elif kind == "external" and m.get("market", {}).get("bars", {}).get("dataset") != table["origin"]:
+            if m.get("market", {}).get("bars", {}).get("dataset") != table["origin"]:
                 errors.append(f"table {table['name']}: origin {table['origin']} is not market.bars.dataset")
-            elif kind not in ("generated", "committed", "external"):
-                errors.append(f"table {table['name']}: origin must be a generated, committed or external origin")
         for profile, spec in pack.profiles.items():
             for table in sorted(set(spec.get("expected_rows", {})) - set(pack.tables)):
                 errors.append(f"profile {profile}: expected_rows names unknown table {table}")
@@ -295,6 +295,13 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         require_source(corpus["source"], "documents", label)
         if corpus["origin"] not in pack.origins:
             errors.append(f"{label}: unknown origin {corpus['origin']!r}")
+        in_place = corpus["format"] in IN_PLACE_FORMATS
+        if in_place != ("files" in corpus):
+            errors.append(f"{label}: format {corpus['format']} takes {'files' if in_place else 'a manifest'}")
+        if "files" in corpus:
+            if pack.origins.get(corpus["origin"], {}).get("kind") != "external":
+                errors.append(f"{label}: files are read from an external dataset, so the origin must be external")
+            continue
         manifest_path = pack.path(corpus["manifest"])
         if not manifest_path.is_file():
             errors.append(f"{label}: manifest {corpus['manifest']} not found")
@@ -387,10 +394,7 @@ def contract_errors(
             continue
         described = connection.execute(f"SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM {relation})")
         columns = dict(described.fetchall())
-        optional = {
-            column: logical for column, logical in spec.get("optional_columns", {}).items() if column in columns
-        }
-        for column, logical in (spec.get("columns", {}) | optional).items():
+        for column, logical in spec.get("columns", {}).items():
             if column not in columns:
                 errors.append(f"{contract_id}: {table}.{column} is missing")
             elif columns[column] not in logical_types.get(logical, ()):

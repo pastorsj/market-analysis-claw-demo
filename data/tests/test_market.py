@@ -133,6 +133,9 @@ def test_prepare_imports_the_fixture_into_the_us_equities_tables(equities, tmp_p
         returns = db.execute(
             "SELECT round(total_return_1d, 6) FROM daily_prices WHERE asset_id = 'XAAA' ORDER BY trading_date"
         ).fetchall()
+        # The answer oracles run on the schema; the fixture's three sessions are too few for their answers.
+        for oracle in sorted((equities / "us-equities" / "eval" / "oracles").glob("*.sql")):
+            db.execute(oracle.read_text()).fetchall()
     assert assets[0] == ("XEU", "Nonclassifiable", 1)  # the highest dollar volume; SEC has no SIC code for it
     assert assets[-1] == ("XAAA", "Manufacturing", 5)
     assert peers == [("XBBB.B",), ("XBBB",)]  # same SIC code, most liquid first
@@ -147,6 +150,23 @@ def test_prepare_imports_the_fixture_into_the_us_equities_tables(equities, tmp_p
     assert "daily rollup" in (out := capsys.readouterr().out) and "reused" in out
     assert main([*run, "us-equities", "clean"]) == 0
     assert len(list((data / "cache" / "rollups").iterdir())) == 1  # still used by the active build
+
+
+def test_the_opt_in_world_news_corpus_is_read_in_place(equities, tmp_path, monkeypatch):
+    data, sources = tmp_path / "data", tmp_path / "sources"
+    monkeypatch.setenv("DATA_SOURCE_MINUTE_BARS", str(MINUTE_BARS))
+    monkeypatch.delenv("SEC_USER_AGENT", raising=False)  # world_news needs no SEC access
+    run = ["--packs-dir", str(equities), "--data-dir", str(data), "--sources-dir", str(sources), "--pack"]
+
+    assert main([*run, "us-equities", "fetch"]) == 0
+    assert main([*run, "us-equities", "prepare", "--corpora", "world_news"]) == 0
+
+    pack = json.loads(((data / "active").resolve() / "pack.json").read_text())
+    assert pack["parts"]["corpus"]["documents"] == {"world_news": 2}
+    assert [source["id"] for source in pack["sources"]] == ["market_data", "world_news"]
+    assert [question["id"] for question in pack["questions"] if "world_news" in question["sources"]] == [
+        "world-news-rates"
+    ]
 
 
 def test_prepare_stops_until_the_dataset_is_fetched(equities, tmp_path, capsys):

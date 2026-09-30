@@ -87,7 +87,7 @@
         "id": { "$ref": "#/$defs/pack_id" },
         "title": { "$ref": "#/$defs/text" },
         "kind": {
-          "description": "generated: written by the pack generator; committed: files in the pack; download: fetched at prepare time and verified against the sha256 pins in the corpus manifest; external: imported from the `external` dataset with the origin's id.",
+          "description": "generated: written by the pack generator; committed: files in the pack; download: fetched at prepare time and verified against the sha256 pins in the corpus manifest; external: imported from, or read in place from, the `external` dataset with the origin's id.",
           "enum": ["generated", "committed", "download", "external"]
         },
         "synthetic": { "type": "boolean" },
@@ -96,7 +96,7 @@
         "as_of": { "$ref": "#/$defs/date" },
         "retrieved_on": { "$ref": "#/$defs/date" },
         "requires_env": {
-          "description": "Environment variables `prepare` needs to fetch this origin (names only, never values).",
+          "description": "Environment variables `prepare` needs to fetch this origin's documents (names only, never values).",
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
@@ -178,7 +178,7 @@
     },
     "clock": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
     "generator": {
-      "description": "A pack-local program run as `python <entrypoint> --profile <name> --out <dir>`. It writes <dir>/<table>.parquet for every table whose origin is generated.",
+      "description": "A pack-local program run as `python <entrypoint> --profile <name> --out <dir>`. It writes the raw market dataset `market.bars.dataset` names into <dir> (bars, companies, news and manifest.json), which the market importer turns into the tables.",
       "type": "object",
       "additionalProperties": false,
       "required": ["entrypoint", "default_profile", "profiles"],
@@ -196,7 +196,10 @@
             "required": ["description", "params"],
             "properties": {
               "description": { "$ref": "#/$defs/text" },
-              "params": { "description": "Generator-specific settings.", "type": "object" },
+              "params": {
+                "description": "Generator-specific settings. `frequency` (1min or 1d), when set, is the frequency of the bars the profile writes.",
+                "type": "object"
+              },
               "expected_rows": {
                 "description": "Row counts the build must produce, by table.",
                 "type": "object",
@@ -257,12 +260,21 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["source", "origin", "format", "manifest"],
+            "required": ["source", "origin", "format"],
+            "oneOf": [{ "required": ["manifest"] }, { "required": ["files"] }],
             "properties": {
               "source": { "$ref": "#/$defs/source_id" },
               "origin": { "$ref": "#/$defs/pack_id" },
-              "format": { "description": "The corpus builder to use.", "enum": ["markdown", "ecfr-xml", "edgar-filings"] },
+              "format": {
+                "description": "The corpus builder to use. gdelt-parquet reads `files`; the others read a `manifest`.",
+                "enum": ["markdown", "ecfr-xml", "edgar-filings", "gdelt-parquet"]
+              },
               "manifest": { "description": "The corpus manifest: pinned snapshot or file list.", "$ref": "#/$defs/pack_path" },
+              "files": {
+                "description": "A glob inside the origin's external dataset, read in place: only files its manifest lists.",
+                "type": "string",
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9._/*-]+$"
+              },
               "opt_in": {
                 "description": "Built only when named in DATA_CORPORA.",
                 "type": "boolean",

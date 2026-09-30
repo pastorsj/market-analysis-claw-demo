@@ -3,9 +3,10 @@
 #
 # yaml-language-server: $schema=../../schemas/questions.schema.json
 #
-# Draft questions for the real-data pack (docs/data-platform.md, questions). Wording is final only once each
-# has been run against the built pack and has an oracle in eval/. Featured questions need only the default
-# profiles. The pack has no ticker-linked news, so no question uses the news tools.
+# The us-equities questions: the UI scenario list and the replay recording set (featured). Featured questions need
+# only the default profiles. eval/oracles/ computes the analytics answers from a build, and eval/retrieval.yaml
+# names the documents the retrieval answers cite. The pack has no ticker-linked news, so no question uses the news
+# tools; SEC filings are a separate document source, connected to the prices only by company.
 schema_version: "1"
 questions:
 - id: market-leaders
@@ -17,13 +18,23 @@ questions:
     ending March 12, 2026, and how did their daily volatility compare?
   sources: [market_data]
   featured: true
+- id: intraday-ranges
+  label: Intraday Swings
+  tag: INTRADAY
+  description: Scan real one-minute bars for the sessions with the widest intraday swings.
+  question: >-
+    Among the 50 most liquid US stocks, which sessions from March 2 through March 12, 2026 had the widest intraday
+    price ranges? For each, how did it trade from open to close, and how much of its volume came in the last 30
+    minutes?
+  sources: [market_data]
+  featured: true
 - id: unusual-sessions
   label: Unusual Sessions
   tag: ANOMALY
-  description: Rank unusual return, volatility and volume combinations across every stock in the pack.
+  description: Rank unusual return, volatility and volume combinations across the 500 most liquid stocks.
   question: >-
-    Using 2025 as the baseline, which 10 stock sessions from January 2 through March 12, 2026 were the most
-    unusual across all stocks in the pack, and which features made each one unusual? Anomaly scores are neither
+    Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual
+    among the 500 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
     forecasts nor explanations.
   sources: [market_data]
   featured: true
@@ -36,34 +47,33 @@ questions:
     December 2025 through March 12, 2026, and which pairs moved together most closely?
   sources: [market_data]
   featured: true
-- id: large-universe-scan
-  label: Whole-Market Scan
-  tag: ANALYTICS
-  description: Scan every stock in the pack at once.
-  question: >-
-    Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2 to
-    March 12, 2026, and how unusual was their trading volume?
-  sources: [market_data]
-  featured: true
 - id: cyber-disclosure-rules
   label: Cybersecurity Disclosures
   tag: RETRIEVAL
-  description: Pair the Form 8-K Item 1.05 rule with filings that report an incident.
+  description: Pair the Form 8-K Item 1.05 rule with filings by companies in the pack that report an incident.
   question: >-
     What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by
-    when? Cite the regulation, and any filings in the corpus that report an incident.
+    when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05.
   sources: [sec_filings, market_regulations]
   featured: true
-- id: leaders-and-filings
-  label: Leaders & Filings
+- id: moves-and-filings
+  label: Moves & Filings
   tag: HYBRID
-  description: Price history and SEC filings as two separate sources, joined only by company name.
+  description: Price moves and SEC filings as two separate sources, joined only by company.
   question: >-
-    How did the 10 most liquid stocks perform from January 2 to March 12, 2026? Separately, which of those
-    companies have second-quarter 2026 filings in the SEC filings corpus, and what did they disclose? Keep the
-    two sources apart, and do not claim that a filing explains a price move.
+    Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in
+    February 2026? Separately, what did those six companies disclose in their 8-K filings from January through
+    March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move.
   sources: [market_data, sec_filings]
   featured: true
+- id: large-universe-scan
+  label: Whole-Market Scan
+  tag: ANALYTICS
+  description: Scan the 500 most liquid stocks at once.
+  question: >-
+    Across the 500 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2 to
+    March 12, 2026, and how unusual was their trading volume?
+  sources: [market_data]
 - id: outcome-prediction
   label: Five-Session Outlook
   tag: PREDICTION
@@ -80,3 +90,11 @@ questions:
     How many stocks are in each SIC division, and what was each division's median return from January 2 to
     March 12, 2026?
   sources: [market_data]
+- id: world-news-rates
+  label: World Headlines
+  tag: RETRIEVAL
+  description: Search the optional GDELT world news headlines, a source that is not linked to any stock.
+  question: >-
+    Which world news headlines in the corpus mention the Federal Reserve or another central bank? List their
+    outlets and dates, and cite the headlines.
+  sources: [world_news]

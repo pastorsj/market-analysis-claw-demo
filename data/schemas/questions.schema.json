@@ -20,7 +20,7 @@
           "label": { "type": "string", "minLength": 1, "maxLength": 60 },
           "tag": {
             "description": "The capability badge the UI shows.",
-            "enum": ["ANALYTICS", "ANOMALY", "GRAPH", "HYBRID", "PQL", "PREDICTION", "RAG", "RETRIEVAL", "ROUTER", "SQL"]
+            "enum": ["ANALYTICS", "ANOMALY", "GRAPH", "HYBRID", "INTRADAY", "PQL", "PREDICTION", "RAG", "RETRIEVAL", "ROUTER", "SQL"]
           },
           "description": { "type": "string", "maxLength": 300 },
           "question": { "type": "string", "minLength": 10, "maxLength": 2000 },

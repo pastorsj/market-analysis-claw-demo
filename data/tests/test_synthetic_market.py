@@ -26,6 +26,7 @@ ORACLE_ROWS = {
     "large_universe_scan.sql": 12,
     "market_leaders.sql": 12,
     "negative_news.sql": 12,
+    "intraday_ranges.sql": 120,  # 12 issuers, 10 sessions
     "news_sentiment_reaction.sql": 3,
     "peer_pair_correlations.sql": 0,  # the 12 story issuers are all in different industries
     "sector_breakdown.sql": 6,

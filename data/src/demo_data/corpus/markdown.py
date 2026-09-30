@@ -7,7 +7,7 @@ Manifest (`format: markdown`):
 
 Each file starts with YAML front matter (document_id, published_at, ...) that becomes metadata, never text.
 The first `# ` heading is the title. Bullet lines written as `key=value` in backticks, such as
-"- `asset_id=asset-aether`", also become metadata, so a brief can be filtered by the entity it describes.
+"- `asset_id=ACME`", also become metadata, so a document can be filtered by the entity it describes.
 """
 
 from __future__ import annotations

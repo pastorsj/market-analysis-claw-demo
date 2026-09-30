@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The recordings committed with the market-analysis pack, as `scripts/demo.sh replay`
- * serves them: every session opens with its answer and its run, and nothing calls the API.
+ * The committed recordings (the retired market-analysis pack's, until the current packs are
+ * recorded), as `scripts/demo.sh replay` serves them: every session opens with its answer and
+ * its run, and nothing calls the API.
  * The expectations come from the bundle itself, so a re-recording needs no change here.
  */
 

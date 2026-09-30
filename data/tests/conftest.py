@@ -21,8 +21,8 @@ MINUTE_BARS = FIXTURES / "external" / "minute-bars"
 
 
 @pytest.fixture(scope="session")
-def market_pack() -> Pack:
-    return load_pack(PACKS / "market-analysis")
+def synthetic_pack() -> Pack:
+    return load_pack(PACKS / "synthetic-market")
 
 
 @pytest.fixture(scope="session")
@@ -35,7 +35,7 @@ def contract() -> dict[str, Any]:
 def pack_copy(tmp_path: Path):
     """A function that copies a pack into tmp_path/packs and returns the copy's directory."""
 
-    def copy(name: str = "market-analysis", source: Path = PACKS) -> Path:
+    def copy(name: str = "synthetic-market", source: Path = PACKS) -> Path:
         target = tmp_path / "packs" / name
         shutil.copytree(source / name, target, ignore=shutil.ignore_patterns("__pycache__"))
         return target

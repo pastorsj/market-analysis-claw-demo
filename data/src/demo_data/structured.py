@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Build the structured part of a pack: Parquet tables, the DuckDB database, the ontology and the prediction graph.
 
-tables/<table>.parquet               every table (the generator's output, the market importer's, or the pack's own)
+tables/<table>.parquet               every table, as the market importer wrote it
 structured/<database_name>.duckdb    schema.sql, then the tables, then the rendered views
 ontology/model.yaml                  Auto Ontology model
 prediction/graph.json                prediction views, keys, time columns, anchor and population
@@ -47,9 +47,7 @@ def build(
     """Build every structured artifact under `out`; returns the part's receipt: row counts, and the import's."""
     tables_dir = out / "tables"
     imported = produce_tables(pack, profile, tables_dir, sources_dir, cache_dir)
-    receipt: dict[str, Any] = {"rows": check_tables(pack, profile, contracts, tables_dir)}
-    if imported:
-        receipt["import"] = imported
+    receipt = {"rows": check_tables(pack, profile, contracts, tables_dir), "import": imported}
     database = out / "structured" / f"{pack.database_name}.duckdb"
     load_database(pack, tables_dir, database)
     model = ontology.build_model(pack, database)
@@ -59,21 +57,11 @@ def build(
     return receipt
 
 
-def produce_tables(
-    pack: Pack, profile: str, tables_dir: Path, sources_dir: Path, cache_dir: Path
-) -> dict[str, Any] | None:
-    """Run the generator for generated tables, import external ones, and copy committed ones."""
+def produce_tables(pack: Pack, profile: str, tables_dir: Path, sources_dir: Path, cache_dir: Path) -> dict[str, Any]:
+    """Import the tables from the pack's raw market dataset: an external one, or its generator's."""
     tables_dir.mkdir(parents=True, exist_ok=True)
-    tables = pack.structured["tables"]
-    imported = None
-    if "market" in pack.manifest:
-        dataset = market_dataset(pack, profile, sources_dir, cache_dir)
-        imported = market.import_tables(pack, dataset, tables_dir, cache_dir)
-    elif any(pack.origins[table["origin"]]["kind"] == "generated" for table in tables):
-        generate(pack, profile, tables_dir)
-    for table in tables:
-        if pack.origins[table["origin"]]["kind"] == "committed":
-            shutil.copyfile(pack.path(f"tables/{table['name']}.parquet"), tables_dir / f"{table['name']}.parquet")
+    dataset = market_dataset(pack, profile, sources_dir, cache_dir)
+    imported = market.import_tables(pack, dataset, tables_dir, cache_dir)
     missing = [name for name in pack.tables if not (tables_dir / f"{name}.parquet").is_file()]
     if missing:
         raise BuildError(f"no table was written for {missing}")

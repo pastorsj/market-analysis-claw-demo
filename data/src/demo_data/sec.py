@@ -71,7 +71,7 @@ def snapshot(cache: Path, *, refresh: bool = False) -> Path:
         return existing[-1]
     directory = root / datetime.now(UTC).date().isoformat()
     directory.mkdir(parents=True, exist_ok=True)
-    body = _get(TICKERS_URL)
+    body = get(TICKERS_URL)
     json.loads(body)  # fail on a truncated or error response before caching it
     (directory / f".{TICKERS}.tmp").write_bytes(body)
     os.replace(directory / f".{TICKERS}.tmp", directory / TICKERS)
@@ -106,12 +106,12 @@ def sic_codes(directory: Path, ciks: set[int]) -> dict[int, tuple[str, str]]:
     path = directory / SIC
     cached: dict[str, list[str]] = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
     missing = sorted(cik for cik in ciks if str(cik) not in cached)
-    lock, pace = threading.Lock(), _Pace(REQUESTS_PER_SECOND)
+    lock, pace = threading.Lock(), Pace(REQUESTS_PER_SECOND)
 
     def lookup(cik: int) -> tuple[int, list[str]]:
         pace.wait()
         try:
-            submissions = json.loads(_get(SUBMISSIONS_URL.format(cik=cik)))
+            submissions = json.loads(get(SUBMISSIONS_URL.format(cik=cik)))
         except NotFound:
             return cik, ["", ""]
         return cik, [submissions.get("sic") or "", submissions.get("sicDescription") or ""]
@@ -142,7 +142,7 @@ def industry(description: str) -> str:
     return description.title().replace("'S", "'s") if description else "Unclassified"
 
 
-class _Pace:
+class Pace:
     """Spaces request starts at least 1/rate seconds apart, across threads."""
 
     def __init__(self, rate: float) -> None:
@@ -156,10 +156,10 @@ class _Pace:
         time.sleep(max(0.0, start - now))
 
 
-def _get(url: str, attempts: int = 4) -> bytes:
+def get(url: str, attempts: int = 4) -> bytes:
     user_agent = os.environ.get("SEC_USER_AGENT", "").strip()
     if not user_agent:
-        raise SecError("set SEC_USER_AGENT (e.g. 'Example Co admin@example.com') to fetch SEC company metadata")
+        raise SecError("set SEC_USER_AGENT (e.g. 'Example Co admin@example.com') to fetch SEC data")
     request = urllib.request.Request(url, headers={"User-Agent": user_agent})
     for attempt in range(1, attempts + 1):
         try:

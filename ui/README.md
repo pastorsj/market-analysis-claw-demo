@@ -59,14 +59,14 @@ The graphs render with `@xyflow/react` 12.12.0 (exact pin), loaded with
 
 Runtime environment, read per request (see [.env.example](.env.example)):
 
-| Variable           | Default           | Meaning                                                                                           |
-| ------------------ | ----------------- | ------------------------------------------------------------------------------------------------- |
-| `UI_MODE`          | `live`            | `live` or `replay`                                                                                |
-| `API_URL`          | `http://api:8000` | Demo API, server-side only                                                                        |
-| `PACKS_DIR`        | `/packs`          | Directory of data packs                                                                           |
-| `DATA_PACK`        | `market-analysis` | Active pack; recordings come from `$PACKS_DIR/$DATA_PACK/recordings`                              |
-| `PHOENIX_URL`      | unset             | Browser-reachable Phoenix UI; unset hides the Phoenix link                                        |
-| `PORT`, `HOSTNAME` | `3000`, `0.0.0.0` | Listen address of the container's server (`npm start` and `npm run dev` listen on 127.0.0.1 only) |
+| Variable           | Default            | Meaning                                                                                           |
+| ------------------ | ------------------ | ------------------------------------------------------------------------------------------------- |
+| `UI_MODE`          | `live`             | `live` or `replay`                                                                                |
+| `API_URL`          | `http://api:8000`  | Demo API, server-side only                                                                        |
+| `PACKS_DIR`        | `/packs`           | Directory of data packs                                                                           |
+| `DATA_PACK`        | `synthetic-market` | Active pack; recordings come from `$PACKS_DIR/$DATA_PACK/recordings`                              |
+| `PHOENIX_URL`      | unset              | Browser-reachable Phoenix UI; unset hides the Phoenix link                                        |
+| `PORT`, `HOSTNAME` | `3000`, `0.0.0.0`  | Listen address of the container's server (`npm start` and `npm run dev` listen on 127.0.0.1 only) |
 
 Icons load from NVIDIA's brand-asset CDN, so the browser needs internet access.
 
@@ -99,7 +99,8 @@ npm run build && npm run e2e  # Playwright smoke (Chromium), no screenshots
 
 The smoke test starts three servers from the build: live mode against
 `e2e/fake-api.mjs`, replay mode on the synthetic bundle in `e2e/fixtures/packs`,
-and replay mode on the recordings committed with the market-analysis pack
-(`../data/packs/market-analysis/recordings`), each of whose sessions must replay.
+and replay mode on the committed recordings (`../data/packs/market-analysis/recordings`, the
+replay bundle of the retired market-analysis pack until the current packs are recorded), each of
+whose sessions must replay. The fake API offers the default pack's six featured questions.
 It needs `npx playwright install chromium` once; on Linux, `npx playwright install --with-deps chromium`,
 which also installs Chromium's system libraries with apt (sudo), as CI and `demo.sh test e2e` do.

@@ -50,7 +50,7 @@ x-data: &data
   image: market-demo/demo-data:local
   # DATA_PACK_PROFILE and DATA_CORPORA are part of the build key: data and data-corpus must agree.
   environment: &data-env
-    DATA_PACK: ${DATA_PACK:-market-analysis}
+    DATA_PACK: ${DATA_PACK:-synthetic-market}
     DATA_PACK_PROFILE: ${DATA_PACK_PROFILE:-}
     DATA_CORPORA: ${DATA_CORPORA:-}
     DATA_SOURCE_DIR: /sources
@@ -275,7 +275,7 @@ services:
     environment:
       UI_MODE: ${UI_MODE:-live} # demo.sh replay sets replay
       API_URL: http://api:8000
-      DATA_PACK: ${DATA_PACK:-market-analysis}
+      DATA_PACK: ${DATA_PACK:-synthetic-market}
       PHOENIX_URL: ${PHOENIX_URL-http://127.0.0.1:6006} # empty hides the Phoenix link
     volumes: [./data/packs:/packs:ro]
     depends_on:
@@ -433,8 +433,8 @@ services:
       RERANK_API_KEY: ${RETRIEVER_API_KEY:-${INFERENCE_API_KEY:-}}
       RERANK_MODEL: ${RETRIEVER_RERANK_MODEL:-nvidia/llama-nemotron-rerank-vl-1b-v2}
       # demo.sh derives DATA_DATABASE_NAME from DATA_PACK (Compose cannot replace - with _).
-      CONNECTION_STRINGS: duckdb:///data/active/structured/${DATA_DATABASE_NAME:-market_analysis}.duckdb
-      SEMANTIC_SEARCH_EXCLUDED_SCHEMAS: ${DATA_DATABASE_NAME:-market_analysis}.prediction
+      CONNECTION_STRINGS: duckdb:///data/active/structured/${DATA_DATABASE_NAME:-synthetic_market}.duckdb
+      SEMANTIC_SEARCH_EXCLUDED_SCHEMAS: ${DATA_DATABASE_NAME:-synthetic_market}.prediction
     volumes: [demo-data:/data:ro]
     depends_on:
       auto-ontology-migrate: { condition: service_completed_successfully }

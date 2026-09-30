@@ -235,6 +235,9 @@ cmd_replay() {
   [ $# -eq 0 ] || die "$EXIT_USAGE" "usage: demo.sh replay"
   export COMPOSE_PROFILES=replay UI_MODE=replay PHOENIX_URL=
   load_env
+  [ -f "$ROOT/data/packs/$DATA_PACK/recordings/index.json" ] ||
+    die "$EXIT_CONFIG" "data pack $DATA_PACK has no recordings yet: record them on a running stack" \
+      "(./scripts/demo.sh record), or replay another pack's, e.g. DATA_PACK=market-analysis"
   dc up -d --build --wait ui
   log "replay: http://127.0.0.1:$UI_PORT (data pack $DATA_PACK)"
 }

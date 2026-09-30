@@ -12,7 +12,7 @@
  * | `UI_MODE`    | `live`                | `live` talks to the API; `replay` never does     |
  * | `API_URL`    | `http://api:8000`     | Base URL of the demo API (server-side only)      |
  * | `PACKS_DIR`  | `/packs`              | Directory holding the data packs                 |
- * | `DATA_PACK`  | `market-analysis`     | Active pack; recordings are read from its folder |
+ * | `DATA_PACK`  | `synthetic-market`    | Active pack; recordings are read from its folder |
  * | `PHOENIX_URL`| unset                 | Browser-reachable Phoenix UI; unset hides links  |
  */
 
@@ -55,7 +55,7 @@ export const readApiUrl = (env: Env = process.env): string =>
 
 /** `$PACKS_DIR/$DATA_PACK/recordings`: the replay bundle of the active data pack. */
 export const readRecordingsDir = (env: Env = process.env): string => {
-  const pack = env.DATA_PACK?.trim() || 'market-analysis'
+  const pack = env.DATA_PACK?.trim() || 'synthetic-market'
   if (!PACK_ID.test(pack)) {
     throw new Error(`DATA_PACK must match ${PACK_ID}, got "${pack}"`)
   }

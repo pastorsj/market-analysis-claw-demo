@@ -3,7 +3,7 @@
 """demo-data: validate | fetch | prepare [--structured | --corpus] | verify | list | clean.
 
 Settings come from flags or the environment:
-  DATA_PACK           pack id under the packs directory (default market-analysis)
+  DATA_PACK           pack id under the packs directory (default synthetic-market)
   DATA_PACK_PROFILE   generator profile (default: the pack's default_profile)
   DATA_CORPORA        comma-separated corpus sources to build (default: every corpus that is not opt-in)
   DATA_DIR            where builds live (default /data)
@@ -66,7 +66,7 @@ def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="demo-data", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    root.add_argument("--pack", default=env("DATA_PACK") or "market-analysis")
+    root.add_argument("--pack", default=env("DATA_PACK") or "synthetic-market")
     root.add_argument("--packs-dir", type=Path, default=env("DATA_PACKS_DIR") or DATA_ROOT / "packs")
     root.add_argument("--data-dir", type=Path, default=env("DATA_DIR") or "/data")
     root.add_argument("--sources-dir", type=Path, default=env("DATA_SOURCE_DIR") or "/sources")
@@ -184,8 +184,9 @@ def prepare(args: argparse.Namespace) -> int:
                         pack, profile, contracts, staging, sources_dir=args.sources_dir, cache_dir=cache_dir
                     )
                 else:
+                    downloads = Downloads(args.data_dir / "downloads")
                     receipt = {
-                        "documents": corpus.build(pack, corpora, Downloads(args.data_dir / "downloads"), staging)
+                        "documents": corpus.build(pack, corpora, downloads, staging, sources_dir=args.sources_dir)
                     }
             # The build is keyed on the selected corpora, but pack.json offers their sources and questions only
             # once the corpus part is in it.

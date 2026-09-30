@@ -13,7 +13,7 @@
       "name": "Apache-2.0",
       "path": "https://www.apache.org/licenses/LICENSE-2.0",
       "redistribution": "allowed",
-      "notes": "The generated data and the fictional briefs are provided solely as synthetic demonstration assets."
+      "notes": "The generated data is provided solely as a synthetic demonstration asset."
     },
     {
       "name": "US-Government-Public-Information",
@@ -39,14 +39,6 @@
       "license": "Apache-2.0",
       "as_of": "2026-08-31",
       "notes": "All companies, tickers, prices, events, relationships and articles are fictional."
-    },
-    {
-      "id": "market-briefs",
-      "title": "Fictional market-news briefs for the eight synthetic events",
-      "kind": "committed",
-      "synthetic": true,
-      "license": "Apache-2.0",
-      "as_of": "2026-08-31"
     },
     {
       "id": "ecfr-title-17",
@@ -118,17 +110,6 @@
       "example_questions": [
         "What current SEC disclosure requirements apply to a material cybersecurity incident?"
       ]
-    },
-    {
-      "id": "market_briefs",
-      "name": "Market Briefs",
-      "description": "Fictional market-news briefs for the eight synthetic market events.",
-      "agent_description": "Retrieve the fictional briefs behind the synthetic market events; each cites its article_id and asset_id. All companies and events are fictional.",
-      "kind": "documents",
-      "capabilities": [
-        "unstructured_retrieval"
-      ],
-      "synthetic": true
     }
   ],
   "questions": [
@@ -207,17 +188,6 @@
       "question": "What does Title 17 of the eCFR require public companies to disclose about material cybersecurity incidents and cybersecurity risk management, strategy, and governance? Cite the relevant sections.",
       "sources": [
         "market_regulations"
-      ],
-      "featured": true
-    },
-    {
-      "id": "market-briefs-export-license",
-      "label": "Export-License Review",
-      "tag": "RETRIEVAL",
-      "description": "Retrieve a fictional market brief and report only what it says, with passage-level citations.",
-      "question": "What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention?",
-      "sources": [
-        "market_briefs"
       ],
       "featured": true
     },
@@ -370,8 +340,7 @@
     "collection": "aiq_market_intelligence_current",
     "sources": [
       "market_news",
-      "market_regulations",
-      "market_briefs"
+      "market_regulations"
     ],
     "path": "corpus/documents.jsonl"
   },
@@ -406,7 +375,6 @@
     },
     "corpus": {
       "documents": {
-        "market_briefs": 8,
         "market_news": 1696,
         "market_regulations": 3525
       },

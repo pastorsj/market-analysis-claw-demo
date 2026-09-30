@@ -27,7 +27,7 @@ describe('runtime configuration', () => {
   })
 
   test('resolves the active pack recordings under the packs directory', () => {
-    expect(readRecordingsDir({})).toBe('/packs/market-analysis/recordings')
+    expect(readRecordingsDir({})).toBe('/packs/synthetic-market/recordings')
     expect(readRecordingsDir({ PACKS_DIR: '/data/packs', DATA_PACK: 'other-pack' })).toBe(
       '/data/packs/other-pack/recordings'
     )

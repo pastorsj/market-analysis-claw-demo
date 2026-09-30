@@ -7,12 +7,13 @@ source catalog the UI and agent see, analytics and prediction settings, and the 
 the pack named by `DATA_PACK` into `/data` and points `/data/active` at the result. Services never read `packs/`;
 they read only `/data/active`, so swapping data means adding a pack, not editing code.
 
-The repository ships [`market-analysis`](packs/market-analysis/README.md),
-[`synthetic-market`](packs/synthetic-market/README.md) and [`us-equities`](packs/us-equities/README.md).
-`synthetic-market` is a fictional market whose names and news text were written with NeMo Data Designer and
-Nemotron ([`generate`](generate/README.md)); it builds with no key and no download. `us-equities` holds real
-prices from an **external dataset**: data that lives outside the repository, is never committed, and reaches a
-machine through `demo-data fetch` ([data platform](../docs/data-platform.md)).
+The repository ships two packs in one format. [`synthetic-market`](packs/synthetic-market/README.md), the
+default, is a fictional market whose names and news text were written with NeMo Data Designer and Nemotron
+([`generate`](generate/README.md)); it builds with no key and no download. [`us-equities`](packs/us-equities/README.md)
+holds real prices from an **external dataset**: data that lives outside the repository, is never committed, and
+reaches a machine through `demo-data fetch` ([data platform](../docs/data-platform.md)). In both, SEC EDGAR filings
+are a separate document source for retrieval, never turned into news. `packs/market-analysis/` holds only the
+replay bundle of the pack they replaced.
 
 ## How it fits
 
@@ -20,10 +21,10 @@ machine through `demo-data fetch` ([data platform](../docs/data-platform.md)).
 |---|---|---|---|
 | `data-fetch` one-shot (`demo.sh data fetch`) | when a pack's external data is new | a source (URL) | `/sources/<dataset>/` (the host's `DATA_SOURCE_DIR`) |
 | `data` one-shot (profile `core`) | before the API starts | `packs/$DATA_PACK`, `/sources` (read-only) | the structured part, `pack.json`, `/data/active` |
-| `data-corpus` one-shot (profile `retrieval`) | after `data` | `packs/$DATA_PACK`, pinned public files | `corpus/documents.jsonl`, `pack.json` |
+| `data-corpus` one-shot (profile `retrieval`) | after `data` | `packs/$DATA_PACK`, pinned public files, `/sources` (in-place corpora) | `corpus/documents.jsonl`, `pack.json` |
 | `retrieval-index` one-shot | after `data-corpus` | `corpus/documents.jsonl` | `collection-manifest.json` |
 | `api` | runtime | `pack.json` (sources, questions, disclaimer), the DuckDB file (read-only) | – |
-| `market-analytics` | runtime | `pack.json` (`analytics`, `prediction`, `market`), `tables/*.parquet`, the DuckDB file, `/sources` | – |
+| `market-analytics` | runtime | `pack.json` (`analytics`, `prediction`, `market`), `tables/*.parquet`, the DuckDB file, the raw minute bars (`/sources`, or a generated dataset in `/data/cache`) | – |
 | Auto Ontology | runtime | the DuckDB file, `ontology/model.yaml` | – |
 
 All of them share the `demo-data` volume, mounted at `/data`.
@@ -67,8 +68,8 @@ its structured part is recorded; the corpus part can be added to it later. Until
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATA_PACK` | `market-analysis` | the pack to build, a directory under `packs/` |
-| `DATA_PACK_PROFILE` | the pack's `default_profile` (`qualification`) | generator profile |
+| `DATA_PACK` | `synthetic-market` | the pack to build, a directory under `packs/` |
+| `DATA_PACK_PROFILE` | the pack's `default_profile` (`standard`) | generator profile |
 | `DATA_CORPORA` | every corpus not marked `opt_in` | comma-separated corpus sources, e.g. `market_regulations` |
 | `SEC_USER_AGENT` | – | required to fetch SEC EDGAR filings and SEC company data: a name and an email, e.g. `Example Co admin@example.com` |
 | `DATA_DIR` | `/data` | where builds live |
@@ -82,11 +83,11 @@ its structured part is recorded; the corpus part can be added to it later. Until
 `DATA_PACK_PROFILE` and `DATA_CORPORA` are part of the build key, so they must be identical for the `data` and
 `data-corpus` one-shots. Otherwise `prepare --corpus` lands in a build with no structured part, and exits 1.
 
-The database name is the pack id in snake case (`market-analysis` → `market_analysis`), and `validate` enforces it.
+The database name is the pack id in snake case (`synthetic-market` → `synthetic_market`), and `validate` enforces it.
 Services that read `/data/active/pack.json` should take it from `structured.database_name`. For the others,
 `scripts/demo.sh` (bash) exports `DATA_DATABASE_NAME="${DATA_PACK//-/_}"`, and `compose.yaml` uses
-`${DATA_DATABASE_NAME:-market_analysis}`, since Compose interpolation has no pattern substitution. A raw
-`docker compose up` without `demo.sh` therefore gets the default pack's `market_analysis`, whatever `DATA_PACK` says,
+`${DATA_DATABASE_NAME:-synthetic_market}`, since Compose interpolation has no pattern substitution. A raw
+`docker compose up` without `demo.sh` therefore gets the default pack's `synthetic_market`, whatever `DATA_PACK` says,
 unless `DATA_DATABASE_NAME` is set as well.
 
 ## Commands
@@ -96,8 +97,8 @@ demo-data validate                # schema, cross-references, and the tool contr
 demo-data fetch [ID...]           # the pack's external datasets from DATA_SOURCE_<ID>, verified file by file
 demo-data fetch --verify-only     # hash what is already in DATA_SOURCE_DIR (only files that changed)
 demo-data prepare                 # build (or reuse) the structured part and the corpus, then activate
-demo-data prepare --structured    # tables, DuckDB, ontology, prediction (about 20 s at qualification scale)
-demo-data prepare --corpus        # corpus/documents.jsonl (the first EDGAR run downloads about 1.4 GB)
+demo-data prepare --structured    # tables, DuckDB, ontology, prediction (about 6 s for synthetic-market standard)
+demo-data prepare --corpus        # corpus/documents.jsonl (the first EDGAR run downloads about 1.3 GB)
 demo-data verify                  # the active build still matches the digests in its pack.json
 demo-data list                    # packs and builds
 demo-data clean [--all]           # remove inactive builds and unused caches (--all: every cache and download)
@@ -143,19 +144,23 @@ kept and dropped is recorded in `pack.json` under `parts.structured.import`. The
 
 - **Identity**: `id`, `version` (minor for data changes, major for table or column changes), `title`, `description`,
   `as_of`, `disclaimer`, `licenses`, and `provenance`: every origin (`generated`, `committed`, `download` or
-  `external`) with the environment variables that fetching it needs.
+  `external`) with the environment variables that fetching its documents needs.
 - **`external`** (`schema_version: "2"`): datasets outside the repository, each with its manifest's path, pinned
   `fingerprint` and size. **`market`**: how the importer reads the bars (files, symbol, columns, frequency, time
   zone, regular session), where company data and news come from, the exclusions, `min_sessions` and `peers`.
-- **`generator`**: a pack-local program, run as `python <entrypoint> --profile <p> --out <dir>`, that writes
-  `<dir>/<table>.parquet` for every generated table. `profiles` hold its parameters and the row counts each profile
-  must produce.
+- **`generator`**: a pack-local program, run as `python <entrypoint> --profile <p> --out <dir>`, that writes the raw
+  market dataset (bars, companies, news, `manifest.json`) the importer reads, as a real dataset would arrive.
+  `profiles` hold its parameters and the row counts each profile must produce; a profile's `frequency` (`1min` or
+  `1d`) is the frequency of the bars it writes, which `pack.json` reports.
 - **`structured`**: the source it serves, `database_name`, `schema` (DDL with primary and foreign keys), `views`
   (SQL run after loading, with `{{anchor_date}}`, `{{anchor_timestamp}}`, `{{horizon_sessions}}` and
-  `{{population_literals}}` filled from `prediction`) and `tables` (`load_into_database: false` keeps a table out of
-  DuckDB). Tables load by column name, so Parquet column order does not matter.
-- **`documents`**: the collection name and `corpora`, each with a `format` (`markdown`, `ecfr-xml`, `edgar-filings`)
-  and a `manifest` that pins what to build. An `opt_in` corpus is built only when `DATA_CORPORA` names it.
+  `{{population_literals}}` filled from `prediction`) and `tables`: the importer's, each with the origin of
+  `market.bars.dataset` (`load_into_database: false` keeps a table out of DuckDB). Tables load by column name, so
+  Parquet column order does not matter.
+- **`documents`**: the collection name and `corpora`, each with a `format`. A pinned corpus (`ecfr-xml`,
+  `edgar-filings`, `markdown`) has a `manifest` in the pack that pins what to build. An in-place corpus
+  (`gdelt-parquet`) has `files`, a glob inside its external origin's dataset, read where `fetch` put it. An `opt_in`
+  corpus is built only when `DATA_CORPORA` names it.
 - **`sources`**: the catalog: `name` and `description` for the UI, `agent_description` for the agent.
 - **`analytics`**, **`prediction`**: settings for the market-analytics and prediction tools. `analytics.news_table`
   is null for a pack without ticker-linked news; the news tools then report that they are unavailable.
@@ -170,8 +175,8 @@ code.
 
 ## Adding or swapping a pack
 
-1. Copy `packs/market-analysis` to `packs/<new-id>`. Replace the generator, or delete it and commit small
-   `tables/<table>.parquet` files under a `committed` origin.
+1. Copy `packs/us-equities` (real data you fetch) or `packs/synthetic-market` (a generator) to `packs/<new-id>`.
+   For your own bars, pin their dataset under `external` and describe their layout under `market.bars`.
 2. Edit `pack.yaml` (provenance, licenses, sources, disclaimer, universes, prediction), `schema.sql`,
    `ontology.yaml` and `questions.yaml`. Only the columns in the tool contracts are mandatory.
 3. Run `DATA_PACK=<new-id> demo-data validate`, then `prepare`. No code changes are needed while the contracts hold.
@@ -189,7 +194,7 @@ DuckDB. Upgrade the readers first, then this pin.
 cd data
 uv sync
 uv run pytest                          # fast and offline
-uv run pytest -m slow                  # builds market-analysis (interactive) end to end in a few seconds
+uv run pytest -m slow                  # builds synthetic-market (ci) end to end in a few seconds
 uv run pytest -m live                  # checks the pinned public sources are still served (network)
 uv run demo-data --data-dir /tmp/demo-data prepare --profile interactive --corpora market_regulations
 docker build -f Dockerfile -t market-demo/demo-data:dev ..   # the build context is the repository root

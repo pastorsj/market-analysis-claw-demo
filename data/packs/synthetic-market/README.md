@@ -10,7 +10,7 @@ of it is investment advice.
 
 | Source | Kind | Origin | Contents |
 |---|---|---|---|
-| `market_data` | structured | generated, synthetic | Fictional issuers, their daily prices, declared peers and ticker-linked company news, in DuckDB and Parquet, with leakage-safe prediction views |
+| `market_data` | structured | generated, synthetic | Fictional issuers, their daily prices, declared peers and ticker-linked company news, in DuckDB and Parquet, with leakage-safe prediction views; in the 1-minute profiles, minute bars that `intraday_scan` reads in place |
 | `sec_filings` | documents | downloaded, real | SEC EDGAR 8-K and 6-K filings from 2026 Q2 (1,000 pinned filings) |
 | `market_regulations` | documents | downloaded, real | eCFR Title 17 as of 2026-08-17 |
 
@@ -31,6 +31,16 @@ Profiles (`DATA_PACK_PROFILE`), the scale knob:
 place (the first 2,000 issuers stay as they are), and `./scripts/demo.sh up` rebuilds the data image with it.
 Measured on a laptop, its build takes about 80 s and peaks at about 11 GB of memory (1.3 million news items,
 a 4 GB build and a 1 GB raw dataset).
+
+## Questions
+
+`questions.yaml` holds eleven questions; six are featured and need only the default profiles: market leaders
+among the 12 story issuers, news sentiment against the following returns, unusual sessions, the peer network, the
+Form 8-K Item 1.05 rule with the one Q2 2026 filing in the sample that reports an incident, and negative company
+news beside real filings about operational disruptions (kept apart: the issuers are fictional). The intraday
+question needs a 1-minute profile (`ci` or `intraday`). `eval/oracles/` computes the analytics answers from a
+build, the slow tests run them on the `ci` build, and `eval/retrieval.yaml` names the documents a retrieval
+answer should cite.
 
 ## How it is made
 
@@ -92,7 +102,7 @@ records the latest run.
 | `generator/build.py`, `generator/model.yaml` | the seeded market and its constants |
 | `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
-| `eval/oracles/` | SQL that computes the analytics questions' answers from a build; never read at runtime |
+| `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
 
 ## Licenses
 

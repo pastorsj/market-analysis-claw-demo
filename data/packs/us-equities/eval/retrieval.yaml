@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# What a correct retrieval answer cites, by question id: answer checks, never read at runtime. `documents` are
+# corpus/documents.jsonl ids; `filings` are corpus manifest filing ids (<cik>:<accession>), whose documents are
+# edgar:<cik>:<accession>:<file>. An answer should cite at least one document and one filing of each list.
+cyber-disclosure-rules:
+  documents:
+    - ecfr-title17:229.106:24c220ed7a14 # 17 CFR 229.106, Regulation S-K Item 106 (cybersecurity)
+    - ecfr-title17:249.308:4a810383a174 # 17 CFR 249.308, Form 8-K
+  filings: # every 8-K in the corpus that reports Item 1.05
+    - 0001677703:0001677703-25-000067 # CNDT, 2025-04-14
+    - 0001679788:0001679788-25-000094 # COIN, 2025-05-15
+    - 0000351998:0001654954-25-009925 # DAIO, 2025-08-21
+    - 0000351998:0001654954-25-010613 # DAIO, 2025-09-10 (update)
+    - 0001649739:0001649739-25-000246 # BAFN, 2025-10-30
+    - 0001834584:0001834584-25-000196 # CPNG, 2025-12-16
+moves-and-filings:
+  # February 2026 (eval/oracles/february_moves.sql): strongest CRCL, NFLX, AMAT; weakest IBM, AMD, BMNR. Their
+  # 8-Ks filed January through March 2026 include these results releases and updates.
+  filings:
+    - 0001876042:0001876042-26-000032 # CRCL, 2026-02-25, results (Item 2.02)
+    - 0001065280:0001065280-26-000033 # NFLX, 2026-01-20, results (Item 2.02)
+    - 0000006951:0001628280-26-007661 # AMAT, 2026-02-12, results (Item 2.02)
+    - 0000051143:0000051143-26-000004 # IBM, 2026-01-28, results (Item 2.02)
+    - 0000002488:0000002488-26-000014 # AMD, 2026-02-03, results (Item 2.02)
+    - 0001829311:0001493152-26-006953 # BMNR, 2026-02-17, Regulation FD update (Item 7.01)

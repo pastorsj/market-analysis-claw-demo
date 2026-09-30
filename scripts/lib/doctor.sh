@@ -106,9 +106,9 @@ check_config() {
   if has_profile retrieval || has_profile ontology; then
     check_retriever
   fi
-  # The default corpora (DATA_CORPORA empty) include the SEC EDGAR filings (market_news or sec_filings).
-  case ,${DATA_CORPORA:-market_news,sec_filings}, in
-    *,market_news,* | *,sec_filings,*)
+  # The default corpora (DATA_CORPORA empty) include the SEC EDGAR filings (sec_filings).
+  case ,${DATA_CORPORA:-sec_filings}, in
+    *,sec_filings,*)
       if has_profile retrieval && [ -z "$SEC_USER_AGENT" ]; then
         problem "SEC_USER_AGENT is empty: SEC EDGAR needs it for the filings corpus (or leave it out of DATA_CORPORA)"
       fi

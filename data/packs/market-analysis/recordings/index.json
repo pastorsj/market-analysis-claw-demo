@@ -51,17 +51,6 @@
       ]
     },
     {
-      "id": "market-briefs-export-license",
-      "title": "Export-License Review",
-      "featured": true,
-      "turns": [
-        {
-          "jobId": "6b752d58-6ff7-43f1-aef7-38cb5dcca09e",
-          "question": "What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention?"
-        }
-      ]
-    },
-    {
       "id": "market-qualification-universe-scan",
       "title": "Large-Universe Scan",
       "featured": true,

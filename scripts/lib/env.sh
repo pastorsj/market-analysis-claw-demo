@@ -39,7 +39,7 @@ load_env() {
   COMPOSE_PROFILES=${COMPOSE_PROFILES:-$DEFAULT_PROFILES}
   UI_PORT=${UI_PORT:-3100}
   UI_BIND_HOST=${UI_BIND_HOST:-127.0.0.1}
-  DATA_PACK=${DATA_PACK:-market-analysis}
+  DATA_PACK=${DATA_PACK:-synthetic-market}
   DATA_DATABASE_NAME=${DATA_PACK//-/_}
   DATA_SOURCE_DIR=${DATA_SOURCE_DIR:-$HOME/market-demo-data}
   if has_profile kumo; then

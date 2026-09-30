@@ -5,17 +5,19 @@
 #
 # Real US equities: daily prices rolled up from real split-adjusted minute bars, with SEC company data. The bars
 # are an external dataset: never committed, fetched into $DATA_SOURCE_DIR/minute-bars/ with
-# `./scripts/demo.sh data fetch` and pinned here by fingerprint. SEC EDGAR filings and eCFR Title 17 are separate
-# document sources, searched by retrieval; they are never turned into news. The pack has no ticker-linked news,
-# so the two news tools report that they are unavailable. See README.md and docs/data-platform.md.
+# `./scripts/demo.sh data fetch` and pinned here by fingerprint. SEC EDGAR filings (8-Ks by this pack's issuers),
+# eCFR Title 17 and, opt-in, GDELT world headlines are separate document sources, searched by retrieval; filings
+# are never turned into news. The pack has no ticker-linked news, so the two news tools report that they are
+# unavailable. See README.md and docs/data-platform.md.
 schema_version: "2"
 id: us-equities
 version: "0.1.0"
 title: US Equities
 description: >-
   Daily prices for about 1,600 US-listed stocks from January 2025 to March 2026, rolled up from real
-  split-adjusted one-minute bars, with SEC company names, CIKs and SIC codes, plus SEC EDGAR filings and eCFR
-  Title 17 as separate document sources.
+  split-adjusted one-minute bars that intraday analytics read in place, with SEC company names, CIKs and SIC
+  codes, plus the issuers' SEC EDGAR 8-K filings, eCFR Title 17 and optional GDELT world headlines as separate
+  document sources.
 as_of: "2026-03-12"
 disclaimer: Real market data for a software demonstration. Not investment advice.
 
@@ -47,19 +49,19 @@ external:
     bytes: 1812697046
     notes: >-
       2,206 files: one Parquet file per symbol for 2,200 symbols (117 million bars, 2025-01-02 to 2026-03-12,
-      04:00 to 19:59 US/Eastern), plus GDELT headlines that this pack does not use yet.
+      04:00 to 19:59 US/Eastern), plus 8,192 GDELT headlines (2025-01-01 to 2026-02-02) in gdelt/.
 
 provenance:
   - id: minute-bars
-    title: US equities one-minute bars, with SEC company metadata
+    title: US equities one-minute bars and GDELT world headlines, with SEC company metadata
     kind: external
     synthetic: false
     license: Private-dataset
     as_of: "2026-03-12"
-    requires_env: [SEC_USER_AGENT]
     notes: >-
+      The bars become the market tables; the GDELT headlines are the opt-in world_news corpus, read in place.
       Company names, CIKs and exchanges come from SEC's company_tickers_exchange.json, and SIC codes from each
-      company's EDGAR submissions, fetched at prepare time and cached.
+      company's EDGAR submissions, fetched at prepare time with SEC_USER_AGENT and cached.
   - id: ecfr-title-17
     title: Electronic Code of Federal Regulations, Title 17 (versioned API snapshot)
     kind: download
@@ -68,15 +70,18 @@ provenance:
     url: https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml
     as_of: "2026-08-17"
     retrieved_on: "2026-09-22"
-  - id: sec-edgar-2026-q2
-    title: SEC EDGAR 2026 Q2 master index and 1,000 sampled 8-K/6-K filings
+  - id: sec-edgar-issuers
+    title: SEC EDGAR 8-K filings by this pack's issuers, 2025-01-02 to 2026-03-12
     kind: download
     synthetic: false
     license: SEC-EDGAR-Reuse
-    url: https://www.sec.gov/Archives/edgar/full-index/2026/QTR2/master.idx
-    as_of: "2026-06-30"
-    retrieved_on: "2026-09-22"
+    url: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+    as_of: "2026-03-12"
+    retrieved_on: "2026-09-30"
     requires_env: [SEC_USER_AGENT]
+    notes: >-
+      Selected by corpus/select_filings.py from each issuer's EDGAR submissions: every 8-K reporting Item 1.05,
+      plus the latest 12 8-Ks of each of the 100 most liquid issuers.
 
 market:
   bars:
@@ -108,16 +113,20 @@ structured:
 documents:
   collection: us_equities_documents
   corpora:
-    # A pinned 2026 Q2 sample of 8-K and 6-K filings by any filer, for now: a manifest of filings by this pack's
-    # issuers over the price window replaces it (docs/data-platform.md, document sources).
     - source: sec_filings
-      origin: sec-edgar-2026-q2
+      origin: sec-edgar-issuers
       format: edgar-filings
-      manifest: corpus/sec-edgar-2026-q2.manifest.json
+      manifest: corpus/sec-edgar-issuers.manifest.json
     - source: market_regulations
       origin: ecfr-title-17
       format: ecfr-xml
       manifest: corpus/ecfr-title17-2026-08-17.manifest.json
+    # GDELT headlines, read in place from the external dataset. Opt-in: set DATA_CORPORA to include world_news.
+    - source: world_news
+      origin: minute-bars
+      format: gdelt-parquet
+      files: gdelt/*.parquet
+      opt_in: true
 
 sources:
   - id: market_data
@@ -137,15 +146,18 @@ sources:
   - id: sec_filings
     name: SEC Filings
     description: >-
-      Public SEC current reports and issuer exhibits retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.
+      8-K current reports and EX-99 exhibits filed by the companies in the pack, January 2025 to March 2026,
+      retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.
     agent_description: >-
-      Retrieve citation-ready 8-K and 6-K filings and EX-99 exhibits from the pinned SEC EDGAR snapshot. A
-      separate document source: it is not linked to the price tables by ticker.
+      Retrieve citation-ready 8-K filings and EX-99 exhibits by companies in market_data, filed from January 2,
+      2025 to March 12, 2026: every 8-K reporting Item 1.05, and the latest 8-Ks of the 100 most liquid stocks.
+      A separate document source: each passage names its company and ticker, but filings are not joined to the
+      price tables.
     kind: documents
     capabilities: [unstructured_retrieval]
     synthetic: false
     example_questions:
-      - Which recent public-company disclosures describe material cybersecurity incidents?
+      - Which companies in the pack reported a material cybersecurity incident under Item 1.05?
   - id: market_regulations
     name: Market Regulations
     description: Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.
@@ -157,6 +169,19 @@ sources:
     synthetic: false
     example_questions:
       - What current SEC disclosure requirements apply to a material cybersecurity incident?
+  - id: world_news
+    name: World Headlines
+    description: >-
+      8,192 GDELT world news headlines from January 2025 to February 2026 (opt-in), retrieved from Milvus with
+      NVIDIA Nemotron Embed and Rerank.
+    agent_description: >-
+      Retrieve short world news headlines sampled from GDELT, with their outlet and date. They are not linked to
+      any stock or filing, and many are topic summaries rather than article titles.
+    kind: documents
+    capabilities: [unstructured_retrieval]
+    synthetic: false
+    example_questions:
+      - Which headlines mention the Federal Reserve?
 
 analytics:
   contract: market-analytics/v1

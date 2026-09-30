@@ -5,9 +5,10 @@
 #
 # The synthetic-market questions: the UI scenario list, the README quickstart and the replay recording set
 # (featured). Featured questions need only the default profiles. eval/oracles/ computes the analytics answers
-# from the built pack. The 12 most liquid issuers are the story issuers, each with one planted news story
-# between August 17 and 28, 2026. The fictional issuers are never SEC filers, so questions that use both keep
-# them apart.
+# from the built pack, and eval/retrieval.yaml names the documents the retrieval answers cite. The 12 most liquid
+# issuers are the story issuers, each with one planted news story between August 17 and 28, 2026. The fictional
+# issuers are never SEC filers, so questions that use both keep them apart. Only the 1-minute profiles (ci,
+# intraday) have minute bars for intraday_scan.
 schema_version: "1"
 questions:
 - id: market-leaders
@@ -100,3 +101,13 @@ questions:
     through August 31, 2026, and how did their volatility compare?
   sources: [market_data]
   profiles: [standard, large]
+- id: intraday-ranges
+  label: Intraday Swings
+  tag: INTRADAY
+  description: Scan one-minute bars for the story issuers' widest intraday swings.
+  question: >-
+    Among the 12 most liquid issuers, which sessions from August 17 through August 28, 2026 had the widest
+    intraday price ranges? For each, how did it trade from open to close, and how much of its volume came in the
+    last 30 minutes?
+  sources: [market_data]
+  profiles: [ci, intraday]

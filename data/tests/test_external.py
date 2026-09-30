@@ -41,7 +41,7 @@ def test_fetch_copies_and_verifies_every_file_and_a_rerun_copies_nothing(tmp_pat
 
     report = fetch.fetch(target, str(MINUTE_BARS))
 
-    assert (report.files, report.bad, report.extra) == (11, [], [])
+    assert (report.files, report.bad, report.extra) == (12, [], [])
     assert (target.root / "market/stocks_1min/XAAA_full_1min_adjsplit.parquet").is_file()
     assert set(json.loads((target.root / external.RECORD).read_text())) == {f["path"] for f in MANIFEST["files"]}
     assert fetch.fetch(target, f"file://{MINUTE_BARS}").hashed == 0
@@ -63,7 +63,7 @@ def test_fetch_rejects_a_corrupted_file_and_keeps_the_others(tmp_path):
     corrupted.write_bytes(bytes(corrupted.stat().st_size))  # same size, different content
     target = dataset(tmp_path / "minute-bars")
 
-    with pytest.raises(ExternalError, match="1 of 11 files failed.*sha256"):
+    with pytest.raises(ExternalError, match="1 of 12 files failed.*sha256"):
         fetch.fetch(target, str(source), attempts=1)
 
     assert not (target.root / MANIFEST["files"][0]["path"]).exists()
@@ -106,7 +106,7 @@ def test_fetch_unpacks_an_archive(tmp_path):
 
     report = fetch.fetch(target, f"file://{archive}")
 
-    assert (report.files, report.hashed, report.bad) == (11, 11, [])
+    assert (report.files, report.hashed, report.bad) == (12, 12, [])
     assert not (tmp_path / "sources" / ".minute-bars.staging").exists()
 
 
@@ -117,12 +117,12 @@ def test_verification_rehashes_only_changed_files_and_prepare_notices_them(tmp_p
     touched = target.root / MANIFEST["files"][3]["path"]
     os.utime(touched, ns=(0, 0))
 
-    with pytest.raises(ExternalError, match="1 of 11 files are missing, changed or not verified"):
+    with pytest.raises(ExternalError, match="1 of 12 files are missing, changed or not verified"):
         external.require_verified(target)
     report = external.verify(target)
 
     assert (report.hashed, report.bad) == (1, [])
-    assert len(external.require_verified(target)) == 11
+    assert len(external.require_verified(target)) == 12
 
 
 def test_verification_reports_missing_and_unlisted_files(tmp_path):

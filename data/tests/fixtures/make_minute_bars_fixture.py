@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Write the tiny external dataset the tests use: made-up minute bars in BFD's layout. No real data.
+"""Write the tiny external dataset the tests use: made-up minute bars and headlines in BFD's layout. No real data.
 
     uv run python tests/fixtures/make_minute_bars_fixture.py
 
 external/minute-bars/
   benchmark-bundle-manifest.json                        BFD's manifest: files, bytes, sha256
   market/stocks_1min/<SYMBOL>_full_1min_adjsplit.parquet
+  gdelt/headlines.parquet                               three made-up headlines in GDELT's columns
 sec/
   company_tickers_exchange.json, sic.json               a stub SEC snapshot for the made-up issuers
 
@@ -101,6 +102,23 @@ def bars(level: float, days: list[date]) -> pa.Table:
     return pa.Table.from_pylist(rows, schema=schema)
 
 
+def headlines() -> pa.Table:
+    """GDELT's article columns: an https link, a plain http link, and a blank headline that must be skipped."""
+    return pa.table(
+        {
+            "id": ["20260102140000-1", "20260102140000-2", "20260105090000-3"],
+            "date": pa.array([20260102140000, 20260102140000, 20260105090000], pa.int64()),
+            "source": ["example.com", "example.org", "example.net"],
+            "string": ["Central bank holds rates steady", "Port strike enters second week", "  "],
+            "embedding": pa.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]], pa.list_(pa.float32())),
+            "url": ["https://example.com/rates", "http://example.org/strike", "https://example.net/blank"],
+            "tone": [-1.5, -3.25, 0.0],
+            "cluster_id": pa.array([1, 2, 3], pa.int32()),
+            "cluster_label": ["1_bank_rates", "2_port_strike", "3_blank"],
+        }
+    )
+
+
 def main() -> None:
     root = HERE / "external" / "minute-bars"
     stocks = root / "market" / "stocks_1min"
@@ -108,13 +126,15 @@ def main() -> None:
     for symbol, (level, _) in SYMBOLS.items():
         days = {"XDDD": DATES[:1], "XCCC": sorted([*DATES, HOLIDAY])}.get(symbol, DATES)
         pq.write_table(bars(level, days), stocks / f"{symbol}_full_1min_adjsplit.parquet", compression="zstd")
+    (root / "gdelt").mkdir(exist_ok=True)
+    pq.write_table(headlines(), root / "gdelt" / "headlines.parquet", compression="zstd")
     files = [
         {
             "path": path.relative_to(root).as_posix(),
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         }
-        for path in sorted(stocks.glob("*.parquet"))
+        for path in sorted(root.glob("*/**/*.parquet"))
     ]
     fingerprint = hashlib.sha256(json.dumps(files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     manifest = {

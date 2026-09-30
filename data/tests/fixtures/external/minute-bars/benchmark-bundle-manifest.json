@@ -1,10 +1,15 @@
 {
   "format": "bfd-portable-benchmark-bundle",
   "version": 1,
-  "dataset_fingerprint": "bbcb20ed524c7ec6918793d94f972d3847b62fd31cb0851547ccb5dbce220a69",
-  "file_count": 11,
-  "total_bytes": 35995,
+  "dataset_fingerprint": "465b6196cfdb7962200073872a7877652ecd9651bf712e8664e32a140e75041d",
+  "file_count": 12,
+  "total_bytes": 39202,
   "files": [
+    {
+      "path": "gdelt/headlines.parquet",
+      "bytes": 3207,
+      "sha256": "51a272419e6b6fd8c32f76ed1bf2474a6accf623d39b3d4c7df6ecbe4be4298c"
+    },
     {
       "path": "market/stocks_1min/XAAA.P_full_1min_adjsplit.parquet",
       "bytes": 3289,

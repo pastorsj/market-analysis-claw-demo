@@ -5,8 +5,9 @@
  * Smoke tests against the production build (`npm run build` first).
  *
  * Three UI servers run from the same build: live mode against a fake API,
- * replay mode on the fixture data pack, and replay mode on the recordings
- * committed with the market-analysis pack. No screenshots or visual baselines.
+ * replay mode on the fixture data pack, and replay mode on the committed
+ * recordings (the retired market-analysis pack's, until the current packs are
+ * recorded). No screenshots or visual baselines.
  */
 
 import { defineConfig, devices } from '@playwright/test'

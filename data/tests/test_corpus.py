@@ -14,13 +14,19 @@ from pathlib import Path
 
 import pytest
 from conftest import FIXTURES
+from conftest import MINUTE_BARS
 
 from demo_data import corpus
-from demo_data.corpus import briefs
+from demo_data import external
 from demo_data.corpus import ecfr
 from demo_data.corpus import edgar
+from demo_data.corpus import gdelt
+from demo_data.corpus import markdown
 from demo_data.corpus.common import CorpusError
 from demo_data.corpus.common import Downloads
+from demo_data.pack import load_pack
+
+NOTES = FIXTURES / "packs" / "notes"
 
 
 def cached(downloads: Downloads, fixture: Path) -> str:
@@ -104,15 +110,17 @@ def edgar_manifest(tmp_path) -> tuple[Path, Downloads]:
         "filed_on": "2026-04-01",
         "source_url": "https://www.sec.gov/Archives/edgar/data/1/0000000001-26-000001.txt",
         "sha256": cached(downloads, FIXTURES / "edgar" / "submission.txt"),
+        "ticker": "EXMP",
+        "items": "1.05,9.01",
     }
-    return write_manifest(tmp_path / "edgar.json", {"source_id": "market_news", "filings": [filing]}), downloads
+    return write_manifest(tmp_path / "edgar.json", {"source_id": "sec_filings", "filings": [filing]}), downloads
 
 
 def test_edgar_keeps_the_primary_document_and_ex99_exhibits(edgar_manifest, monkeypatch):
     manifest, downloads = edgar_manifest
     monkeypatch.setenv("SEC_USER_AGENT", "Example Co admin@example.com")
 
-    primary, exhibit = edgar.documents("market_news", manifest, downloads)
+    primary, exhibit = edgar.documents("sec_filings", manifest, downloads)
 
     assert primary.document_id == "edgar:0000000001:0000000001-26-000001:example-8k.htm"
     assert primary.title == "EXAMPLE CORP 8-K: CURRENT REPORT"
@@ -120,6 +128,7 @@ def test_edgar_keeps_the_primary_document_and_ex99_exhibits(edgar_manifest, monk
     assert "track()" not in primary.text and "color" not in primary.text
     assert primary.published_at == "2026-04-01T00:00:00Z"
     assert primary.metadata["citation"] == "SEC 8-K, EXAMPLE CORP, filed 2026-04-01, accession 0000000001-26-000001"
+    assert (primary.metadata["ticker"], primary.metadata["items"]) == ("EXMP", "1.05,9.01")  # citation metadata only
     assert exhibit.metadata["document_type"] == "EX-99.1"
     assert exhibit.text.startswith("Example Corp announces that its operations were restored on April 1, 2026")
 
@@ -134,43 +143,60 @@ def test_edgar_needs_a_user_agent(edgar_manifest, monkeypatch):
     monkeypatch.delenv("SEC_USER_AGENT", raising=False)
 
     with pytest.raises(CorpusError, match="SEC_USER_AGENT"):
-        edgar.documents("market_news", manifest, downloads)
+        edgar.documents("sec_filings", manifest, downloads)
 
 
-def test_briefs_become_documents_with_front_matter_as_metadata(market_pack):
-    documents = briefs.documents("market_briefs", market_pack.path("documents/manifest.json"), None)
+def test_markdown_files_become_documents_with_front_matter_as_metadata():
+    first, second = markdown.documents("notes", NOTES / "documents" / "manifest.json", None)
 
-    assert len(documents) == 8
-    aether = documents[0]
-    assert aether.document_id == "aether-demand-update"  # joins main.news_articles.document_id
-    assert aether.title == "Aether Raises Accelerated-Compute Demand Outlook"
-    assert aether.published_at == "2026-08-18T13:30:00+00:00"
-    assert aether.text.startswith("> **Synthetic market evidence.**")
-    assert aether.metadata == {
-        "citation": "Aether Raises Accelerated-Compute Demand Outlook",
-        "document_type": "market_news",
-        "synthetic": True,
-        "article_id": "news-aether-demand-20260818",
-        "asset_id": "asset-aether",
-        "event_type": "guidance",
+    assert (first.document_id, second.document_id) == ("note-first", "note-second")
+    assert first.title == "First note"
+    assert first.published_at == "2026-09-01T12:00:00+00:00"
+    assert first.text.startswith("# First note")
+    assert first.metadata == {"citation": "First note", "asset_id": "asset-one"}
+
+
+def test_gdelt_headlines_are_read_in_place_from_the_verified_dataset(equities, tmp_path):
+    pack = load_pack(equities / "us-equities")  # pinned to the fixture dataset
+    world_news = pack.select_corpora(["world_news"])[0]
+    dataset = external.datasets(pack.manifest, tmp_path / "sources")["minute-bars"]
+    shutil.copytree(MINUTE_BARS, dataset.root)
+
+    with pytest.raises(external.ExternalError, match="not verified yet"):
+        corpus.dataset_files(pack, world_news, tmp_path / "sources")
+    external.verify(dataset)
+    files = corpus.dataset_files(pack, world_news, tmp_path / "sources")
+    rates, strike = gdelt.documents("world_news", files)  # the blank headline is skipped
+
+    assert files == [dataset.root / "gdelt" / "headlines.parquet"]
+    assert rates.document_id == "gdelt:20260102140000-1"
+    assert (rates.title, rates.text) == ("Central bank holds rates steady", "Central bank holds rates steady")
+    assert (rates.url, strike.url) == ("https://example.com/rates", None)  # only https links are kept
+    assert rates.published_at == "2026-01-02T14:00:00Z"
+    assert rates.metadata == {
+        "citation": "example.com, 2026-01-02 14:00 UTC (GDELT)",
+        "source_domain": "example.com",
+        "tone": -1.5,
+        "topic": "1_bank_rates",
     }
 
 
-def test_build_writes_sorted_valid_rows(market_pack, tmp_path):
-    counts = corpus.build(market_pack, market_pack.select_corpora(["market_briefs"]), Downloads(tmp_path), tmp_path)
+def test_build_writes_sorted_valid_rows(tmp_path):
+    notes = load_pack(NOTES)
+    counts = corpus.build(notes, notes.select_corpora(None), Downloads(tmp_path), tmp_path, sources_dir=tmp_path)
 
     rows = [json.loads(line) for line in (tmp_path / "corpus" / "documents.jsonl").read_text().splitlines()]
-    assert counts == {"market_briefs": 8}
+    assert counts == {"notes": 2}
     assert [row["document_id"] for row in rows] == sorted(row["document_id"] for row in rows)
     assert list(rows[0]) == ["document_id", "source_id", "title", "text", "url", "published_at", "metadata"]
 
 
-def test_document_rows_follow_the_schema(market_pack):
-    row = asdict(briefs.documents("market_briefs", market_pack.path("documents/manifest.json"), None)[0])
+def test_document_rows_follow_the_schema():
+    row = asdict(markdown.documents("notes", NOTES / "documents" / "manifest.json", None)[0])
     bad = [
         row | {"url": "http://example.com"},
         row | {"metadata": row["metadata"] | {"image": "chart.png"}},
-        row | {"metadata": {"asset_id": "asset-aether"}},
+        row | {"metadata": {"asset_id": "ACME"}},
     ]
 
     errors = corpus.document_errors([row, row, *bad])
