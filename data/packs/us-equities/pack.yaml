@@ -81,7 +81,7 @@ provenance:
     requires_env: [SEC_USER_AGENT]
     notes: >-
       Selected by corpus/select_filings.py from each issuer's EDGAR submissions: every 8-K reporting Item 1.05,
-      plus the latest 12 8-Ks of each of the 100 most liquid issuers.
+      plus the latest 12 8-Ks of each issuer of the 100 most liquid stocks.
 
 market:
   bars:

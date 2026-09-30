@@ -12,7 +12,7 @@
       "2025-01-02",
       "2026-03-12"
     ],
-    "rule": "every 8-K reporting Item 1.05 by any issuer in the pack, plus the latest 12 8-Ks of each of the 100 most liquid issuers; at most 1,500 filings",
+    "rule": "every 8-K reporting Item 1.05 by any issuer in the pack, plus the latest 12 8-Ks of each issuer of the 100 most liquid stocks; at most 1,500 filings",
     "script": "corpus/select_filings.py",
     "documents": "the primary document and EX-99 exhibits"
   },

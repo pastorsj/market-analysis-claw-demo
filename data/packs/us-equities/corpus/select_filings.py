@@ -8,9 +8,10 @@
         --out data/packs/us-equities/corpus/sec-edgar-issuers.manifest.json
 
 The rule: every 8-K filed in the window that reports Item 1.05 (a material cybersecurity incident) by any issuer
-in the pack, plus the latest PER_ISSUER 8-Ks in the window of each of the TOP most liquid issuers. Each issuer's
-8-Ks come from its EDGAR submissions, which list the items each 8-K reports. Every selected filing is downloaded
-once to pin its SHA-256; `--downloads <data dir>/downloads` keeps them, so `prepare` does not fetch them again.
+in the pack, plus the latest PER_ISSUER 8-Ks in the window of each issuer of the TOP most liquid stocks. Each
+issuer's 8-Ks come from its EDGAR submissions, which list the items each 8-K reports. Every selected filing is
+downloaded once to pin its SHA-256; `--downloads <data dir>/downloads` keeps them, so `prepare` does not fetch them
+again.
 
 This runs rarely, by hand: the manifest it writes is committed and reviewed. The filings remain a document source
 for retrieval. They are never turned into news or joined to the price tables; `ticker` is citation metadata.
@@ -100,7 +101,7 @@ def eight_ks(cik: int, pace: sec.Pace) -> list[dict[str, Any]]:
 
 
 def select(issuers: dict[int, tuple[str, int]], found: dict[int, list[dict[str, Any]]]) -> list[dict[str, Any]]:
-    """Every Item 1.05 8-K, then the TOP issuers' latest PER_ISSUER 8-Ks, most liquid first, up to CAP."""
+    """Every Item 1.05 8-K, then the latest PER_ISSUER 8-Ks of the TOP stocks' issuers, most liquid first, up to CAP."""
     cyber = [f for filings in found.values() for f in filings if CYBERSECURITY_ITEM in f["items"].split(",")]
     latest = [f for cik, (_, rank) in issuers.items() if rank <= TOP for f in found[cik][:PER_ISSUER]]
     chosen: dict[str, dict[str, Any]] = {}
@@ -142,7 +143,7 @@ def manifest(filings: list[dict[str, Any]]) -> dict[str, Any]:
             "forms": ["8-K"],
             "window": [str(START), str(END)],
             "rule": f"every 8-K reporting Item {CYBERSECURITY_ITEM} by any issuer in the pack, plus the latest "
-            f"{PER_ISSUER} 8-Ks of each of the {TOP} most liquid issuers; at most {CAP:,} filings",
+            f"{PER_ISSUER} 8-Ks of each issuer of the {TOP} most liquid stocks; at most {CAP:,} filings",
             "script": "corpus/select_filings.py",
             "documents": "the primary document and EX-99 exhibits",
         },
