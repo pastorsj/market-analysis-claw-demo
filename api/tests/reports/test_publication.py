@@ -51,6 +51,18 @@ def test_lenticular_tokens_and_bracketed_receipt_ids_are_citations(tool_registry
     assert report.invalid_evidence_ids == []
 
 
+def test_a_receipt_id_in_code_or_bold_is_a_citation(tool_registry):
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    scan = evidence[0].evidence_id
+    draft = f"PEAX led (evidence `{scan}`), again (**{scan}**); `hermes-receipt:{'0' * 64}` is not this run's."
+
+    report = publish_report(draft, evidence)
+
+    assert report.markdown.splitlines()[0] == "PEAX led (evidence [1]), again ([1]); is not this run's."
+    assert [c["evidenceId"] for c in report.citations] == [scan]
+    assert report.invalid_evidence_ids == [f"hermes-receipt:{'0' * 64}"]
+
+
 def test_unknown_evidence_is_removed_and_flagged(tool_registry):
     report = publish_report("A claim [evidence:hermes-receipt:unknown].", [])
 

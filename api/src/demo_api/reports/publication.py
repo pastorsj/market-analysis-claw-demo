@@ -20,12 +20,13 @@ from demo_api.registry import ToolRegistry
 from .markdown import normalize_web_markdown
 
 # A token or reference takes the spaces before it along when it is removed, so "claim [x]." reads "claim.".
-# Some models write the token in lenticular brackets, 【evidence:<id>】, as they learned to cite, or bracket a
-# receipt id without the "evidence:" prefix; both count too.
+# Some models write the token in lenticular brackets, 【evidence:<id>】, as they learned to cite, bracket a
+# receipt id without the "evidence:" prefix, or name the receipt id in code or bold in a prose source note
+# ("evidence `hermes-receipt:<id>`"); all count too.
 _EVIDENCE_TOKEN = re.compile(
-    r"(?P<lead>[ \t]*)(?:\[\[?|【)\s*"
+    r"(?P<lead>[ \t]*)(?:(?:\[\[?|【)\s*"
     r"(?:(?:evidence|source)\s*:\s*(?P<id>[A-Za-z0-9][A-Za-z0-9._:/-]{0,255})|(?P<receipt>hermes-receipt:[0-9a-f]{64}))"
-    r"\s*(?:\]?\]|】)",
+    r"\s*(?:\]?\]|】)|(?:`|\*\*)(?P<code>hermes-receipt:[0-9a-f]{64})(?:`|\*\*))",
     re.IGNORECASE,
 )
 _NUMBERED_REFERENCE = re.compile(r"[ \t]*\[[1-9][0-9]{0,3}\]")
@@ -115,7 +116,7 @@ def publish_report(draft: str, evidence: list[Citation]) -> PublishedReport:
     invalid: list[str] = []
 
     def resolve(match: re.Match[str]) -> str:
-        evidence_id = match["id"] or match["receipt"]
+        evidence_id = match["id"] or match["receipt"] or match["code"]
         item = by_id.get(evidence_id)
         if item is None and _BARE_SHA256.fullmatch(evidence_id):
             item = by_digest.get(evidence_id.casefold())  # the model dropped the "hermes-receipt:" prefix
