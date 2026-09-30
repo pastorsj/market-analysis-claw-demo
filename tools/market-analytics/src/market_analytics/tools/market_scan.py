@@ -30,18 +30,28 @@ def run(
     data: MarketData,
     *,
     universe_id: str,
-    start: datetime,
     end: datetime,
     metrics: list[Metric],
+    start: datetime | None = None,
+    sessions: int | None = None,
     comparison: Comparison = "absolute",
     direction: Direction = "highest",
     limit: int = 10,
 ) -> Output:
-    check_window(start, end)
     if len(set(metrics)) != len(metrics):
         raise InvalidRequest("metrics must be unique")
     prices = data.prices
-    bars = prices[prices["asset_id"].isin(data.universe(universe_id)) & prices["timestamp"].between(start, end)]
+    prices = prices[prices["asset_id"].isin(data.universe(universe_id))]
+    if sessions is not None:
+        # "The N sessions ending D": the N latest sessions on or before D. Selecting them by value keeps a
+        # timestamp read from the frame out of scalar comparisons, which cudf.pandas runs on the CPU.
+        latest = prices.loc[prices["timestamp"] <= end, "timestamp"].drop_duplicates().nlargest(sessions)
+        bars = prices[prices["timestamp"].isin(latest)]
+    elif start is None:
+        raise InvalidRequest("give start, or sessions for the sessions ending at end")
+    else:
+        check_window(start, end)
+        bars = prices[prices["timestamp"].between(start, end)]
     if bars.empty:
         payload = MarketScanPayload(
             universe_id=universe_id,

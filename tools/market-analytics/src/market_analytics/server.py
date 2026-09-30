@@ -115,9 +115,14 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
     async def market_scan(
         *,
         universe_id: UniverseId,
-        start: Start,
         end: End,
         metrics: Annotated[list[Metric], Field(min_length=1, max_length=4, description="The first metric ranks")],
+        start: Annotated[
+            AwareDatetime | None, Field(description="Window start, inclusive, with a timezone; omit it with sessions")
+        ] = None,
+        sessions: Annotated[
+            int | None, Field(ge=2, le=260, description="The number of trading sessions ending at end; replaces start")
+        ] = None,
         comparison: Annotated[
             Comparison, Field(description="Rank the value, its magnitude, or its z-score")
         ] = "absolute",
@@ -129,8 +134,8 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
 
         Use direction=highest for leaders and direction=lowest for laggards; make two calls when both ends of the
         ranking are needed. The other metrics are reported next to the ranking one. Returns and volatility are
-        fractions (0.25 is 25%; volatility is the daily standard deviation). observation_count is the number of
-        sessions in the window: for "the N sessions ending D", end at D and choose start so that it is N.
+        fractions (0.25 is 25%; volatility is the daily standard deviation). For "the N sessions ending D", pass
+        end=D and sessions=N instead of start.
         """
         return await run_in_worker(
             "market_scan",
@@ -139,6 +144,7 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
             universe_id=universe_id,
             start=start,
             end=end,
+            sessions=sessions,
             metrics=metrics,
             comparison=comparison,
             direction=direction,

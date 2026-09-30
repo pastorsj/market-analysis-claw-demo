@@ -54,6 +54,19 @@ def test_market_scan_zscore_centers_the_scores(data: MarketData) -> None:
     assert sum(scores) == pytest.approx(0, abs=1e-9)
 
 
+def test_market_scan_counts_the_sessions_ending_at_end(data: MarketData) -> None:
+    # "The 22 sessions ending June 30" are the 22 June sessions
+    by_dates = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], **JUNE)
+    by_count = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], sessions=22, end=JUNE["end"])
+    assert by_count["payload"] == by_dates["payload"]
+    assert {row["observation_count"] for row in by_count["payload"]["observations"]} == {22}
+    shorter = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], sessions=5, end=JUNE["end"])
+    assert {row["observation_count"] for row in shorter["payload"]["observations"]} == {5}
+
+    neither = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], end=JUNE["end"])
+    assert neither["error"]["code"] == "invalid_request"
+
+
 def test_market_scan_reports_an_empty_window_and_invalid_arguments(data: MarketData) -> None:
     empty = run(
         data,

@@ -43,6 +43,7 @@ WIRE_A = {"source_names": ["Wire A"]}
 CALLS = [
     ("market_scan", {"universe_id": "all_assets", "metrics": ["return", "volatility"], **JUNE}),
     ("market_scan", {"universe_id": "all_assets", "metrics": ["volume"], "comparison": "zscore", **JUNE}),
+    ("market_scan", {"universe_id": "all_assets", "metrics": ["return"], "sessions": 5, "end": JUNE["end"]}),
     (
         "market_anomaly_scan",
         {
