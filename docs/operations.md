@@ -265,9 +265,9 @@ profile and the default corpora. `up` needed nothing else installed.
    took 13 minutes, and one failed and succeeded when asked again, while build.nvidia.com answered most
    Nemotron 3 Ultra requests with "Service temporarily overloaded".
 
-   Once the stack was up, `check` passed 8 of 8, and the hero questions in
-   [models and routing](models-and-routing.md) (H1 to H7) each finished in 21 s to 3 minutes with citations
-   and a Phoenix trace.
+   Once the stack was up, `check` passed 8 of 8, and the seven hero questions of the retired `market-analysis`
+   pack ([models and routing](models-and-routing.md#the-earlier-bake-off-2026-09-29)) each finished in 21 s
+   to 3 minutes with citations and a Phoenix trace.
 6. **Footprint, and one GPU for both.** Sampled every 10 s with `df`, `free` and `nvidia-smi` through the
    install and the tests:
 

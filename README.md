@@ -258,7 +258,8 @@ Each component also has its own README with its environment and tests.
 - **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
 - **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
   person on one host.
-- **Measured once.** The routing bake-off ran each question once (12 questions, 6 arms); its limits are in
+- **A small bake-off.** The routing bake-off ran each question twice (17 questions, 5 arms), judged by one of
+  the models it compares; its limits are in
   [models and routing](docs/models-and-routing.md#limits-of-this-bake-off).
 
 ## Security considerations

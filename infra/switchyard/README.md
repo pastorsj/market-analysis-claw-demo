@@ -172,12 +172,12 @@ For the judge's reasons, set the `RUST_LOG` value above.
 ## Bake-off
 
 [`docs/models-and-routing.md`](../../docs/models-and-routing.md) has the method, the results and the
-recommendation. In short, on an OpenAI-compatible gateway serving Nemotron and GPT-6 models (2026-09-29, 12
-questions): GPT-6 Sol pinned passed 11, Nemotron 3 Ultra alone 6, Ultra → Sol escalation 6 (with a 50%
-false-latch rate), Super → Ultra 3, and the Nemotron 3.5 Super preview → Sol 5. build.nvidia.com serves no GPT
-model, so its default is `passthrough.nemotron` (Ultra alone); with a provider that serves GPT-6 Sol,
-`pinned-capable.nemotron-gpt` is the better choice. Each arm is an `.env` change plus
-`./scripts/demo.sh restart switchyard`, which also resets latches and `/v1/stats`.
+recommendation. In short (2026-09-30, both packs, 17 questions run twice per arm, Nemotron on
+build.nvidia.com and GPT-6 Sol from an OpenAI-compatible gateway): GPT-6 Sol pinned passed 24 of 34 runs,
+Nemotron 3 Ultra → Sol escalation with the tuned judge 20, Ultra alone 13, Super → Ultra 12, and the Nemotron
+3.5 Super preview 4. build.nvidia.com serves no GPT model, so its default is `passthrough.nemotron` (Ultra
+alone); with a provider that serves GPT-6 Sol, `pinned-capable.nemotron-gpt` is the better choice. Each arm
+is an `.env` change plus `./scripts/demo.sh restart switchyard`, which also resets latches and `/v1/stats`.
 
 ## Run and test
 
