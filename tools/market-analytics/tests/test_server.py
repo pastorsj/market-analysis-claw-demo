@@ -71,7 +71,10 @@ async def test_tools_are_listed_read_only_with_typed_schemas(pack: Pack, data: M
         assert "scope_grant" not in tool.input_schema["properties"]
         assert {"status", "payload", "engine", "timing", "rows_scanned"} <= set(tool.output_schema["properties"])
     assert listed["market_scan"].input_schema["properties"]["universe_id"]["enum"] == ["reviewed_assets", "all_assets"]
-    assert "from 2026-06-01 to 2026-08-06" in listed["analyze_market_relationships"].description
+    assert (
+        "from 2026-06-01 to 2026-08-06, whose links join every pair"
+        in listed["analyze_market_relationships"].description
+    )
 
 
 async def test_tools_without_their_data_say_so_in_their_descriptions(pack: Pack, daily_only: MarketData) -> None:

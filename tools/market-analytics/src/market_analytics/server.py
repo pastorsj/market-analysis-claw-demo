@@ -275,13 +275,16 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         )
 
     start, end = pack.graph_window
+    pairs = "declared same-industry peers" if pack.graph_mode == "sparse_declared_peers" else "every pair of assets"
 
     @server.tool(
         annotations=READ_ONLY,
         description=(
             f"Rank assets by PageRank centrality in the fixed graph of daily-return correlations from {start} to "
-            f"{end}, and list its strongest links. The graph covers the whole dataset and cannot be limited to a "
-            "universe or window; for correlations within a chosen group of assets, query the database instead."
+            f"{end}, whose links join {pairs}, and list its strongest links by absolute correlation: a negative "
+            "correlation means the two moved in opposite directions. The graph covers the whole dataset and cannot "
+            "be limited to a universe or window; for correlations within a chosen group of assets, query the "
+            "database instead."
         ),
     )
     async def analyze_market_relationships(
