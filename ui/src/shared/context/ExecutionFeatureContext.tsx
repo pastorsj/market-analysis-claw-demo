@@ -36,6 +36,10 @@ export interface ExecutionFocus {
 export interface ExecutionWorkspaceProps {
   jobId: string
   focus: ExecutionFocus | null
+  /** The question that started the job, when the conversation has it */
+  question?: string | null
+  /** Data sources selected for that question */
+  sourceIds?: string[]
   onClose: () => void
 }
 

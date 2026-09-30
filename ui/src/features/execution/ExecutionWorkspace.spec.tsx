@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@/test-utils'
+import { cleanup, fireEvent, render, screen, within } from '@/test-utils'
 import { ExecutionWorkspace } from './ExecutionWorkspace'
 import { useExecutionStore } from './store'
-import { fixtureEvents, receiptOf } from './test-utils/fixtures'
+import { fixtureEvents, readRecording, receiptOf } from './test-utils/fixtures'
+import type { ExecutionRecord } from './store'
 
 const JOB = fixtureEvents[0].jobId
 const turn = {
@@ -23,9 +24,10 @@ const renderWorkspace = (
   focus: { referenceId?: string } | null = null
 ) => {
   const onClose = vi.fn()
-  const view = render(<ExecutionWorkspace jobId={JOB} focus={focus} onClose={onClose} />, {
-    config: { mode },
-  })
+  const view = render(
+    <ExecutionWorkspace jobId={JOB} focus={focus} question={turn.question} onClose={onClose} />,
+    { config: { mode } }
+  )
   return { ...view, onClose }
 }
 
@@ -50,14 +52,15 @@ describe('ExecutionWorkspace', () => {
     expect(within(summary).getByText('106,217 tokens')).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'Inspect Market Anomaly Scan' }))
-    const explorer = screen.getByRole('region', { name: 'Market Anomaly Scan explorer' })
-    expect(
-      within(explorer).getByRole('img', { name: /Anomaly score by observation/ })
-    ).toBeVisible()
+    const explorer = screen.getByRole('dialog', { name: 'Market Anomaly Scan explorer' })
+    expect(within(explorer).getByText('NVIDIA GPU tool receipt')).toBeVisible()
+    expect(within(explorer).getByLabelText('Anomaly score ranking')).toBeVisible()
     // The explorer covers the graph, and the header gives way to it
     expect(screen.queryByRole('heading', { name: 'Execution Graph' })).toBeNull()
 
-    fireEvent.click(within(explorer).getByRole('button', { name: 'Close explorer' }))
+    fireEvent.click(
+      within(explorer).getByRole('button', { name: 'Close Market Anomaly Scan explorer' })
+    )
     fireEvent.click(screen.getByRole('button', { name: /Back to Answer/ }))
     expect(onClose).toHaveBeenCalled()
   })
@@ -76,7 +79,7 @@ describe('ExecutionWorkspace', () => {
     fireEvent.change(position, { target: { value: '3' } })
     expect(screen.getByText('Market Anomaly Scan started')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Inspect Market Anomaly Scan' }))
-    expect(screen.getByRole('region', { name: 'Market Anomaly Scan explorer' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: 'Market Anomaly Scan explorer' })).toBeVisible()
 
     // Moving on leaves the explorer's call behind
     fireEvent.click(screen.getByRole('button', { name: 'Next execution step' }))
@@ -91,10 +94,16 @@ describe('ExecutionWorkspace', () => {
       referenceId: receiptOf('retrieval_evidence').receiptId,
     })
 
-    const explorer = screen.getByRole('region', { name: 'Unstructured Retrieval explorer' })
-    expect(within(explorer).getByText('1. CB Financial Services, Inc. 8-K: 8-K')).toBeVisible()
-    fireEvent.click(within(explorer).getByRole('button', { name: 'Close explorer' }))
-    expect(screen.queryByRole('region', { name: 'Unstructured Retrieval explorer' })).toBeNull()
+    const details = 'Unstructured Retrieval execution details'
+    const explorer = screen.getByRole('dialog', { name: details })
+    expect(within(explorer).getByText(turn.question)).toBeVisible()
+    expect(within(explorer).getByText('market_news')).toBeVisible()
+    expect(within(explorer).getByText('Search query')).toBeVisible()
+    expect(within(explorer).getByTestId('execution-evidence-output')).toHaveTextContent(
+      'CB Financial Services'
+    )
+    fireEvent.click(within(explorer).getByRole('button', { name: `Close ${details}` }))
+    expect(screen.queryByRole('dialog', { name: details })).toBeNull()
 
     rerender(
       <ExecutionWorkspace
@@ -103,7 +112,44 @@ describe('ExecutionWorkspace', () => {
         onClose={vi.fn()}
       />
     )
-    expect(screen.getByRole('region', { name: 'Market Anomaly Scan explorer' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: 'Market Anomaly Scan explorer' })).toBeVisible()
+  })
+
+  it('opens each node’s own explorer: agent, ontology lineage, Kumo and database', () => {
+    const [sqlTurn, predictionTurn] = (
+      readRecording('sessions/structured-evidence.json') as { turns: ExecutionRecord[] }
+    ).turns
+    useExecutionStore.getState().addRecord(turn)
+    useExecutionStore.getState().addRecord(sqlTurn)
+    useExecutionStore.getState().addRecord(predictionTurn)
+
+    renderWorkspace('replay')
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Hermes Agent' }))
+    const agent = screen.getByRole('dialog', { name: 'Hermes Agent execution details' })
+    expect(within(agent).getAllByTestId('execution-evidence-call')).toHaveLength(2)
+    cleanup()
+
+    render(<ExecutionWorkspace jobId={sqlTurn.jobId} focus={null} onClose={vi.fn()} />, {
+      config: { mode: 'replay' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Auto Ontology' }))
+    expect(screen.getByRole('dialog', { name: 'Auto Ontology text-to-SQL details' })).toBeVisible()
+    // Replay has no API: no query to open, and no database to browse
+    expect(screen.queryByRole('button', { name: 'Open in Data Viewer' })).toBeNull()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Structured Database' }))
+    expect(screen.getByRole('dialog', { name: 'Structured Database browser' })).toHaveTextContent(
+      'No run-scoped structured database is available for this execution.'
+    )
+    cleanup()
+
+    render(<ExecutionWorkspace jobId={predictionTurn.jobId} focus={null} onClose={vi.fn()} />, {
+      config: { mode: 'replay' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect NVIDIA Kumo' }))
+    const kumo = screen.getByRole('dialog', { name: 'NVIDIA Kumo execution details' })
+    expect(within(kumo).getByRole('heading', { name: 'NVIDIA Kumo Prediction' })).toBeVisible()
+    expect(within(kumo).getByText('Generated PQL')).toBeVisible()
   })
 
   it('loads a live run from the job export', async () => {

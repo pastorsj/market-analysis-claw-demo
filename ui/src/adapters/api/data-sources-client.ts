@@ -16,6 +16,8 @@ export interface DataSourceFromAPI {
   description?: string | null
   /** Whether the source starts enabled (defaults to true) */
   default_enabled?: boolean
+  /** The structured source's database; null for document sources */
+  database_name?: string | null
 }
 
 /**

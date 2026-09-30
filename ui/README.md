@@ -53,10 +53,8 @@ The execution view (graph, capability explorers, timeline, replay) lives in
 with `noExecutionFeature` and simply hides those parts.
 
 The execution graph is a fixed topology drawn with plain HTML and SVG, with its
-own pan and zoom. The smaller graphs in the explorers and the data viewer
-(ontology lineage, table relationships) render with `@xyflow/react` 12.12.0
-(exact pin), loaded with `next/dynamic`; its stylesheet is imported once in
-`src/app/globals.css`.
+own pan and zoom. The explorers and the data viewer are drawn the same way, with
+no graph library.
 
 ## Configuration
 

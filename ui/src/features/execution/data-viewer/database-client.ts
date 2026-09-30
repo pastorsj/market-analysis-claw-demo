@@ -4,59 +4,85 @@
 /**
  * The API's read-only view of a structured data source (live mode):
  *
- * - `GET  /v1/data_sources/{id}/schema`                  tables, columns, relationships
+ * - `GET  /v1/data_sources/{id}/schema`                  tables, views, columns, keys
  * - `GET  /v1/data_sources/{id}/preview?table=&limit=`   first rows of a table
  * - `POST /v1/data_sources/{id}/query` `{sql}`           one bounded read-only query
- * - `GET  /v1/data_sources/{id}/ontology`                Auto Ontology's graph (ontology profile)
  *
- * The API bounds every result; errors come back as `{detail}`.
+ * The API bounds every result; errors come back as `{detail}`. Every pack's
+ * structured source is one DuckDB database.
  */
 
 export type Value = string | number | boolean | null
 
-export interface ColumnInfo {
+export interface DatabaseColumn {
   name: string
-  type: string
-  description?: string | null
+  dataType: string
+  nullable?: boolean
+  primaryKey?: boolean
 }
 
-export interface TableInfo {
+export interface DatabaseTable {
+  /** Bare table name */
   name: string
-  description?: string | null
-  columns: ColumnInfo[]
+  schemaName: string
+  /** How queries and previews name it: bare in `main`, `schema.table` elsewhere */
+  qualifiedName: string
+  tableType: string
+  columns: DatabaseColumn[]
 }
 
-export interface Relationship {
-  from_table: string
-  from_column: string
-  to_table: string
-  to_column: string
+export interface DatabaseRelationship {
+  /** `schema.table.column` of the foreign key */
+  source: string
+  /** `schema.table.column` it references */
+  target: string
+  sourceTable: string
+  targetTable: string
 }
 
-export interface DatabaseSchema {
-  source_id: string
-  database_name: string
-  tables: TableInfo[]
-  relationships: Relationship[]
+export interface DatabaseSnapshot {
+  sourceId: string
+  databaseName: string
+  provider: string
+  schemas: Array<{ name: string; tables: DatabaseTable[] }>
+  relationships: DatabaseRelationship[]
 }
 
 export interface QueryResult {
+  columns: Array<{ name: string; dataType: string | null }>
+  rows: Value[][]
+  truncated: boolean
+  durationMs: number
+}
+
+/** `GET /schema` as the API sends it. */
+interface SchemaResponse {
+  source_id: string
+  database_name: string
+  tables: Array<{
+    name: string
+    schema: string
+    kind: string
+    columns: Array<{ name: string; type: string; nullable?: boolean; primary_key?: boolean }>
+  }>
+  relationships: Array<{
+    from_table: string
+    from_column: string
+    to_table: string
+    to_column: string
+  }>
+}
+
+/** `GET /preview` and `POST /query` as the API sends them. */
+interface QueryResponse {
   columns: string[]
+  types?: string[]
   rows: Value[][]
   truncated: boolean
   duration_ms: number
 }
 
-/** The parts of the API's `OntologySnapshot` the viewer draws. */
-export interface OntologySnapshot {
-  truncated: boolean
-  /** `kind` is e.g. `table`, `column` or `term` (an ontology object) */
-  nodes: { id: string; kind: string; label: string }[]
-  /** `kind` is e.g. `represents` (term → table) or `contains` */
-  edges: { kind: string; source: string; target: string }[]
-}
-
-const PREVIEW_ROWS = 20
+export const PREVIEW_ROWS = 8
 
 const sourceUrl = (sourceId: string) => `/api/v1/data_sources/${encodeURIComponent(sourceId)}`
 
@@ -74,38 +100,83 @@ const readBody = async <T>(response: Response): Promise<T> => {
 const request = async <T>(url: string, init?: RequestInit): Promise<T> =>
   readBody<T>(await fetch(url, { cache: 'no-store', ...init }))
 
-export const getSchema = (sourceId: string, signal?: AbortSignal): Promise<DatabaseSchema> =>
-  request(`${sourceUrl(sourceId)}/schema`, { signal })
+const toSnapshot = (schema: SchemaResponse): DatabaseSnapshot => {
+  const schemas = new Map<string, DatabaseTable[]>()
+  for (const table of schema.tables) {
+    const tables = schemas.get(table.schema) ?? []
+    tables.push({
+      name: table.name.slice(table.name.lastIndexOf('.') + 1),
+      schemaName: table.schema,
+      qualifiedName: table.name,
+      tableType: table.kind,
+      columns: table.columns.map((column) => ({
+        name: column.name,
+        dataType: column.type,
+        nullable: column.nullable,
+        primaryKey: column.primary_key,
+      })),
+    })
+    schemas.set(table.schema, tables)
+  }
+  // Relationships name each column in full: schema.table.column
+  const fullName = new Map(
+    [...schemas.values()]
+      .flat()
+      .map((table) => [table.qualifiedName, `${table.schemaName}.${table.name}`])
+  )
+  const column = (table: string, name: string): string => `${fullName.get(table) ?? table}.${name}`
+  return {
+    sourceId: schema.source_id,
+    databaseName: schema.database_name,
+    provider: 'duckdb',
+    schemas: [...schemas].map(([name, tables]) => ({ name, tables })),
+    relationships: schema.relationships.map((relationship) => ({
+      source: column(relationship.from_table, relationship.from_column),
+      target: column(relationship.to_table, relationship.to_column),
+      sourceTable: relationship.from_table,
+      targetTable: relationship.to_table,
+    })),
+  }
+}
 
-export const getPreview = (
+const toResult = (response: QueryResponse): QueryResult => ({
+  columns: response.columns.map((name, index) => ({
+    name,
+    dataType: response.types?.[index] ?? null,
+  })),
+  rows: response.rows,
+  truncated: response.truncated,
+  durationMs: response.duration_ms,
+})
+
+export const getSnapshot = async (
+  sourceId: string,
+  signal?: AbortSignal
+): Promise<DatabaseSnapshot> =>
+  toSnapshot(await request<SchemaResponse>(`${sourceUrl(sourceId)}/schema`, { signal }))
+
+export const getPreview = async (
   sourceId: string,
   table: string,
   signal?: AbortSignal
 ): Promise<QueryResult> =>
-  request(
-    `${sourceUrl(sourceId)}/preview?table=${encodeURIComponent(table)}&limit=${PREVIEW_ROWS}`,
-    {
-      signal,
-    }
+  toResult(
+    await request<QueryResponse>(
+      `${sourceUrl(sourceId)}/preview?table=${encodeURIComponent(table)}&limit=${PREVIEW_ROWS}`,
+      { signal }
+    )
   )
 
-export const runQuery = (
+export const runQuery = async (
   sourceId: string,
   sql: string,
   signal?: AbortSignal
 ): Promise<QueryResult> =>
-  request(`${sourceUrl(sourceId)}/query`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sql }),
-    signal,
-  })
-
-/** Null when there is no ontology: the API answers 404 unless Auto Ontology is running. */
-export const getOntology = async (
-  sourceId: string,
-  signal?: AbortSignal
-): Promise<OntologySnapshot | null> => {
-  const response = await fetch(`${sourceUrl(sourceId)}/ontology`, { cache: 'no-store', signal })
-  return response.status === 404 ? null : readBody<OntologySnapshot>(response)
-}
+  toResult(
+    await request<QueryResponse>(`${sourceUrl(sourceId)}/query`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sql }),
+      signal,
+    })
+  )

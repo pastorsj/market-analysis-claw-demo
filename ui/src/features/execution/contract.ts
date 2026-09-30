@@ -14,10 +14,14 @@ import type { ReceiptV2 } from '@/generated/receipt'
 
 export type { ExecutionEventV2 } from '@/generated/execution-event'
 export type {
+  AnalyticsResult,
   AnalyticsResultReceipt,
   ReceiptV2,
+  RetrievalEvidence,
   RetrievalEvidenceReceipt,
+  StructuredPrediction,
   StructuredPredictionReceipt,
+  StructuredQuery,
   StructuredQueryReceipt,
 } from '@/generated/receipt'
 

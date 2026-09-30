@@ -128,6 +128,7 @@ def execute(payload: dict[str, Any]) -> dict[str, Any]:
         rows = result.fetchall()
         response = {
             "columns": [str(item[0])[:256] for item in result.description],
+            "types": [str(item[1])[:64] for item in result.description],
             "rows": [[display_cell(cell) for cell in row] for row in rows[:max_rows]],
             "truncated": len(rows) > max_rows,
         }

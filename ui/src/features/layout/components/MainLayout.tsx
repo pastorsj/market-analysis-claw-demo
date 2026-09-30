@@ -29,7 +29,7 @@ import { ChatArea } from './ChatArea'
 import { InputArea } from './InputArea'
 import { ResearchPanel } from './ResearchPanel'
 import { DataSourcesPanel } from './DataSourcesPanel'
-import { useChatStore, useDeepResearch, NoSourcesBanner } from '@/features/chat'
+import { useChatStore, useDeepResearch, NoSourcesBanner, type ChatMessage } from '@/features/chat'
 import {
   hasActiveDeepResearchJob,
   hasCompletedDeepResearchReport,
@@ -47,6 +47,17 @@ export interface InitialQuestion {
 
 interface MainLayoutProps {
   initialQuestion?: InitialQuestion | null
+}
+
+/** The question, and its data sources, that started a job in this conversation. */
+const turnOfJob = (
+  messages: readonly ChatMessage[] | undefined,
+  jobId: string | undefined
+): { question: string; sourceIds: string[] } | null => {
+  const answer = messages?.findIndex((message) => message.deepResearchJobId === jobId) ?? -1
+  if (!messages || !jobId || answer < 0) return null
+  const asked = messages.slice(0, answer).findLast((message) => message.role === 'user')
+  return asked ? { question: asked.content, sourceIds: asked.enabledDataSources ?? [] } : null
 }
 
 /**
@@ -87,6 +98,10 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
   const closeExecution = useLayoutStore((s) => s.closeExecution)
   const availableDataSources = useLayoutStore((s) => s.availableDataSources)
   const executionOpen = Boolean(Workspace && execution)
+  const executionTurn = useMemo(
+    () => turnOfJob(currentConversation?.messages, execution?.jobId),
+    [currentConversation?.messages, execution?.jobId]
+  )
 
   // Follows the current job's SSE stream
   useDeepResearch()
@@ -221,6 +236,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
               key={execution.jobId}
               jobId={execution.jobId}
               focus={execution.focus}
+              question={executionTurn?.question ?? null}
+              sourceIds={executionTurn?.sourceIds}
               onClose={closeExecution}
             />
           </div>

@@ -92,10 +92,7 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
 
 ### Dependencies
 
-- Added: `uuid` (was imported but undeclared), `@playwright/test`, and
-  `@xyflow/react` 12.12.0 (exact pin, MIT) for the lineage and table graphs in
-  the explorers and the data viewer. Its CSS is imported once in `globals.css`,
-  and the React Flow attribution stays visible.
+- Added: `uuid` (was imported but undeclared) and `@playwright/test`.
 - Removed: `next-auth`, `@react-pdf/renderer`, `marked`, `http-proxy`,
   `concurrently`, `husky`, `msw`, `@mswjs/data`, `@faker-js/faker`,
   `@types/uuid`, `autoprefixer`.

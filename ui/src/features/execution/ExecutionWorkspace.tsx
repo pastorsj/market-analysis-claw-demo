@@ -12,11 +12,19 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useLayoutStore } from '@/features/layout/store'
 import { useAppConfig, type ExecutionFocus, type ExecutionWorkspaceProps } from '@/shared/context'
-import type { ExecutionEventV2, ReceiptV2 } from './contract'
-import { DatabaseBrowser } from './data-viewer/DatabaseBrowser'
+import type {
+  AnalyticsResultReceipt,
+  ExecutionEventV2,
+  ReceiptV2,
+  StructuredQueryReceipt,
+} from './contract'
+import { DatabaseBrowser, type StructuredSource } from './data-viewer/DatabaseBrowser'
 import styles from './execution-workspace.module.css'
-import { CapabilityExplorer } from './explorers/CapabilityExplorer'
+import { EvidenceInspector } from './explorers/EvidenceInspector'
+import { MarketToolExplorer } from './explorers/MarketToolExplorer'
+import { OntologyLineageInspector } from './explorers/OntologyLineageInspector'
 import { elapsedMs } from './format'
 import {
   buildExecutionGraphViewModel,
@@ -34,6 +42,7 @@ import {
   type InspectableExecutionNodeId,
 } from './graph'
 import { projectRun, runEnded, type RunProjection, type ToolCall } from './projection'
+import { OPERATION_LABELS } from './receipt-summary'
 import { TOOL_LOGOS, toolFor, type NodeLogo } from './registry'
 import { ReplayControls } from './replay/ReplayControls'
 import { loadJobExport } from './replay/sources'
@@ -105,6 +114,49 @@ const structuredSourcesOf = (receipts: Record<string, ReceiptV2>): string[] => [
     )
   ),
 ]
+
+/** The market analytics nodes, each explored one call at a time. */
+const MARKET_NODES: ReadonlySet<InspectableExecutionNodeId> = new Set([
+  'market-scan',
+  'market-anomaly-scan',
+  'price-context',
+  'sentiment-timeline',
+  'news-price-relationship',
+  'market-relationship-analysis',
+])
+
+const isAnalytics = (receipt: ReceiptV2): receipt is AnalyticsResultReceipt =>
+  receipt.artifactKind === 'analytics_result'
+
+const isStructuredQuery = (receipt: ReceiptV2): receipt is StructuredQueryReceipt =>
+  receipt.artifactKind === 'structured_query'
+
+/**
+ * The structured sources the data viewer can browse: the pack's sources with a
+ * database that the question selected or a receipt read.
+ */
+const browsableSources = (
+  available: ReadonlyArray<{ id: string; name: string; database_name?: string | null }>,
+  sourceIds: readonly string[],
+  receipts: readonly ReceiptV2[]
+): StructuredSource[] => {
+  const used = new Set([
+    ...sourceIds,
+    ...receipts.flatMap((receipt) =>
+      isAnalytics(receipt) && receipt.content ? [receipt.content.sourceId] : []
+    ),
+  ])
+  const databases = new Set(
+    receipts.flatMap((receipt) =>
+      isStructuredQuery(receipt) && receipt.content ? [receipt.content.databaseName] : []
+    )
+  )
+  return available.flatMap((source) =>
+    source.database_name && (used.has(source.id) || databases.has(source.database_name))
+      ? [{ id: source.id, name: source.name, databaseName: source.database_name }]
+      : []
+  )
+}
 
 /** The logos of each node whose tool is built on a library, from the registry. */
 const NODE_LOGOS: ReadonlyMap<string, readonly NodeLogo[]> = new Map(
@@ -337,10 +389,13 @@ const ReplayScopedInspectorNotice = ({
 export const ExecutionWorkspace = ({
   jobId,
   focus,
+  question = null,
+  sourceIds = [],
   onClose,
 }: ExecutionWorkspaceProps): ReactNode => {
-  const { mode, phoenixUrl } = useAppConfig()
+  const { mode } = useAppConfig()
   const liveMode = mode === 'live'
+  const availableDataSources = useLayoutStore((state) => state.availableDataSources)
   const stored = useExecutionRun(jobId)
   const events = stored?.events ?? NO_EVENTS
   const receipts = stored?.receipts ?? NO_RECEIPTS
@@ -414,7 +469,8 @@ export const ExecutionWorkspace = ({
 
   // A cited source opens its node. Choosing or closing a node wins until another citation.
   const [selectedNodeId, setSelectedNodeId] = useState<InspectableExecutionNodeId | null>(null)
-  const [sql, setSql] = useState<string | null>(null)
+  // An Auto Ontology call opened in the data viewer from its explorer
+  const [queryReceipt, setQueryReceipt] = useState<StructuredQueryReceipt | null>(null)
   const focusKey = focus ? `${focus.invocationId ?? ''}|${focus.referenceId ?? ''}` : null
   const focusCall = focusedCall(whole, focus)
   const focusNodeId = focusCall ? nodeOfCall(focusCall, events) : null
@@ -447,9 +503,10 @@ export const ExecutionWorkspace = ({
   }, [allGraphEvents, replay.step, selectedNodeId])
 
   const closeInspector = useCallback((): void => {
-    setSql(null)
+    setQueryReceipt(null)
     setSelectedNodeId(null)
   }, [])
+  const closeQuery = useCallback((): void => setQueryReceipt(null), [])
   const handleNodeSelect = (nodeId: InspectableExecutionNodeId): void => {
     const node = graph.nodes.find((candidate) => candidate.id === nodeId)
     if (
@@ -459,7 +516,7 @@ export const ExecutionWorkspace = ({
     ) {
       return
     }
-    setSql(null)
+    setQueryReceipt(null)
     setSelectedNodeId(nodeId)
   }
 
@@ -482,9 +539,34 @@ export const ExecutionWorkspace = ({
         ?.component ?? 'tool')
     : 'agent'
 
+  // The receipts behind the chosen node: all of them once the run has ended, else those of the
+  // call at the replay position. The agent's explorer lists every call it made.
+  const inspectorReceipts = useMemo(() => {
+    if (!selectedDetail) return []
+    const refs =
+      selectedDetail.id === 'hermes-agent'
+        ? shown.toolCalls.flatMap((call) => call.receiptIds)
+        : selectedDetail.artifactRefs
+    const all = [...new Set(refs)].flatMap((id) => receipts[id] ?? [])
+    if (terminalInspection) return all
+    const invocationId = currentEvent?.invocationId
+    return invocationId ? all.filter((receipt) => receipt.invocationId === invocationId) : []
+  }, [currentEvent?.invocationId, receipts, selectedDetail, shown, terminalInspection])
+  const browsable = useMemo(
+    () =>
+      liveMode
+        ? browsableSources(availableDataSources ?? [], sourceIds, Object.values(receipts))
+        : [],
+    [availableDataSources, liveMode, receipts, sourceIds]
+  )
+  // Receipts load from the job export in live mode
+  const receiptsLoading =
+    exportState === 'loading' && Boolean(selectedDetail?.artifactRefs.some((id) => !receipts[id]))
+  const activeCursor = currentEvent?.cursor != null ? String(currentEvent.cursor) : '0'
+  const focusedInvocationId = focusCall?.invocationId ?? null
+
   const graphLayerRef = useRef<HTMLDivElement>(null)
-  const dataViewerOpen = sql !== null || (selectedDetail?.id === 'structured-database' && liveMode)
-  const inspectorOpen = Boolean(selectedDetail) || dataViewerOpen
+  const inspectorOpen = Boolean(selectedDetail)
   useEffect(() => {
     const layer = graphLayerRef.current
     if (!layer) return
@@ -502,30 +584,7 @@ export const ExecutionWorkspace = ({
       : 'Hermes Recorded'
 
   let inspector: ReactNode = null
-  if (dataViewerOpen) {
-    inspector = (
-      <section
-        className={styles.capabilityExplorer}
-        aria-label="Structured database"
-        data-testid="capability-explorer"
-      >
-        <div className="flex justify-end px-4 pt-3">
-          <button
-            type="button"
-            className={styles.iconButton}
-            // Back to the explorer the query came from, else close
-            onClick={sql !== null && selectedDetail ? () => setSql(null) : closeInspector}
-            aria-label="Close the data viewer"
-          >
-            ×
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <DatabaseBrowser sourceIds={structuredSources} sql={sql ?? ''} onSqlChange={setSql} />
-        </div>
-      </section>
-    )
-  } else if (selectedDetail && !selectedInspectorActive) {
+  if (selectedDetail && !selectedInspectorActive) {
     inspector = (
       <ReplayScopedInspectorNotice
         detail={selectedDetail}
@@ -535,31 +594,60 @@ export const ExecutionWorkspace = ({
         onClose={closeInspector}
       />
     )
-  } else if (selectedDetail) {
-    const invocationIds = new Set(selectedDetail.invocations.map((call) => call.invocationId))
-    // The agent's explorer lists every call it made
-    const calls = shown.toolCalls.filter(
-      (call) => selectedDetail.id === 'hermes-agent' || invocationIds.has(call.invocationId)
-    )
-    const tools = new Set(calls.map((call) => call.tool?.id))
-    const description =
-      tools.size === 1 && calls[0]?.tool ? calls[0].tool.description : selectedDetail.subtitle
+  } else if (selectedDetail && (selectedDetail.id === 'structured-database' || queryReceipt)) {
     inspector = (
-      <div className={styles.capabilityExplorer} data-testid="capability-explorer">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <CapabilityExplorer
-            key={selectedDetail.id}
-            title={selectedDetail.label}
-            description={description}
-            calls={calls}
-            receipts={receipts}
-            focusReceiptId={focus?.referenceId ?? null}
-            phoenixUrl={liveMode ? phoenixUrl : null}
-            onOpenQuery={liveMode ? setSql : undefined}
-            onClose={closeInspector}
-          />
-        </div>
-      </div>
+      <DatabaseBrowser
+        detail={selectedDetail}
+        cursor={activeCursor}
+        sources={browsable}
+        receipts={Object.values(receipts).filter(isStructuredQuery)}
+        initialReceipt={queryReceipt}
+        onClose={queryReceipt ? closeQuery : closeInspector}
+      />
+    )
+  } else if (selectedDetail?.id === 'nvidia-ontology') {
+    inspector = (
+      <OntologyLineageInspector
+        key={handledFocusKey ?? undefined}
+        detail={selectedDetail}
+        cursor={activeCursor}
+        question={question}
+        receipts={inspectorReceipts.filter(isStructuredQuery)}
+        loading={receiptsLoading}
+        preferredInvocationId={focusedInvocationId}
+        queryDatabases={browsable.map((source) => source.databaseName)}
+        onOpenQuery={(receipt) => {
+          replay.pause()
+          setQueryReceipt(receipt)
+        }}
+        onClose={closeInspector}
+      />
+    )
+  } else if (selectedDetail && MARKET_NODES.has(selectedDetail.id)) {
+    const analytics = inspectorReceipts.filter(isAnalytics)
+    const operation = analytics.find((receipt) => receipt.content)?.content?.operationId
+    inspector = (
+      <MarketToolExplorer
+        key={`${selectedDetail.id}:${handledFocusKey}`}
+        nodeId={selectedDetail.id}
+        title={operation ? OPERATION_LABELS[operation] : selectedDetail.label}
+        cursor={activeCursor}
+        receipts={analytics}
+        preferredInvocationId={focusedInvocationId}
+        loading={receiptsLoading}
+        onClose={closeInspector}
+      />
+    )
+  } else if (selectedDetail) {
+    inspector = (
+      <EvidenceInspector
+        detail={selectedDetail}
+        cursor={activeCursor}
+        question={question}
+        receipts={inspectorReceipts}
+        loading={receiptsLoading}
+        onClose={closeInspector}
+      />
     )
   }
 

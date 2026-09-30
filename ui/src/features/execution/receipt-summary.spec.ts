@@ -1,0 +1,131 @@
+// SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+import { describe, expect, it } from 'vitest'
+import type { AnalyticsResultReceipt } from './contract'
+import { receiptOutputCount, summarizeReceipt } from './receipt-summary'
+import { receiptOf } from './test-utils/fixtures'
+
+const analytics = (
+  operationId: NonNullable<AnalyticsResultReceipt['content']>['operationId'],
+  payload: Record<string, unknown>
+): AnalyticsResultReceipt => {
+  const receipt = receiptOf('analytics_result')
+  return { ...receipt, content: { ...receipt.content!, operationId, payload } }
+}
+
+describe('summarizeReceipt', () => {
+  it('describes a retrieval: sources, index, models, timings, the query and its passages', () => {
+    const summary = summarizeReceipt(receiptOf('retrieval_evidence'))
+    const content = receiptOf('retrieval_evidence').content!
+
+    expect(summary.title).toBe('Unstructured retrieval result')
+    expect(summary.summary).toMatch(/^\d+ passages? displayed from \d+ candidates?\.$/)
+    expect(summary.details).toEqual(
+      expect.arrayContaining([
+        'Sources: market_news',
+        `Collection: ${content.collection}`,
+        `Embedding model: ${content.models.embed}`,
+        `Total retrieval: ${content.timings.totalMs.toFixed(1)} ms`,
+      ])
+    )
+    expect(summary.statement).toMatchObject({ label: 'Search query', language: 'text' })
+    expect(summary.output?.kind).toBe('passages')
+    if (summary.output?.kind !== 'passages') return
+    expect(summary.output.passages[0]).toMatchObject({ source: content.hits[0].title })
+    expect(summary.output.passages[0].metadata).toContain(`Rerank score: ${content.hits[0].score}`)
+  })
+
+  it('describes an Auto Ontology answer: its SQL and its rows', () => {
+    const content = receiptOf('structured_query').content!
+    const summary = summarizeReceipt(receiptOf('structured_query'))
+
+    expect(summary.title).toBe('Structured result')
+    expect(summary.details).toEqual(['Database: market_analysis'])
+    expect(summary.statement).toMatchObject({ label: 'Generated SQL', language: 'sql' })
+    expect(summary.output).toMatchObject({
+      kind: 'table',
+      label: 'Query result',
+      displayedCount: content.rows.length,
+    })
+  })
+
+  it('describes a Kumo prediction: its PQL, template and scored assets', () => {
+    const summary = summarizeReceipt(receiptOf('structured_prediction'))
+
+    expect(summary.summary).toMatch(/^\d+ predictions returned\.$/)
+    expect(summary.details).toEqual(
+      expect.arrayContaining(['Template: news_event', 'Horizon: 5 days'])
+    )
+    expect(summary.statement).toMatchObject({ label: 'Generated PQL', language: 'pql' })
+    expect(summary.output).toMatchObject({ columns: ['asset_id', 'probability'] })
+  })
+
+  it('reports a failed call without its content', () => {
+    const summary = summarizeReceipt(receiptOf('structured_prediction', 'failed'))
+    expect(summary).toMatchObject({
+      title: 'Tool result',
+      summary: 'The tool call ended with a failure.',
+    })
+    expect(summary.output).toBeUndefined()
+  })
+
+  it('describes each market operation by its own rows and facts', () => {
+    const anomaly = summarizeReceipt(receiptOf('analytics_result'))
+    expect(anomaly.summary).toBe('5 ranked anomaly observations returned.')
+    expect(anomaly.details).toEqual(
+      expect.arrayContaining([
+        'Engine: cuml.accel 26.6.0 (GPU)',
+        'Training observations: 1476',
+        'Flagged observations: 31',
+      ])
+    )
+    expect(anomaly.statement).toMatchObject({ label: 'Public parameters', language: 'json' })
+
+    const scan = summarizeReceipt(
+      analytics('market_scan', {
+        assets_ranked: 12,
+        observations: [{ rank: 1, asset_id: 'a', score: 0.1, values: { return: 0.1 } }],
+      })
+    )
+    expect(scan.summary).toBe('1 row returned from 12 source rows.')
+    expect(scan.output).toMatchObject({ truncated: true, sourceCount: 12 })
+
+    const network = summarizeReceipt(
+      analytics('analyze_market_relationships', {
+        window_start: '2026-06-01',
+        window_end: '2026-08-31',
+        node_count: 12,
+        edge_count: 40,
+        central_assets: [{ rank: 1, asset_id: 'a', centrality: 0.2 }],
+        strongest_edges: [],
+      })
+    )
+    expect(network.summary).toBe('1 ranked asset returned.')
+    expect(network.details).toContain('Window: 2026-06-01 to 2026-08-31')
+  })
+
+  it('counts rows or passages, and says when they are a part of more', () => {
+    expect(
+      receiptOutputCount({
+        kind: 'table',
+        label: 'Query result',
+        columns: [],
+        rows: [],
+        displayedCount: 8,
+        sourceCount: 8,
+        truncated: false,
+      })
+    ).toBe('8 rows')
+    expect(
+      receiptOutputCount({
+        kind: 'passages',
+        label: 'Retrieved passages',
+        passages: [],
+        displayedCount: 1,
+        sourceCount: 32,
+        truncated: true,
+      })
+    ).toBe('1 passage of 32')
+  })
+})

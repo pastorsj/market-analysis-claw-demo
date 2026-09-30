@@ -74,7 +74,7 @@ the request flow, the contracts and the trust boundaries.
 | Tool protocol | Model Context Protocol, Python SDK over streamable HTTP | `mcp` 2.2 |
 | Tracing | NeMo Relay (bundled with Hermes), Arize Phoenix | Relay < 0.9, Phoenix 20.16.0 |
 | Job API | Python, FastAPI, uvicorn, Pydantic, SQLite, DuckDB | 3.12, 0.141, 0.54, 2.13, –, 1.5.5 |
-| UI | Next.js, React, NVIDIA KUI, React Flow (`@xyflow/react`), Zustand, Tailwind CSS | 16.3.6, 18.3, 0.600, 12.12.0, 5, 4 |
+| UI | Next.js, React, NVIDIA KUI, Zustand, Tailwind CSS | 16.3.6, 18.3, 0.600, 5, 4 |
 | Platform | Docker Engine, Docker Compose, uv, Node.js | 28+, 2.30+, 0.12, 22 |
 
 ## Hardware
@@ -301,5 +301,5 @@ NeMo Relay, [NVIDIA Nemotron](https://build.nvidia.com) models,
 [RAPIDS](https://rapids.ai), [Kumo](https://kumo.ai) Relational, NVIDIA Auto Ontology, the
 [Model Context Protocol](https://modelcontextprotocol.io), [Arize Phoenix](https://github.com/Arize-ai/phoenix),
 [FastAPI](https://fastapi.tiangolo.com), [DuckDB](https://duckdb.org), [Next.js](https://nextjs.org),
-NVIDIA KUI and [React Flow](https://reactflow.dev). Each keeps its own license, and each model its provider's
+NVIDIA KUI. Each keeps its own license, and each model its provider's
 terms.

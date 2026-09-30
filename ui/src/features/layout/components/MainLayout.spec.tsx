@@ -94,4 +94,20 @@ describe('MainLayout', () => {
     expect(useLayoutStore.getState().execution).toBeNull()
     expect(screen.queryByText('Workspace for job-1')).not.toBeInTheDocument()
   })
+
+  test('gives the workspace the question and data sources that started the run', async () => {
+    const Workspace = ({ question, sourceIds }: ExecutionWorkspaceProps) => (
+      <p>
+        {question} from {sourceIds?.join(', ')}
+      </p>
+    )
+    render(<MainLayout />, { config: { mode: 'replay' }, feature: { recordings, Workspace } })
+    await userEvent.click(await screen.findByText('Market leaders'))
+    await screen.findByText('Asset A led.')
+
+    useLayoutStore.getState().openExecution('job-1')
+    expect(
+      await screen.findByText('Which assets led? from market_analysis_structured')
+    ).toBeInTheDocument()
+  })
 })

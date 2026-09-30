@@ -1,7 +1,5 @@
 @import 'tailwindcss/theme.css';
 @import 'tailwindcss/preflight.css';
-/* React Flow (execution graph). Unlayered and after preflight, so preflight cannot override it. */
-@import '@xyflow/react/dist/style.css';
 @import 'tailwindcss/utilities.css';
 
 /* KUI Foundations 0.600 — extracted from @kui/foundations-tailwind-plugin.
