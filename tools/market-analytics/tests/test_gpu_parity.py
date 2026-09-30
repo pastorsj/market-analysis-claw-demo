@@ -25,8 +25,6 @@ from fixture_bars import per_symbol
 from fixture_pack import at
 
 from market_analytics import tools
-from market_analytics.bars import MinuteBars
-from market_analytics.bars import session_bars
 from market_analytics.data import MarketData
 from market_analytics.worker import Worker
 
@@ -100,19 +98,21 @@ def test_gpu_tool_calls_do_not_fall_back_to_pandas(pack_root: Path) -> None:
 
 
 def test_minute_bar_scans_match_the_cpu_without_falling_back(tmp_path: Path) -> None:
-    """Partition-scoped reads, row-group filters and batch reductions all stay on the GPU, in both layouts."""
+    """Partition-scoped reads, multi-file reads, row-group filters and batch reductions all stay on the GPU, in
+    both layouts."""
     specs = [per_symbol(tmp_path / "per_symbol"), month_partitions(tmp_path / "month_partitions")]
     window = (datetime(2026, 6, 29), datetime(2026, 7, 2))
     cpu = [
-        MinuteBars.from_pack({"market": {"bars": spec}}).scan(["AAA", "CCC"], *window, session_bars, budget=1).result
+        gpu_strict.records(gpu_strict.scan_bars(spec, window, budget))
         for spec in specs
+        for budget in gpu_strict.BUDGETS
     ]
     with multiprocessing.get_context("spawn").Pool(1) as pool:
         gpu = pool.apply(gpu_strict.scan_bars_without_fallbacks, (specs, window))
 
-    for gpu_json, cpu_result in zip(gpu, cpu, strict=True):
-        assert len(cpu_result) == 2 * 3  # two symbols, three sessions
-        assert_close(json.loads(gpu_json), json.loads(cpu_result.to_json(orient="records", date_format="iso")))
+    for gpu_json, cpu_json in zip(gpu, cpu, strict=True):
+        assert len(json.loads(cpu_json)) == 2 * 3  # two symbols, three sessions
+        assert_close(json.loads(gpu_json), json.loads(cpu_json))
 
 
 def assert_close(gpu: Any, cpu: Any, path: str = "payload") -> None:
