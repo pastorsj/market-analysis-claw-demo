@@ -574,7 +574,7 @@ question gets expected document ids in `eval/`.
 | Id | Tag | Sources | Question (draft) | Tools |
 |---|---|---|---|---|
 | `market-leaders` ★ | ANALYTICS | `market_data` | Which story issuers had the strongest and weakest returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare? | `market_scan` |
-| `news-sentiment-reaction` ★ | ANALYTICS | `market_data` | For company news about the story issuers published August 17–28, 2026, how did the sentiment labels line up with returns over the next five sessions? Describe the relationship without claiming causation. | `sentiment_timeline`, `analyze_news_price_relationship` |
+| `news-sentiment-reaction` ★ | ANALYTICS | `market_data` | For company news about the story issuers published August 17–24, 2026, how did the sentiment labels line up with returns over the next five sessions? Describe the relationship without claiming causation. | `sentiment_timeline`, `analyze_news_price_relationship` |
 | `unusual-sessions` ★ | ANOMALY | `market_data` | Treat January 2 through June 30, 2026 as the baseline for all issuers. Which 10 sessions from July 1 through August 31 were most unusual in return, volatility and volume, and why? | `market_anomaly_scan` |
 | `peer-network` ★ | GRAPH | `market_data` | In the return-correlation network from June through August 2026, which issuers are the most central, and which pairs moved together most closely? | `analyze_market_relationships` |
 | `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and which 2026 Q2 filings in the corpus report one? | `retrieve_evidence` |

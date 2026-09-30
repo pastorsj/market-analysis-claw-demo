@@ -24,7 +24,7 @@ questions:
   tag: ANALYTICS
   description: Line up ticker-linked company news sentiment with the returns that followed.
   question: >-
-    For company news about the 12 most liquid issuers published from August 17 through August 28, 2026, how did
+    For company news about the 12 most liquid issuers published from August 17 through August 24, 2026, how did
     the sentiment labels line up with the issuers' returns over the following five sessions? Describe the
     relationship without claiming causation.
   sources: [market_data]
