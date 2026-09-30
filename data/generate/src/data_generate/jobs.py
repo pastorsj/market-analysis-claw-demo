@@ -96,6 +96,8 @@ class Designer:
     """One Data Designer instance, one model, and the usage it has spent."""
 
     def __init__(self, work_dir: Path) -> None:
+        # Data Designer sends usage telemetry and an attribution header by default; it reads this on import.
+        os.environ.setdefault("NEMO_TELEMETRY_ENABLED", "false")
         import data_designer.config as dd
         from data_designer.engine.models.usage_events import subscribe_token_usage
         from data_designer.interface import DataDesigner

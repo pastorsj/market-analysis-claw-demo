@@ -434,6 +434,10 @@ a request covers more than a handful of stocks ([measurements](../tools/market-a
   api_key="DATA_DESIGNER_API_KEY")`.
 - **Dependencies conflict with the data project:** 0.9.3 needs `pyarrow>=24,<25`, and `demo-data` pins
   `pyarrow==25.0.1`. Generation therefore gets its own uv project, run on the host (below).
+- **Telemetry is on by default.** `NEMO_TELEMETRY_ENABLED` defaults to `true`: each batch posts an event with
+  the model id and token counts to NVIDIA's telemetry endpoint, and each model request carries an `X-Title`
+  attribution header. `demo-data-generate` sets it to `false` before importing Data Designer, unless you set
+  it yourself, as the rest of the stack turns off OpenShell's and Phoenix's telemetry.
 - **A live preview** on build.nvidia.com with the nvapi key worked, once the model timeout was raised to
   120 s (the default health check timed out):
   - Plain text on `nvidia/nemotron-3.5-lightning-30b-a3b` produced one degenerate name out of three.

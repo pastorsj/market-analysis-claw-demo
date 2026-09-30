@@ -53,6 +53,7 @@ after its content for that: Data Designer's resume fingerprint covers a seed fil
 | `DATA_DESIGNER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | sent with thinking off |
 | `DATA_DESIGNER_PARALLEL` | 8 | concurrent requests; build.nvidia.com rate-limits above that, and Data Designer backs off |
 | `SEC_USER_AGENT` | – | a name and an email; SEC requires it to download its ticker files |
+| `NEMO_TELEMETRY_ENABLED` | `false` | Data Designer's usage telemetry (model ids and token counts, sent to NVIDIA) and its `X-Title` header on model requests; the tool turns it off unless you set it |
 
 ## Run
 
