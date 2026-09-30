@@ -6,16 +6,22 @@ The daily tables fit in memory, so the worker loads them once (data.py). Minute 
 and are never loaded whole. A scan names symbols and a window, and:
 
 1. picks the files: by symbol when each file holds one symbol (BFD's `<SYMBOL>_full_1min_adjsplit.parquet`), or
-   by window when files sit in month partitions (`month=YYYY-MM/`, the canonical layout);
-2. estimates each file's share from its Parquet footer: only the columns it reads, and only the row groups whose
-   statistics overlap the window (and, in a file of many symbols, the symbols);
-3. reads the files in batches whose estimate stays under a byte budget (MARKET_ANALYTICS_BATCH_BYTES, 2 GiB by
-   default), with the columns and the window pushed into the Parquet reader, which skips row groups by statistics;
+   by window when files sit in month partitions (`month=YYYY-MM/`, the canonical layout), and skips any file
+   whose Parquet footer shows no row group in the window (or, in a file of many symbols, none of the symbols);
+2. estimates from the footers what reading each file takes: the columns read, in the row groups read;
+3. reads the files in batches whose estimate stays under a byte budget (MARKET_ANALYTICS_BATCH_BYTES), one
+   read_parquet call per batch;
 4. reduces each batch with the caller's function, such as `session_bars`, before it reads the next.
 
 Memory holds one batch plus the reduced results, whatever the dataset's size, which is how a GPU scan goes past an
-A100's 40 GB. The reads are plain pandas calls, so cudf.pandas runs them on cudf's Parquet reader, and the pruning
-is what Polars' `scan_parquet` and BFD's own loaders do on the same files.
+A100's 40 GB. The reads are plain pandas calls, which cudf.pandas runs on cudf's Parquet reader. As with Polars'
+`scan_parquet` and BFD's own loaders, a batch is one multi-file read: cudf pays about 25 ms per call, so reading
+file by file was 16 to 46 times slower on the GPU.
+
+In month partitions the window and the symbols go into the reader, which skips row groups by their statistics. A
+file of one symbol has no symbol column, so a batch of them is read whole: each row's symbol follows from its
+file's row count in the footer, and the window is applied after the read. That layout suits bounded requests;
+the canonical one suits long windows over many symbols.
 
 A reduction must be complete within one file's bars for a symbol and session: in one-symbol files a symbol never
 spans two files, and in month partitions each part holds whole symbols, so grouping by symbol and session is safe.
@@ -40,11 +46,12 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
 FIELDS = ("time", "open", "high", "low", "close", "volume")
-BATCH_BYTES = 2 << 30
+BATCH_BYTES = 1 << 30
 
 
 def batch_bytes() -> int:
@@ -55,6 +62,7 @@ def batch_bytes() -> int:
 class Part:
     path: Path
     symbol: str | None  # from the file name; None when the file has a symbol column
+    rows: int  # the file's rows, from its footer
     bytes: int  # estimated uncompressed bytes of the columns and row groups a scan reads
 
 
@@ -108,7 +116,7 @@ class MinuteBars:
         parts = self.plan(symbols, start, end)
         results, rows = [], 0
         for batch in _batches(parts, budget or batch_bytes()):
-            frame = pd.concat([self._read(part, symbols, start, end) for part in batch], ignore_index=True)
+            frame = self._read(batch, symbols, start, end)
             rows += len(frame)
             results.append(reduce(frame))
         result = pd.concat(results, ignore_index=True) if rows else pd.DataFrame()
@@ -117,15 +125,12 @@ class MinuteBars:
     def plan(self, symbols: list[str], start: datetime, end: datetime) -> list[Part]:
         """The files a scan reads, with their estimates; `start` and `end` are local wall-clock times."""
         if self.symbol_from_path:
-            files = [
-                (self._symbol_files[symbol], symbol)
-                for symbol in dict.fromkeys(symbols)
-                if symbol in self._symbol_files
-            ]
+            index = self._symbol_files
+            files = [(index[symbol], symbol) for symbol in dict.fromkeys(symbols) if symbol in index]
         else:
             files = [(path, None) for path in sorted(self.root.glob(self.files)) if _month_overlaps(path, start, end)]
         ordered = sorted(set(symbols))
-        parts = [Part(path, symbol, self._estimate(path, ordered, start, end)) for path, symbol in files]
+        parts = [self._part(path, symbol, ordered, start, end) for path, symbol in files]
         return [part for part in parts if part.bytes]
 
     def local(self, moment: datetime) -> datetime:
@@ -140,40 +145,54 @@ class MinuteBars:
     def _read_columns(self) -> list[str]:
         return [self.columns[field] for field in FIELDS] + ([self.symbol_column] if self.symbol_column else [])
 
-    def _estimate(self, path: Path, symbols: list[str], start: datetime, end: datetime) -> int:
-        """Uncompressed bytes of the columns read, in the row groups whose statistics may hold matching bars."""
+    def _part(self, path: Path, symbol: str | None, symbols: list[str], start: datetime, end: datetime) -> Part:
+        """The file's row count and the bytes a scan reads from it: 0 when no row group can hold a matching bar."""
         metadata = pq.read_metadata(path)
         read = set(self._read_columns())
-        total = 0
+        whole = matching = 0
         for index in range(metadata.num_row_groups):
             group = metadata.row_group(index)
             chunks = {group.column(i).path_in_schema: group.column(i) for i in range(group.num_columns)}
-            low, high = _bounds(chunks[self.columns["time"]])
-            if low is not None and (high < start or low > end):
-                continue
-            if self.symbol_column:
-                low, high = _bounds(chunks[self.symbol_column])
-                if low is not None and bisect.bisect_left(symbols, low) == bisect.bisect_right(symbols, high):
-                    continue  # no requested symbol sorts between the group's smallest and largest
-            total += sum(chunk.total_uncompressed_size for name, chunk in chunks.items() if name in read)
-        return total
+            size = sum(chunk.total_uncompressed_size for name, chunk in chunks.items() if name in read)
+            whole += size
+            if self._may_match(chunks, symbols, start, end):
+                matching += size
+        # The reader skips a partition's other row groups; a one-symbol file is read whole if any of it is needed.
+        needed = matching if self.symbol_column or not matching else whole
+        return Part(path, symbol, rows=metadata.num_rows, bytes=needed)
 
-    def _read(self, part: Part, symbols: list[str], start: datetime, end: datetime) -> pd.DataFrame:
-        time_column = self.columns["time"]
-        filters: list[tuple[str, str, Any]] = [(time_column, ">=", start), (time_column, "<=", end)]
+    def _may_match(self, chunks: dict[str, Any], symbols: list[str], start: datetime, end: datetime) -> bool:
+        """Whether a row group's statistics allow a bar in the window (and, with a symbol column, of the symbols)."""
+        low, high = _bounds(chunks[self.columns["time"]])
+        if low is not None and (high < start or low > end):
+            return False
         if self.symbol_column:
-            filters.append((self.symbol_column, "in", list(symbols)))
-        frame = pd.read_parquet(part.path, columns=self._read_columns(), filters=filters)
+            low, high = _bounds(chunks[self.symbol_column])
+            # False when no requested symbol sorts between the group's smallest and largest.
+            return low is None or bisect.bisect_left(symbols, low) < bisect.bisect_right(symbols, high)
+        return True
+
+    def _read(self, batch: list[Part], symbols: list[str], start: datetime, end: datetime) -> pd.DataFrame:
+        """The batch's bars in the window and the regular session, as symbol, time, open, high, low, close, volume."""
+        paths = [str(part.path) for part in batch]
         names = {source: field for field, source in self.columns.items()}
         if self.symbol_column:
-            names[self.symbol_column] = "symbol"
-        frame = frame.rename(columns=names)
-        if part.symbol:
-            frame["symbol"] = part.symbol
+            time_column = self.columns["time"]
+            filters = [(time_column, ">=", start), (time_column, "<=", end), (self.symbol_column, "in", symbols)]
+            frame = pd.read_parquet(paths, columns=self._read_columns(), filters=filters)
+            frame = frame.rename(columns={**names, self.symbol_column: "symbol"})
+            keep = None
+        else:
+            frame = pd.read_parquet(paths, columns=self._read_columns()).rename(columns=names)
+            # Row i came from file files[i]; a gather turns that into the file's symbol.
+            files = np.repeat(np.arange(len(batch)), [part.rows for part in batch])
+            frame["symbol"] = pd.Series([part.symbol for part in batch]).iloc[files].reset_index(drop=True)
+            keep = frame["time"].between(start, end)
         if self.regular_session:
             opens, closes = (moment.hour * 60 + moment.minute for moment in self.regular_session)
-            minute = frame["time"].dt.hour * 60 + frame["time"].dt.minute
-            frame = frame[minute.between(opens, closes)]
+            in_session = (frame["time"].dt.hour * 60 + frame["time"].dt.minute).between(opens, closes)
+            keep = in_session if keep is None else keep & in_session
+        frame = frame if keep is None else frame[keep]  # one filtered copy of the batch
         return frame[["symbol", *FIELDS]]
 
 

@@ -51,27 +51,31 @@ def test_a_scan_reduces_the_regular_session_of_the_named_symbols(bars: MinuteBar
     assert (result["vwap"].between(result["low"], result["high"])).all()
 
 
-def test_only_the_named_symbols_files_and_the_windows_row_groups_are_read(tmp_path: Path) -> None:
+def test_one_symbol_files_are_picked_by_name_and_read_whole(tmp_path: Path) -> None:
     bars = MinuteBars.from_pack({"market": {"bars": per_symbol(tmp_path)}})
-    start, end = (bars.local(moment) for moment in JUNE_30)
 
-    parts = bars.plan(["CCC", "AAA", "ZZZ"], start, end)
+    parts = bars.plan(["CCC", "AAA", "ZZZ"], *(bars.local(moment) for moment in JUNE_30))
 
-    assert [(part.path.name, part.symbol) for part in parts] == [
-        ("CCC_full_1min_adjsplit.parquet", "CCC"),
-        ("AAA_full_1min_adjsplit.parquet", "AAA"),
+    assert [(part.path.name, part.symbol, part.rows) for part in parts] == [
+        ("CCC_full_1min_adjsplit.parquet", "CCC", 3 * 960),
+        ("AAA_full_1min_adjsplit.parquet", "AAA", 3 * 960),
     ]
-    # Each file has one row group per day, and the window needs only the second.
-    assert parts[0].bytes == pq.read_metadata(parts[0].path).row_group(1).total_byte_size
+    # With no symbol column, a file that is needed at all is read whole; one with no bar in the window is skipped.
+    metadata = pq.read_metadata(parts[0].path)
+    assert parts[0].bytes == sum(metadata.row_group(i).total_byte_size for i in range(metadata.num_row_groups))
+    assert bars.plan(["AAA"], datetime(2026, 7, 2), datetime(2026, 7, 3)) == []
 
 
-def test_month_partitions_are_pruned_by_window_and_parts_by_symbol(tmp_path: Path) -> None:
+def test_month_partitions_are_pruned_by_window_and_row_groups_by_statistics(tmp_path: Path) -> None:
     bars = MinuteBars.from_pack({"market": {"bars": month_partitions(tmp_path)}})
-    july = (datetime(2026, 7, 1), datetime(2026, 7, 1, 23, 59))
 
-    parts = bars.plan(["CCC"], *july)
+    (july,) = bars.plan(["CCC"], datetime(2026, 7, 1), datetime(2026, 7, 1, 23, 59))
+    (june,) = bars.plan(["AAA"], datetime(2026, 6, 30), datetime(2026, 6, 30, 23, 59))
 
-    assert [part.path.relative_to(tmp_path).as_posix() for part in parts] == ["bars/month=2026-07/part-001.parquet"]
+    assert july.path.relative_to(tmp_path).as_posix() == "bars/month=2026-07/part-001.parquet"
+    # June's first part has one row group per symbol and day (AAA, AAA, BBB, BBB): only AAA on June 30 is read.
+    assert june.path.relative_to(tmp_path).as_posix() == "bars/month=2026-06/part-000.parquet"
+    assert june.bytes == pq.read_metadata(june.path).row_group(1).total_byte_size
     assert len(bars.plan(["AAA", "CCC"], *EVERYTHING)) == 4  # both months, both parts
 
 
