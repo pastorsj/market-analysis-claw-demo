@@ -15,6 +15,7 @@ from market_analytics.data import FEATURES
 from market_analytics.data import ContractError
 from market_analytics.data import MarketData
 from market_analytics.data import Pack
+from market_analytics.data import _peer_correlations
 from market_analytics.data import validate
 from market_analytics.models import InvalidRequest
 
@@ -128,6 +129,35 @@ def test_relationship_graph_links_every_pair_or_only_declared_peers(pack: Pack, 
         ("asset-beta", "asset-gamma"),
         ("asset-gamma", "asset-beta"),
     ]
+    # Computed from the declared pairs alone, the correlations equal the full matrix's.
+    peers = sparse.edges.set_index(["source", "target"])["correlation"]
+    full = data.edges.set_index(["source", "target"])["correlation"]
+    pd.testing.assert_series_equal(peers, full.loc[peers.index], rtol=1e-12)
+
+
+def test_peer_correlations_use_the_sessions_both_assets_traded(pack: Pack) -> None:
+    """As DataFrame.corr does: pairwise complete sessions, and no edge for a flat series."""
+    dates = pd.date_range("2026-06-01", periods=6)
+    returns = {
+        "asset-alpha": [0.01, np.nan, -0.02, 0.03, np.nan, 0.01],
+        "asset-beta": [0.02, 0.01, -0.01, 0.02, -0.03, np.nan],
+        "asset-gamma": [0.0] * 6,
+    }
+    window = pd.DataFrame(
+        [(day, asset, value) for asset, values in returns.items() for day, value in zip(dates, values, strict=True)],
+        columns=["trading_date", "asset_id", "total_return_1d"],
+    )
+
+    edges = _peer_correlations(pack, window).set_index(["source", "target"])["correlation"]
+
+    expected = window.pivot(index="trading_date", columns="asset_id", values="total_return_1d").corr()
+    assert edges.to_dict() == pytest.approx(
+        {
+            ("asset-alpha", "asset-beta"): expected.loc["asset-alpha", "asset-beta"],
+            ("asset-beta", "asset-alpha"): expected.loc["asset-beta", "asset-alpha"],
+        },
+        rel=1e-12,
+    )
 
 
 def test_price_bars_are_stamped_at_the_session_close(data: MarketData) -> None:

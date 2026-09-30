@@ -26,6 +26,7 @@ import duckdb
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from .models import InvalidRequest
 
@@ -35,6 +36,9 @@ CONTRACT_PATH = Path(__file__).resolve().parents[2] / "contract" / "market-analy
 
 FEATURES = ("adjusted_return_1d", "adjusted_return_5d", "realized_volatility_20d", "log_volume_deviation_20d")
 SENTIMENT_SCORES = {"negative": -1, "neutral": 0, "positive": 1}
+# Bytes the loaded frames take per table row, measured on a 1.36-million-row pack: a daily price row counts its
+# prices and anomaly-feature rows. cudf keeps strings in Arrow columns, so the GPU needs less than pandas.
+BYTES_PER_ROW = {"cpu": {"prices": 225, "news": 310}, "gpu": {"prices": 135, "news": 130}}
 
 
 class ContractError(Exception):
@@ -186,6 +190,14 @@ class MarketData:
         return resolved
 
 
+def footprint(pack: Pack, device: str) -> str:
+    """Row counts from the Parquet footers, and about how much memory the frames will take once loaded."""
+    rows = {"prices": pq.read_metadata(pack.table("daily_prices")).num_rows}
+    rows["news"] = pq.read_metadata(pack.table(pack.news_table)).num_rows
+    size = sum(count * BYTES_PER_ROW[device][table] for table, count in rows.items())
+    return f"{rows['prices']:,} daily prices and {rows['news']:,} news rows, about {size / 1e9:.1f} GB on the {device}"
+
+
 def utc_naive(values: pd.Series) -> pd.Series:
     """Dates or timestamps as tz-naive UTC datetime64[ns], the worker's one timestamp model.
 
@@ -256,20 +268,47 @@ def _news(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
 def _edges(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
     """The return-correlation graph over the pack's window: every pair of assets, or only declared peers."""
     start, end = (datetime.combine(day, time()) for day in pack.graph_window)
-    window = prices[prices["trading_date"].between(start, end)]
+    window = prices.loc[prices["trading_date"].between(start, end), ["trading_date", "asset_id", "total_return_1d"]]
+    if pack.graph_mode == "sparse_declared_peers":
+        edges = _peer_correlations(pack, window)
+    else:
+        edges = _all_correlations(window)
+    edges = edges.assign(weight=edges["correlation"].abs().clip(lower=1e-6))
+    return edges.sort_values(["source", "target"], ignore_index=True)
+
+
+def _all_correlations(window: pd.DataFrame) -> pd.DataFrame:
+    """Every pair of assets, from a dates x assets matrix: memory grows with the square of the assets."""
     returns = window.pivot(index="trading_date", columns="asset_id", values="total_return_1d")
     matrix = returns.corr().rename_axis(index="source")
     # var_name explicitly: pandas names the melted column after the columns axis, cudf.pandas does not.
     edges = matrix.reset_index().melt(id_vars="source", var_name="target", value_name="correlation")
     edges = edges.dropna(subset=["correlation"])
-    edges = edges[edges["source"] != edges["target"]]
-    if pack.graph_mode == "sparse_declared_peers":
-        declared = pd.read_parquet(pack.table("asset_relationships"), columns=["source_asset_id", "target_asset_id"])
-        declared.columns = ["source", "target"]
-        pairs = pd.concat([declared, declared.rename(columns={"source": "target", "target": "source"})])
-        edges = edges.merge(pairs.drop_duplicates(), on=["source", "target"])
-    edges = edges.assign(weight=edges["correlation"].abs().clip(lower=1e-6))
-    return edges.sort_values(["source", "target"], ignore_index=True)
+    return edges[edges["source"] != edges["target"]]
+
+
+def _peer_correlations(pack: Pack, window: pd.DataFrame) -> pd.DataFrame:
+    """Only the declared peers (both directions): memory grows with the pairs, not the square of the assets.
+
+    The same Pearson correlation as DataFrame.corr, over the sessions where both assets have a return: each pair's
+    returns are joined on the date, centered on the pair's own means, and summed.
+    """
+    declared = pd.read_parquet(pack.table("asset_relationships"), columns=["source_asset_id", "target_asset_id"])
+    declared.columns = ["source", "target"]
+    pairs = pd.concat([declared, declared.rename(columns={"source": "target", "target": "source"})]).drop_duplicates()
+    pairs = pairs[pairs["source"] != pairs["target"]]
+    returns = window.dropna(subset=["total_return_1d"])
+    x = returns.rename(columns={"asset_id": "source", "total_return_1d": "x"})
+    y = returns.rename(columns={"asset_id": "target", "total_return_1d": "y"})
+    joined = pairs.merge(x, on="source").merge(y, on=["target", "trading_date"])
+    keys = ["source", "target"]
+    by_pair = joined.groupby(keys)
+    dx = joined["x"] - by_pair["x"].transform("mean")
+    dy = joined["y"] - by_pair["y"].transform("mean")
+    sums = joined[keys].assign(xy=dx * dy, xx=dx * dx, yy=dy * dy).groupby(keys).sum()
+    sums = sums[(sums["xx"] > 0) & (sums["yy"] > 0)]  # a single shared session or a flat series has no correlation
+    correlation = sums["xy"] / np.sqrt(sums["xx"] * sums["yy"])
+    return correlation.rename("correlation").reset_index()
 
 
 def _universes(pack: Pack) -> dict[str, tuple[str, ...]]:

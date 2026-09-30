@@ -25,6 +25,7 @@ from . import bootstrap
 from . import tools
 from .data import MarketData
 from .data import Pack
+from .data import footprint
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,9 @@ def serve(connection: Connection, root: Path) -> None:
     """The worker process: load the pack, then answer (tool, arguments) requests until the pipe closes."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(processName)s %(name)s: %(message)s")
     try:
-        data = MarketData.load(Pack.load(root))
+        pack = Pack.load(root)
+        logger.info("loading %s: %s", root, footprint(pack, tools.engine("tabular").device))
+        data = MarketData.load(pack)
     except Exception as error:
         logger.exception("loading %s failed", root)
         connection.send(("failed", f"{type(error).__name__}: {error}"))
