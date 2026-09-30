@@ -24,7 +24,15 @@ Comparison = Literal["absolute", "magnitude", "zscore"]
 Direction = Literal["highest", "lowest"]
 Frequency = Literal["daily", "weekly", "monthly"]
 SentimentLabel = Literal["positive", "neutral", "negative"]
-ErrorCode = Literal["invalid_request", "source_not_selected", "deadline_exceeded", "execution_failed"]
+IntradayMetric = Literal["intraday_range", "realized_volatility", "open_to_close_return", "max_drawdown", "volume"]
+ErrorCode = Literal[
+    "invalid_request",
+    "source_not_selected",
+    "deadline_exceeded",
+    "execution_failed",
+    "news_unavailable",  # the pack has no ticker-linked news table
+    "minute_bars_unavailable",  # the pack has no minute bars
+]
 MAX_MESSAGE_LENGTH = 1_000  # what the execution receipt accepts for an error message
 
 
@@ -221,3 +229,35 @@ class MarketRelationshipsPayload(BaseModel):
     edge_count: int
     central_assets: list[CentralAsset]
     strongest_edges: list[RelationshipEdge]
+
+
+# intraday_scan
+
+
+class IntradaySession(BaseModel):
+    rank: int
+    asset_id: str
+    session: date = Field(description="The trading date, in the exchange's time zone")
+    open: float
+    high: float
+    low: float
+    close: float
+    vwap: float = Field(description="Volume-weighted average of the minute closes")
+    volume: float
+    bar_count: int = Field(description="Minute bars in the regular session")
+    open_to_close_return: float
+    intraday_range: float = Field(description="High over low, minus 1")
+    realized_volatility: float = Field(description="Square root of the summed squared minute returns")
+    max_drawdown: float = Field(description="Deepest fall of a minute close from the session's running high close")
+    opening_volume_share: float = Field(description="Share of the session's volume in its first 30 minutes")
+    closing_volume_share: float = Field(description="Share of the session's volume in its last 30 minutes")
+
+
+class IntradayScanPayload(BaseModel):
+    rank_by: IntradayMetric
+    direction: Direction
+    assets_scanned: int = Field(description="Assets with at least one minute bar in the window")
+    sessions_scanned: int = Field(description="Asset sessions ranked")
+    files_read: int
+    batches: int
+    observations: list[IntradaySession]

@@ -19,14 +19,14 @@ BARS_PER_DAY = 16 * 60
 COLUMNS = {"time": "ts", "open": "open", "high": "high", "low": "low", "close": "close", "volume": "volume"}
 
 
-def minute_bars() -> pd.DataFrame:
+def minute_bars(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
     """symbol, ts (naive New York time), float32 prices and float64 volume, sorted by symbol and time."""
     rng = np.random.default_rng(11)
     times = pd.DatetimeIndex(
         [t for day in DAYS for t in pd.date_range(f"{day} 04:00", periods=BARS_PER_DAY, freq="min")]
     )
     frames = []
-    for symbol in SYMBOLS:
+    for symbol in symbols:
         close = 100 + np.cumsum(rng.normal(0, 0.05, len(times)))
         spread = rng.uniform(0.01, 0.1, len(times))
         frames.append(
@@ -45,10 +45,10 @@ def minute_bars() -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def per_symbol(root: Path) -> dict[str, Any]:
+def per_symbol(root: Path, symbols: list[str] = SYMBOLS) -> dict[str, Any]:
     """BFD's layout; returns pack.json's `market.bars` for it."""
     (root / "stocks_1min").mkdir(parents=True)
-    for symbol, bars in minute_bars().groupby("symbol"):
+    for symbol, bars in minute_bars(symbols).groupby("symbol"):
         path = root / "stocks_1min" / f"{symbol}_full_1min_adjsplit.parquet"
         bars.drop(columns="symbol").to_parquet(path, index=False, row_group_size=BARS_PER_DAY)
     return _spec(

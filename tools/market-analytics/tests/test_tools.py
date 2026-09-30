@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""The six tools, called through the same dispatcher the worker uses."""
+"""The market tools, called through the same dispatcher the worker uses."""
 
 import math
 from dataclasses import replace
@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from fixture_bars import minute_bars
 from fixture_pack import GAMMA_SPIKE
 from fixture_pack import at
 
@@ -233,3 +234,72 @@ def test_market_relationships_rank_pagerank_centrality(data: MarketData) -> None
 
     everyone = run(data, "analyze_market_relationships", top_k=50)["payload"]["central_assets"]
     assert math.isclose(sum(asset["centrality"] for asset in everyone), 1.0)
+
+
+# The three days of fixture minute bars, as whole UTC days: in New York they hold the same three sessions.
+THREE_DAYS = {"start": datetime(2026, 6, 29, tzinfo=UTC), "end": datetime(2026, 7, 1, 23, 59, 59, tzinfo=UTC)}
+
+
+def regular_session(asset_id: str, day: str) -> Any:
+    bars = minute_bars(["asset-alpha", "asset-beta", "asset-gamma"])
+    clock = bars["ts"].dt.strftime("%H:%M")
+    return bars[
+        (bars["symbol"] == asset_id) & (bars["ts"].dt.strftime("%Y-%m-%d") == day) & clock.between("09:30", "16:00")
+    ]
+
+
+def test_intraday_scan_ranks_asset_sessions_from_the_minute_bars(data: MarketData) -> None:
+    result = run(data, "intraday_scan", universe_id="reviewed_assets", **THREE_DAYS)
+
+    assert result["status"] == "succeeded"
+    assert result["rows_scanned"] == 9 * 391  # three assets, three sessions, 09:30 to 16:00
+    payload = result["payload"]
+    assert (payload["assets_scanned"], payload["sessions_scanned"], payload["files_read"]) == (3, 9, 3)
+    ranges = [row["intraday_range"] for row in payload["observations"]]
+    assert len(ranges) == 9 and ranges == sorted(ranges, reverse=True)
+
+    top = payload["observations"][0]
+    bars = regular_session(top["asset_id"], top["session"])
+    close, volume, clock = bars["close"].astype("float64"), bars["volume"], bars["ts"].dt.strftime("%H:%M")
+    assert top["bar_count"] == 391
+    assert (top["open"], top["close"]) == pytest.approx((bars["open"].iloc[0], close.iloc[-1]))
+    assert top["intraday_range"] == pytest.approx(bars["high"].max() / bars["low"].min() - 1)
+    assert top["vwap"] == pytest.approx((close * volume).sum() / volume.sum())
+    assert top["realized_volatility"] == pytest.approx(np.sqrt((close.pct_change() ** 2).sum()))
+    assert top["max_drawdown"] == pytest.approx((close / close.cummax() - 1).min())
+    assert top["opening_volume_share"] == pytest.approx(volume[clock < "10:00"].sum() / volume.sum())
+    assert top["closing_volume_share"] == pytest.approx(volume[clock > "15:30"].sum() / volume.sum())
+
+
+def test_intraday_scan_takes_named_assets_and_any_metric(data: MarketData) -> None:
+    result = run(data, "intraday_scan", asset_ids=["ALPH"], rank_by="volume", direction="lowest", limit=2, **THREE_DAYS)
+
+    rows = result["payload"]["observations"]
+    assert [row["asset_id"] for row in rows] == ["asset-alpha"] * 2
+    assert rows[0]["volume"] <= rows[1]["volume"]
+    assert rows[0]["volume"] == pytest.approx(regular_session("asset-alpha", rows[0]["session"])["volume"].sum())
+
+
+def test_intraday_scan_reports_an_empty_window_and_invalid_arguments(data: MarketData) -> None:
+    empty = run(data, "intraday_scan", universe_id="all_assets", start=at(60, 0), end=at(69, 23))
+    neither = run(data, "intraday_scan", **THREE_DAYS)
+
+    assert empty["status"] == "empty"
+    assert empty["warnings"] == ["No minute bars matched the assets and window."]
+    assert neither["error"] == {
+        "code": "invalid_request",
+        "message": "name the assets (asset_ids) or a universe (universe_id)",
+    }
+
+
+def test_tools_without_their_data_in_the_pack_report_it(daily_only: MarketData) -> None:
+    window = {"start": at(0, 0), "end": at(69, 23)}
+    news = run(daily_only, "sentiment_timeline", **window)
+    reaction = run(daily_only, "analyze_news_price_relationship", published_from=at(0, 0), published_to=at(69, 23))
+    intraday = run(daily_only, "intraday_scan", universe_id="all_assets", **THREE_DAYS)
+
+    assert news["status"] == reaction["status"] == intraday["status"] == "failed"
+    assert news["error"]["code"] == reaction["error"]["code"] == "news_unavailable"
+    assert news["error"]["message"].startswith("The active data pack has no ticker-linked news table")
+    assert intraday["error"]["code"] == "minute_bars_unavailable"
+    assert run(daily_only, "market_scan", universe_id="all_assets", metrics=["return"], **JUNE)["status"] == "succeeded"

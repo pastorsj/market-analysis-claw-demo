@@ -38,7 +38,20 @@ def test_worker_warms_up_before_it_reports_ready(pack_root: Path, caplog: pytest
         worker.start()
     worker.close()
     for tool in tools.TOOLS:
-        assert f"{tool} succeeded" in caplog.text
+        # The fixture's minute bars end weeks before its daily prices, so intraday_scan's warm-up finds none.
+        assert f"{tool} {'empty' if tool == 'intraday_scan' else 'succeeded'}" in caplog.text
+
+
+def test_the_warm_up_skips_tools_the_pack_has_no_data_for(
+    daily_only_root: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    worker = Worker(daily_only_root, timeout=60)
+    with caplog.at_level("INFO", logger="market_analytics.worker"):
+        worker.start()
+    worker.close()
+    assert "market_scan succeeded" in caplog.text
+    for tool in ("sentiment_timeline", "analyze_news_price_relationship", "intraday_scan"):
+        assert tool not in caplog.text
 
 
 def test_worker_is_replaced_after_a_deadline(worker: Worker) -> None:

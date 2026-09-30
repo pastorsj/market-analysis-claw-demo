@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import gpu_strict
+import pandas as pd
 import pytest
 from fixture_bars import month_partitions
 from fixture_bars import per_symbol
@@ -26,6 +27,7 @@ from fixture_pack import at
 
 from market_analytics import tools
 from market_analytics.data import MarketData
+from market_analytics.data import Pack
 from market_analytics.worker import Worker
 
 pytestmark = [
@@ -61,6 +63,9 @@ CALLS = [
         "analyze_news_price_relationship",
         {"published_from": at(0, 0), "published_to": at(69, 23), "asset_ids": ["ALPH", "BETA"], **WIRE_A},
     ),
+    # The three sessions with minute bars (June 29 to July 1).
+    ("intraday_scan", {"universe_id": "all_assets", "start": at(41, 0), "end": at(43, 23)}),
+    ("intraday_scan", {"asset_ids": ["GAMA"], "rank_by": "max_drawdown", "direction": "lowest", **JUNE}),
 ]
 
 
@@ -82,6 +87,33 @@ def test_gpu_matches_cpu(data: MarketData, gpu_worker: Worker, tool: str, argume
     assert gpu["engine"]["device"] == "gpu"
     assert gpu["engine"]["library"] in {"cudf.pandas", "cuml.accel", "nx-cugraph"}
     assert gpu["status"] == cpu["status"] == "succeeded"
+    assert_close(gpu["payload"], cpu["payload"])
+
+
+def test_the_declared_peer_graph_loads_and_matches_on_the_gpu(pack_root: Path, tmp_path: Path) -> None:
+    """sparse_declared_peers, the mode of the large packs, which the fixture's full_correlation graph skips. Real
+    packs declare most pairs both ways, so the two directions repeat rows that must be dropped on the GPU too."""
+    root = tmp_path / "sparse"
+    shutil.copytree(pack_root, root)
+    declared = {"source_asset_id": ["asset-alpha", "asset-beta", "asset-gamma"]}
+    declared["target_asset_id"] = ["asset-beta", "asset-gamma", "asset-beta"]
+    pd.DataFrame(declared).to_parquet(root / "tables" / "asset_relationships.parquet", index=False)
+    manifest = json.loads((root / "pack.json").read_text())
+    manifest["analytics"]["relationship_graph"]["mode"] = "sparse_declared_peers"
+    (root / "pack.json").write_text(json.dumps(manifest))
+    arguments = {"top_k": 4}
+    cpu = tools.run(MarketData.load(Pack.load(root)), "analyze_market_relationships", arguments)
+    worker = Worker(root, timeout=300)
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("MARKET_ANALYTICS_ENGINE", "gpu")
+        worker.start()
+    try:
+        gpu = worker.call("analyze_market_relationships", arguments)
+    finally:
+        worker.close()
+
+    assert gpu["engine"]["device"] == "gpu"
+    assert cpu["payload"]["edge_count"] == 4  # the two declared pairs, both directions
     assert_close(gpu["payload"], cpu["payload"])
 
 

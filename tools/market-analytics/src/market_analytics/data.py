@@ -28,6 +28,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
+from .bars import MinuteBars
 from .models import InvalidRequest
 
 # The contract ships next to the sources (tools/market-analytics/contract/) so demo-data validates packs
@@ -61,12 +62,13 @@ class Pack:
     source_id: str
     database_name: str
     contract_id: str
-    news_table: str
+    news_table: str | None  # None: the pack has no ticker-linked news, and the news tools are unavailable
     session_close: timedelta  # added to trading_date to timestamp a daily bar (UTC)
     universes: dict[str, Universe]
     graph_window: tuple[date, date]
     graph_mode: str  # full_correlation | sparse_declared_peers
     prediction: dict[str, Any] | None
+    minute_bars: MinuteBars | None  # None: the pack has no minute bars, and intraday_scan is unavailable
 
     @classmethod
     def load(cls, root: Path) -> Pack:
@@ -88,6 +90,7 @@ class Pack:
             graph_window=(date.fromisoformat(graph["window_start"]), date.fromisoformat(graph["window_end"])),
             graph_mode=graph["mode"],
             prediction=manifest.get("prediction"),
+            minute_bars=MinuteBars.from_pack(manifest),
         )
 
     def table(self, name: str) -> Path:
@@ -108,6 +111,8 @@ def validate(pack: Pack) -> None:
     with duckdb.connect() as db:
         for name, spec in contract["tables"].items():
             table = pack.news_table if name == "$news_table" else name
+            if table is None:  # no news table: the news tools report news_unavailable
+                continue
             path = pack.table(table)
             if not path.is_file():
                 problems.append(f"table {table} is missing ({path})")
@@ -143,7 +148,7 @@ def validate(pack: Pack) -> None:
 
 @dataclass(frozen=True)
 class MarketData:
-    """Everything the six market tools read, derived once from the pack tables."""
+    """Everything the daily market tools read, derived once from the pack tables."""
 
     pack: Pack
     prices: pd.DataFrame  # asset_id, trading_date, timestamp, session, adjusted_close, volume, returns
@@ -246,6 +251,10 @@ def _features(prices: pd.DataFrame) -> pd.DataFrame:
 
 
 def _news(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
+    if pack.news_table is None:  # the news tools report news_unavailable and never read it
+        types = {"news_id": str, "asset_id": str, "published_at": "datetime64[ns]", "source_name": str}
+        types |= {"sentiment_label": str, "session": "int64"}
+        return pd.DataFrame({column: pd.Series(dtype=dtype) for column, dtype in types.items()})
     columns = ["news_id", "primary_asset_id", "published_at", "source_name", "sentiment_label"]
     news = pd.read_parquet(pack.table(pack.news_table), columns=columns).rename(
         columns={"primary_asset_id": "asset_id"}
@@ -337,13 +346,16 @@ def _aliases(pack: Pack) -> dict[str, tuple[str, ...]]:
             """,
             [str(pack.table("assets")), str(pack.table("ticker_history"))],
         ).fetchall()
-    aliases: dict[str, set[str]] = {}
+    exact: dict[str, set[str]] = {}
+    prefixes: dict[str, set[str]] = {}
     for asset_id, company_name, ticker in rows:
+        for name in [asset_id, company_name, *([ticker] if isinstance(ticker, str) else [])]:
+            exact.setdefault(_normalized(name), set()).add(asset_id)
         words = _normalized(company_name).split()
-        names = [asset_id, company_name, *([ticker] if isinstance(ticker, str) else [])]
-        prefixes = [" ".join(words[:count]) for count in range(1, len(words))]
-        for alias in {_normalized(name) for name in names} | set(prefixes):
-            aliases.setdefault(alias, set()).add(asset_id)
+        for count in range(1, len(words)):
+            prefixes.setdefault(" ".join(words[:count]), set()).add(asset_id)
+    # An id, ticker or full name wins over name prefixes: ticker ACI is Albertsons, not also "ACI Worldwide".
+    aliases = prefixes | exact
     return {alias: tuple(sorted(asset_ids)) for alias, asset_ids in aliases.items()}
 
 

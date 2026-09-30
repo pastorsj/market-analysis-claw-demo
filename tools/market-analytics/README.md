@@ -1,6 +1,6 @@
 # market-analytics
 
-An MCP server (streamable HTTP at `:3010/mcp`) with six read-only market tools, plus Kumo prediction when a
+An MCP server (streamable HTTP at `:3010/mcp`) with seven read-only market tools, plus Kumo prediction when a
 Kumo Relational endpoint is configured. Hermes calls them as `mcp__market_analytics__<tool>`. The tools run on
 pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (cuDF, cuML, cuGraph).
 
@@ -12,6 +12,7 @@ pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (c
 | Positive, neutral and negative news labels over time | `sentiment_timeline` | pandas | cudf.pandas |
 | How news sentiment lined up with later returns | `analyze_news_price_relationship` | pandas | cudf.pandas |
 | Most central assets in the return-correlation graph | `analyze_market_relationships` | `nx.pagerank` | nx-cugraph |
+| Sessions ranked by intraday range, minute volatility, drawdown or volume timing, from the raw minute bars | `intraday_scan` | pandas | cudf.pandas |
 | Probability of a curated future outcome per asset | `predict_asset_outcomes` | Kumo Relational (a NIM) | same |
 
 The results are descriptive. Each result names the device, library and time it used, and nothing more; the
@@ -26,7 +27,7 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   so no dataset facts live in this code. The server resolves the `/data/active` symlink once at startup, and
   every worker, including a replacement, loads that build: restart the service after activating another pack.
 - **Worker.** One spawned process loads and derives the tables once (prices, anomaly features, news aligned to
-  sessions, the correlation graph), runs every tool once as a warm-up so the first question does not pay the GPU
+  sessions, the correlation graph), runs every tool the pack supports once as a warm-up so the first question does not pay the GPU
   libraries' first-call costs, and runs every call under a deadline. A call that overruns, or a crash,
   kills the worker and a fresh one replaces it, so the next call succeeds. The tools are async and wait for the
   worker on a thread, so `tools/list` and other requests stay responsive. `GET /health` is 200 while the
@@ -41,6 +42,13 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   tables once at load, the dispatcher converts timezone-aware arguments to UTC, and the result models put the
   UTC offset back, so results still read `2026-08-24T21:00:00Z`. cudf.pandas cannot keep a tz-aware column on
   the GPU; with one, every operation on the frame fell back to pandas.
+- **Data a pack may lack.** The news tools need a ticker-linked news table (`analytics.news_table`) and
+  `intraday_scan` needs minute bars (`market.bars` with `frequency: 1min` in `pack.json`). A pack without them
+  keeps every tool registered, so the registry, the sandbox policy and the UI do not change: those tools' MCP
+  descriptions start with "Unavailable in the active data pack", the worker neither loads nor warms them up,
+  and a call returns `status: "failed"` at once with `error.code` `news_unavailable` or
+  `minute_bars_unavailable`. `us-equities` has no news table; `synthetic-market`'s daily-bar profiles have no
+  minute bars.
 - **Scope.** Every tool takes an optional `source_ids`, which the Hermes plugin sets to the run's selected
   sources. A market tool refuses (`source_not_selected`) when the pack's structured source is not among them.
 - **Prediction.** `predict_asset_outcomes(template_id, asset_ids?)` runs one of the pack's curated PQL
@@ -56,19 +64,20 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
 Two tiers, so that a pack larger than the GPU still runs.
 
 - **Daily tables** are loaded once, with only the columns the tools need. Before loading, the worker logs their
-  row counts from the Parquet footers and an estimate of the memory the frames will take: measured on the
-  qualification pack, about 225 bytes per daily price row on the CPU and 135 on the GPU, prices and anomaly
+  row counts from the Parquet footers and an estimate of the memory the frames will take: measured on a
+  2,000-issuer pack, about 225 bytes per daily price row on the CPU and 135 on the GPU, prices and anomaly
   features together (cudf keeps strings in Arrow columns). 10,000 issuers over 10 years, about 27 million
   rows, is about 3.6 GB of an A100's 40 GB. The GPU engine uses cudf.pandas' managed memory pool
   (`CUDF_PANDAS_RMM_MODE=managed_pool`), so a pack past the GPU's memory pages to host memory, more slowly,
   instead of failing.
 - **The correlation graph** in `sparse_declared_peers` mode is computed from the declared pairs alone, joined
-  on the date: its memory grows with the pairs, not with the square of the assets. On the qualification pack
-  (2,000 issuers, 16,000 directed edges) that took the graph from 3.1 s to 0.73 s on the CPU and from 4.5 s to
+  on the date: its memory grows with the pairs, not with the square of the assets. On a 2,000-issuer pack
+  (16,000 directed edges) that took the graph from 3.1 s to 0.73 s on the CPU and from 4.5 s to
   0.21 s on the GPU, with the same correlations (within 6e-16). `full_correlation` builds an assets x assets
   matrix, so keep it for small packs.
-- **Minute bars** are never loaded whole. [`bars.py`](src/market_analytics/bars.py) scans them in place from
-  the pack's raw dataset (`pack.json` → `market.bars`). It picks the files by symbol (one file per symbol, BFD's
+- **Minute bars** are never loaded whole. `intraday_scan` names the assets (or a universe) and a window, and
+  [`bars.py`](src/market_analytics/bars.py) scans them in place from the pack's raw dataset
+  (`pack.json` → `market.bars`, whose symbols are the pack's asset ids). It picks the files by symbol (one file per symbol, BFD's
   layout) or by month (`month=YYYY-MM/` partitions), skips those whose Parquet footers show no row group in the
   window, and reads the rest in batches that stay under `MARKET_ANALYTICS_BATCH_BYTES`, estimated from the
   footers. A batch is one `read_parquet` call over its files, as Polars' `scan_parquet` takes a file list: cudf
@@ -77,6 +86,9 @@ Two tiers, so that a pack larger than the GPU still runs.
   have no symbol column, so they are read whole, and each row's symbol follows from its file's row count. Each
   batch is reduced, for example to one bar per symbol and session (`session_bars`), before the next is read, so
   memory holds one batch whatever the dataset's size. Peak GPU memory was 5 to 7 times the batch's estimate.
+  `intraday_scan`'s reduction (`tools/intraday.py`) turns each batch into one row per asset and session: its
+  bar, VWAP, the sum of squared minute returns, the deepest fall from the running high close, and the volume in
+  the first and last 30 minutes. The ranking runs on those rows.
 
 Minute-bar scans measured on the A100 VM, on `bfdmini` (2,200 US symbols, 117 million minute bars, 3.75 GB of
 uncompressed columns), reducing each symbol's regular sessions (09:30 to 16:00) to session bars. On both
@@ -143,9 +155,9 @@ Lint with the repository's `ruff.toml`: `uv run ruff check . && uv run ruff form
 
 ## CPU and GPU timings
 
-Measured on a 40 GB A100 VM with 12 vCPUs, on the qualification pack (2,000 issuers, 1.36 million daily
-bars, 84,000 news items). The method: a throwaway container from the stack's own GPU image, with `--gpus all`
-and the pack mounted read-only, ran the service's worker with `MARKET_ANALYTICS_ENGINE=cpu` and then with
+Measured on a 40 GB A100 VM with 12 vCPUs, on the `qualification` profile of `market-analysis`, the pack
+`synthetic-market` replaced at the same scale (2,000 issuers, 1.36 million daily bars, 84,000 news items). The
+method: a throwaway container from the stack's own GPU image, with `--gpus all` and the pack mounted read-only, ran the service's worker with `MARKET_ANALYTICS_ENGINE=cpu` and then with
 `gpu`, never both at once, while the rest of the stack sat idle. Each call ran once to warm up, then five timed
 repeats. The time is the tool's own compute timer, the one receipts show. Median milliseconds:
 
@@ -176,6 +188,30 @@ copying results back to the host) outweighs the arithmetic, which pandas and Net
 Before the [timestamp change](#how-it-fits) the GPU engine was slower on every call (0.1x to 0.9x; for
 example 1,560 ms against 250 ms for the first `market_scan` row), because every operation on a frame with a
 tz-aware column fell back to pandas. The CPU results did not change.
+
+### `intraday_scan` on real minute bars
+
+The same method on `us-equities` built from `bfdmini` (1,601 stocks, 117 million one-minute bars in 2,200
+per-symbol files, 1.8 GB), with the bars on the VM's disk and read in place. The default batch budget (1 GiB)
+applied. Bars counts those in the window's regular sessions; a per-symbol file is read whole, so a scan reads
+all 15 months of each stock it names. Median milliseconds of five calls after one:
+
+| Call | Bars | Batches | CPU | GPU | CPU/GPU |
+| --- | --- | --- | --- | --- | --- |
+| 2 stocks, 5 sessions, ranked by realized volatility | 3,910 | 1 | 85 | 216 | 0.4x |
+| `top_50`, 9 sessions, ranked by intraday range (the featured question) | 175,923 | 1 | 1,180 | 291 | 4.1x |
+| `liquid_500`, 48 sessions, ranked by drawdown | 8,685,591 | 2 | 12,261 | 1,048 | 11.7x |
+| `all_assets`, all 298 sessions, ranked by intraday range | 98,760,895 | 4 | 72,937 | 7,543 | 9.7x |
+
+Both engines returned the same payloads (floats within 1e-4). Two stocks is too little work for the GPU, as
+with the small daily tools above. On the GPU the first call of each shape after the warm-up took at most 12%
+longer than its median; starting the worker took 18 s on the GPU and 5 s on the CPU, warm-up included. On the
+CPU a whole-market scan uses most of the 120 s deadline (`MARKET_ANALYTICS_TIMEOUT_SECONDS`).
+
+The metrics divide columns with `ratio()` (a product with a power), not `/`: for a column divisor, cudf checks
+for zeros with CuPy reductions that CuPy compiles once per array size class, about 9 s each on the A100. With
+`/`, the first featured question after a restart took 9.4 s instead of 0.3 s, and any request that reduced to a
+new number of rows could pay it again.
 
 ## Changing the contract
 

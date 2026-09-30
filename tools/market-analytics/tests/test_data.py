@@ -30,6 +30,21 @@ def test_fixture_pack_satisfies_the_contract(pack: Pack) -> None:
     validate(pack)
 
 
+def test_a_pack_without_news_or_minute_bars_satisfies_the_contract(daily_only: MarketData) -> None:
+    validate(daily_only.pack)
+
+    assert (daily_only.pack.news_table, daily_only.pack.minute_bars) == (None, None)
+    assert daily_only.news.empty
+    assert list(daily_only.news.columns) == [
+        "news_id",
+        "asset_id",
+        "published_at",
+        "source_name",
+        "sentiment_label",
+        "session",
+    ]
+
+
 def test_contract_violations_are_all_listed(pack_root: Path, tmp_path: Path) -> None:
     root = tmp_path / "active"
     shutil.copytree(pack_root, root)
@@ -85,6 +100,19 @@ def test_an_ambiguous_reference_names_only_a_few_of_its_matches(pack_root: Path,
         "ambiguous asset 'alpha': matches 8 assets, "
         "e.g. ['asset-alpha', 'asset-alpha-1', 'asset-alpha-2', 'asset-alpha-3', 'asset-alpha-4']"
     )
+
+
+def test_an_id_or_ticker_wins_over_another_companys_name(pack_root: Path, tmp_path: Path) -> None:
+    """Real tickers are often another company's first word: ACI is Albertsons, and ACI Worldwide is ACIW."""
+    root = tmp_path / "active"
+    shutil.copytree(pack_root, root)
+    assets = pd.read_parquet(root / "tables" / "assets.parquet")
+    lookalike = pd.DataFrame({"asset_id": ["asset-beta-grid"], "company_name": ["Beta Grid Co"], "is_reviewed": False})
+    pd.concat([assets, lookalike]).to_parquet(root / "tables" / "assets.parquet", index=False)
+    data = MarketData.load(Pack.load(root))
+
+    assert data.resolve_assets(["BETA", "asset-beta"]) == ["asset-beta"]  # the ticker, not "Beta Grid Co"
+    assert data.resolve_assets(["beta grid"]) == ["asset-beta-grid"]
 
 
 def test_news_aligns_to_the_first_session_at_or_after_publication(data: MarketData) -> None:

@@ -158,13 +158,15 @@ def warm_up(data: MarketData) -> str:
 
 
 def _warm_up_calls(data: MarketData) -> list[tuple[str, dict[str, Any]]]:
-    """Every tool on the largest universe: the scans over the whole price history, the others over its last month."""
+    """Every tool the pack supports, on the largest universe: the scans over the whole price history, the others
+    over its last month, and intraday_scan over ten assets' last week."""
     universe = max(sorted(data.universes), key=lambda name: len(data.universes[name]))
     timestamps = data.prices["timestamp"]
     start, end = timestamps.min().to_pydatetime(), timestamps.max().to_pydatetime()
     middle = start + (end - start) / 2
     month = {"start": end - timedelta(days=30), "end": end}
-    return [
+    assets = data.universes[universe]
+    calls = [
         ("market_scan", {"universe_id": universe, "start": start, "end": end, "metrics": ["return", "volatility"]}),
         (
             "market_anomaly_scan",
@@ -176,8 +178,10 @@ def _warm_up_calls(data: MarketData) -> list[tuple[str, dict[str, Any]]]:
                 "scoring_end": end,
             },
         ),
-        ("price_context", {"asset_ids": [data.universes[universe][0]], "frequency": "weekly", **month}),
+        ("price_context", {"asset_ids": [assets[0]], "frequency": "weekly", **month}),
         ("sentiment_timeline", {"frequency": "weekly", **month}),
         ("analyze_news_price_relationship", {"published_from": month["start"], "published_to": end}),
         ("analyze_market_relationships", {}),
+        ("intraday_scan", {"asset_ids": list(assets[:10]), "start": end - timedelta(days=7), "end": end}),
     ]
+    return [(tool, arguments) for tool, arguments in calls if tools.available(data.pack, tool)]
