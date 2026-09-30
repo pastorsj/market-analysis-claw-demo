@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Logo } from '@/adapters/ui'
 import type { PackQuestion } from '@/adapters/api/pack-client'
@@ -24,10 +25,70 @@ const NvidiaMark = ({ size = 'medium' }: { size?: 'small' | 'medium' }): ReactNo
   </span>
 )
 
-/** A technology chip; NVIDIA technologies carry the NVIDIA mark, others are text only. */
-const Technology = ({ children, nvidia = false }: { children: ReactNode; nvidia?: boolean }) => (
+/** Logos of the third-party technologies the demo runs, served from `public/ecosystem-logos`. */
+const LOGOS = {
+  duckdb: '/ecosystem-logos/duckdb.svg',
+  fastapi: '/ecosystem-logos/fastapi.png',
+  milvus: '/ecosystem-logos/milvus.svg',
+  nextjs: '/ecosystem-logos/nextjs.svg',
+  nim: '/ecosystem-logos/nim.png',
+  nous: '/ecosystem-logos/nous.png',
+  opentelemetry: '/ecosystem-logos/opentelemetry.png',
+  phoenix: '/ecosystem-logos/phoenix.png',
+  rapids: '/ecosystem-logos/rapids.svg',
+  react: '/ecosystem-logos/react.svg',
+} as const
+
+const MARK_SIZES = {
+  small: styles.brandMarkSmall,
+  large: styles.brandMarkLarge,
+  wide: styles.brandMarkWide,
+}
+
+/** A decorative logo; the technology's name is always written next to it. */
+const BrandMark = ({
+  brand,
+  src,
+  size = 'small',
+  treatment = 'color',
+}: {
+  brand: string
+  src: string
+  size?: keyof typeof MARK_SIZES
+  treatment?: 'color' | 'monochrome' | 'light-tile' | 'circle'
+}): ReactNode => (
+  <span
+    className={[
+      styles.brandMark,
+      MARK_SIZES[size],
+      treatment === 'monochrome' ? styles.brandMarkMonochrome : '',
+      treatment === 'light-tile' ? styles.brandMarkLightTile : '',
+      treatment === 'circle' ? styles.brandMarkCircle : '',
+    ]
+      .filter(Boolean)
+      .join(' ')}
+    data-brand={brand}
+    aria-hidden="true"
+  >
+    <Image className={styles.brandImage} src={src} alt="" width={40} height={40} unoptimized />
+  </span>
+)
+
+/** A text badge in a logo's place, for a technology without a logo file. */
+const TextMark = ({ brand, text }: { brand: string; text: string }): ReactNode => (
+  <span className={`${styles.brandMark} ${styles.textMark}`} data-brand={brand} aria-hidden="true">
+    {text}
+  </span>
+)
+
+const NimMark = (): ReactNode => (
+  <BrandMark brand="NVIDIA NIM" src={LOGOS.nim} treatment="monochrome" />
+)
+
+/** A technology chip: its mark, then its name. */
+const Technology = ({ children, mark }: { children: ReactNode; mark: ReactNode }): ReactNode => (
   <span className={styles.technology}>
-    {nvidia && <NvidiaMark size="small" />}
+    {mark}
     <strong>{children}</strong>
   </span>
 )
@@ -82,6 +143,12 @@ export const EcosystemLanding = ({
 
           <article className={`${styles.node} ${styles.hermes}`} data-testid="ecosystem-node">
             <div className={styles.hermesHeader}>
+              <BrandMark
+                brand="Nous Research"
+                src={LOGOS.nous}
+                size="large"
+                treatment="light-tile"
+              />
               <div>
                 <p className={styles.nodeKicker}>Nous Research</p>
                 <h2>Hermes Agent</h2>
@@ -91,6 +158,10 @@ export const EcosystemLanding = ({
               <span>Plan</span>
               <span>Call tools</span>
               <span>Synthesize</span>
+            </div>
+            <div className={styles.technologyRow} aria-label="Agent runtime">
+              <Technology mark={<NvidiaMark size="small" />}>OpenShell</Technology>
+              <Technology mark={<NvidiaMark size="small" />}>Switchyard</Technology>
             </div>
             <div className={styles.inference}>
               <NvidiaMark size="small" />
@@ -109,9 +180,11 @@ export const EcosystemLanding = ({
                 <span className={styles.role}>Retrieve · Predict</span>
               </div>
               <div className={styles.technologyRow}>
-                <Technology nvidia>Auto Ontology</Technology>
-                <Technology nvidia>NVIDIA Kumo</Technology>
-                <Technology>DuckDB</Technology>
+                <Technology mark={<NvidiaMark size="small" />}>Auto Ontology</Technology>
+                <Technology mark={<TextMark brand="Kumo" text="K" />}>NVIDIA Kumo</Technology>
+                <Technology mark={<BrandMark brand="DuckDB" src={LOGOS.duckdb} />}>
+                  DuckDB
+                </Technology>
               </div>
             </article>
 
@@ -120,21 +193,27 @@ export const EcosystemLanding = ({
                 <span className={styles.capabilityTitle}>Public Knowledge</span>
                 <span className={styles.role}>Search</span>
               </div>
-              <div className={styles.technologyGroup}>
-                <p className={styles.groupLabel}>Retrieval orchestration</p>
-                <div className={styles.technologyRow}>
-                  <Technology>LangChain</Technology>
-                  <Technology>Milvus</Technology>
+              <div className={styles.technologyGroups}>
+                <div className={styles.technologyGroup}>
+                  <p className={styles.groupLabel}>Retrieval orchestration</p>
+                  <div className={styles.technologyRow}>
+                    <Technology mark={<TextMark brand="LangChain" text="LC" />}>
+                      LangChain
+                    </Technology>
+                    <Technology mark={<BrandMark brand="Milvus" src={LOGOS.milvus} />}>
+                      Milvus
+                    </Technology>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.technologyGroup}>
-                <p className={styles.groupLabel}>
-                  <NvidiaMark size="small" />
-                  NVIDIA AI models
-                </p>
-                <div className={styles.technologyRow}>
-                  <Technology>Nemotron Embed</Technology>
-                  <Technology>Nemotron Rerank</Technology>
+                <div className={styles.technologyGroup}>
+                  <p className={styles.groupLabel}>
+                    <NvidiaMark size="small" />
+                    NVIDIA AI models
+                  </p>
+                  <div className={styles.technologyRow}>
+                    <Technology mark={<NimMark />}>Nemotron Embed</Technology>
+                    <Technology mark={<NimMark />}>Nemotron Rerank</Technology>
+                  </div>
                 </div>
               </div>
             </article>
@@ -148,8 +227,12 @@ export const EcosystemLanding = ({
                 <span className={styles.role}>Analyze</span>
               </div>
               <div className={styles.technologyRow}>
-                <Technology>cuDF</Technology>
-                <Technology>cuGraph</Technology>
+                <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
+                  cuDF
+                </Technology>
+                <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
+                  cuGraph
+                </Technology>
               </div>
             </article>
           </div>
@@ -188,22 +271,6 @@ export const EcosystemLanding = ({
           </div>
         </section>
 
-        <section className={styles.observability} aria-label="Observability flow">
-          <strong>Observable by design</strong>
-          <span className={styles.observabilityItem}>
-            <NvidiaMark size="small" />
-            NeMo Relay
-          </span>
-          <span className={styles.arrow} aria-hidden="true">
-            →
-          </span>
-          <span className={styles.observabilityItem}>OpenTelemetry</span>
-          <span className={styles.arrow} aria-hidden="true">
-            →
-          </span>
-          <span className={styles.observabilityItem}>Phoenix</span>
-        </section>
-
         {featuredQuestions.length > 0 && (
           <section className={styles.featured} aria-labelledby="featured-title">
             <h2 id="featured-title" className={styles.featuredTitle}>
@@ -215,9 +282,10 @@ export const EcosystemLanding = ({
                   <Link
                     className={styles.featuredQuestion}
                     href={`/research?${new URLSearchParams({ question: question.id })}`}
+                    title={question.question}
                   >
                     <strong>{question.label}</strong>
-                    <span>{question.question}</span>
+                    <span className={styles.featuredText}>{question.question}</span>
                   </Link>
                 </li>
               ))}
@@ -226,11 +294,41 @@ export const EcosystemLanding = ({
         )}
 
         <footer className={styles.footer}>
+          <section className={styles.observability} aria-label="Observability flow">
+            <strong>Observable by design</strong>
+            <span className={styles.observabilityItem}>
+              <NvidiaMark size="small" />
+              NeMo Relay
+            </span>
+            <span className={styles.arrow} aria-hidden="true">
+              →
+            </span>
+            <span className={styles.observabilityItem}>
+              <BrandMark brand="OpenTelemetry" src={LOGOS.opentelemetry} />
+              OpenTelemetry
+            </span>
+            <span className={styles.arrow} aria-hidden="true">
+              →
+            </span>
+            <span className={styles.observabilityItem}>
+              <BrandMark brand="Phoenix" src={LOGOS.phoenix} treatment="light-tile" />
+              Phoenix
+            </span>
+          </section>
           <div className={styles.application} aria-label="Application technology">
             <strong>Application</strong>
-            <span>React</span>
-            <span>Next.js</span>
-            <span>FastAPI</span>
+            <span>
+              <BrandMark brand="React" src={LOGOS.react} />
+              React
+            </span>
+            <span>
+              <BrandMark brand="Next.js" src={LOGOS.nextjs} treatment="monochrome" />
+              Next.js
+            </span>
+            <span>
+              <BrandMark brand="FastAPI" src={LOGOS.fastapi} treatment="circle" />
+              FastAPI
+            </span>
           </div>
           <Link className={styles.enterLink} href="/research">
             Enter market analysis <span aria-hidden="true">→</span>

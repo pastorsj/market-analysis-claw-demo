@@ -54,6 +54,36 @@ test.describe('live mode', () => {
     await expect(evidence).toContainText('Close')
     await expect(composer).toBeEnabled()
   })
+
+  test('the landing page fits a 1440x900 screen without scrolling, and its logos load', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme })
+      await page.goto('/')
+      const featured = page.getByRole('region', { name: 'Featured questions' })
+      await expect(featured.getByRole('link')).toHaveCount(6)
+
+      const logos = page.locator('main [data-brand] img')
+      await expect(logos).toHaveCount(12)
+      await expect
+        .poll(() =>
+          logos.evaluateAll((images: HTMLImageElement[]) => images.map((i) => i.complete))
+        )
+        .not.toContain(false)
+      const broken = await logos.evaluateAll((images: HTMLImageElement[]) =>
+        images.filter((i) => i.naturalWidth === 0).map((i) => i.src)
+      )
+      expect(broken, `${colorScheme}: logos that did not load`).toEqual([])
+
+      const size = await page.evaluate(() => ({
+        scrollHeight: document.documentElement.scrollHeight,
+        innerHeight: window.innerHeight,
+      }))
+      expect(size.scrollHeight, `${colorScheme}: page height`).toBeLessThanOrEqual(size.innerHeight)
+    }
+  })
 })
 
 test.describe('replay mode', () => {

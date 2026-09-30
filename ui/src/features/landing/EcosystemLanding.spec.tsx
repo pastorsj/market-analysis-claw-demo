@@ -28,6 +28,39 @@ describe('EcosystemLanding', () => {
     expect(screen.queryByRole('heading', { name: 'Featured questions' })).not.toBeInTheDocument()
   })
 
+  test('marks each technology with its logo, or a text badge when there is no logo file', () => {
+    const { container } = render(<EcosystemLanding featuredQuestions={[]} disclaimer={null} />)
+    const brands = (selector: string) =>
+      [...container.querySelectorAll(selector)].map((mark) => mark.getAttribute('data-brand'))
+
+    expect(new Set(brands('[data-brand]:has(img)'))).toEqual(
+      new Set([
+        'Nous Research',
+        'DuckDB',
+        'Milvus',
+        'NVIDIA NIM',
+        'RAPIDS',
+        'OpenTelemetry',
+        'Phoenix',
+        'React',
+        'Next.js',
+        'FastAPI',
+      ])
+    )
+    for (const image of container.querySelectorAll('[data-brand] img')) {
+      expect(image.getAttribute('src')).toMatch(/^\/ecosystem-logos\/[a-z]+\.(svg|png)$/)
+      expect(image).toHaveAttribute('alt', '')
+    }
+    expect(brands('[data-brand]:not(:has(img)):not([data-brand="NVIDIA"])')).toEqual([
+      'Kumo',
+      'LangChain',
+    ])
+    for (const name of ['OpenShell', 'Switchyard', 'LangChain', 'DuckDB', 'FastAPI']) {
+      expect(screen.getByText(name)).toBeInTheDocument()
+    }
+    expect(screen.queryByText('LlamaIndex')).not.toBeInTheDocument()
+  })
+
   test('links each featured question to the research view', () => {
     render(
       <EcosystemLanding
@@ -37,9 +70,10 @@ describe('EcosystemLanding', () => {
     )
 
     expect(screen.getByText('Synthetic market data. Not investment advice.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Market Leaders/ })).toHaveAttribute(
-      'href',
-      '/research?question=market-leaders'
-    )
+    const link = screen.getByRole('link', { name: /Market Leaders/ })
+    expect(link).toHaveAttribute('href', '/research?question=market-leaders')
+    // The card may clamp the question; its full text stays in the link and its tooltip.
+    expect(link).toHaveTextContent(QUESTION.question)
+    expect(link).toHaveAttribute('title', QUESTION.question)
   })
 })

@@ -3,6 +3,7 @@
 
 .page {
   --logo-label-gap: 7px;
+  display: flex;
   min-height: 100dvh;
   padding: 16px;
   color: var(--text-color-primary);
@@ -10,7 +11,10 @@
 }
 
 .shell {
-  min-height: calc(100dvh - 32px);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-color-base);
   background-color: var(--background-color-surface-base);
@@ -81,6 +85,62 @@
   overflow: hidden;
 }
 
+.brandMark {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+}
+
+.brandMarkSmall {
+  width: 17px;
+  height: 17px;
+}
+
+.brandMarkLarge {
+  width: 34px;
+  height: 34px;
+}
+
+.brandMarkWide {
+  width: 46px;
+  height: 19px;
+}
+
+.textMark {
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--border-color-base);
+  border-radius: 3px;
+  color: var(--text-color-primary);
+  background: var(--background-color-surface-raised);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.brandImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brandMarkLightTile {
+  padding: 2px;
+  border-radius: 3px;
+  background: #fff;
+}
+
+.brandMarkCircle {
+  border-radius: 50%;
+  clip-path: circle(48%);
+}
+
+:global(.nv-dark) .brandMarkMonochrome .brandImage {
+  filter: invert(1);
+}
+
 .nvidiaMark > span {
   width: 100% !important;
   height: 100% !important;
@@ -111,6 +171,11 @@
 }
 
 .content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
   max-width: 1320px;
   margin: 0 auto;
   padding: 32px 32px 24px;
@@ -121,7 +186,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(260px, 390px);
   align-items: end;
   gap: 40px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .eyebrow,
@@ -142,9 +207,9 @@
 }
 
 .intro h1 {
-  max-width: 780px;
+  max-width: 12em;
   margin: 0;
-  font-size: clamp(38px, 4.2vw, 62px);
+  font-size: clamp(38px, min(4.2vw, 5.6vh), 62px);
   font-weight: 500;
   line-height: 1.02;
   letter-spacing: -0.045em;
@@ -166,13 +231,13 @@
 .architecture {
   --flow-gap: clamp(20px, 2.3vw, 36px);
   display: grid;
-  grid-template-columns: minmax(140px, 0.86fr) minmax(190px, 1.08fr) minmax(390px, 2.3fr) minmax(
-      180px,
-      1fr
+  grid-template-columns: minmax(140px, 0.8fr) minmax(200px, 1.1fr) minmax(400px, 2.45fr) minmax(
+      170px,
+      0.9fr
     );
   grid-template-rows: auto auto;
   align-items: center;
-  gap: 14px var(--flow-gap);
+  gap: 10px var(--flow-gap);
   padding: 4px;
 }
 
@@ -233,13 +298,13 @@
   position: relative;
   z-index: 0;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .capabilities::before,
 .capabilities::after {
-  top: 47px;
-  bottom: 47px;
+  top: 36px;
+  bottom: 36px;
   width: 1px;
 }
 
@@ -309,12 +374,16 @@
   display: grid;
   grid-template-columns: 0.92fr 1fr 1.18fr;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+}
+
+.hermes .technologyRow {
+  margin-bottom: 11px;
 }
 
 .agentSteps span {
   display: grid;
-  min-height: 42px;
+  min-height: 36px;
   place-items: center;
   padding: 6px 4px;
   color: var(--text-color-secondary);
@@ -342,8 +411,7 @@
 }
 
 .capability {
-  min-height: 92px;
-  padding: 14px 15px;
+  padding: 11px 15px;
 }
 
 .capabilityHeader {
@@ -351,7 +419,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .capabilityTitle {
@@ -373,7 +441,7 @@
 }
 
 .technology {
-  min-height: 27px;
+  min-height: 25px;
   gap: var(--logo-label-gap);
   padding: 4px 8px;
   color: var(--text-color-secondary);
@@ -382,15 +450,15 @@
   white-space: nowrap;
 }
 
-.technologyGroup + .technologyGroup {
-  margin-top: 9px;
-  padding-top: 9px;
-  border-top: 1px solid var(--border-color-base);
+.technologyGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
 }
 
 .groupLabel {
   gap: var(--logo-label-gap);
-  margin: 0 0 6px;
+  margin: 0 0 5px;
 }
 
 .answer {
@@ -429,8 +497,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 54px;
-  padding: 10px 16px;
+  min-height: 48px;
+  padding: 8px 16px;
   border: 1px solid color-mix(in srgb, #76b900 46%, var(--border-color-base));
   background: linear-gradient(
     90deg,
@@ -466,14 +534,8 @@
 }
 
 .observability {
-  max-width: 900px;
-  justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 14px auto 0;
-  padding: 11px 14px;
-  border-top: 1px solid var(--border-color-base);
-  border-bottom: 1px solid var(--border-color-base);
   color: var(--text-color-secondary);
   font-size: 10px;
 }
@@ -498,6 +560,10 @@
   margin-top: 16px;
 }
 
+.featured li {
+  min-width: 0;
+}
+
 .featuredTitle {
   margin: 0 0 8px;
   font-size: 10px;
@@ -508,8 +574,8 @@
 
 .featuredList {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -518,8 +584,9 @@
 .featuredQuestion {
   display: grid;
   height: 100%;
-  gap: 4px;
-  padding: 10px 12px;
+  align-content: start;
+  gap: 3px;
+  padding: 9px 12px;
   border: 1px solid var(--border-color-base);
   color: var(--text-color-secondary);
   background: var(--background-color-surface-raised);
@@ -534,16 +601,32 @@
   font-weight: 500;
 }
 
+.featuredText {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 .featuredQuestion:hover {
   border-color: #76b900;
+}
+
+.featuredQuestion:focus-visible,
+.enterLink:focus-visible {
+  outline: 2px solid #76b900;
+  outline-offset: 2px;
 }
 
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  margin-top: 18px;
+  gap: 16px 24px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color-base);
 }
 
 .application {
@@ -588,10 +671,6 @@
     padding: 12px;
   }
 
-  .shell {
-    min-height: calc(100dvh - 24px);
-  }
-
   .header {
     min-height: 60px;
     padding: 10px 24px;
@@ -602,12 +681,18 @@
   }
 
   .intro {
-    margin-bottom: 22px;
+    margin-bottom: 18px;
   }
 }
 
 @media (min-width: 981px) and (max-height: 820px) {
+  .header {
+    min-height: 52px;
+    padding-block: 8px;
+  }
+
   .content {
+    padding-top: 16px;
     padding-bottom: 10px;
   }
 
@@ -616,17 +701,42 @@
   }
 
   .intro h1 {
-    font-size: 42px;
+    font-size: 40px;
     line-height: 1;
   }
 
-  .observability {
-    margin-top: 8px;
+  .featured {
+    margin-top: 12px;
+  }
+
+  .featuredQuestion {
     padding-block: 7px;
   }
 
+  .featuredTitle {
+    margin-bottom: 6px;
+  }
+
+  .architecture {
+    row-gap: 8px;
+  }
+
+  .capabilities {
+    gap: 8px;
+  }
+
+  .capability {
+    padding-block: 9px;
+  }
+
+  .gpuFoundation {
+    min-height: 44px;
+    padding-block: 6px;
+  }
+
   .footer {
-    margin-top: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
   }
 
   .enterLink {
@@ -637,10 +747,6 @@
 @media (min-width: 981px) and (max-height: 740px) {
   .page {
     padding: 8px;
-  }
-
-  .shell {
-    min-height: calc(100dvh - 16px);
   }
 
   .header {
@@ -669,13 +775,13 @@
     padding-block: 6px;
   }
 
-  .observability {
-    margin-top: 6px;
-    padding-block: 5px;
+  .featured {
+    margin-top: 8px;
   }
 
   .footer {
-    margin-top: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
   }
 
   .enterLink {
@@ -730,6 +836,10 @@
     grid-row: 3;
   }
 
+  .featuredList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .answerList {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -775,7 +885,8 @@
     padding: 24px 20px;
   }
 
-  .capabilities {
+  .capabilities,
+  .featuredList {
     grid-template-columns: 1fr;
   }
 

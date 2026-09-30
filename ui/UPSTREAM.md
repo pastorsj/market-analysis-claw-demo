@@ -65,8 +65,14 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
   gone (as in the prototype); the "Answer complete" banner is gone, since a
   successful job shows its answer instead (answer-first); the no-sources banner
   no longer mentions files;
-  the landing page names LangChain instead of LlamaIndex and shows third-party
-  technologies as text instead of logos.
+  the landing page names LangChain instead of LlamaIndex and adds OpenShell and
+  Switchyard to the Hermes card.
+- Landing page: it keeps the prototype's technology logos
+  (`public/ecosystem-logos`); LangChain and Kumo, which have no logo file, get a
+  text badge of the same size. The featured questions sit in a 3 × 2 grid of
+  short cards (the full question is in the link and its tooltip), and the
+  observability flow shares the footer row, so the page fits 1280×800,
+  1440×900 and 1920×1080 without scrolling.
 
 ### Added
 
@@ -79,6 +85,7 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
 | `shared/context/ExecutionFeatureContext.tsx`  | The typed slot where `features/execution` plugs in                                   |
 | `features/chat/hooks/use-hermes-chat.ts`      | Submits a question as a job                                                          |
 | `features/landing/*`                          | Landing page with the pack's featured questions                                      |
+| `public/ecosystem-logos/*`                    | Technology logos on the landing page, from the prototype                             |
 | `features/layout/use-recorded-sessions.ts`    | Recorded sessions in replay mode                                                     |
 | `Dockerfile`, `playwright.config.ts`, `e2e/*` | Standalone image and the smoke test                                                  |
 
@@ -101,9 +108,9 @@ Line counts (`wc -l`, excluding `package-lock.json` and the generated `src/gener
 
 |                                     | Upstream | Now                                                               | Budget      |
 | ----------------------------------- | -------- | ----------------------------------------------------------------- | ----------- |
-| Non-test TS/TSX/JS                  | 33,046   | 10,086                                                            |             |
-| Tests and test utilities            | 30,399   | 6,574 (+1,660 lines added by this project)                        | ~3–4k added |
-| Hand-written CSS                    | 1,432    | 1,601: `globals.css` 800 (upstream, trimmed), landing 801 (added) | < 1k added  |
+| Non-test TS/TSX/JS                  | 33,046   | 10,184                                                            |             |
+| Tests and test utilities            | 30,399   | 6,678 (+1,764 lines added by this project)                        | ~3–4k added |
+| Hand-written CSS                    | 1,432    | 1,719: `globals.css` 804 (upstream, trimmed), landing 915 (added) | < 1k added  |
 | Diff vs upstream (without lockfile) |          | +5,780 / −52,969                                                  |             |
 
 The `features/execution` view is not counted here; it has its own budget.
