@@ -10,7 +10,7 @@ const mockToggleSessionsSidebar = vi.fn()
 const mockSetSessionsCollapsed = vi.fn()
 
 vi.mock('../store', () => ({
-  useLayoutStore: vi.fn((selector?: (s: any) => any) => {
+  useLayoutStore: vi.fn((selector?: (s: object) => unknown) => {
     const state = {
       sessionsCollapsed: false,
       sessionsAutoCollapsed: false,
@@ -45,6 +45,8 @@ vi.mock('./DeleteSessionConfirmationModal', () => ({
 
 import { useLayoutStore } from '../store'
 import { useChatStore } from '@/features/chat'
+import type { ChatStore } from '@/features/chat/types'
+import type { LayoutStore } from '../types'
 
 /**
  * Helper to create a mock chat store state.
@@ -66,23 +68,23 @@ const createMockChatState = (
 
 const setupChatStoreMock = (overrides: Parameters<typeof createMockChatState>[0] = {}) => {
   const state = createMockChatState(overrides)
-  vi.mocked(useChatStore).mockImplementation((selector: (s: any) => any) => {
+  vi.mocked(useChatStore).mockImplementation((selector: (s: ChatStore) => unknown) => {
     if (typeof selector === 'function') {
-      return selector(state)
+      return selector(state as ChatStore)
     }
     return undefined
   })
 }
 
 const setupLayoutStoreMock = (collapsed = false) => {
-  vi.mocked(useLayoutStore).mockImplementation((selector?: (s: any) => any) => {
-    const state = {
+  vi.mocked(useLayoutStore).mockImplementation((selector?: (s: LayoutStore) => unknown) => {
+    const state: Partial<LayoutStore> = {
       sessionsCollapsed: collapsed,
       sessionsAutoCollapsed: false,
       toggleSessionsSidebar: mockToggleSessionsSidebar,
       setSessionsCollapsed: mockSetSessionsCollapsed,
     }
-    return selector ? selector(state) : state
+    return selector ? selector(state as LayoutStore) : state
   })
 }
 
@@ -243,14 +245,14 @@ describe('SessionsPanel', () => {
         })
     )
     setupChatStoreMock({ refreshDeepResearchSessionStatuses })
-    vi.mocked(useLayoutStore).mockImplementation((selector?: (s: any) => any) => {
-      const state = {
+    vi.mocked(useLayoutStore).mockImplementation((selector?: (s: LayoutStore) => unknown) => {
+      const state: Partial<LayoutStore> = {
         sessionsCollapsed: collapsed,
         sessionsAutoCollapsed: false,
         toggleSessionsSidebar: mockToggleSessionsSidebar,
         setSessionsCollapsed: mockSetSessionsCollapsed,
       }
-      return selector ? selector(state) : state
+      return selector ? selector(state as LayoutStore) : state
     })
 
     const { rerender } = render(<SessionsPanel sessions={mockSessions} />)

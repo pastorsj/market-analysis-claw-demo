@@ -30,7 +30,9 @@ const mockChatStore = {
 
 vi.mock('@/features/chat', () => ({
   useChatStore: Object.assign(
-    vi.fn((selector?: (s: any) => any) => (selector ? selector(mockChatStore) : mockChatStore)),
+    vi.fn((selector?: (s: object) => unknown) =>
+      selector ? selector(mockChatStore) : mockChatStore
+    ),
     { getState: () => mockChatStore }
   ),
 }))
