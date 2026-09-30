@@ -68,8 +68,9 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
   the landing page names LangChain instead of LlamaIndex and adds OpenShell and
   Switchyard to the Hermes card.
 - Landing page: it keeps the prototype's technology logos
-  (`public/ecosystem-logos`); LangChain and Kumo, which have no logo file, get a
-  text badge of the same size. The featured questions sit in a 3 × 2 grid of
+  (`public/ecosystem-logos`) and adds the LangChain symbol; Kumo, which has no
+  logo file, gets a text badge of the same size. The Market Analytics card
+  lists RAPIDS cuDF, cuGraph and cuML. The featured questions sit in a 3 × 2 grid of
   short cards (the full question is in the link and its tooltip), and the
   observability flow shares the footer row, so the page fits 1280×800,
   1440×900 and 1920×1080 without scrolling.
@@ -85,7 +86,7 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
 | `shared/context/ExecutionFeatureContext.tsx`  | The typed slot where `features/execution` plugs in                                   |
 | `features/chat/hooks/use-hermes-chat.ts`      | Submits a question as a job                                                          |
 | `features/landing/*`                          | Landing page with the pack's featured questions                                      |
-| `public/ecosystem-logos/*`                    | Technology logos on the landing page, from the prototype                             |
+| `public/ecosystem-logos/*`                    | Technology logos on the landing page and the execution graph                         |
 | `features/layout/use-recorded-sessions.ts`    | Recorded sessions in replay mode                                                     |
 | `Dockerfile`, `playwright.config.ts`, `e2e/*` | Standalone image and the smoke test                                                  |
 

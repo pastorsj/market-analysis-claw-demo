@@ -80,6 +80,20 @@ describe('buildExecutionGraph', () => {
     ])
   })
 
+  it('draws the LangChain logo on the retrieval tool and no logo elsewhere', () => {
+    const graph = buildExecutionGraph(whole, whole, receipts)
+    expect(node(graph, 'tool:retrieve_evidence').logos).toEqual([
+      { brand: 'LangChain', src: '/ecosystem-logos/langchain.svg' },
+    ])
+    const others = graph.nodes.filter((n) => n.id !== 'tool:retrieve_evidence')
+    expect(others.flatMap((n) => n.logos)).toEqual([])
+    // Milvus and its Nemotron embedder stay on the retrieval resource
+    expect(node(graph, 'resource:unstructured_retrieval')).toMatchObject({
+      label: 'Milvus',
+      badges: ['HNSW · nemotron-3-embed-1b'],
+    })
+  })
+
   it('keeps the whole run’s shape at a replay cursor and marks what has not happened', () => {
     const graph = buildExecutionGraph(projectRun(fixtureEvents.slice(0, 2)), whole, receipts)
     expect(graph.nodes).toHaveLength(8)

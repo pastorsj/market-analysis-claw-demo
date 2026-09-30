@@ -51,11 +51,29 @@
   cursor: pointer;
 }
 
+.title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.logo {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
 .label,
 .detail {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.label {
+  min-width: 0;
 }
 
 .detail {

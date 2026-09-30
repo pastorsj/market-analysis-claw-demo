@@ -37,6 +37,14 @@ test('a recorded session replays its run as a graph and opens an explorer', asyn
   await expect(graph.getByText('gpt-6-sol · capable')).toBeVisible()
   await expect(graph.locator('.react-flow__edge')).toHaveCount(9)
 
+  // The retrieval tool carries the LangChain logo, and it loads
+  const retrieval = graph.getByRole('group', { name: 'Unstructured Retrieval, completed' })
+  const langchain = retrieval.getByRole('img', { name: 'LangChain' })
+  await expect(langchain).toHaveAttribute('src', '/ecosystem-logos/langchain.svg')
+  await expect
+    .poll(() => langchain.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0)
+
   await graph.getByRole('group', { name: 'Market Anomaly Scan, completed' }).click()
   const explorer = workspace.getByRole('region', { name: 'Market Anomaly Scan explorer' })
   await expect(explorer.getByRole('img', { name: /Anomaly score by observation/ })).toBeVisible()

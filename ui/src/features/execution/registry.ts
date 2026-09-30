@@ -30,3 +30,19 @@ export const RESOURCES: Record<Family, { label: string; detail: string }> = {
   structured_retrieval: { label: 'Auto Ontology', detail: 'Ontology-grounded SQL' },
   structured_prediction: { label: 'NVIDIA Kumo', detail: 'Relational predictions' },
 }
+
+/** A technology logo drawn on a graph node, served from `public/ecosystem-logos`. */
+export interface NodeLogo {
+  /** The technology's name, the image's tooltip */
+  brand: string
+  src: string
+}
+
+/**
+ * The libraries a registered tool is built on, by tool id, drawn as logos on
+ * its tool node. `retrieve_evidence` embeds and reranks through LangChain
+ * (langchain-nvidia-ai-endpoints, in tools/retrieval).
+ */
+export const TOOL_LOGOS: Readonly<Partial<Record<string, readonly NodeLogo[]>>> = {
+  retrieve_evidence: [{ brand: 'LangChain', src: '/ecosystem-logos/langchain.svg' }],
+}

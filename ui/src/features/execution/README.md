@@ -38,7 +38,7 @@ pure functions; components only compose them with KUI and the upstream `ResultCh
 | Path                        | Role                                                                                                               |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `contract.ts`               | Shape guard for events and receipts; anything else is dropped and counted                                          |
-| `registry.ts`               | Tool lookup by MCP or Hermes name; the resource behind each capability family                                      |
+| `registry.ts`               | Tool lookup by MCP or Hermes name; the resource behind each capability family; the logos on each tool node         |
 | `store.ts`, `projection.ts` | Run state, and its reduction to what the views show                                                                |
 | `graph/`                    | Layered layout (no layout library), graph view-model, React Flow canvas (loaded with `next/dynamic`)               |
 | `explorers/`                | One builder per explorer (`retrieval`, `market`, `sql`, `ontology`, `pql`); `index.ts` picks one by `artifactKind` |
@@ -63,7 +63,8 @@ pure functions; components only compose them with KUI and the upstream `ResultCh
 Add it to `contracts/tool-registry.json` and regenerate. A tool with an existing `receipt_kind`
 needs no UI change. A new kind adds a receipt model in the API, a builder under `explorers/`, a
 `case` in `explorers/index.ts` and an entry in `ARTIFACT_KINDS` (`contract.ts`), which TypeScript
-then requires.
+then requires. To draw the logo of a library the tool is built on, as `retrieve_evidence` draws
+LangChain's, add the file to `public/ecosystem-logos` and an entry to `TOOL_LOGOS` (`registry.ts`).
 
 ## Tests
 

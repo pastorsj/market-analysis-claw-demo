@@ -29,6 +29,7 @@ const NvidiaMark = ({ size = 'medium' }: { size?: 'small' | 'medium' }): ReactNo
 const LOGOS = {
   duckdb: '/ecosystem-logos/duckdb.svg',
   fastapi: '/ecosystem-logos/fastapi.png',
+  langchain: '/ecosystem-logos/langchain.svg',
   milvus: '/ecosystem-logos/milvus.svg',
   nextjs: '/ecosystem-logos/nextjs.svg',
   nim: '/ecosystem-logos/nim.png',
@@ -197,7 +198,7 @@ export const EcosystemLanding = ({
                 <div className={styles.technologyGroup}>
                   <p className={styles.groupLabel}>Retrieval orchestration</p>
                   <div className={styles.technologyRow}>
-                    <Technology mark={<TextMark brand="LangChain" text="LC" />}>
+                    <Technology mark={<BrandMark brand="LangChain" src={LOGOS.langchain} />}>
                       LangChain
                     </Technology>
                     <Technology mark={<BrandMark brand="Milvus" src={LOGOS.milvus} />}>
@@ -232,6 +233,9 @@ export const EcosystemLanding = ({
                 </Technology>
                 <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
                   cuGraph
+                </Technology>
+                <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
+                  cuML
                 </Technology>
               </div>
             </article>

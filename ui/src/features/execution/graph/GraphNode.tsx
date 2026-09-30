@@ -4,8 +4,10 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { Badge, Text } from '@/adapters/ui'
+import type { NodeLogo } from '../registry'
 import type { NodeState } from './view-model'
 import styles from './graph.module.css'
 
@@ -15,6 +17,8 @@ export type CanvasNodeData = {
   detail?: string | null
   state?: NodeState
   badges?: string[]
+  /** Logos of the libraries behind the node, drawn before its label */
+  logos?: readonly NodeLogo[]
   kind?: string
 }
 
@@ -26,6 +30,7 @@ const BADGE_LIMIT = 2
 /** A card with a target handle on the left and a source handle on the right. */
 export const StepNode = ({ data, selected }: NodeProps<CanvasNode>): ReactNode => {
   const badges = data.badges ?? []
+  const logos = data.logos ?? []
   return (
     <div
       className={styles.node}
@@ -34,9 +39,24 @@ export const StepNode = ({ data, selected }: NodeProps<CanvasNode>): ReactNode =
       data-selected={selected || undefined}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} />
-      <Text kind="label/semibold/sm" className={styles.label}>
-        {data.label}
-      </Text>
+      <span className={styles.title}>
+        {logos.map((logo) => (
+          <Image
+            key={logo.brand}
+            className={styles.logo}
+            src={logo.src}
+            alt={logo.brand}
+            title={logo.brand}
+            data-brand={logo.brand}
+            width={14}
+            height={14}
+            unoptimized
+          />
+        ))}
+        <Text kind="label/semibold/sm" className={styles.label}>
+          {data.label}
+        </Text>
+      </span>
       {data.detail && <span className={styles.detail}>{data.detail}</span>}
       {badges.length > 0 && (
         <span className={styles.badges}>

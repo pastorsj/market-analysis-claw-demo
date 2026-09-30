@@ -15,7 +15,7 @@
 import type { ReceiptV2 } from '../contract'
 import { plural, shortModel } from '../format'
 import type { CallState, RunProjection, ToolCall } from '../projection'
-import { RESOURCES } from '../registry'
+import { RESOURCES, TOOL_LOGOS, type NodeLogo } from '../registry'
 import type { Edge } from './layout'
 
 export type NodeKind = 'question' | 'agent' | 'router' | 'tool' | 'resource' | 'answer'
@@ -30,6 +30,8 @@ export interface GraphNode {
   description: string | null
   state: NodeState
   badges: string[]
+  /** Logos of the libraries the node's tool is built on */
+  logos: readonly NodeLogo[]
   /** The visible tool calls behind a tool or resource node */
   invocationIds: string[]
 }
@@ -94,6 +96,7 @@ export const buildExecutionGraph = (
     description: null,
     state: 'idle',
     badges: [],
+    logos: [],
     invocationIds: [],
     ...partial,
   })
@@ -141,6 +144,7 @@ export const buildExecutionGraph = (
           ? plural(calls.length, 'call')
           : `Other tool · ${plural(calls.length, 'call')}`,
         state: combinedState(calls),
+        logos: (sample.tool && TOOL_LOGOS[sample.tool.id]) ?? [],
         invocationIds: calls.map((call) => call.invocationId),
       })
     )

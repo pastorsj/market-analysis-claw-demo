@@ -55,33 +55,43 @@ test.describe('live mode', () => {
     await expect(composer).toBeEnabled()
   })
 
-  test('the landing page fits a 1440x900 screen without scrolling, and its logos load', async ({
+  test('the landing page fits a 1280x800, 1440x900 or 1920x1080 screen without scrolling, and its logos load', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
-    for (const colorScheme of ['light', 'dark'] as const) {
-      await page.emulateMedia({ colorScheme })
-      await page.goto('/')
-      const featured = page.getByRole('region', { name: 'Featured questions' })
-      await expect(featured.getByRole('link')).toHaveCount(6)
+    for (const viewport of [
+      { width: 1280, height: 800 },
+      { width: 1440, height: 900 },
+      { width: 1920, height: 1080 },
+    ]) {
+      await page.setViewportSize(viewport)
+      for (const colorScheme of ['light', 'dark'] as const) {
+        const where = `${viewport.width}x${viewport.height} ${colorScheme}`
+        await page.emulateMedia({ colorScheme })
+        await page.goto('/')
+        const featured = page.getByRole('region', { name: 'Featured questions' })
+        await expect(featured.getByRole('link')).toHaveCount(6)
 
-      const logos = page.locator('main [data-brand] img')
-      await expect(logos).toHaveCount(12)
-      await expect
-        .poll(() =>
-          logos.evaluateAll((images: HTMLImageElement[]) => images.map((i) => i.complete))
+        const logos = page.locator('main [data-brand] img')
+        await expect(logos).toHaveCount(14)
+        await expect
+          .poll(() =>
+            logos.evaluateAll((images: HTMLImageElement[]) => images.map((i) => i.complete))
+          )
+          .not.toContain(false)
+        const broken = await logos.evaluateAll((images: HTMLImageElement[]) =>
+          images.filter((i) => i.naturalWidth === 0).map((i) => i.src)
         )
-        .not.toContain(false)
-      const broken = await logos.evaluateAll((images: HTMLImageElement[]) =>
-        images.filter((i) => i.naturalWidth === 0).map((i) => i.src)
-      )
-      expect(broken, `${colorScheme}: logos that did not load`).toEqual([])
+        expect(broken, `${where}: logos that did not load`).toEqual([])
+        const langchain = page.locator('main [data-brand="LangChain"] img')
+        await expect(langchain).toHaveAttribute('src', '/ecosystem-logos/langchain.svg')
+        expect(await langchain.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0)
 
-      const size = await page.evaluate(() => ({
-        scrollHeight: document.documentElement.scrollHeight,
-        innerHeight: window.innerHeight,
-      }))
-      expect(size.scrollHeight, `${colorScheme}: page height`).toBeLessThanOrEqual(size.innerHeight)
+        const size = await page.evaluate(() => ({
+          scrollHeight: document.documentElement.scrollHeight,
+          innerHeight: window.innerHeight,
+        }))
+        expect(size.scrollHeight, `${where}: page height`).toBeLessThanOrEqual(size.innerHeight)
+      }
     }
   })
 })

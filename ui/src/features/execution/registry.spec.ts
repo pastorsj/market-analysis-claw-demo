@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { TOOL_REGISTRY } from '@/generated/tool-registry'
-import { RESOURCES, toolFor } from './registry'
+import { RESOURCES, TOOL_LOGOS, toolFor } from './registry'
 import { fixtureEvents, fixtureReceipts } from './test-utils/fixtures'
 
 describe('tool registry', () => {
@@ -28,6 +30,17 @@ describe('tool registry', () => {
     for (const tool of TOOL_REGISTRY.tools) expect(RESOURCES[tool.family]).toBeDefined()
     for (const receipt of fixtureReceipts) {
       expect(toolFor(receipt.toolName)?.receipt_kind).toBe(receipt.artifactKind)
+    }
+  })
+
+  it('draws logos only for registered tools, from files in public/ecosystem-logos', () => {
+    expect(TOOL_LOGOS.retrieve_evidence?.map((logo) => logo.brand)).toEqual(['LangChain'])
+    for (const [id, logos] of Object.entries(TOOL_LOGOS)) {
+      expect(toolFor(id)?.id, id).toBe(id)
+      for (const { src } of logos ?? []) {
+        expect(src).toMatch(/^\/ecosystem-logos\/[a-z-]+\.(svg|png)$/)
+        expect(existsSync(join(process.cwd(), 'public', src)), src).toBe(true)
+      }
     }
   })
 
