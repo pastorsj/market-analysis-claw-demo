@@ -19,8 +19,8 @@ Work through these steps in order. Do not include them in the answer.
 
    | The work item needs | Capability | Skill |
    | --- | --- | --- |
-   | Rankings, unusual sessions, price history, sentiment, news versus price, correlation-graph centrality, intraday (minute-bar) behavior | `market_analytics` | `analyzing-market-data` |
-   | Exact rows, counts, totals, or custom calculations over historical data | `structured_retrieval` | `querying-auto-ontology` |
+   | Rankings (leaders and laggards by return, volume, or volatility over any window), unusual sessions, price history, sentiment, news versus price, correlation-graph centrality, intraday (minute-bar) behavior | `market_analytics` | `analyzing-market-data` |
+   | Exact rows, counts, totals, or custom calculations the market tools do not offer | `structured_retrieval` | `querying-auto-ontology` |
    | A future outcome, likelihood, or forecast over a horizon | `structured_prediction` | `predicting-with-kumo` |
    | What a document says: filings, disclosures, rules, policies, quotations | `unstructured_retrieval` | `searching-documents` |
 

@@ -61,11 +61,11 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
 ## Procedure
 
 1. Copy `universe_id` exactly from the values listed in the tool's schema,
-   whose description says which assets each one holds. The values differ
-   between data packs, so never build one from the question's wording (a
-   question about "the 12 most liquid" does not make `top_50` valid). If no
-   listed universe matches, use the closest one and say which you used. Take
-   metric names and limits from the schema too, and never pass a source ID.
+   and pick the one whose description matches the group the question names,
+   such as its most liquid stocks. The values differ between data packs, so
+   never build one from the question's wording. If no listed universe
+   matches, use the closest one and say which you used. Take metric names and
+   limits from the schema too, and never pass a source ID.
 2. Use timezone-aware RFC 3339 timestamps. For whole calendar days, start at
    `T00:00:00Z` on the first day and end at `T23:59:59Z` on the last day.
 3. Use the window the question states. For "the N trading sessions ending D",

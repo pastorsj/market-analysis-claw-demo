@@ -73,12 +73,11 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         instructions="Read-only market analytics over the active data pack. Results are descriptive, not advice.",
     )
     universe_help = "; ".join(f"{name}: {u.description.rstrip('.')}" for name, u in pack.universes.items())
-    UniverseId = Annotated[
-        Literal[tuple(pack.universes)], Field(description=f"The asset universe to analyze. {universe_help}")
-    ]
+    pick = "The asset universe to analyze: the one that matches the group the question names"
+    UniverseId = Annotated[Literal[tuple(pack.universes)], Field(description=f"{pick}. {universe_help}")]
     OptionalUniverse = Annotated[
         Literal[tuple(pack.universes)] | None,
-        Field(description=f"The asset universe to analyze, when no asset_ids are named. {universe_help}"),
+        Field(description=f"{pick}, when no asset_ids are named. {universe_help}"),
     ]
     news = "" if pack.news_table else NO_NEWS
 
