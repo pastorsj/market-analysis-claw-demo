@@ -140,7 +140,10 @@ class MinuteBars:
     @cached_property
     def _symbol_files(self) -> dict[str, Path]:
         pattern = re.compile(self.symbol_from_path or "")
-        return {match[1]: path for path in self.root.glob(self.files) if (match := pattern.search(path.as_posix()))}
+        index = {match[1]: path for path in self.root.glob(self.files) if (match := pattern.search(path.as_posix()))}
+        if not index:  # raised, so not cached: a dataset fetched or made readable later is found on the next call
+            raise FileNotFoundError(f"no minute bars match {self.root / self.files}: missing or unreadable")
+        return index
 
     def _read_columns(self) -> list[str]:
         return [self.columns[field] for field in FIELDS] + ([self.symbol_column] if self.symbol_column else [])

@@ -106,6 +106,17 @@ def test_a_scan_that_matches_nothing_is_empty(bars: MinuteBars) -> None:
     assert bars.scan(["ZZZ"], *EVERYTHING, session_bars).files == 0
 
 
+def test_a_dataset_it_cannot_list_fails_instead_of_scanning_nothing(tmp_path: Path) -> None:
+    bars = MinuteBars.from_pack({"market": {"bars": per_symbol(tmp_path / "dataset")}})
+    hidden = tmp_path / "hidden"
+    (tmp_path / "dataset").rename(hidden)  # as if missing, or unreadable to the service's user
+
+    with pytest.raises(FileNotFoundError, match="missing or unreadable"):
+        bars.plan(["AAA"], *EVERYTHING)
+    hidden.rename(tmp_path / "dataset")
+    assert [part.symbol for part in bars.plan(["AAA"], *EVERYTHING)] == ["AAA"]  # found once it is back
+
+
 def test_packs_without_minute_bars_have_none(tmp_path: Path) -> None:
     daily = {**per_symbol(tmp_path), "frequency": "1d"}
 
