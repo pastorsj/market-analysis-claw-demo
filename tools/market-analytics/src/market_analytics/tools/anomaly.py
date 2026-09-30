@@ -25,7 +25,8 @@ from .common import check_window
 
 LIMITATIONS = (
     "Anomaly scores describe unusual observed feature combinations; they are not forecasts or probabilities.",
-    "Observed deviations are descriptive reason codes and do not establish a cause or adverse event.",
+    "Observed deviations are robust z-scores against the training window, not returns or percentages; they are "
+    "descriptive reason codes and do not establish a cause or adverse event.",
 )
 MIN_TRAINING_ROWS = 8
 FLAG_QUANTILE = 0.95

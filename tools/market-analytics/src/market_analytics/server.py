@@ -128,7 +128,9 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         """Rank a universe's assets by return, volume, volatility or peer-relative return over a window.
 
         Use direction=highest for leaders and direction=lowest for laggards; make two calls when both ends of the
-        ranking are needed. The other metrics are reported next to the ranking one.
+        ranking are needed. The other metrics are reported next to the ranking one. Returns and volatility are
+        fractions (0.25 is 25%; volatility is the daily standard deviation). observation_count is the number of
+        sessions in the window: for "the N sessions ending D", end at D and choose start so that it is N.
         """
         return await run_in_worker(
             "market_scan",
@@ -158,7 +160,8 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
         """Find sessions whose price and volume behavior differs from an earlier baseline window.
 
         Use it for unusual observed behavior, not for leaders and laggards or for predictions. Scores measure how
-        unusual a session was; they are not probabilities, forecasts or evidence of a cause.
+        unusual a session was; they are not probabilities, forecasts or evidence of a cause. observed_deviations
+        are robust z-scores against the baseline window, not returns or percentages.
         """
         return await run_in_worker(
             "market_anomaly_scan",
@@ -284,6 +287,7 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
             "in the regular session: intraday range, realized volatility, open-to-close return, the deepest drawdown "
             "from the session's running high, or volume. Name asset_ids, or a universe_id to scan every asset in "
             "it. Each session also reports its VWAP and the share of its volume in the first and last 30 minutes. "
+            "Ranges, returns, drawdowns and volume shares are fractions (0.05 is 5%). "
             "It reads the raw minute bars in place, batch by batch."
         ),
     )

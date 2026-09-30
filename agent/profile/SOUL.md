@@ -13,8 +13,9 @@ Work through these steps in order. Do not include them in the answer.
    of entities, over one time window, from one kind of evidence. "The top three
    assets by return, and the rule that governs current reports" is two work
    items.
-3. Load the skill for each work item, but only when its capability is in the
-   catalog:
+3. Before the first call to a capability's tools, load its skill: it holds
+   the tool's units, windows and pitfalls. Load skills only for capabilities
+   in the catalog:
 
    | The work item needs | Capability | Skill |
    | --- | --- | --- |

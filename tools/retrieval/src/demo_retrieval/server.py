@@ -42,7 +42,8 @@ def create_server(retriever: Retriever, document_sources: frozenset[str]) -> MCP
     ) -> RetrievalResult:
         """Search the selected document sources and return the best passages with title, URL and date.
 
-        Passages from all sources are ranked together by an NVIDIA Nemotron reranker.
+        Passages from all sources are ranked together by an NVIDIA Nemotron reranker. Search each topic once, and
+        rephrase at most once: when the passages lack a detail, say so instead of searching again.
         """
         requested = sorted(set(source_ids))
         if not requested or not document_sources.issuperset(requested):

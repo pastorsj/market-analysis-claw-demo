@@ -70,8 +70,9 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
    `T00:00:00Z` on the first day and end at `T23:59:59Z` on the last day.
 3. Use the window the question states. For "the N trading sessions ending D",
    set `end` to D and `start` about 1.5 × N calendar days earlier, then check
-   that `observation_count` is N in the result. If it is not, move `start` and
-   scan once more. Say which dates the window covers.
+   that `observation_count` is N in the result. If it is N + 1, start one
+   session later; if it is N − 1, one session earlier; then scan once more.
+   Say which dates the window covers.
 4. When the question asks for leaders and laggards (strongest and weakest, best
    and worst), make two `market_scan` calls with the same universe, window, and
    metrics: one with `direction=highest` and one with `direction=lowest`. Use
