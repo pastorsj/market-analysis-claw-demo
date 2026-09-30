@@ -326,6 +326,16 @@ def test_the_lineage_keeps_only_complete_bindings(hooks, api):
     ]
 
 
+def test_a_whole_question_as_the_lineage_phrase_is_cut(hooks, api):
+    # Auto Ontology can bind a long question as one phrase; the receipt allows 500 characters.
+    binding = {"phrase": "q" * 600, "ontology_object": "News", "table": "main.company_news", "column": "headline"}
+    result = {"answer": "ALPH", "sql": "SELECT 1", "rows": [], "row_count": 0, "resolution_lineage": [binding]}
+
+    run_tool(hooks, "ask_question", {"question": "Which issuers had negative news?"}, result)
+
+    assert len(posted_receipt(api)["content"]["resolutionLineage"][0]["phrase"]) == 500
+
+
 def test_each_tool_gets_the_sources_its_family_allows(hooks, api):
     for tool in REGISTRY["tools"]:
         directive = hooks.pre_tool_call(tool_name=tool["hermes_name"], args={"source_ids": ["x"]}, session_id=JOB)

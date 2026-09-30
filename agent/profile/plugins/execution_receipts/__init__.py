@@ -47,7 +47,7 @@ BANNED_KEY = re.compile(
 )
 # Receipt schema limits that a tool result can exceed. Other lists keep 100 items, other strings 32,000 characters.
 LIST_LIMITS = {"hits": 25, "source_ids": 32, "warnings": 20, "limitations": 20, "resolution_lineage": 40}
-STRING_LIMITS = {"snippet": 1500, "title": 1000, "url": 2048, "answer": 4000, "sql": 12000}
+STRING_LIMITS = {"snippet": 1500, "title": 1000, "url": 2048, "answer": 4000, "sql": 12000, "phrase": 500}
 # The receipt schema refuses control characters other than tab, line feed and carriage return in text.
 UNSAFE_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 MAX_ITEMS = 100
