@@ -601,7 +601,7 @@ cite is in the pack's manifest. The live runs come with the recordings.
 |---|---|---|---|---|---|
 | `market-leaders` ★ | ANALYTICS | `market_data` | Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare? | `market_scan` | `market_leaders.sql` (CRCL +102%) |
 | `intraday-ranges` ★ | INTRADAY | `market_data` | Among the 50 most liquid, which sessions from March 2 to March 12, 2026 had the widest intraday ranges? How did each trade from open to close, and how much volume came in the last 30 minutes? | `intraday_scan` | `intraday_ranges.sql` (CRCL on March 2, 20.4%) |
-| `unusual-sessions` ★ | ANOMALY | `market_data` | With 2025 as the baseline, which 10 sessions from January 2 to March 12, 2026 were most unusual among the 500 most liquid, and which features made each unusual? | `market_anomaly_scan` | – (PCA) |
+| `unusual-sessions` ★ | ANOMALY | `market_data` | With 2025 as the baseline, which 10 sessions from January 2 to March 12, 2026 were most unusual among the 50 most liquid, and which features made each unusual? | `market_anomaly_scan` | – (PCA; CRCL on February 25 first) |
 | `peer-network` ★ | GRAPH | `market_data` | Among declared industry peers, which stocks were most central in the return-correlation network from December 2025 to March 12, 2026, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` (share classes lead: GOOG and GOOGL, 0.996) |
 | `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require, and by when? Cite the regulation, and any 8-Ks in the corpus that report an incident under Item 1.05. | `retrieve_evidence` | `retrieval.yaml`: 17 CFR 229.106 and 249.308; six filings (CNDT, COIN, DAIO twice, BAFN, CPNG) |
 | `moves-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Among the 50 most liquid, which three had the strongest and three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-Ks from January to March 2026? No causal claims. | `market_scan`, `retrieve_evidence` | `february_moves.sql` (CRCL, NFLX, AMAT; IBM, AMD, BMNR); `retrieval.yaml` |
@@ -612,9 +612,11 @@ cite is in the pack's manifest. The live runs come with the recordings.
 
 The universes in `us-equities` are `top_50` (`liquidity_rank <= 50`), `liquid_500` and `all_assets`. Whole-market
 questions use `liquid_500`: the smallest stocks trade a few hundred dollars a day, and single trades give them
-absurd returns. The Kumo population is `top_50`, with the anchor at 2026-03-05 21:00 UTC and a horizon of 5
-sessions. With no news table, the prediction graph has no `news_events` view and no news template, and the news
-tools get no question in `us-equities`.
+absurd returns. The anomaly question uses `top_50`: one split adjustment the dataset applies a session late
+(ASST, 2026-02-05) fills a `liquid_500` scan of 2026 ([known issues](../data/packs/us-equities/README.md#known-issues)).
+The Kumo population is `top_50`, with the anchor at 2026-03-05 21:00 UTC and a horizon of 5 sessions. With no
+news table, the prediction graph has no `news_events` view and no news template, and the news tools get no
+question in `us-equities`.
 
 ## Disk
 

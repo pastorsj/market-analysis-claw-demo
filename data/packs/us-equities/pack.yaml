@@ -142,7 +142,7 @@ sources:
     synthetic: false
     example_questions:
       - Which of the 50 most liquid stocks led returns over the latest 20 trading sessions?
-      - Which sessions in early 2026 were most unusual across the pack?
+      - Which sessions in early 2026 were most unusual among the 50 most liquid stocks?
   - id: sec_filings
     name: SEC Filings
     description: >-

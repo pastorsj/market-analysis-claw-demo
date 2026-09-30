@@ -31,10 +31,10 @@ questions:
 - id: unusual-sessions
   label: Unusual Sessions
   tag: ANOMALY
-  description: Rank unusual return, volatility and volume combinations across the 500 most liquid stocks.
+  description: Rank unusual return, volatility and volume combinations across the 50 most liquid stocks.
   question: >-
     Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual
-    among the 500 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
+    among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
     forecasts nor explanations.
   sources: [market_data]
   featured: true
