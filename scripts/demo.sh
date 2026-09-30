@@ -261,6 +261,10 @@ cmd_data() {
   load_env
   mkdir -p "$DATA_SOURCE_DIR" # before Compose, which would create it as root
   case $action in
+    # Build the data image first: a no-op when it is current, and after a code update never the old image.
+    fetch | prepare | validate | verify | list | clean) COMPOSE_PROFILES=core dc build --quiet data ;;
+  esac
+  case $action in
     fetch)
       shift
       data_fetch "$@"
@@ -314,8 +318,6 @@ data_fetch() {
     log "data pack $DATA_PACK has no external datasets"
     return 0
   fi
-  # data-fetch runs the data image, which the data service builds (at setup, before the first `up`).
-  docker image inspect market-demo/demo-data:local >/dev/null 2>&1 || COMPOSE_PROFILES=core dc build data
   for id in "${datasets[@]}"; do
     variable=DATA_SOURCE_$(printf '%s' "$id" | tr 'a-z-' 'A-Z_')
     source=$(env_value "$variable")
@@ -381,6 +383,7 @@ data_generate() {
 }
 
 reindex() {
+  dc build --quiet retrieval # retrieval-index's image, as the data image above
   dc up -d --wait milvus
   dc run --rm --no-deps retrieval-index
 }
