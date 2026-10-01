@@ -267,7 +267,7 @@
               "origin": { "$ref": "#/$defs/pack_id" },
               "format": {
                 "description": "The corpus builder to use. gdelt-parquet reads `files`; the others read a `manifest`.",
-                "enum": ["markdown", "ecfr-xml", "edgar-filings", "gdelt-parquet"]
+                "enum": ["markdown", "ecfr-xml", "federal-register-xml", "edgar-filings", "gdelt-parquet"]
               },
               "manifest": { "description": "The corpus manifest: pinned snapshot or file list.", "$ref": "#/$defs/pack_path" },
               "files": {

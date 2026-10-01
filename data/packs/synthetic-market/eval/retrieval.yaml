@@ -8,5 +8,6 @@ cyber-disclosure-rules:
   documents:
     - ecfr-title17:229.106:24c220ed7a14 # 17 CFR 229.106, Regulation S-K Item 106 (cybersecurity)
     - ecfr-title17:249.308:4a810383a174 # 17 CFR 249.308, Form 8-K
+    - fr-2023-16194:appendix-c-form-8-k # Form 8-K Item 1.05 and its four-business-day deadline (88 FR 51896)
   filings: # the only 8-K in the 2026 Q2 sample that reports Item 1.05
     - 0001605301:0001605301-26-000021 # CB Financial Services, 2026-05-11

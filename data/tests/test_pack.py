@@ -45,8 +45,8 @@ def test_filings_are_a_document_source_in_both_packs_and_never_news():
         assert pack.manifest["market"]["news"] in (None, "news.parquet")  # a dataset table, never filings
 
 
-# The documents.jsonl id prefix of each document source that eval/retrieval.yaml names documents of
-DOCUMENT_PREFIXES = {"market_regulations": "ecfr-title17:", "world_news": "gdelt:"}
+# The documents.jsonl id prefixes of each document source that eval/retrieval.yaml names documents of
+DOCUMENT_PREFIXES = {"market_regulations": ("ecfr-title17:", "fr-"), "world_news": ("gdelt:",)}
 
 
 @pytest.mark.parametrize("name", ["synthetic-market", "us-equities"])
@@ -61,7 +61,7 @@ def test_retrieval_answer_checks_name_questions_and_pinned_filings(name):
         sources = set(questions[question_id]["sources"])
         assert sources & {"sec_filings", "market_regulations", "world_news"}, question_id
         assert set(check.get("filings", [])) <= pinned, question_id
-        prefixes = tuple(prefix for source, prefix in DOCUMENT_PREFIXES.items() if source in sources)
+        prefixes = tuple(prefix for source, found in DOCUMENT_PREFIXES.items() if source in sources for prefix in found)
         assert all(document.startswith(prefixes) for document in check.get("documents", [])), question_id
 
 
@@ -133,7 +133,7 @@ def test_resolve_serves_only_the_conversations_the_build_can_answer():
 
 def test_files_are_read_only_from_an_external_dataset(pack_copy):
     pack_dir = pack_copy("us-equities")
-    edit_yaml(pack_dir / "pack.yaml", lambda m: m["documents"]["corpora"][2].update(origin="ecfr-title-17"))
+    edit_yaml(pack_dir / "pack.yaml", lambda m: m["documents"]["corpora"][3].update(origin="ecfr-title-17"))
 
     with pytest.raises(PackError) as raised:
         load_pack(pack_dir)
@@ -192,10 +192,24 @@ def test_resolve_reports_the_bars_a_profile_writes(synthetic_pack, tmp_path):
 def test_default_corpora_skip_opt_in_ones():
     pack = load_pack(PACKS / "us-equities")
 
-    assert [corpus["source"] for corpus in pack.select_corpora(None)] == ["sec_filings", "market_regulations"]
+    assert [corpus["source"] for corpus in pack.select_corpora(None)] == [
+        "sec_filings",
+        "market_regulations",
+        "market_regulations",  # the eCFR and the Federal Register rule
+    ]
     assert [corpus["source"] for corpus in pack.select_corpora(["world_news"])] == ["world_news"]
     with pytest.raises(PackError, match="no corpus for"):
         pack.select_corpora(["market_prices"])
+
+
+def test_a_source_s_corpora_are_all_opt_in_or_none_are(pack_copy):
+    pack_dir = pack_copy("us-equities")
+    edit_yaml(pack_dir / "pack.yaml", lambda m: m["documents"]["corpora"][2].update(opt_in=True))
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert raised.value.errors == ["source market_regulations has opt-in and default corpora"]
 
 
 def test_profiles(synthetic_pack):

@@ -158,9 +158,10 @@ kept and dropped is recorded in `pack.json` under `parts.structured.import`. The
   `market.bars.dataset` (`load_into_database: false` keeps a table out of DuckDB). Tables load by column name, so
   Parquet column order does not matter.
 - **`documents`**: the collection name and `corpora`, each with a `format`. A pinned corpus (`ecfr-xml`,
-  `edgar-filings`, `markdown`) has a `manifest` in the pack that pins what to build. An in-place corpus
-  (`gdelt-parquet`) has `files`, a glob inside its external origin's dataset, read where `fetch` put it. An `opt_in`
-  corpus is built only when `DATA_CORPORA` names it.
+  `federal-register-xml`, `edgar-filings`, `markdown`) has a `manifest` in the pack that pins what to build. An
+  in-place corpus (`gdelt-parquet`) has `files`, a glob inside its external origin's dataset, read where `fetch` put
+  it. A source may draw on several corpora (`market_regulations`: the eCFR and a Federal Register rule), all of
+  them `opt_in` or none: an `opt_in` corpus is built only when `DATA_CORPORA` names its source.
 - **`sources`**: the catalog: `name` and `description` for the UI, `agent_description` for the agent.
 - **`analytics`**, **`prediction`**: settings for the market-analytics and prediction tools. `analytics.news_table`
   is null for a pack without ticker-linked news; the news tools then report that they are unavailable.

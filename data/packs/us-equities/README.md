@@ -21,7 +21,7 @@ DATA_SOURCE_MINUTE_BARS=/mnt/datasets/minute-bars
 |---|---|---|
 | `market_data` | external dataset `minute-bars`, plus SEC company data | 5 DuckDB tables and 3 prediction views; the raw minute bars, read in place |
 | `sec_filings` | downloaded, real | 1,074 SEC EDGAR 8-Ks filed by the pack's companies from 2025-01-02 to 2026-03-12 (1,887 documents) |
-| `market_regulations` | downloaded, real | eCFR Title 17 as of 2026-08-17 (3,525 sections) |
+| `market_regulations` | downloaded, real | eCFR Title 17 as of 2026-08-17 (3,525 sections), and the SEC's 2023 cybersecurity disclosure rule (88 FR 51896): its summary and amended form text, Form 8-K Item 1.05 and its deadline among them (5 documents) |
 | `world_news` (opt-in) | external dataset `minute-bars`, read in place | 8,192 GDELT headlines, 2025-01-01 to 2026-02-02 |
 
 Built from the pinned minute-bar dataset (fingerprint `d8b40510…`, 1.8 GB, 117 million bars for 2,200 symbols
@@ -139,7 +139,7 @@ question that failed outright (it ran out of Hermes' tool-call budget) succeeded
 | `schema.sql`, `views/prediction.sql` | the DuckDB schema and the leakage-safe prediction views |
 | `ontology.yaml` | table and column descriptions for Auto Ontology |
 | `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set |
-| `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
+| `corpus/*.manifest.json` | the pinned eCFR snapshot, Federal Register rule and EDGAR filings (URL and SHA-256 of every file) |
 | `corpus/select_filings.py` | selects the filings from the issuers' EDGAR submissions and writes their manifest |
 | `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
 | `recordings/` | the replay bundle of all 45 sessions, 30 questions and 15 conversations (`demo.sh record --all`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars. Private: the public repository ships `synthetic-market`'s recordings only |
