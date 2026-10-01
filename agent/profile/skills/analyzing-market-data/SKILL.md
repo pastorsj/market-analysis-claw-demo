@@ -82,7 +82,9 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
    If a tool rejects an unknown or ambiguous asset, ask the user instead of
    guessing.
 7. For `intraday_scan`, name `asset_ids` or a `universe_id`, and keep the window
-   to the sessions asked about: it reads the raw minute bars. When a question
+   to the sessions asked about: it reads the raw minute bars. `max_drawdown` is
+   negative (-0.08 is an 8% fall from the session's high), so rank the deepest
+   drawdowns with `direction=lowest`. When a question
    about news names a group, such as the most liquid issuers, pass that
    `universe_id` to `sentiment_timeline` or `analyze_news_price_relationship`;
    without one they cover every issuer's news.

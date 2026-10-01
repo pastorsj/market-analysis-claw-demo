@@ -315,6 +315,8 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
             "from the session's running high, or volume. Name asset_ids, or a universe_id to scan every asset in "
             "it. Each session also reports its VWAP and the share of its volume in the first and last 30 minutes. "
             "Ranges, returns, drawdowns and volume shares are fractions (0.05 is 5%). "
+            "max_drawdown is negative (-0.08 is an 8% fall from the session's high): rank the deepest with "
+            "direction=lowest. "
             "It reads the raw minute bars in place, batch by batch."
         ),
     )

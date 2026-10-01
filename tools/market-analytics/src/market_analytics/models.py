@@ -248,7 +248,12 @@ class IntradaySession(BaseModel):
     open_to_close_return: float
     intraday_range: float = Field(description="High over low, minus 1")
     realized_volatility: float = Field(description="Square root of the summed squared minute returns")
-    max_drawdown: float = Field(description="Deepest fall of a minute close from the session's running high close")
+    max_drawdown: float = Field(
+        description=(
+            "Deepest fall of a minute close from the session's running high close, as a negative fraction "
+            "(-0.08 is an 8% fall); the deepest rank first with direction=lowest"
+        )
+    )
     opening_volume_share: float = Field(description="Share of the session's volume in its first 30 minutes")
     closing_volume_share: float = Field(description="Share of the session's volume in its last 30 minutes")
 
