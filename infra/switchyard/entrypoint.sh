@@ -6,8 +6,9 @@
 # serve it. Configuration mistakes exit 64 (EX_USAGE) before anything listens. Extra arguments
 # are passed to switchyard-server.
 #
-# The capable model may use its own OpenAI-compatible endpoint: CAPABLE_BASE_URL and
-# CAPABLE_API_KEY default to INFERENCE_BASE_URL and INFERENCE_API_KEY.
+# The capable model may use its own OpenAI-compatible endpoint: CAPABLE_BASE_URL defaults to
+# INFERENCE_BASE_URL. CAPABLE_API_KEY defaults to INFERENCE_API_KEY only on that same endpoint, so
+# the inference key never goes to another host.
 set -eu
 
 here=$(dirname "$0")
@@ -28,7 +29,8 @@ require() {
 }
 
 # Compose delivers the keys as secret files, which keeps them out of `docker inspect`. Compose
-# writes an empty capable_api_key file when CAPABLE_API_KEY is unset: empty means "the inference key".
+# writes an empty capable_api_key file when CAPABLE_API_KEY is unset: empty means "the inference
+# key" when the capable model is on the inference endpoint, and "no key" on any other endpoint.
 if [ -e "$key_file" ]; then
   INFERENCE_API_KEY=$(cat "$key_file") || fail "cannot read $key_file"
 fi
@@ -44,7 +46,10 @@ if [ -n "${CAPABLE_API_KEY:-}" ] && [ "$CAPABLE_API_KEY" != "${INFERENCE_API_KEY
   capable_key="its own key"
 fi
 CAPABLE_BASE_URL=${CAPABLE_BASE_URL:-${INFERENCE_BASE_URL:-}}
-CAPABLE_API_KEY=${CAPABLE_API_KEY:-${INFERENCE_API_KEY:-}}
+if [ "$capable_endpoint" = "the inference endpoint" ]; then
+  CAPABLE_API_KEY=${CAPABLE_API_KEY:-${INFERENCE_API_KEY:-}}
+fi
+CAPABLE_API_KEY=${CAPABLE_API_KEY:-}
 export INFERENCE_API_KEY CAPABLE_BASE_URL CAPABLE_API_KEY
 
 require SWITCHYARD_ROUTES
@@ -86,6 +91,8 @@ envsubst '${INFERENCE_BASE_URL} ${CAPABLE_BASE_URL} ${AGENT_EFFICIENT_MODEL} ${A
 
 case " $required " in
   *" AGENT_CAPABLE_MODEL "*)
+    [ -n "$CAPABLE_API_KEY" ] ||
+      fail "CAPABLE_BASE_URL is another endpoint than INFERENCE_BASE_URL: set CAPABLE_API_KEY to its key"
     capable="capable ${AGENT_CAPABLE_MODEL:-} on $capable_endpoint with $capable_key, "
     ;;
   *) capable="" ;;

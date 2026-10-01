@@ -83,7 +83,7 @@ x-market-analytics: &market-analytics
 
 secrets:
   inference_api_key: { environment: INFERENCE_API_KEY }
-  capable_api_key: { environment: CAPABLE_API_KEY } # empty: Switchyard uses the inference key
+  capable_api_key: { environment: CAPABLE_API_KEY } # empty: the inference key, on the inference endpoint only
   retriever_api_key: { environment: RETRIEVER_API_KEY } # demo.sh fills an empty one from INFERENCE_API_KEY
   hermes_api_server_key: { environment: HERMES_API_SERVER_KEY }
   hermes_receipt_api_key: { environment: HERMES_RECEIPT_API_KEY }

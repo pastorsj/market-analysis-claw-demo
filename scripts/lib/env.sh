@@ -30,8 +30,9 @@ readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_PACK_PRO
 #   SPEECH_API_KEY      RETRIEVER_API_KEY when empty and the retriever is build.nvidia.com: the
 #                       ASR is on build.nvidia.com too, so no key goes to another host
 #   DATA_SOURCE_DIR     $HOME/market-demo-data when empty: external datasets, outside the repository
-# CAPABLE_BASE_URL and CAPABLE_API_KEY also fall back to the inference ones, here for doctor and
-# in Switchyard's entrypoint for the stack.
+# CAPABLE_BASE_URL also falls back to INFERENCE_BASE_URL, and CAPABLE_API_KEY to INFERENCE_API_KEY
+# when the two endpoints are the same (never for another host), here for doctor and in
+# Switchyard's entrypoint for the stack.
 load_env() {
   local key
   COMPOSE_ENVIRONMENT=$(dc config --environment) ||
@@ -58,7 +59,9 @@ load_env() {
     SPEECH_API_KEY=$RETRIEVER_API_KEY
   fi
   CAPABLE_BASE_URL=${CAPABLE_BASE_URL:-$INFERENCE_BASE_URL}
-  CAPABLE_API_KEY=${CAPABLE_API_KEY:-$INFERENCE_API_KEY}
+  if [ "$CAPABLE_BASE_URL" = "$INFERENCE_BASE_URL" ]; then
+    CAPABLE_API_KEY=${CAPABLE_API_KEY:-$INFERENCE_API_KEY}
+  fi
   export COMPOSE_PROFILES DATA_DATABASE_NAME DATA_SOURCE_DIR KUMO_RELATIONAL_URL AUTO_ONTOLOGY_URL AGENT_FEATURES
   export RETRIEVER_API_KEY SPEECH_API_KEY
 }

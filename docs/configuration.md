@@ -40,7 +40,7 @@ The agent's models (through Switchyard) and Auto Ontology's reasoning models.
 | `AGENT_EFFICIENT_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | The passthrough model; the model an escalation template tries first |
 | `AGENT_CAPABLE_MODEL` | `gpt-6-sol` | The model a session escalates to; the pinned model. Unused by `passthrough.nemotron` |
 | `AGENT_JUDGE_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | The escalation judge, and Hermes' auxiliary calls (thinking off) |
-| `CAPABLE_BASE_URL`, `CAPABLE_API_KEY` | empty | The capable model's own OpenAI-compatible endpoint and key. Empty means `INFERENCE_BASE_URL` and `INFERENCE_API_KEY` |
+| `CAPABLE_BASE_URL`, `CAPABLE_API_KEY` | empty | The capable model's own OpenAI-compatible endpoint and key. An empty endpoint means `INFERENCE_BASE_URL`. An empty key means `INFERENCE_API_KEY` only when the endpoint is empty or the same as `INFERENCE_BASE_URL`; another endpoint needs its own key, so the inference key never goes to another host |
 | `SWITCHYARD_CONFIRMATIONS` | `1` | Consecutive "escalate" verdicts before a session switches (1 or 2) |
 | `AUTO_ONTOLOGY_REASONING_MODEL`, `AUTO_ONTOLOGY_NON_REASONING_MODEL` | `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b` | Auto Ontology's models (ontology profile) |
 

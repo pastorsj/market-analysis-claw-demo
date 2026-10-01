@@ -4,7 +4,7 @@
 # Every agent turn goes to the capable GPT model (Responses API), with no judge. Hermes still
 # sends "market-research", so switching to this template is an .env change. The GPT model can
 # come from its own endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to the
-# inference endpoint and key.
+# inference endpoint and key (the key only on that same endpoint).
 # requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL
 schema_version = 1
 

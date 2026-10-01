@@ -4,7 +4,7 @@
 # A Nemotron model answers over Chat Completions. A second Nemotron model judges every completed
 # turn; once it escalates, a GPT model (Responses API) serves the rest of the session. The GPT
 # model can come from its own endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to
-# the inference endpoint and key.
+# the inference endpoint and key (the key only on that same endpoint).
 # requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL SWITCHYARD_CONFIRMATIONS
 schema_version = 1
 

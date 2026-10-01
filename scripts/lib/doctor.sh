@@ -209,9 +209,14 @@ check_inference() {
       esac
     done
   fi
+  # The inference key goes to the inference endpoint only (env.sh, Switchyard's entrypoint).
+  if uses_capable_model && [ -z "$CAPABLE_API_KEY" ] && [ "$CAPABLE_BASE_URL" != "$INFERENCE_BASE_URL" ]; then
+    problem "CAPABLE_BASE_URL is another endpoint than INFERENCE_BASE_URL: set CAPABLE_API_KEY to its key" \
+      "(.env section 1)"
+  fi
   if on_build_nvidia "$CAPABLE_BASE_URL" && uses_capable_model; then
     case $CAPABLE_API_KEY in
-      nvapi-*) ;;
+      "" | nvapi-*) ;;
       *) problem "CAPABLE_API_KEY (or INFERENCE_API_KEY) must be an nvapi- key for build.nvidia.com" ;;
     esac
     case $SWITCHYARD_ROUTES in

@@ -54,9 +54,11 @@ The suffix names the model families the template expects:
   with `reasoning_effort = "medium"` and `store = false`.
 - `.nemotron`: every model speaks Chat Completions, for example all-Nemotron on build.nvidia.com.
 
-The capable model's client reads `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`, which default to the
-inference endpoint and key. So GPT-6 Sol can come from any OpenAI-compatible provider while the
-efficient and judge models stay on build.nvidia.com.
+The capable model's client reads `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`. The endpoint defaults to
+the inference endpoint, and the key to the inference key on that endpoint only: the inference key
+never goes to another host, so with another endpoint and no `CAPABLE_API_KEY` the entrypoint exits 64.
+So GPT-6 Sol can come from any OpenAI-compatible provider while the efficient and judge models stay
+on build.nvidia.com.
 
 **How escalation works.** It uses Switchyard's `llm_classifier` router in `mode = "escalation"`.
 On each turn of a session that has not latched:
@@ -96,7 +98,7 @@ Without the fallback, Hermes kept retrying for about 5 minutes and then failed t
 | `INFERENCE_BASE_URL` | yes | OpenAI-compatible base URL, e.g. `https://integrate.api.nvidia.com/v1` (build.nvidia.com). |
 | `INFERENCE_API_KEY` | yes | Read from `/run/secrets/inference_api_key` when that file exists (the Compose secret), else from the environment. |
 | `CAPABLE_BASE_URL` | no | The capable model's OpenAI-compatible base URL. Empty means `INFERENCE_BASE_URL`. |
-| `CAPABLE_API_KEY` | no | Its key, read from `/run/secrets/capable_api_key` when that file exists and is not empty, else from the environment. Empty means `INFERENCE_API_KEY`. |
+| `CAPABLE_API_KEY` | no | Its key, read from `/run/secrets/capable_api_key` when that file exists, else from the environment. Empty means `INFERENCE_API_KEY` when `CAPABLE_BASE_URL` is empty or equals `INFERENCE_BASE_URL`; with another endpoint a template that uses the capable model needs it. |
 | `AGENT_EFFICIENT_MODEL`, `AGENT_JUDGE_MODEL` | yes | Model ids at the inference endpoint. |
 | `AGENT_CAPABLE_MODEL` | all but `passthrough.nemotron` | Model id at the capable endpoint. The models a template uses must all differ. |
 | `SWITCHYARD_CONFIRMATIONS` | escalation templates | `1` or `2`. |
