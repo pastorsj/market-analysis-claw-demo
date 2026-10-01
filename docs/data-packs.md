@@ -110,6 +110,10 @@ turn can refer to an earlier answer ("For those same two examples, ..."). They f
 rules, share the questions' ids, are not listed in the UI, and are recorded by `record --all`, each as one replay
 session. `us-equities` has 30 questions and 15 conversations, 45 sessions in all.
 
+`documents.benchmark_queries` in `pack.yaml` lists held-out queries for the Benchmark tab's CPU/GPU Milvus
+comparison on a GPU host, each with the document sources it searches; they are never demo questions. A build keeps
+those whose sources it indexed ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)). Each pack has 15.
+
 ## Recordings
 
 The replay bundle lives with its pack, in `data/packs/<pack>/recordings/`, and is committed. It is written by:
@@ -136,7 +140,9 @@ DATA_PACK=us-equities ./scripts/demo.sh replay
 
 The bundles were recorded on 2026-10-01 with the `.env.example` models (Nemotron 3 Ultra alone, on
 build.nvidia.com) and every profile, including `ontology` and the local Kumo NIM, on a Brev A100 VM, so every
-answer that called the market tools also carries its CPU/GPU comparison for the Benchmark tab. Each question
+answer that called the market tools also carries its CPU/GPU comparison for the Benchmark tab. They predate the
+GPU Milvus, so no turn carries a Milvus comparison (`retrievalBenchmark`) yet: a bundle recorded on the GPU
+profile from now on does. Each question
 was asked once and succeeded, in 14 s to 7.5 minutes; 11 of the 12 answers cite their evidence. The bundles keep
 Ultra's faults rather than hiding them ([models and routing](models-and-routing.md#the-default-on-buildnvidiacom)).
 The `us-equities` bundle holds results derived from its external dataset: the answers' figures and, in

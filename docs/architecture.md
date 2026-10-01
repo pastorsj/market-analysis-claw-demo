@@ -25,6 +25,7 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 | `data` (one-shot) | core | – | Builds the active data pack into the `demo-data` volume at `/data/active` | [`data/`](../data/README.md) |
 | `data-fetch` (one-shot) | tools | – | `demo.sh data fetch`: copies or downloads a pack's external datasets into `DATA_SOURCE_DIR`, the only writable mount of it, and verifies them against the pinned manifest | [`data/`](../data/README.md) |
 | `milvus`, `data-corpus`, `retrieval-index`, `retrieval` | retrieval | 8120 (`retrieval`) | Document corpus, vector index and the `retrieve_evidence` MCP server | [`tools/retrieval/`](../tools/retrieval/README.md) |
+| `milvus-gpu`, `retrieval-benchmark` (one-shot) | analytics-gpu, with retrieval | – | A GPU Milvus holding a `GPU_CAGRA` copy of the index, and the one-shot that times the CPU and GPU indexes for the Benchmark tab; answers never use it ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)) | [`tools/retrieval/`](../tools/retrieval/README.md) |
 | `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured; the GPU service also runs the API's matched CPU/GPU comparisons (`POST /benchmark`) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `kumo-relational` | kumo | – | Kumo Relational NIM (x86_64 and an NVIDIA GPU) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `auto-ontology-*` | ontology | 3003 (`auto-ontology-mcp`) | NVIDIA Auto Ontology: `ask_question` answers structured questions with SQL | [`tools/auto-ontology/`](../tools/auto-ontology/README.md) |
@@ -32,7 +33,7 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 The `build` and `tools` profiles hold the agent image build, the OpenShell CLI and `data-fetch`, which `demo.sh`
 runs. `demo.sh data generate` runs NeMo Data Designer with uv on the host, not in Compose: it rewrites the
 `synthetic-market` pack's committed text ([data platform](data-platform.md#the-data-designer-pack)). Named
-volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `switchyard-data`, `openshell-state`,
+volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `milvus-gpu-data`, `switchyard-data`, `openshell-state`,
 `openshell-client` and `auto-ontology-db` (one per data pack).
 
 ## How a question is answered
@@ -101,7 +102,7 @@ Services share JSON contracts only; no service imports another's Python code.
 | Contract | Defined in | Shared by |
 |---|---|---|
 | Tool registry: one entry per MCP tool (server, family, label, explorer, receipt kind) | `contracts/tool-registry.json` | API, agent plugin, UI, wiring tests |
-| `execution.v2` events, the `ReceiptV2` union (by `artifactKind`) and the Benchmark tab's `Benchmark` | Pydantic models in `api/src/demo_api/events/`, `receipts/` and `benchmark/`, exported to `contracts/schemas/` and `ui/src/generated/` by `scripts/gen-contracts.sh` | API, plugin tests, UI |
+| `execution.v2` events, the `ReceiptV2` union (by `artifactKind`) and the Benchmark tab's `Benchmark` and `RetrievalBenchmark` | Pydantic models in `api/src/demo_api/events/`, `receipts/` and `benchmark/`, exported to `contracts/schemas/` and `ui/src/generated/` by `scripts/gen-contracts.sh` | API, plugin tests, UI |
 | Data pack layout (`/data/active/pack.json` and friends) | [`data/README.md`](../data/README.md) | every service |
 | Market analytics table contract | `tools/market-analytics/contract/market-analytics.v1.json` | the tool and `demo-data validate` |
 | Recordings bundle v2 (`index.json`, `pack.json`, `sessions/<id>.json`, `database.json`) | [`api/README.md`](../api/README.md#recordings) | `demo-api record`, the UI's replay mode |
