@@ -103,6 +103,7 @@ records the latest run.
 | `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
 | `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
+| `recordings/` | the replay bundle of the featured questions (`demo.sh record`, [recordings](../../../docs/data-packs.md#recordings)) |
 
 ## Licenses
 

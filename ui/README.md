@@ -101,10 +101,9 @@ npm run test:ci               # Vitest + coverage
 npm run build && npm run e2e  # Playwright smoke (Chromium), no screenshots
 ```
 
-The smoke test starts three servers from the build: live mode against
+The smoke test starts four servers from the build: live mode against
 `e2e/fake-api.mjs`, replay mode on the synthetic bundle in `e2e/fixtures/packs`,
-and replay mode on the committed recordings (`../data/packs/market-analysis/recordings`, the
-replay bundle of the retired market-analysis pack until the current packs are recorded), each of
-whose sessions must replay. The fake API offers the default pack's six featured questions.
+and replay mode on each pack's committed recordings (`../data/packs/synthetic-market/recordings`
+and `../data/packs/us-equities/recordings`), each of whose sessions must replay. The fake API offers the default pack's six featured questions.
 It needs `npx playwright install chromium` once; on Linux, `npx playwright install --with-deps chromium`,
 which also installs Chromium's system libraries with apt (sudo), as CI and `demo.sh test e2e` do.

@@ -1,0 +1,622 @@
+{
+  "schemaVersion": 2,
+  "id": "unusual-sessions",
+  "title": "Unusual Sessions",
+  "turns": [
+    {
+      "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+      "question": "Treat January 2 through June 30, 2026 as the baseline for every issuer. Which 10 issuer sessions from July 1 through August 31, 2026 were the most unusual in return, volatility and volume, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations.",
+      "submittedAt": "2026-10-01T04:27:13.757479Z",
+      "completedAt": "2026-10-01T04:27:40.246033Z",
+      "status": "success",
+      "report": {
+        "markdown": "**Top‑10 most unusual issuer‑sessions (July 1 – August 31 2026)**\n*Baseline = Jan 2 – Jun 30 2026; “unusual” = highest anomaly score from the market‑anomaly scan (all assets).  Scores are robust‑z‑score based; they are descriptive, not forecasts.*\n\n| Rank | Asset (ticker) | Session (UTC) | Anomaly score | Features driving the anomaly (robust z‑scores) |\n|------|----------------|---------------|---------------|-----------------------------------------------|\n| 1 | **DREI** | 2026‑07‑08 | 16.56 | • Adj‑return 1d = **‑25.96**  <br>• Adj‑return 5d = **‑11.56**  <br>• Realized vol 20d = **+14.41**  <br>• Log‑volume dev 20d = **+14.81** |\n| 2 | **MOST** | 2026‑07‑27 | 15.04 | • Adj‑return 1d = **‑2.53**  <br>• Adj‑return 5d = **+10.24**  <br>• Realized vol 20d = **+12.42**  <br>• Log‑volume dev 20d = **+0.88** |\n| 3 | **DREI** | 2026‑07‑09 | 14.98 | • Adj‑return 1d = **+0.95**  <br>• Adj‑return 5d = **‑11.44**  <br>• Realized vol 20d = **+14.41**  <br>• Log‑volume dev 20d = **+0.37** |\n| 4 | **FLOA** | 2026‑07‑02 | 13.64 | • Adj‑return 1d = **‑2.42**  <br>• Adj‑return 5d = **+9.91**  <br>• Realized vol 20d = **+12.49**  <br>• Log‑volume dev 20d = **‑0.58** |\n| 5 | **DREI** | 2026‑07‑14 | 12.93 | • Adj‑return 1d = **+0.61**  <br>• Adj‑return 5d = **‑10.89**  <br>• Realized vol 20d = **+14.36**  <br>• Log‑volume dev 20d = **+0.60** |\n| 6 | **DREI** | 2026‑07‑10 | 11.62 | • Adj‑return 1d = **‑1.13**  <br>• Adj‑return 5d = **‑11.80**  <br>• Realized vol 20d = **+14.33**  <br>• Log‑volume dev 20d = **+0.27** |\n| 7 | **MOST** | 2026‑07‑21 | 11.56 | • Adj‑return 1d = **+23.62**  <br>• Adj‑return 5d = **+8.72**  <br>• Realized vol 20d = **+12.19**  <br>• Log‑volume dev 20d = **+13.86** |\n| 8 | **FLOA** | 2026‑07‑01 | 10.86 | • Adj‑return 1d = **+0.49**  <br>• Adj‑return 5d = **+11.29**  <br>• Realized vol 20d = **+12.31**  <br>• Log‑volume dev 20d = **‑1.13** |\n| 9 | **REXI** | 2026‑07‑06 | 10.64 | • Adj‑return 1d = **‑1.71**  <br>• Adj‑return 5d = **+9.17**  <br>• Realized vol 20d = **+12.78**  <br>• Log‑volume dev 20d = **‑0.61** |\n|10| **DREI** | 2026‑07‑13 | 10.57 | • Adj‑return 1d = **‑2.10**  <br>• Adj‑return 5d = **‑12.25**  <br>• Realized vol 20d = **+14.32**  <br>• Log‑volume dev 20d = **+1.05** |\n\n**What the feature deviations mean**\n\n| Feature | Interpretation of a large positive/negative z‑score |\n|---------|----------------------------------------------------|\n| **adjusted_return_1d** | One‑day price move far from the baseline distribution (positive = unusually large gain, negative = unusually large loss). |\n| **adjusted_return_5d** | Five‑day cumulative return far from baseline (same sign convention). |\n| **realized_volatility_20d** | 20‑day realized volatility far above (positive) or below (negative) its historic range. |\n| **log_volume_deviation_20d** | Log‑volume over the past 20 sessions far above (positive) or below (negative) typical levels. |\n\n**Key take‑aways**\n\n* The **DREI** ticker dominates the list (5 of the top‑10), mainly because its 20‑day volatility and volume deviate strongly (+14 z) while its multi‑day returns are deeply negative.\n* **MOST** shows two extreme sessions: a large positive 1‑day return (+23.6 z) with high volume (+13.9 z) on 2026‑07‑21, and a mixed‑sign pattern on 2026‑07‑27.\n* **FLOA** and **REXI** each appear once, driven by a combination of elevated 5‑day returns and higher‑than‑usual volatility.\n\n**Limitations** – The anomaly scores describe unusual *observed* feature combinations; they are **not forecasts, probabilities, or causal explanations**[1].\n\n## Sources\n\n- [1] Market analytics result — market anomaly scan — evidence `hermes-receipt:6a2b1509c734f6bbc33c3742dfb3dec86009136d7b3366eb32aa13082c27916d`",
+        "citations": [
+          {
+            "number": 1,
+            "evidenceId": "hermes-receipt:6a2b1509c734f6bbc33c3742dfb3dec86009136d7b3366eb32aa13082c27916d",
+            "label": "Market analytics result — market anomaly scan",
+            "capabilityId": "market_analytics",
+            "invocationId": "hermes-tool:call-265e3c9c-e13b-47bc-9bec-20a9e978e7c1"
+          }
+        ]
+      },
+      "events": [
+        {
+          "schemaVersion": "2",
+          "eventId": "77736a48-d17d-5e66-9686-a05e15a3cb69",
+          "cursor": 9206,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": null,
+          "eventKind": "run.created",
+          "state": "started",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:13.864636Z",
+          "display": {
+            "label": "Run accepted",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:a9816e20733b70ec40a451c62ab40c11a0bce24c760ba11b4f38863be92d15b7",
+            "sourceEventKind": "run.created",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "7eaf6c69-322a-52f2-905a-e9b2f76513b8",
+          "cursor": 9207,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb:api:1",
+          "parentInvocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:18.121129Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 9642,
+              "output_tokens": 276
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb:api:1",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "c2433686-3d5e-50cb-8e6f-d674ec87ba21",
+          "cursor": 9208,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-265e3c9c-e13b-47bc-9bec-20a9e978e7c1",
+          "parentInvocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "toolServer": "market_analytics",
+          "toolName": "market_anomaly_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:18.159225Z",
+          "display": {
+            "label": "Market Anomaly Scan started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:a73724e24627e6c1e05ffd0e2cf2b9e477d7c955d710b59e92f6e38981fb8908",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "1a14eb34-2394-56c6-910e-01259df94655",
+          "cursor": 9209,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-265e3c9c-e13b-47bc-9bec-20a9e978e7c1",
+          "parentInvocationId": null,
+          "toolServer": "market_analytics",
+          "toolName": "market_anomaly_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [
+            "hermes-receipt:6a2b1509c734f6bbc33c3742dfb3dec86009136d7b3366eb32aa13082c27916d"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:18.407419Z",
+          "display": {
+            "label": "Market analytics result available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 245,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:6a2b1509c734f6bbc33c3742dfb3dec86009136d7b3366eb32aa13082c27916d",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "4d72125f-bbf9-565f-89ec-fce871d3031e",
+          "cursor": 9210,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-265e3c9c-e13b-47bc-9bec-20a9e978e7c1",
+          "parentInvocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "toolServer": "market_analytics",
+          "toolName": "market_anomaly_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:18.435195Z",
+          "display": {
+            "label": "Market Anomaly Scan completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.27
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:e4ddae9dd904eb978e8008eec105ced055c71d8710da4a29931d0a0053444129",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "b3ea3e75-5fa8-5918-af4b-203065386318",
+          "cursor": 9211,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:28.874432Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:3bb025e4c1375c119a607e30405c16efd2789d4d54877969f87be1bd0517710a",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "8f01a82b-bf09-5b94-a629-f107a5236228",
+          "cursor": 9212,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb:api:2",
+          "parentInvocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:40.189649Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 13190,
+              "output_tokens": 1902
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb:api:2",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "4151dde2-9c96-5ed8-8a5c-e4240b802468",
+          "cursor": 9213,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": null,
+          "eventKind": "reasoning.available",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:40.208496Z",
+          "display": {
+            "label": "Reasoning in progress",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:f1c6b7b0ebdd016328ba727f0b9a3349a6225cb8aabfdef33a56c3e22f30d15a",
+            "sourceEventKind": "reasoning.available",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a08ced34-99fe-5767-9bdc-93abdf63ee06",
+          "cursor": 9214,
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "runId": "run_562c1991f2bf4a22b92b251a23955baf",
+          "sessionId": "record-f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "turnId": null,
+          "eventKind": "run.completed",
+          "state": "completed",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:4fcf06df1576e4aed26c0742:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:40.227815Z",
+          "display": {
+            "label": "Run completed",
+            "summary": null,
+            "attributes": {
+              "input_tokens": 22832,
+              "output_tokens": 2178,
+              "total_tokens": 25010,
+              "output_characters": 3644
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:9251af0ef99d08231ad5b575e00d241fc832d51d5621bdeb10ff2936fa3ededd",
+            "sourceEventKind": "run.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        }
+      ],
+      "receipts": [
+        {
+          "schemaVersion": "2",
+          "artifactKind": "analytics_result",
+          "receiptId": "hermes-receipt:6a2b1509c734f6bbc33c3742dfb3dec86009136d7b3366eb32aa13082c27916d",
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "invocationId": "hermes-tool:call-265e3c9c-e13b-47bc-9bec-20a9e978e7c1",
+          "turnId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b:f5e7a266-39cd-4430-8790-8c7f59fa3c0b:d27a1abb",
+          "toolName": "mcp__market_analytics__market_anomaly_scan",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 245,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:27:18.407419Z",
+          "content": {
+            "operationId": "market_anomaly_scan",
+            "status": "succeeded",
+            "sourceId": "market_data",
+            "databaseName": "synthetic_market",
+            "publicParameters": {
+              "limit": 10,
+              "scoring_end": "2026-08-31T23:59:59Z",
+              "scoring_start": "2026-07-01T00:00:00Z",
+              "training_end": "2026-06-30T23:59:59Z",
+              "training_start": "2026-01-02T00:00:00Z",
+              "universe_id": "all_assets"
+            },
+            "payload": {
+              "universe_id": "all_assets",
+              "feature_names": [
+                "adjusted_return_1d",
+                "adjusted_return_5d",
+                "realized_volatility_20d",
+                "log_volume_deviation_20d"
+              ],
+              "training_observations": 246000,
+              "scoring_observations": 86000,
+              "flagged_observations": 5143,
+              "observations": [
+                {
+                  "rank": 1,
+                  "asset_id": "DREI",
+                  "timestamp": "2026-07-08T21:00:00Z",
+                  "anomaly_score": 16.563957945962983,
+                  "decision_score": -16.024851014502904,
+                  "cohort_percentile": 100.0,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": -25.95950078158672,
+                    "adjusted_return_5d": -11.559024662518762,
+                    "realized_volatility_20d": 14.411745396187014,
+                    "log_volume_deviation_20d": 14.805402555779539
+                  }
+                },
+                {
+                  "rank": 2,
+                  "asset_id": "MOST",
+                  "timestamp": "2026-07-27T21:00:00Z",
+                  "anomaly_score": 15.038757958508779,
+                  "decision_score": -14.4996510270487,
+                  "cohort_percentile": 99.99883720930232,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": -2.53218627504633,
+                    "adjusted_return_5d": 10.239494842779004,
+                    "realized_volatility_20d": 12.421422019114711,
+                    "log_volume_deviation_20d": 0.883469776674413
+                  }
+                },
+                {
+                  "rank": 3,
+                  "asset_id": "DREI",
+                  "timestamp": "2026-07-09T21:00:00Z",
+                  "anomaly_score": 14.980199703758128,
+                  "decision_score": -14.441092772298049,
+                  "cohort_percentile": 99.99767441860465,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": 0.952674942566478,
+                    "adjusted_return_5d": -11.437127486276585,
+                    "realized_volatility_20d": 14.412821726992384,
+                    "log_volume_deviation_20d": 0.36740070081708703
+                  }
+                },
+                {
+                  "rank": 4,
+                  "asset_id": "FLOA",
+                  "timestamp": "2026-07-02T21:00:00Z",
+                  "anomaly_score": 13.643782918038108,
+                  "decision_score": -13.104675986578028,
+                  "cohort_percentile": 99.99651162790698,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": -2.4245587452909736,
+                    "adjusted_return_5d": 9.909994287160252,
+                    "realized_volatility_20d": 12.491827218420893,
+                    "log_volume_deviation_20d": -0.5824334595024548
+                  }
+                },
+                {
+                  "rank": 5,
+                  "asset_id": "DREI",
+                  "timestamp": "2026-07-14T21:00:00Z",
+                  "anomaly_score": 12.93089792382344,
+                  "decision_score": -12.391790992363362,
+                  "cohort_percentile": 99.9953488372093,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": 0.6131731762273211,
+                    "adjusted_return_5d": -10.885339705032779,
+                    "realized_volatility_20d": 14.362941168796981,
+                    "log_volume_deviation_20d": 0.5973074786918281
+                  }
+                },
+                {
+                  "rank": 6,
+                  "asset_id": "DREI",
+                  "timestamp": "2026-07-10T21:00:00Z",
+                  "anomaly_score": 11.620663253486617,
+                  "decision_score": -11.081556322026538,
+                  "cohort_percentile": 99.99418604651163,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": -1.127425654987174,
+                    "adjusted_return_5d": -11.799527007299174,
+                    "realized_volatility_20d": 14.330311158231924,
+                    "log_volume_deviation_20d": 0.2734742019247897
+                  }
+                },
+                {
+                  "rank": 7,
+                  "asset_id": "MOST",
+                  "timestamp": "2026-07-21T21:00:00Z",
+                  "anomaly_score": 11.562087941620174,
+                  "decision_score": -11.022981010160095,
+                  "cohort_percentile": 99.99302325581395,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": 23.620391284209017,
+                    "adjusted_return_5d": 8.720542221011442,
+                    "realized_volatility_20d": 12.189670809556226,
+                    "log_volume_deviation_20d": 13.861982927464974
+                  }
+                },
+                {
+                  "rank": 8,
+                  "asset_id": "FLOA",
+                  "timestamp": "2026-07-01T21:00:00Z",
+                  "anomaly_score": 10.856228958898472,
+                  "decision_score": -10.317122027438392,
+                  "cohort_percentile": 99.99186046511628,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": 0.49188918092963047,
+                    "adjusted_return_5d": 11.287723437778997,
+                    "realized_volatility_20d": 12.312615091957598,
+                    "log_volume_deviation_20d": -1.1284843758725476
+                  }
+                },
+                {
+                  "rank": 9,
+                  "asset_id": "REXI",
+                  "timestamp": "2026-07-06T21:00:00Z",
+                  "anomaly_score": 10.6371956382903,
+                  "decision_score": -10.098088706830222,
+                  "cohort_percentile": 99.9906976744186,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": -1.709527376991532,
+                    "adjusted_return_5d": 9.165681760373197,
+                    "realized_volatility_20d": 12.777936181019768,
+                    "log_volume_deviation_20d": -0.6069079423171392
+                  }
+                },
+                {
+                  "rank": 10,
+                  "asset_id": "DREI",
+                  "timestamp": "2026-07-13T21:00:00Z",
+                  "anomaly_score": 10.569320385128986,
+                  "decision_score": -10.030213453668907,
+                  "cohort_percentile": 99.98953488372094,
+                  "is_anomaly": true,
+                  "observed_deviations": {
+                    "adjusted_return_1d": -2.102590281043661,
+                    "adjusted_return_5d": -12.249145732004145,
+                    "realized_volatility_20d": 14.318711652066693,
+                    "log_volume_deviation_20d": 1.0495675785014855
+                  }
+                }
+              ]
+            },
+            "error": null,
+            "engine": {
+              "device": "gpu",
+              "library": "cuml.accel",
+              "version": "26.06.00"
+            },
+            "timing": {
+              "computeMs": 209.7482898971066,
+              "totalMs": 211.08152298256755
+            },
+            "rowsScanned": 332000,
+            "warnings": [],
+            "limitations": [
+              "Anomaly scores describe unusual observed feature combinations; they are not forecasts or probabilities.",
+              "Observed deviations are robust z-scores against the training window, not returns or percentages; they are descriptive reason codes and do not establish a cause or adverse event."
+            ]
+          }
+        }
+      ],
+      "sourceIds": [
+        "market_data"
+      ],
+      "benchmark": {
+        "schemaVersion": "1",
+        "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+        "status": "completed",
+        "reason": null,
+        "measuredAt": "2026-10-01T04:27:44.630191Z",
+        "pairs": 5,
+        "stages": [
+          {
+            "invocationId": "hermes-tool:call-265e3c9c-e13b-47bc-9bec-20a9e978e7c1",
+            "receiptId": "hermes-receipt:6a2b1509c734f6bbc33c3742dfb3dec86009136d7b3366eb32aa13082c27916d",
+            "toolName": "market_anomaly_scan",
+            "outcome": "completed",
+            "parity": true,
+            "reason": null,
+            "cpu": {
+              "device": "cpu",
+              "library": "scikit-learn",
+              "version": "1.9.1",
+              "trialsMs": [
+                295.273,
+                304.037,
+                343.387,
+                318.479,
+                323.845
+              ],
+              "medianMs": 318.479
+            },
+            "gpu": {
+              "device": "gpu",
+              "library": "cuml.accel",
+              "version": "26.06.00",
+              "trialsMs": [
+                117.241,
+                116.566,
+                130.551,
+                117.716,
+                116.623
+              ],
+              "medianMs": 117.241
+            },
+            "speedup": 2.716447317917793,
+            "speedupRange": {
+              "low": 2.5185131481307734,
+              "high": 2.7768536223557962
+            },
+            "qualified": true
+          }
+        ]
+      }
+    }
+  ]
+}

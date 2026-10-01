@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 2,
+  "pack": {
+    "id": "us-equities",
+    "version": "0.1.0"
+  },
+  "recordedAt": "2026-10-01T04:55:12.689096Z",
+  "sessions": [
+    {
+      "id": "market-leaders",
+      "title": "Market Leaders",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "26e0564e-1e2c-4e2d-9bb4-434a281784c6",
+          "question": "Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare?"
+        }
+      ]
+    },
+    {
+      "id": "intraday-ranges",
+      "title": "Intraday Swings",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "39c2721d-6adb-40b7-a28f-bff47010d35a",
+          "question": "Among the 50 most liquid US stocks, which sessions from March 2 through March 12, 2026 had the widest intraday price ranges? For each, how did it trade from open to close, and how much of its volume came in the last 30 minutes?"
+        }
+      ]
+    },
+    {
+      "id": "unusual-sessions",
+      "title": "Unusual Sessions",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "6587fe6a-b6f7-42e0-99fd-c5b78c62d215",
+          "question": "Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
+        }
+      ]
+    },
+    {
+      "id": "peer-network",
+      "title": "Peer Network",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "bffe822c-da94-48cc-9742-5210f9378927",
+          "question": "Among declared industry peers, which stocks were the most central in the return-correlation network from December 2025 through March 12, 2026, and which pairs moved together most closely?"
+        }
+      ]
+    },
+    {
+      "id": "cyber-disclosure-rules",
+      "title": "Cybersecurity Disclosures",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "25d25785-a7db-4ff3-b275-02b4592f6b60",
+          "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05."
+        }
+      ]
+    },
+    {
+      "id": "moves-and-filings",
+      "title": "Moves & Filings",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "question": "Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-K filings from January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move."
+        }
+      ]
+    }
+  ]
+}

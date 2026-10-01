@@ -100,3 +100,4 @@ data is never in CI.
 | `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
 | `corpus/select_filings.py` | selects the filings from the issuers' EDGAR submissions and writes their manifest |
 | `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
+| `recordings/` | the replay bundle of the featured questions (`demo.sh record`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars |

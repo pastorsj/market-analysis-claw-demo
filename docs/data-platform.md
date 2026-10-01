@@ -60,9 +60,8 @@ canonical layout into `/data/cache/generated/`, and the same rollup and import r
 | Committed | Everything, including the Nemotron text for the committed profiles | The pack definition, the dataset digest and the filings manifest only |
 | Needs | No key for the structured part; `SEC_USER_AGENT` for `sec_filings` | `data fetch`; `SEC_USER_AGENT` for company metadata and `sec_filings` |
 
-The first pack, `market-analysis`, is retired: its generator, fictional briefs and questions are gone and
-`DATA_PACK` defaults to `synthetic-market`. Its `recordings/` directory stays until the new packs are
-recorded, because replay needs only the bundle.
+The first pack, `market-analysis`, is retired: its generator, fictional briefs, questions and replay bundle
+are gone, and `DATA_PACK` defaults to `synthetic-market`. Both current packs carry their own recordings.
 
 The structured source is `market_data` in both packs. The SEC filings source is `sec_filings`, not
 `market_news` as in the old pack, so the name no longer suggests a news table.
@@ -650,7 +649,7 @@ the SEC filings corpus. On Brev, the images and the Docker volumes stay where th
 | `data/schemas/pack.schema.json` | v2: `external`, `market`, provenance kind `external`, in-place corpora (`files`), nullable `news_table`, `population` by view |
 | `data/src/demo_data/` | `external.py` (manifest, fingerprint, verification), `fetch.py` (sources), `market.py` (rollup, import), `sec.py` (company metadata), `corpus/` (`edgar.py`, `ecfr.py`, `gdelt.py`, `markdown.py`), `structured.py`, `cli.py` |
 | `data/generate/` | The Data Designer jobs and their checks |
-| `data/packs/` | `synthetic-market/` and `us-equities/` (with `corpus/select_filings.py`); `market-analysis/` holds only its recordings |
+| `data/packs/` | `synthetic-market/` and `us-equities/` (with `corpus/select_filings.py`), each with its `recordings/` |
 | `tools/market-analytics/` | The contract (optional news table, minute bars); `bars.py` (minute-bar scans) and `tools/intraday.py` (`intraday_scan`); the availability of each tool per pack; the sparse peer graph; the memory estimate |
 | `tools/retrieval/` | Streamed, resumable indexing |
 | `scripts/demo.sh`, `scripts/lib/doctor.sh`, `compose.yaml`, `.env.example` | `data fetch` and `data generate`, the `/sources` mounts, the `DATA_SOURCE_*`, `DATA_DESIGNER_*` and credential variables, the default `DATA_PACK` and `DATA_DATABASE_NAME` |

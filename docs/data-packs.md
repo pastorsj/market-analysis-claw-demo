@@ -117,19 +117,20 @@ is left out, and the command exits 1. Review the files before committing: they h
 excerpts and model names. `./scripts/demo.sh replay` then serves the UI on the bundle alone, and stops with a
 hint when the pack has none. The format is in [`api/README.md`](../api/README.md#recordings).
 
-The current packs are not recorded yet. The committed bundle is the one recorded for the pack they replaced,
-`market-analysis` (a generated market of 2,000 fictional issuers, 12 of them the reviewed set; the bundle was
-recorded on its 2,000-issuer qualification profile), which is otherwise gone:
+Both packs are recorded, each with its six featured questions:
 
 ```bash
-DATA_PACK=market-analysis ./scripts/demo.sh replay
+./scripts/demo.sh replay                          # synthetic-market, the default
+DATA_PACK=us-equities ./scripts/demo.sh replay
 ```
 
-It holds five sessions, recorded on 2026-09-29 with the `.env.example` models (Nemotron 3 Ultra alone, on
-build.nvidia.com) and every profile, including `ontology` and the local Kumo NIM, on a Brev A100 VM. Ultra's
-known faults show in it, and the bundle keeps them rather than hiding them ([models and
-routing](models-and-routing.md#the-default-on-buildnvidiacom)). In it, `market_news` names the SEC filings, a
-document source like `sec_filings` today.
+The bundles were recorded on 2026-10-01 with the `.env.example` models (Nemotron 3 Ultra alone, on
+build.nvidia.com) and every profile, including `ontology` and the local Kumo NIM, on a Brev A100 VM, so every
+answer that called the market tools also carries its CPU/GPU comparison for the Benchmark tab. Each question
+was asked once and succeeded, in 14 s to 7.5 minutes; 11 of the 12 answers cite their evidence. The bundles keep
+Ultra's faults rather than hiding them ([models and routing](models-and-routing.md#the-default-on-buildnvidiacom)).
+The `us-equities` bundle holds results derived from its external dataset: the answers' figures and, in
+`database.json`, the first rows of each table (a few dozen rows of daily prices), never the minute bars.
 
 ## Adding or swapping a pack
 

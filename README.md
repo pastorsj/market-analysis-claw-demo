@@ -124,9 +124,9 @@ turn is recommended), or a different endpoint for every model, see
 ```
 
 This serves the UI alone on the sessions recorded with the data pack, at <http://127.0.0.1:3100>: the answers,
-their evidence and the execution graphs, with no `.env`, keys, API or GPU. `./scripts/demo.sh up` returns to
-live mode. The current packs are not recorded yet; until they are, replay the bundle of the pack they replaced
-with `DATA_PACK=market-analysis ./scripts/demo.sh replay` ([data packs](docs/data-packs.md#recordings)).
+their evidence and the execution graphs, with no `.env`, keys, API or GPU. Both packs ship their six featured
+questions recorded; `DATA_PACK=us-equities ./scripts/demo.sh replay` replays the other one
+([data packs](docs/data-packs.md#recordings)). `./scripts/demo.sh up` returns to live mode.
 
 ## Example questions
 

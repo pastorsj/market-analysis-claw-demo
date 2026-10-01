@@ -56,14 +56,22 @@ that every model id the template uses is listed.
 
 ### The default on build.nvidia.com
 
-The replay bundle was recorded with the default on 2026-09-29: Ultra alone on build.nvidia.com, every
-profile, on a Brev A100 VM. That was four `record` runs of the featured questions (three of all six, one of
-two), unjudged, not a bake-off. What they showed:
+The committed replay bundles were recorded with the default on 2026-10-01: Ultra alone on build.nvidia.com,
+every profile, on a Brev A100 VM, one `record` run of each pack's six featured questions, unjudged. All twelve
+succeeded on the first ask, and 11 cite their evidence: `synthetic-market`'s Market Leaders answer matches the
+oracle but cites nothing. Market Leaders on both packs and the News & Price Reaction means match their
+oracles, and so do the Peer Network pairs, except that the `us-equities` answer ranks a strongly negative pair
+among the pairs that "moved together". The Cybersecurity Disclosures answer still searches many times: 9 on
+`synthetic-market`, where it reports that the corpus lacks the four-business-day text, and 25 in 7.5 minutes on
+`us-equities`, where it finds it.
+
+The retired `market-analysis` pack's bundle was recorded the same way on 2026-09-29, in four `record` runs of
+the featured questions (three of all six, one of two). What they showed:
 
 - **Citation tokens.** Ultra there often writes `【evidence:<id>】` or `【hermes-receipt:<id>】` instead of
   `[evidence:<id>]`, or names the receipt in prose. Before the API accepted the bracketed forms, 4 of 5
-  answers in the first run had no citations. In the committed bundle 4 of 5 are cited; the Event Reaction
-  answer names its receipts in a prose "Sources" line, which does not count.
+  answers in the first run had no citations. In that bundle 4 of 5 were cited; the Event Reaction answer named
+  its receipts in a prose "Sources" line, which does not count.
 - **Event Reaction is unstable, as H1 was.** Of four attempts, two listed the eight planted events and their
   returns through Auto Ontology. One reached the Hermes run deadline after asking Auto Ontology to read a
   spilled-over tool result, and one reported the 2,000-issuer short-form news stream instead of the planted
@@ -71,7 +79,7 @@ two), unjudged, not a bake-off. What they showed:
 - **Market Leaders** scanned from August 1 in every run: 21 sessions, not 20. The strongest and weakest
   assets match the oracle (Aether, Cascade), but Aether's +0.21% is not the oracle's 20-session −0.94%.
 - **Large-Universe Scan** names the oracle's strongest and weakest issuers but misreads the unit: the tool's
-  returns are fractions (4.19 is +419%), which the committed answer labels "×" and another run showed as
+  returns are fractions (4.19 is +419%), which that bundle's answer labeled "×" and another run showed as
   "+4.191 %".
 - **Cybersecurity Rules** made one retrieval and covers Regulation S-K Item 106 only. It does not mention
   Form 8-K Item 1.05, which the earlier recording with GPT-6 Sol did.

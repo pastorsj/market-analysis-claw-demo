@@ -12,8 +12,8 @@ default, is a fictional market whose names and news text were written with NeMo 
 ([`generate`](generate/README.md)); it builds with no key and no download. [`us-equities`](packs/us-equities/README.md)
 holds real prices from an **external dataset**: data that lives outside the repository, is never committed, and
 reaches a machine through `demo-data fetch` ([data platform](../docs/data-platform.md)). In both, SEC EDGAR filings
-are a separate document source for retrieval, never turned into news. `packs/market-analysis/` holds only the
-replay bundle of the pack they replaced.
+are a separate document source for retrieval, never turned into news. Each pack's `recordings/` holds its
+replay bundle.
 
 ## How it fits
 

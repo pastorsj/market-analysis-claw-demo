@@ -255,7 +255,7 @@ cmd_replay() {
   load_env
   [ -f "$ROOT/data/packs/$DATA_PACK/recordings/index.json" ] ||
     die "$EXIT_CONFIG" "data pack $DATA_PACK has no recordings yet: record them on a running stack" \
-      "(./scripts/demo.sh record), or replay another pack's, e.g. DATA_PACK=market-analysis"
+      "(./scripts/demo.sh record), or replay another pack's, e.g. DATA_PACK=synthetic-market"
   dc up -d --build --wait ui
   log "replay: http://127.0.0.1:$UI_PORT (data pack $DATA_PACK)"
 }

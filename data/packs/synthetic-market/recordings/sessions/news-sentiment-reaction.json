@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 2,
+  "id": "news-sentiment-reaction",
+  "title": "News & Price Reaction",
+  "turns": [
+    {
+      "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+      "question": "For company news about the 12 most liquid issuers published from August 17 through August 24, 2026, how did the sentiment labels line up with the issuers' returns over the following five sessions? Describe the relationship without claiming causation.",
+      "submittedAt": "2026-10-01T04:26:44.758553Z",
+      "completedAt": "2026-10-01T04:27:11.589094Z",
+      "status": "success",
+      "report": {
+        "markdown": "**Sentiment‑label alignment with 5‑session forward returns (12 most‑liquid issuers, news 17 Aug – 24 Aug 2026)**\n\n| Sentiment label | News events | Mean 5‑session return | Median 5‑session return |\n|----------------|------------|----------------------|--------------------------|\n| Negative | 5 | **‑3.0 %** | **‑6.5 %** |\n| Neutral  | 3 | **+0.2 %** | **+3.8 %** |\n| Positive | 5 | **+3.0 %** | **+0.3 %** |\n\n*Overall sentiment‑return correlation*: **≈ 0.41** (positive), indicating that, on average, more positive news tended to be followed by higher returns over the next five trading sessions, while negative news tended to be followed by lower returns.\n\n**Key points**\n\n- The 13 aligned news events (100 % coverage) show the pattern above.\n- The correlation is modest (≈ 0.41) and **does not imply causation**; other factors (timing, market conditions, overlapping events, label quality) can influence returns.\n\n**Limitations**\n- Descriptive correlation only; not a predictive model.\n- Small sample (13 events) limits statistical confidence.\n- Results are based on synthetic market data and are not investment advice.\n\n[1]\n\n## Sources\n\n- [1] Market analytics result — analyze news price relationship — evidence `hermes-receipt:b14f670eff8b83daba60a1f4410cbd8fb3b52288876166eb2875df21e3815a0c`",
+        "citations": [
+          {
+            "number": 1,
+            "evidenceId": "hermes-receipt:b14f670eff8b83daba60a1f4410cbd8fb3b52288876166eb2875df21e3815a0c",
+            "label": "Market analytics result — analyze news price relationship",
+            "capabilityId": "market_analytics",
+            "invocationId": "hermes-tool:call-efe696ce-d59a-4bd0-aa0b-20bef89b22ce"
+          }
+        ]
+      },
+      "events": [
+        {
+          "schemaVersion": "2",
+          "eventId": "f4a1e54f-bc99-573d-baff-6c0028f51b1c",
+          "cursor": 9196,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": null,
+          "eventKind": "run.created",
+          "state": "started",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:26:44.873809Z",
+          "display": {
+            "label": "Run accepted",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:54e86f2a7b6933bc01c3fd1135e404c4d9a6c2c8071db09df8cbdc6517c7f75c",
+            "sourceEventKind": "run.created",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "4876b7aa-0d80-5f04-aba0-7437b72dbc18",
+          "cursor": 9197,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6:api:1",
+          "parentInvocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:26:50.149159Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 9624,
+              "output_tokens": 257
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6:api:1",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "3f5e9147-aa78-55ab-a632-fbec150dfc2f",
+          "cursor": 9198,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-efe696ce-d59a-4bd0-aa0b-20bef89b22ce",
+          "parentInvocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "toolServer": "market_analytics",
+          "toolName": "analyze_news_price_relationship",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:26:50.186575Z",
+          "display": {
+            "label": "News and Price Relationship started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:d592cb9d0127b2c6a521b55569d1d34837082c5675b4aa6505e74ad2b9f1ebcd",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "2f5e6217-618c-5b1b-9965-93d873b79193",
+          "cursor": 9199,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-efe696ce-d59a-4bd0-aa0b-20bef89b22ce",
+          "parentInvocationId": null,
+          "toolServer": "market_analytics",
+          "toolName": "analyze_news_price_relationship",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [
+            "hermes-receipt:b14f670eff8b83daba60a1f4410cbd8fb3b52288876166eb2875df21e3815a0c"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:26:50.318096Z",
+          "display": {
+            "label": "Market analytics result available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 129,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:b14f670eff8b83daba60a1f4410cbd8fb3b52288876166eb2875df21e3815a0c",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "e389623b-cd8e-56cc-86d3-5b41b7e470c0",
+          "cursor": 9200,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-efe696ce-d59a-4bd0-aa0b-20bef89b22ce",
+          "parentInvocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "toolServer": "market_analytics",
+          "toolName": "analyze_news_price_relationship",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:26:50.348524Z",
+          "display": {
+            "label": "News and Price Relationship completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.156
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:2e209ca80924abd3d0cb45db11006fe6c53477dc9cce75347a0c2befd97bd858",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "2dfddcdf-4f10-565f-b3a1-a4864aeb7930",
+          "cursor": 9201,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:26:59.881031Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:02edd40c90d6550bacad99455447fb2174780ca1dfd4bdd45a15415b8b7d903c",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "52f722fd-b973-5b0f-8f15-2eaf43ed290d",
+          "cursor": 9202,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6:api:2",
+          "parentInvocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:11.526946Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 12693,
+              "output_tokens": 462
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6:api:2",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "467b3447-9f77-5cb6-88b5-484c272ac555",
+          "cursor": 9203,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": null,
+          "eventKind": "reasoning.available",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:11.552128Z",
+          "display": {
+            "label": "Reasoning in progress",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:eeb2339f4d370be0fe7366a5e6cb716ad280a49b6a5c104450a22429b1b719ae",
+            "sourceEventKind": "reasoning.available",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "4870eba0-b3ac-5811-913f-6f77126ecaa5",
+          "cursor": 9204,
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "runId": "run_d257286fd7564b53973af4dce224350b",
+          "sessionId": "record-7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "turnId": null,
+          "eventKind": "run.completed",
+          "state": "completed",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:931021fa9479fb84ec144bff:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:27:11.570887Z",
+          "display": {
+            "label": "Run completed",
+            "summary": null,
+            "attributes": {
+              "input_tokens": 22317,
+              "output_tokens": 719,
+              "total_tokens": 23036,
+              "output_characters": 1232
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:583dff2bb1b51321b25f3ca3995425f3cc8ba503c55ad796239f08e96f9d5ba2",
+            "sourceEventKind": "run.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        }
+      ],
+      "receipts": [
+        {
+          "schemaVersion": "2",
+          "artifactKind": "analytics_result",
+          "receiptId": "hermes-receipt:b14f670eff8b83daba60a1f4410cbd8fb3b52288876166eb2875df21e3815a0c",
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "invocationId": "hermes-tool:call-efe696ce-d59a-4bd0-aa0b-20bef89b22ce",
+          "turnId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a:36f1d9f6",
+          "toolName": "mcp__market_analytics__analyze_news_price_relationship",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 129,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:26:50.318096Z",
+          "content": {
+            "operationId": "analyze_news_price_relationship",
+            "status": "succeeded",
+            "sourceId": "market_data",
+            "databaseName": "synthetic_market",
+            "publicParameters": {
+              "event_limit": 50,
+              "published_from": "2026-08-17T00:00:00Z",
+              "published_to": "2026-08-24T23:59:59Z",
+              "return_horizon_sessions": 5,
+              "universe_id": "top_12"
+            },
+            "payload": {
+              "return_horizon_sessions": 5,
+              "eligible_event_count": 13,
+              "aligned_event_count": 13,
+              "coverage_ratio": 1.0,
+              "sentiment_return_correlation": 0.4094126250853287,
+              "summaries": [
+                {
+                  "sentiment_label": "negative",
+                  "event_count": 5,
+                  "mean_forward_return": -0.030050453599871553,
+                  "median_forward_return": -0.06495865039698623
+                },
+                {
+                  "sentiment_label": "neutral",
+                  "event_count": 3,
+                  "mean_forward_return": 0.0018405336940932788,
+                  "median_forward_return": 0.03836354950007226
+                },
+                {
+                  "sentiment_label": "positive",
+                  "event_count": 5,
+                  "mean_forward_return": 0.029536703717709535,
+                  "median_forward_return": 0.0032923302739418236
+                }
+              ],
+              "events": [
+                {
+                  "news_id": "STIO-20260817-1",
+                  "asset_id": "STIO",
+                  "published_at": "2026-08-17T12:30:00Z",
+                  "sentiment_label": "positive",
+                  "aligned_session": "2026-08-17T21:00:00Z",
+                  "outcome_session": "2026-08-24T21:00:00Z",
+                  "forward_return": 0.0032923302739418236
+                },
+                {
+                  "news_id": "GIST-20260818-1",
+                  "asset_id": "GIST",
+                  "published_at": "2026-08-18T12:30:00Z",
+                  "sentiment_label": "positive",
+                  "aligned_session": "2026-08-18T21:00:00Z",
+                  "outcome_session": "2026-08-25T21:00:00Z",
+                  "forward_return": 0.08045427302538921
+                },
+                {
+                  "news_id": "TISL-20260818-1",
+                  "asset_id": "TISL",
+                  "published_at": "2026-08-18T12:30:00Z",
+                  "sentiment_label": "negative",
+                  "aligned_session": "2026-08-18T21:00:00Z",
+                  "outcome_session": "2026-08-25T21:00:00Z",
+                  "forward_return": 0.09148742805210541
+                },
+                {
+                  "news_id": "PRAL-20260818-1",
+                  "asset_id": "PRAL",
+                  "published_at": "2026-08-18T14:47:00Z",
+                  "sentiment_label": "neutral",
+                  "aligned_session": "2026-08-18T21:00:00Z",
+                  "outcome_session": "2026-08-25T21:00:00Z",
+                  "forward_return": -0.0962196809672955
+                },
+                {
+                  "news_id": "VIAS-20260818-1",
+                  "asset_id": "VIAS",
+                  "published_at": "2026-08-18T16:57:00Z",
+                  "sentiment_label": "negative",
+                  "aligned_session": "2026-08-18T21:00:00Z",
+                  "outcome_session": "2026-08-25T21:00:00Z",
+                  "forward_return": -0.06845831037259964
+                },
+                {
+                  "news_id": "PRAL-20260819-1",
+                  "asset_id": "PRAL",
+                  "published_at": "2026-08-19T12:30:00Z",
+                  "sentiment_label": "negative",
+                  "aligned_session": "2026-08-19T21:00:00Z",
+                  "outcome_session": "2026-08-26T21:00:00Z",
+                  "forward_return": -0.03757153238259603
+                },
+                {
+                  "news_id": "GIST-20260819-1",
+                  "asset_id": "GIST",
+                  "published_at": "2026-08-19T15:56:00Z",
+                  "sentiment_label": "neutral",
+                  "aligned_session": "2026-08-19T21:00:00Z",
+                  "outcome_session": "2026-08-26T21:00:00Z",
+                  "forward_return": 0.06337773254950307
+                },
+                {
+                  "news_id": "SOUS-20260820-1",
+                  "asset_id": "SOUS",
+                  "published_at": "2026-08-20T12:30:00Z",
+                  "sentiment_label": "positive",
+                  "aligned_session": "2026-08-20T21:00:00Z",
+                  "outcome_session": "2026-08-27T21:00:00Z",
+                  "forward_return": -0.011710152013300168
+                },
+                {
+                  "news_id": "VIAS-20260821-1",
+                  "asset_id": "VIAS",
+                  "published_at": "2026-08-21T12:30:00Z",
+                  "sentiment_label": "negative",
+                  "aligned_session": "2026-08-21T21:00:00Z",
+                  "outcome_session": "2026-08-28T21:00:00Z",
+                  "forward_return": -0.06495865039698623
+                },
+                {
+                  "news_id": "GIST-20260821-1",
+                  "asset_id": "GIST",
+                  "published_at": "2026-08-21T13:19:00Z",
+                  "sentiment_label": "neutral",
+                  "aligned_session": "2026-08-21T21:00:00Z",
+                  "outcome_session": "2026-08-28T21:00:00Z",
+                  "forward_return": 0.03836354950007226
+                },
+                {
+                  "news_id": "GIOR-20260821-1",
+                  "asset_id": "GIOR",
+                  "published_at": "2026-08-21T18:48:00Z",
+                  "sentiment_label": "positive",
+                  "aligned_session": "2026-08-21T21:00:00Z",
+                  "outcome_session": "2026-08-28T21:00:00Z",
+                  "forward_return": 0.08799981979397242
+                },
+                {
+                  "news_id": "CLAE-20260824-1",
+                  "asset_id": "CLAE",
+                  "published_at": "2026-08-24T12:30:00Z",
+                  "sentiment_label": "negative",
+                  "aligned_session": "2026-08-24T21:00:00Z",
+                  "outcome_session": "2026-08-31T21:00:00Z",
+                  "forward_return": -0.07075120289928127
+                },
+                {
+                  "news_id": "GIOR-20260824-1",
+                  "asset_id": "GIOR",
+                  "published_at": "2026-08-24T12:30:00Z",
+                  "sentiment_label": "positive",
+                  "aligned_session": "2026-08-24T21:00:00Z",
+                  "outcome_session": "2026-08-31T21:00:00Z",
+                  "forward_return": -0.01235275249145562
+                }
+              ],
+              "events_truncated": false
+            },
+            "error": null,
+            "engine": {
+              "device": "gpu",
+              "library": "cudf.pandas",
+              "version": "26.06.00"
+            },
+            "timing": {
+              "computeMs": 86.92363300360739,
+              "totalMs": 88.23142503388226
+            },
+            "rowsScanned": 13,
+            "warnings": [],
+            "limitations": [
+              "The analysis is descriptive correlation and does not establish causation.",
+              "Publication timing, label quality, overlapping events and omitted variables can affect the relationship.",
+              "Results are not investment advice."
+            ]
+          }
+        }
+      ],
+      "sourceIds": [
+        "market_data"
+      ],
+      "benchmark": {
+        "schemaVersion": "1",
+        "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+        "status": "completed",
+        "reason": null,
+        "measuredAt": "2026-10-01T04:27:13.739613Z",
+        "pairs": 5,
+        "stages": [
+          {
+            "invocationId": "hermes-tool:call-efe696ce-d59a-4bd0-aa0b-20bef89b22ce",
+            "receiptId": "hermes-receipt:b14f670eff8b83daba60a1f4410cbd8fb3b52288876166eb2875df21e3815a0c",
+            "toolName": "analyze_news_price_relationship",
+            "outcome": "completed",
+            "parity": true,
+            "reason": null,
+            "cpu": {
+              "device": "cpu",
+              "library": "pandas",
+              "version": "2.3.3",
+              "trialsMs": [
+                66.903,
+                63.835,
+                65.663,
+                63.974,
+                67.027
+              ],
+              "medianMs": 65.663
+            },
+            "gpu": {
+              "device": "gpu",
+              "library": "cudf.pandas",
+              "version": "26.06.00",
+              "trialsMs": [
+                82.686,
+                82.04,
+                82.059,
+                80.27,
+                80.872
+              ],
+              "medianMs": 82.04
+            },
+            "speedup": null,
+            "speedupRange": null,
+            "qualified": false
+          }
+        ]
+      }
+    }
+  ]
+}

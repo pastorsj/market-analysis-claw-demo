@@ -2,26 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The committed recordings (the retired market-analysis pack's, until the current packs are
- * recorded), as `scripts/demo.sh replay` serves them: every session opens with its answer and
- * its run, and nothing calls the API.
- * The expectations come from the bundle itself, so a re-recording needs no change here.
+ * Each pack's committed recordings, as `scripts/demo.sh replay` serves them: every session opens
+ * with its answer and its run, and nothing calls the API.
+ * The expectations come from the bundles themselves, so a re-recording needs no change here.
  */
 
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { DATA_PACKS_DIR, PACK_REPLAY_URL, RECORDED_PACK } from '../playwright.config'
+import { DATA_PACKS_DIR, RECORDED_PACKS } from '../playwright.config'
 
 interface RecordedEvent {
   eventId: string
   eventKind: string
   invocationId?: string | null
 }
-
-const RECORDINGS = `${DATA_PACKS_DIR}/${RECORDED_PACK}/recordings`
-const readJson = <T>(file: string): T => JSON.parse(readFileSync(`${RECORDINGS}/${file}`, 'utf8'))
-
-const index = readJson<{ sessions: { id: string; title: string }[] }>('index.json')
 
 /** Tool calls by invocation, as the run summary counts them. */
 const toolCallCount = (events: RecordedEvent[]): number =>
@@ -31,36 +25,47 @@ const toolCallCount = (events: RecordedEvent[]): number =>
       .map((event) => event.invocationId ?? event.eventId)
   ).size
 
-test.use({ baseURL: PACK_REPLAY_URL })
+for (const [pack, baseURL] of Object.entries(RECORDED_PACKS)) {
+  const readJson = <T>(file: string): T =>
+    JSON.parse(readFileSync(`${DATA_PACKS_DIR}/${pack}/recordings/${file}`, 'utf8'))
+  const index = readJson<{ pack: { id: string }; sessions: { id: string; title: string }[] }>(
+    'index.json'
+  )
 
-test('the pack has recorded sessions', () => {
-  expect(index.sessions.length).toBeGreaterThan(0)
-})
+  test.describe(`${pack} recordings`, () => {
+    test.use({ baseURL })
 
-for (const { id, title } of index.sessions) {
-  test(`recorded session "${title}" replays its answer and run`, async ({ page }) => {
-    const [turn] = readJson<{ turns: { events: RecordedEvent[] }[] }>(`sessions/${id}.json`).turns
-    const apiCalls: string[] = []
-    page.on('request', (request) => {
-      if (new URL(request.url()).pathname.startsWith('/api/v1/')) apiCalls.push(request.url())
+    test('the pack has recorded sessions', () => {
+      expect(index.pack.id).toBe(pack)
+      expect(index.sessions.length).toBeGreaterThan(0)
     })
 
-    await page.goto('/research')
-    await page
-      .getByRole('button', { name: `Recorded session: ${title}; Completed` })
-      .first()
-      .click()
-    await page.getByRole('button', { name: 'View execution for this response' }).click()
+    for (const { id, title } of index.sessions) {
+      test(`recorded session "${title}" replays its answer and run`, async ({ page }) => {
+        const [turn] = readJson<{ turns: { events: RecordedEvent[] }[] }>(`sessions/${id}.json`).turns
+        const apiCalls: string[] = []
+        page.on('request', (request) => {
+          if (new URL(request.url()).pathname.startsWith('/api/v1/')) apiCalls.push(request.url())
+        })
 
-    const workspace = page.getByRole('region', { name: 'Execution workspace' })
-    const steps = turn.events.length
-    await expect(workspace.getByText(`Step ${steps} of ${steps}`)).toBeVisible()
-    const summary = workspace.getByRole('region', { name: 'Hermes run summary' })
-    await expect(
-      summary.getByText(`${toolCallCount(turn.events)} tool call(s) ·`, { exact: false })
-    ).toBeVisible()
-    await expect(workspace.getByRole('list', { name: 'Execution graph legend' })).toBeVisible()
-    await expect(workspace.getByRole('button', { name: 'Inspect Hermes Agent' })).toBeVisible()
-    expect(apiCalls).toEqual([])
+        await page.goto('/research')
+        await page
+          .getByRole('button', { name: `Recorded session: ${title}; Completed` })
+          .first()
+          .click()
+        await page.getByRole('button', { name: 'View execution for this response' }).click()
+
+        const workspace = page.getByRole('region', { name: 'Execution workspace' })
+        const steps = turn.events.length
+        await expect(workspace.getByText(`Step ${steps} of ${steps}`)).toBeVisible()
+        const summary = workspace.getByRole('region', { name: 'Hermes run summary' })
+        await expect(
+          summary.getByText(`${toolCallCount(turn.events)} tool call(s) ·`, { exact: false })
+        ).toBeVisible()
+        await expect(workspace.getByRole('list', { name: 'Execution graph legend' })).toBeVisible()
+        await expect(workspace.getByRole('button', { name: 'Inspect Hermes Agent' })).toBeVisible()
+        expect(apiCalls).toEqual([])
+      })
+    }
   })
 }

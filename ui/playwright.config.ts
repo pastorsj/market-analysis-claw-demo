@@ -4,10 +4,9 @@
 /**
  * Smoke tests against the production build (`npm run build` first).
  *
- * Three UI servers run from the same build: live mode against a fake API,
- * replay mode on the fixture data pack, and replay mode on the committed
- * recordings (the retired market-analysis pack's, until the current packs are
- * recorded). No screenshots or visual baselines.
+ * The UI servers run from the same build: live mode against a fake API,
+ * replay mode on the fixture data pack, and replay mode on each pack's
+ * committed recordings. No screenshots or visual baselines.
  */
 
 import { defineConfig, devices } from '@playwright/test'
@@ -15,10 +14,12 @@ import { defineConfig, devices } from '@playwright/test'
 const FAKE_API = 'http://127.0.0.1:3990'
 export const LIVE_URL = 'http://127.0.0.1:3991'
 export const REPLAY_URL = 'http://127.0.0.1:3992'
-export const PACK_REPLAY_URL = 'http://127.0.0.1:3993'
 export const DATA_PACKS_DIR = `${process.cwd()}/../data/packs`
-/** The data pack whose committed recordings the replay suite runs against */
-export const RECORDED_PACK = 'market-analysis'
+/** The data packs whose committed recordings the replay suite runs against, each on its own server */
+export const RECORDED_PACKS = {
+  'synthetic-market': 'http://127.0.0.1:3993',
+  'us-equities': 'http://127.0.0.1:3994',
+} as const
 
 const uiServer = (url: string, env: Record<string, string>) => ({
   command: 'node .next/standalone/server.js',
@@ -62,10 +63,8 @@ export default defineConfig({
       PACKS_DIR: `${process.cwd()}/e2e/fixtures/packs`,
       DATA_PACK: 'e2e',
     }),
-    uiServer(PACK_REPLAY_URL, {
-      UI_MODE: 'replay',
-      PACKS_DIR: DATA_PACKS_DIR,
-      DATA_PACK: RECORDED_PACK,
-    }),
+    ...Object.entries(RECORDED_PACKS).map(([pack, url]) =>
+      uiServer(url, { UI_MODE: 'replay', PACKS_DIR: DATA_PACKS_DIR, DATA_PACK: pack })
+    ),
   ],
 })

@@ -1,0 +1,3173 @@
+{
+  "schemaVersion": 2,
+  "id": "moves-and-filings",
+  "title": "Moves & Filings",
+  "turns": [
+    {
+      "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+      "question": "Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-K filings from January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move.",
+      "submittedAt": "2026-10-01T04:51:19.684143Z",
+      "completedAt": "2026-10-01T04:54:56.476698Z",
+      "status": "success",
+      "report": {
+        "markdown": "**February 2026 – 50 most‑liquid U.S. stocks**\n\n| Rank (return) | Ticker | Company (SEC name) | Feb‑2026 return* |\n|---------------|--------|-------------------|------------------|\n| **1 (strongest)** | **CRCL** | Circle Internet Group Inc. | **+30.20 %** |\n| **2** | **AMAT** | Applied Materials Inc. | **+15.76 %** |\n| **3** | **NFLX** | Netflix Inc. | **+15.29 %** |\n| **48 (weakest)** | **BMNR** | Bitmine Immersion Technologies Inc. | **‑24.44 %** |\n| **49** | **IBM** | International Business Machines Corp. | **‑21.68 %** |\n| **50** | **CRWD** | CrowdStrike Holdings Inc. | **‑15.73 %** |\n\n\\*Return is measured from the close on 31 Jan 2026 to the close on 28 Feb 2026 (19 trading sessions).\nEvidence: highest‑return scan [1]; lowest‑return scan [2].\n\n---\n\n## 8‑K filings (Jan – Mar 2026) for the six companies\n\n| Company (ticker) | Filing date(s) | Principal Item(s) disclosed | Brief description |\n|------------------|----------------|----------------------------|-------------------|\n| **Circle Internet Group (CRCL)** | 25 Feb 2026 | **Item 2.02 – Results of Operations and Financial Condition**; Item 9.01 | Press release with Q4 2025 earnings (fourth‑quarter and full‑year results) [3]. |\n| **Applied Materials (AMAT)** | 12 Feb 2026 (two filings: 11 Feb & 12 Feb) | **Item 2.02 – Results of Operations and Financial Condition**; **Item 7.01/8.01 – Other Events** | Q1 FY2026 earnings (quarter ended 25 Jan 2026) and a separate “Other Events” disclosure (details not fully captured in snippet) [4]. |\n| **Netflix (NFLX)** | 20 Jan 2026 (two filings) | **Item 2.02 – Results of Operations and Financial Condition** (Q4 2025 earnings) [5]; **Item 1.01 – Entry into a Material Definitive Agreement** (merger agreement with Warner Bros. Discovery) [5]; 27 Feb 2026 | **Item 1.02 – Termination of a Material Definitive Agreement** (the same merger agreement was terminated) [5]. |\n| **Bitmine Immersion Technologies (BMNR)** | 15 Jan 2026 | **Item 7.01 – Regulation FD Disclosure** (press release announcing an investment in Beast Industries) [6]; 20 Jan 2026 | **Item 3.03 – Material Modification to Rights of Security Holders** (annual‑meeting approvals) [6]; 26 Jan 2026 | **Item 5.02 – Departure/Appointment of Directors** (Young Kim appointed) [6]; 9 Feb 2026 | **Item 7.01 – Regulation FD Disclosure** (operational update) [6]; 2 Mar 2026 | **Item 7.01 – Regulation FD Disclosure** (operational update) [6]. |\n| **International Business Machines (IBM)** | 28 Jan 2026 | **Item 2.02 – Results of Operations and Financial Condition** (Q4 2025 earnings) [7]; 30 Jan 2026 | **Item 5.02 – Election of Director** (Ramon Laguarta elected, effective 1 Mar 2026) [7]; 2 Feb 2026 | **Item 9.01 – Financial Statements and Exhibits** (routine filing) [7]; 3 Mar 2026 | **Item 5.03 – Amendments to Articles of Incorporation/Bylaws** (governance changes) [7]. |\n| **CrowdStrike Holdings (CRWD)** | 3 Mar 2026 | **Item 2.02 – Results of Operations and Financial Condition** (fiscal Q1 2026 earnings, quarter ended 31 Jan 2026) [8]. |\n\n*The 8‑K items are taken directly from the SEC filings; no causal link between any filing and the February price moves is implied.*\n\n---\n\n### Limitations\n* The market‑scan returns are based on the 50‑stock liquidity universe and the 19‑session February window; they are descriptive, not predictive.\n* 8‑K retrievals return the most relevant passages (top‑5 per ticker). Some filings may contain additional items not shown in the snippets.\n\n## Sources\n\n- [1] Market analytics result — market scan — evidence `hermes-receipt:9e1dcaab4a3e4539d0fa55c77e47c4e1e53ae6d8a844bb52570d23c7e2fafeda`\n- [2] Market analytics result — market scan — evidence `hermes-receipt:7ac0011c65baab2559f1f3217b9ec3e1b1c544624fd44b87857a6558b59d36c8`\n- [3] Unstructured Retrieval evidence — 5 documents — evidence `hermes-receipt:b52ef0ef8c069661c7da988c052a25e8057da5cee29fc7c2f5c1e05ef36e8d96`\n- [4] Unstructured Retrieval evidence — 4 documents — evidence `hermes-receipt:2ece5df4c4c6314213625fffdfb9ac7b3826f874e4e24ead5531ab3c7e7e4758`\n- [5] Unstructured Retrieval evidence — 5 documents — evidence `hermes-receipt:2249bb341fdf7b3ca0c95df901c6baaa519f1b3d99f20087b0ff2522768dafd9`\n- [6] Unstructured Retrieval evidence — 5 documents — evidence `hermes-receipt:8904431f704c8a8199740d7cdfeaf286ecd98053c4445f53ec2921f4af953dca`\n- [7] Unstructured Retrieval evidence — 4 documents — evidence `hermes-receipt:3b26030a5475b24c232d5047482c490061ca4ee9534e5dcfbf441489bef9d5b0`\n- [8] Unstructured Retrieval evidence — 5 documents — evidence `hermes-receipt:3863c8008435655a38830124de0713e4ee8f6e5286a5072c5c3545662a0b9739`",
+        "citations": [
+          {
+            "number": 1,
+            "evidenceId": "hermes-receipt:9e1dcaab4a3e4539d0fa55c77e47c4e1e53ae6d8a844bb52570d23c7e2fafeda",
+            "label": "Market analytics result — market scan",
+            "capabilityId": "market_analytics",
+            "invocationId": "hermes-tool:call-5fb2c6d7-2724-4f1b-bb7c-c4949a169251"
+          },
+          {
+            "number": 2,
+            "evidenceId": "hermes-receipt:7ac0011c65baab2559f1f3217b9ec3e1b1c544624fd44b87857a6558b59d36c8",
+            "label": "Market analytics result — market scan",
+            "capabilityId": "market_analytics",
+            "invocationId": "hermes-tool:call-cf3c9336-cfb3-4764-a18a-e047655577bc"
+          },
+          {
+            "number": 3,
+            "evidenceId": "hermes-receipt:b52ef0ef8c069661c7da988c052a25e8057da5cee29fc7c2f5c1e05ef36e8d96",
+            "label": "Unstructured Retrieval evidence — 5 documents",
+            "capabilityId": "unstructured_retrieval",
+            "invocationId": "hermes-tool:call-f2a8857b-dec6-4671-a291-e2e3edad1785"
+          },
+          {
+            "number": 4,
+            "evidenceId": "hermes-receipt:2ece5df4c4c6314213625fffdfb9ac7b3826f874e4e24ead5531ab3c7e7e4758",
+            "label": "Unstructured Retrieval evidence — 4 documents",
+            "capabilityId": "unstructured_retrieval",
+            "invocationId": "hermes-tool:call-39311b8a-68a0-47de-9afa-16b1945c5cd9"
+          },
+          {
+            "number": 5,
+            "evidenceId": "hermes-receipt:2249bb341fdf7b3ca0c95df901c6baaa519f1b3d99f20087b0ff2522768dafd9",
+            "label": "Unstructured Retrieval evidence — 5 documents",
+            "capabilityId": "unstructured_retrieval",
+            "invocationId": "hermes-tool:call-86a78629-e15a-4c83-8184-e1083e151e3a"
+          },
+          {
+            "number": 6,
+            "evidenceId": "hermes-receipt:8904431f704c8a8199740d7cdfeaf286ecd98053c4445f53ec2921f4af953dca",
+            "label": "Unstructured Retrieval evidence — 5 documents",
+            "capabilityId": "unstructured_retrieval",
+            "invocationId": "hermes-tool:call-553225dd-bd70-4f0b-899d-fc4efeffd9e0"
+          },
+          {
+            "number": 7,
+            "evidenceId": "hermes-receipt:3b26030a5475b24c232d5047482c490061ca4ee9534e5dcfbf441489bef9d5b0",
+            "label": "Unstructured Retrieval evidence — 4 documents",
+            "capabilityId": "unstructured_retrieval",
+            "invocationId": "hermes-tool:call-c1b9a9ff-fbe6-4d1f-9ede-7a3b06b39b08"
+          },
+          {
+            "number": 8,
+            "evidenceId": "hermes-receipt:3863c8008435655a38830124de0713e4ee8f6e5286a5072c5c3545662a0b9739",
+            "label": "Unstructured Retrieval evidence — 5 documents",
+            "capabilityId": "unstructured_retrieval",
+            "invocationId": "hermes-tool:call-a13bdc58-1675-48b8-9328-b7cf6ca6edd5"
+          }
+        ]
+      },
+      "events": [
+        {
+          "schemaVersion": "2",
+          "eventId": "091be8ec-48d2-5bbe-8597-e832d4593f45",
+          "cursor": 9498,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.created",
+          "state": "started",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:19.801656Z",
+          "display": {
+            "label": "Run accepted",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:0b78a7846e9c58e8630ba115967051fe75d95a7a0067bb751bcddd953d3c29ce",
+            "sourceEventKind": "run.created",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "2924b12c-816b-59cb-80be-6d8e2bac092b",
+          "cursor": 9499,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:1",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:27.428509Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 10229,
+              "output_tokens": 542
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:1",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "c06d925a-f8dc-5a18-847d-facc1f8fc0d6",
+          "cursor": 9500,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-5fb2c6d7-2724-4f1b-bb7c-c4949a169251",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "market_analytics",
+          "toolName": "market_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:27.463508Z",
+          "display": {
+            "label": "Market Scan started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:7b172eb4f6c80c0b448f824ecd5da63be5c94ea7c0bb8bd0121afcf2002a9899",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "c9e405bb-8177-5cc4-a5ea-65b9d582911b",
+          "cursor": 9501,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-5fb2c6d7-2724-4f1b-bb7c-c4949a169251",
+          "parentInvocationId": null,
+          "toolServer": "market_analytics",
+          "toolName": "market_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [
+            "hermes-receipt:9e1dcaab4a3e4539d0fa55c77e47c4e1e53ae6d8a844bb52570d23c7e2fafeda"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:27.550688Z",
+          "display": {
+            "label": "Market analytics result available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 85,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:9e1dcaab4a3e4539d0fa55c77e47c4e1e53ae6d8a844bb52570d23c7e2fafeda",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "822d7790-f8fd-55c7-961e-1c5a05da13a8",
+          "cursor": 9502,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-5fb2c6d7-2724-4f1b-bb7c-c4949a169251",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "market_analytics",
+          "toolName": "market_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:27.575491Z",
+          "display": {
+            "label": "Market Scan completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.108
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:e00cbac01679578af5982dda446d6a3871b39c22757b67814a07615bb1a4e327",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "223e613d-81b8-5db3-b575-1b49c6b00663",
+          "cursor": 9503,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:2",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:30.802808Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 11135,
+              "output_tokens": 137
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:2",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "0a4cd854-1ba0-5586-93bc-01569175730d",
+          "cursor": 9504,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-cf3c9336-cfb3-4764-a18a-e047655577bc",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "market_analytics",
+          "toolName": "market_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:30.829306Z",
+          "display": {
+            "label": "Market Scan started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:f65e4e3c53b01e9d400585ffeb420dc0e4d23a96ae3aa3e767a69bdd3fba1eac",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a1ed72ac-3df7-5a1e-81ea-e132f75fbf1c",
+          "cursor": 9505,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-cf3c9336-cfb3-4764-a18a-e047655577bc",
+          "parentInvocationId": null,
+          "toolServer": "market_analytics",
+          "toolName": "market_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [
+            "hermes-receipt:7ac0011c65baab2559f1f3217b9ec3e1b1c544624fd44b87857a6558b59d36c8"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:30.900589Z",
+          "display": {
+            "label": "Market analytics result available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 69,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:7ac0011c65baab2559f1f3217b9ec3e1b1c544624fd44b87857a6558b59d36c8",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "36c1cc10-a678-5fec-84f5-73ecb7c18e72",
+          "cursor": 9506,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "nvidia.market_analytics",
+          "invocationId": "hermes-tool:call-cf3c9336-cfb3-4764-a18a-e047655577bc",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "market_analytics",
+          "toolName": "market_scan",
+          "capabilityId": "market_analytics",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:30.925733Z",
+          "display": {
+            "label": "Market Scan completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.092
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:2ace60fd4f1564590509afe35f8b6596d3f3cbce5422713ac8b654f716a5473a",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "af51293f-5f97-525f-b3e4-e84cfd68ee00",
+          "cursor": 9507,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:34.809189Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:35a985016ff25f6e2fae92c3dacc0816156d34f972d0358a0a79c0905b721980",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "d5fa7488-34da-5e82-9688-dc6c3dfea6ae",
+          "cursor": 9508,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:3",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:37.369407Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 12047,
+              "output_tokens": 238
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:3",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "7ae1d79b-a6f8-5c6d-b2a3-cf2c88563573",
+          "cursor": 9509,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-f2a8857b-dec6-4671-a291-e2e3edad1785",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:37.399094Z",
+          "display": {
+            "label": "Unstructured Retrieval started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:d480adb51effca1b57e2037e0a27bf2630048dd43fdf757d4c5b603f339000c0",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a9d5c4e1-d052-5c16-bfe9-c27e388861e0",
+          "cursor": 9510,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-f2a8857b-dec6-4671-a291-e2e3edad1785",
+          "parentInvocationId": null,
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [
+            "hermes-receipt:b52ef0ef8c069661c7da988c052a25e8057da5cee29fc7c2f5c1e05ef36e8d96"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:38.207524Z",
+          "display": {
+            "label": "Unstructured retrieval evidence available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 806,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:b52ef0ef8c069661c7da988c052a25e8057da5cee29fc7c2f5c1e05ef36e8d96",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "ba6439a9-3d36-5e4a-bd0d-f742600f0865",
+          "cursor": 9511,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-f2a8857b-dec6-4671-a291-e2e3edad1785",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:38.253993Z",
+          "display": {
+            "label": "Unstructured Retrieval completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.83
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:b1244027874b40819932bace52d93253303533894646dcb8b01d4352388d76c3",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "2b448651-66cc-5fab-bf6d-354d00fbe269",
+          "cursor": 9512,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:4",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:44.770814Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 19751,
+              "output_tokens": 177
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:4",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "76fa12b0-3984-5308-beea-96e78bb4c1b3",
+          "cursor": 9513,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-39311b8a-68a0-47de-9afa-16b1945c5cd9",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:44.796601Z",
+          "display": {
+            "label": "Unstructured Retrieval started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:70a46e649e49d140176318dd658c8a6737c6593bde59eacfd33ed02dfd0caea9",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "fd8e553e-ac38-53ee-bd52-68f5260001a7",
+          "cursor": 9514,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-39311b8a-68a0-47de-9afa-16b1945c5cd9",
+          "parentInvocationId": null,
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [
+            "hermes-receipt:2ece5df4c4c6314213625fffdfb9ac7b3826f874e4e24ead5531ab3c7e7e4758"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:45.788783Z",
+          "display": {
+            "label": "Unstructured retrieval evidence available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 990,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:2ece5df4c4c6314213625fffdfb9ac7b3826f874e4e24ead5531ab3c7e7e4758",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "e492909c-6bd7-5a27-b2e4-4df9c9a84c6e",
+          "cursor": 9515,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-39311b8a-68a0-47de-9afa-16b1945c5cd9",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:45.836410Z",
+          "display": {
+            "label": "Unstructured Retrieval completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 1.014
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:5653c77f8d086f6ab90784fff240e0d3e3a0923d421fef2705ee9bf35eeb6b73",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "86494a94-ec0f-5b0f-8f22-8673fd31ba46",
+          "cursor": 9516,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:49.821545Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:394d92b2f1459c8edd271b020d552d353d7103090d26526e0c3735c4afd044b2",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "def79910-be4f-530a-9c9c-4d01a9805168",
+          "cursor": 9517,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:5",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:59.631109Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 26129,
+              "output_tokens": 193
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:5",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "ac7b8cda-6ca2-57b1-99d0-f2c36a708e3a",
+          "cursor": 9518,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-86a78629-e15a-4c83-8184-e1083e151e3a",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:51:59.661192Z",
+          "display": {
+            "label": "Unstructured Retrieval started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:27689e101567f04c91b1971cd7ec75cf7d181acfe0073de7de294a902ea1a677",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "017ae960-9c55-5bb9-aa6d-0afdf87deaeb",
+          "cursor": 9519,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-86a78629-e15a-4c83-8184-e1083e151e3a",
+          "parentInvocationId": null,
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [
+            "hermes-receipt:2249bb341fdf7b3ca0c95df901c6baaa519f1b3d99f20087b0ff2522768dafd9"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:00.573563Z",
+          "display": {
+            "label": "Unstructured retrieval evidence available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 910,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:2249bb341fdf7b3ca0c95df901c6baaa519f1b3d99f20087b0ff2522768dafd9",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "d6b23400-838d-5c07-be2d-777f3887f61b",
+          "cursor": 9520,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-86a78629-e15a-4c83-8184-e1083e151e3a",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:00.618258Z",
+          "display": {
+            "label": "Unstructured Retrieval completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.934
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:17036ace2d867559152261e34cbf94632ee2d78b358488e6d93322b2a55efe3c",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "4a469de8-aaa8-5472-8add-53c029f69ca0",
+          "cursor": 9521,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:04.828352Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:22d05c45420c2d7b6fc5aa24875ab4362837889c08115f0e4b3c8d79c715d430",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "10ffe28c-f3b0-5705-b03b-3eb76bd040a4",
+          "cursor": 9522,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:19.835032Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:bab8efbc52014839e96a9142e38bcee28bb1b8b7b1ba6965acef6812fa8b5a7a",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "2bd66063-5953-542b-87c2-eda9a001fff4",
+          "cursor": 9523,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:6",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:19.923542Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 32909,
+              "output_tokens": 167
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:6",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "7a2d40ae-ec86-5557-a028-9c12b90458d9",
+          "cursor": 9524,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-553225dd-bd70-4f0b-899d-fc4efeffd9e0",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:19.948813Z",
+          "display": {
+            "label": "Unstructured Retrieval started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:b628f7dbf4681e6773b66c25232644ecc8fad57df0aafd38fb6facd2145cf84e",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "12cf6d92-0582-505f-a6e1-dde29ce4a221",
+          "cursor": 9525,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-553225dd-bd70-4f0b-899d-fc4efeffd9e0",
+          "parentInvocationId": null,
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [
+            "hermes-receipt:8904431f704c8a8199740d7cdfeaf286ecd98053c4445f53ec2921f4af953dca"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:20.911784Z",
+          "display": {
+            "label": "Unstructured retrieval evidence available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 960,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:8904431f704c8a8199740d7cdfeaf286ecd98053c4445f53ec2921f4af953dca",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "3e5d1d5e-91a6-5db6-b0ec-cf0fb645c83a",
+          "cursor": 9526,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-553225dd-bd70-4f0b-899d-fc4efeffd9e0",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:20.956835Z",
+          "display": {
+            "label": "Unstructured Retrieval completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.988
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:8e1dffa5c52679c688a5f9294971aeb772c40e6264e3f3063473591ac39def96",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "b09a7702-8ae9-53ab-b765-963a555a4a81",
+          "cursor": 9527,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:7",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:25.547954Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 39818,
+              "output_tokens": 225
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:7",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "bc9b05fb-c5da-5e22-98d6-4e7a6b92dee1",
+          "cursor": 9528,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-c1b9a9ff-fbe6-4d1f-9ede-7a3b06b39b08",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:25.573133Z",
+          "display": {
+            "label": "Unstructured Retrieval started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:bb9c6e85cc7092f9b581d63c920726c01ba9fa8ade890fb3bad11c271cbde9c8",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "e99c3ae0-4749-5739-9b01-91f80043565d",
+          "cursor": 9529,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-c1b9a9ff-fbe6-4d1f-9ede-7a3b06b39b08",
+          "parentInvocationId": null,
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [
+            "hermes-receipt:3b26030a5475b24c232d5047482c490061ca4ee9534e5dcfbf441489bef9d5b0"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:26.438389Z",
+          "display": {
+            "label": "Unstructured retrieval evidence available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 863,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:3b26030a5475b24c232d5047482c490061ca4ee9534e5dcfbf441489bef9d5b0",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "7c4dc2ef-d4fe-5088-97a5-fc80d1d99af5",
+          "cursor": 9530,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-c1b9a9ff-fbe6-4d1f-9ede-7a3b06b39b08",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:26.485704Z",
+          "display": {
+            "label": "Unstructured Retrieval completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.889
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:30bee83f69a55272b0eb2673796ceb5e89629537c86fa3f4cd46c358c350e3ae",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "b44610ad-8a19-5dd4-a864-fc2b1124b0b6",
+          "cursor": 9531,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:8",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:30.411315Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 48607,
+              "output_tokens": 174
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:8",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a5e7e1a3-34f9-55e0-b2ee-b469c91e9a42",
+          "cursor": 9532,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.started",
+          "state": "started",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-a13bdc58-1675-48b8-9328-b7cf6ca6edd5",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:30.437115Z",
+          "display": {
+            "label": "Unstructured Retrieval started",
+            "summary": null,
+            "attributes": {},
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:51df9566251e7b059b321460972546b3b5f7d2f1772f7cd95413d9aaf169a7a3",
+            "sourceEventKind": "tool.started",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "3599c6cd-f525-552a-9ea9-9be0933a6fd6",
+          "cursor": 9533,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "artifact.available",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-a13bdc58-1675-48b8-9328-b7cf6ca6edd5",
+          "parentInvocationId": null,
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [
+            "hermes-receipt:3863c8008435655a38830124de0713e4ee8f6e5286a5072c5c3545662a0b9739"
+          ],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:31.217315Z",
+          "display": {
+            "label": "Unstructured retrieval evidence available",
+            "summary": null,
+            "attributes": {
+              "duration_ms": 778,
+              "tool_status": "completed"
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-receipt:3863c8008435655a38830124de0713e4ee8f6e5286a5072c5c3545662a0b9739",
+            "sourceEventKind": "post_tool_call",
+            "normalizationVersion": "hermes-plugin-receipt.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "ba244110-a64a-517c-ac5c-9190d4d5ba91",
+          "cursor": 9534,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "tool.completed",
+          "state": "completed",
+          "componentId": "milvus.retrieval",
+          "invocationId": "hermes-tool:call-a13bdc58-1675-48b8-9328-b7cf6ca6edd5",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": "retrieval",
+          "toolName": "retrieve_evidence",
+          "capabilityId": "unstructured_retrieval",
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:31.259410Z",
+          "display": {
+            "label": "Unstructured Retrieval completed",
+            "summary": null,
+            "attributes": {
+              "reported_error": false,
+              "duration_seconds": 0.802
+            },
+            "inspectable": true
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:4fc0c26aa4646c1f062c0e486a6399adb7c901c1f1e78066606291069e056d34",
+            "sourceEventKind": "tool.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "54125459-5688-55b3-af7a-7c1655fcea11",
+          "cursor": 9535,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:34.841645Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:a1ee52aa3884bcc376a28c4a79a2d0a000ff28e0864e9252be0327965bab077a",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "902c6c50-c276-5abc-9f53-67f9754cf9bd",
+          "cursor": 9536,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:52:49.852037Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:2686e4437fd114984760c1ce6d42fdef6223a672a900a1c002bee8e96e660d6c",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "20962783-3533-561f-afac-da5f5506e99a",
+          "cursor": 9537,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:53:04.859095Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:3d8dd7d7bd82e5404934691f64f79336f7236b9a7283acce6b256caf8cb5c817",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "ca305999-2480-5c5d-8c69-35b56e646037",
+          "cursor": 9538,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:53:19.866219Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:c4aebd6de3af72c16b00a484512c0c1fd7476c06e36ee3d6c68cdacb21eb29c6",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "ccb9ea05-208e-5188-bfbc-505439947273",
+          "cursor": 9539,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:53:34.873892Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:101e58bceb4030e76a45805b20d7df875c811f75d662939da4237f502e991e55",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "3a889af6-64f6-526d-8b44-c4658bd32683",
+          "cursor": 9540,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:53:49.881079Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:7117fef2a15ca570299e4a4b474f4149d702f796afb07fc527d36afe6d203ecb",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a583139f-0b2c-5446-a33b-10d211246197",
+          "cursor": 9541,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:04.889024Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:58a15a702182dec5fe694d7f2ffc07873ab5f295aaca599ec2d183b6383ffcae",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "4899cad7-8642-5662-a02a-f4332fd715b1",
+          "cursor": 9542,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:19.897678Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:80d568d1d595dd5fec579364cb9ec0af8452a550da04d046f826300ab03ef6da",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a136a5e8-3775-5059-8dac-b7ca5e5e3c1e",
+          "cursor": 9543,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:34.903982Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:e6e7a2f62cd9244ecdcfeda4f71264d879f5dcc7691812b304ddbd8a89eeec69",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "c846c556-d55c-521a-a2ac-c4f24f9f4ba9",
+          "cursor": 9544,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.heartbeat",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:49.910625Z",
+          "display": {
+            "label": "Working on the answer",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:10ce152e40af6fae0ff20d7ddf107e1b6e596b2fead5bddf3ccb345b4a547db3",
+            "sourceEventKind": "run.heartbeat",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "a0445ca0-f89d-5883-a5c0-0646d9875cfd",
+          "cursor": 9545,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "eventKind": "llm.call",
+          "state": "completed",
+          "componentId": "switchyard.router",
+          "invocationId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:9",
+          "parentInvocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:56.415259Z",
+          "display": {
+            "label": "Model call completed",
+            "summary": null,
+            "attributes": {
+              "served_model": "nvidia/nemotron-3-ultra-550b-a55b",
+              "tier": "efficient",
+              "input_tokens": 55467,
+              "output_tokens": 3259
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.plugin",
+            "sourceEventId": "hermes-llm:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343:api:9",
+            "sourceEventKind": "post_api_request",
+            "normalizationVersion": "hermes-plugin.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "8bd37594-14fd-505b-ad89-286dd643d124",
+          "cursor": 9546,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "reasoning.available",
+          "state": "progress",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:56.438747Z",
+          "display": {
+            "label": "Reasoning in progress",
+            "summary": null,
+            "attributes": {},
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:96ae72ad69a9d10d7797d14e2b3fc30e4c35490f56622b491f80c297d567c59d",
+            "sourceEventKind": "reasoning.available",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "eventId": "6995f4a7-449f-5bfd-84b5-dce64cdeb6fb",
+          "cursor": 9547,
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "runId": "run_326f921eb0194541960e8d6d5f652201",
+          "sessionId": "record-a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "turnId": null,
+          "eventKind": "run.completed",
+          "state": "completed",
+          "componentId": "hermes.agent",
+          "invocationId": "hermes-run:fb852dcbb3fe12900bda7002:0",
+          "parentInvocationId": null,
+          "toolServer": null,
+          "toolName": null,
+          "capabilityId": null,
+          "artifactRefs": [],
+          "metricsRef": null,
+          "occurredAt": "2026-10-01T04:54:56.456431Z",
+          "display": {
+            "label": "Run completed",
+            "summary": null,
+            "attributes": {
+              "input_tokens": 256092,
+              "output_tokens": 5112,
+              "total_tokens": 261204,
+              "output_characters": 4959
+            },
+            "inspectable": false
+          },
+          "provenance": {
+            "sourceSystem": "hermes.runs",
+            "sourceEventId": "hermes-event:a58fa291bfca8220169a5b6d86a0a22e62580b867ce6b415465878b536eec9d0",
+            "sourceEventKind": "run.completed",
+            "normalizationVersion": "hermes-runs.v1",
+            "observation": "observed",
+            "configDigest": null
+          }
+        }
+      ],
+      "receipts": [
+        {
+          "schemaVersion": "2",
+          "artifactKind": "analytics_result",
+          "receiptId": "hermes-receipt:9e1dcaab4a3e4539d0fa55c77e47c4e1e53ae6d8a844bb52570d23c7e2fafeda",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-5fb2c6d7-2724-4f1b-bb7c-c4949a169251",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__market_analytics__market_scan",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 85,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:51:27.550688Z",
+          "content": {
+            "operationId": "market_scan",
+            "status": "succeeded",
+            "sourceId": "market_data",
+            "databaseName": "us_equities",
+            "publicParameters": {
+              "direction": "highest",
+              "end": "2026-02-28T23:59:59Z",
+              "limit": 3,
+              "metrics": [
+                "return"
+              ],
+              "start": "2026-02-01T00:00:00Z",
+              "universe_id": "top_50"
+            },
+            "payload": {
+              "universe_id": "top_50",
+              "primary_metric": "return",
+              "comparison": "absolute",
+              "direction": "highest",
+              "assets_ranked": 50,
+              "observations": [
+                {
+                  "rank": 1,
+                  "asset_id": "CRCL",
+                  "score": 0.3020018767594621,
+                  "values": {
+                    "return": 0.3020018767594621
+                  },
+                  "observation_count": 19,
+                  "coverage_ratio": 1.0
+                },
+                {
+                  "rank": 2,
+                  "asset_id": "AMAT",
+                  "score": 0.1576383718044181,
+                  "values": {
+                    "return": 0.1576383718044181
+                  },
+                  "observation_count": 19,
+                  "coverage_ratio": 1.0
+                },
+                {
+                  "rank": 3,
+                  "asset_id": "NFLX",
+                  "score": 0.15285098227120253,
+                  "values": {
+                    "return": 0.15285098227120253
+                  },
+                  "observation_count": 19,
+                  "coverage_ratio": 1.0
+                }
+              ]
+            },
+            "error": null,
+            "engine": {
+              "device": "gpu",
+              "library": "cudf.pandas",
+              "version": "26.06.00"
+            },
+            "timing": {
+              "computeMs": 65.65880496054888,
+              "totalMs": 66.94804597645998
+            },
+            "rowsScanned": 950,
+            "warnings": [],
+            "limitations": [
+              "Results are descriptive historical observations and are not investment advice."
+            ]
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "analytics_result",
+          "receiptId": "hermes-receipt:7ac0011c65baab2559f1f3217b9ec3e1b1c544624fd44b87857a6558b59d36c8",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-cf3c9336-cfb3-4764-a18a-e047655577bc",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__market_analytics__market_scan",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 69,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:51:30.900589Z",
+          "content": {
+            "operationId": "market_scan",
+            "status": "succeeded",
+            "sourceId": "market_data",
+            "databaseName": "us_equities",
+            "publicParameters": {
+              "direction": "lowest",
+              "end": "2026-02-28T23:59:59Z",
+              "limit": 3,
+              "metrics": [
+                "return"
+              ],
+              "start": "2026-02-01T00:00:00Z",
+              "universe_id": "top_50"
+            },
+            "payload": {
+              "universe_id": "top_50",
+              "primary_metric": "return",
+              "comparison": "absolute",
+              "direction": "lowest",
+              "assets_ranked": 50,
+              "observations": [
+                {
+                  "rank": 1,
+                  "asset_id": "BMNR",
+                  "score": -0.24443561208267084,
+                  "values": {
+                    "return": -0.24443561208267084
+                  },
+                  "observation_count": 19,
+                  "coverage_ratio": 1.0
+                },
+                {
+                  "rank": 2,
+                  "asset_id": "IBM",
+                  "score": -0.21679165308118675,
+                  "values": {
+                    "return": -0.21679165308118675
+                  },
+                  "observation_count": 19,
+                  "coverage_ratio": 1.0
+                },
+                {
+                  "rank": 3,
+                  "asset_id": "CRWD",
+                  "score": -0.15732717119198925,
+                  "values": {
+                    "return": -0.15732717119198925
+                  },
+                  "observation_count": 19,
+                  "coverage_ratio": 1.0
+                }
+              ]
+            },
+            "error": null,
+            "engine": {
+              "device": "gpu",
+              "library": "cudf.pandas",
+              "version": "26.06.00"
+            },
+            "timing": {
+              "computeMs": 57.334210025146604,
+              "totalMs": 58.31697804387659
+            },
+            "rowsScanned": 950,
+            "warnings": [],
+            "limitations": [
+              "Results are descriptive historical observations and are not investment advice."
+            ]
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "retrieval_evidence",
+          "receiptId": "hermes-receipt:b52ef0ef8c069661c7da988c052a25e8057da5cee29fc7c2f5c1e05ef36e8d96",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-f2a8857b-dec6-4671-a291-e2e3edad1785",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__retrieval__retrieve_evidence",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 806,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:51:38.207524Z",
+          "content": {
+            "query": "8-K filing January 2026 February 2026 March 2026 CRCL",
+            "sourceIds": [
+              "sec_filings"
+            ],
+            "collection": "us_equities_documents",
+            "collectionVersion": "us_equities_documents__03a5e71747bc",
+            "hits": [
+              {
+                "rank": 1,
+                "score": -2.466796875,
+                "vectorScore": 0.4500904381275177,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001876042:0001876042-26-000032:crcl-20260225.htm",
+                "chunkId": "edgar:0001876042:0001876042-26-000032:crcl-20260225.htm:0001",
+                "title": "Circle Internet Group, Inc. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1876042/0001876042-26-000032.txt",
+                "publishedAt": "2026-02-25T00:00:00Z",
+                "snippet": "crcl-202602250001876042false00018760422026-02-252026-02-25UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549FORM 8-KCURRENT REPORTPursuant to Section 13 or 15(d)of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported): February 25, 2026CIRCLE INTERNET GROUP, INC.(Exact name of registrant as specified in its charter)Delaware001-4267199-2840274(State or other jurisdiction of incorporation or organization)(Commission File Number)(I.R.S. Employer Identification Number) One World Trade Center New York, NY 10007(332) 334-0660(Address, including zip code, and telephone number, including area code, of registrant’s principal executive offices)Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each classTrading SymbolName of each exchange on which registeredClass A common stock, par value $0.0001 per shareCRCLNew York Stock ExchangeIndicate by check mark whether the registrant is",
+                "metadata": {
+                  "citation": "SEC 8-K, Circle Internet Group, Inc., filed 2026-02-25, accession 0001876042-26-000032",
+                  "cik": "0001876042",
+                  "company_name": "Circle Internet Group, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2026-02-25",
+                  "accession": "0001876042-26-000032",
+                  "document_type": "8-K",
+                  "filename": "crcl-20260225.htm",
+                  "ticker": "CRCL",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 2,
+                "score": -4.234375,
+                "vectorScore": 0.44959214329719543,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000815097:0000950142-26-000354:eh260737149_8k.htm",
+                "chunkId": "edgar:0000815097:0000950142-26-000354:eh260737149_8k.htm:0001",
+                "title": "Carnival Corp Ltd. 8-K: FORM 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/815097/0000950142-26-000354.txt",
+                "publishedAt": "2026-02-12T00:00:00Z",
+                "snippet": "FORM 8-K false 0000815097 0000815097 2026-02-12 2026-02-12 0000815097 CCL:CarnivalPLCMember 2026-02-12 2026-02-12 0000815097 CCL:CommonStock0.01ParValueMember 2026-02-12 2026-02-12 0000815097 CCL:OrdinarySharesEachRepresentedByAmericanDepositarySharesMember CCL:CarnivalPLCMember 2026-02-12 2026-02-12 0000815097 CCL:Sec1.000SeniorNotesDue2029Member CCL:CarnivalPLCMember 2026-02-12 2026-02-12 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (date of earliest event reported) February 12, 2026 Carnival Corporation Carnival plc (Exact name of registrant as specified in its charter) (Exact name of registrant as specified in its charter) Republic of Panama England and Wales (State or other jurisdiction of incorporation) (State or other jurisdiction of incorporation) 001-9610 001-15136 (Commission File Number) (Commission File Number) 59-1562976 98-0357772 (I.R.S. Employer Identification No.) (I.R.S. Employer Identification No.) 3655 N.W. 87th Avenue Miami, Florida 33178-2428 Carnival House, 100 Harbour Parade, Southampton SO15 1ST, United Kingdom (Address of principal executive offices) (Zip code) (Address of principal executive offices) (Zip code) (305) 599-2600 011 44 23 8065 5000 (Registrant’s telephone number, including area code) (Registrant’s telephone number, including area code) None None (Forme",
+                "metadata": {
+                  "citation": "SEC 8-K, Carnival Corp Ltd., filed 2026-02-12, accession 0000950142-26-000354",
+                  "cik": "0000815097",
+                  "company_name": "Carnival Corp Ltd.",
+                  "form": "8-K",
+                  "filed_on": "2026-02-12",
+                  "accession": "0000950142-26-000354",
+                  "document_type": "8-K",
+                  "filename": "eh260737149_8k.htm",
+                  "ticker": "CCL",
+                  "items": "1.01,3.03,9.01"
+                }
+              },
+              {
+                "rank": 3,
+                "score": -4.40234375,
+                "vectorScore": 0.4889988303184509,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001535527:0001535527-26-000007:crwd-20260303.htm",
+                "chunkId": "edgar:0001535527:0001535527-26-000007:crwd-20260303.htm:0001",
+                "title": "CrowdStrike Holdings, Inc. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1535527/0001535527-26-000007.txt",
+                "publishedAt": "2026-03-03T00:00:00Z",
+                "snippet": "crwd-202603030001535527false00015355272026-03-032026-03-03UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWASHINGTON, D.C. 20549FORM 8-K CURRENT REPORTPursuant to Section 13 or 15(d)of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported): March 3, 2026CrowdStrike Holdings, Inc. (Exact name of registrant as specified in its charter)______________________________________________________________________________________________________Delaware001-3893345-3788918(State or other jurisdictionof incorporation)(CommissionFile Number)(IRS EmployerIdentification No.)206 E. 9th StreetSuite 1400AustinTexas78701(Address of principal executive offices)(Zip Code)Registrant’s telephone number, including area code: (888) 512-8906 Not Applicable(Former name or former address, if changed since last report)Check the appropriate box below if the Form 8‑K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions (see General Instruction A.2. below):☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a‑12 under the Exchange Act (17 CFR 240.14a‑12)☐Pre-commencement communications pursuant to Rule 14d‑2(b) under the Exchange Act (17 CFR 240.14d‑2(b))☐Pre-commencement communications pursuant to Rule 13e‑4(c) under the Exchange Act (17 CFR 240.13e‑4(c))Securities registered pursuant to Section 12(b) of the Act:Title of each classTradingS",
+                "metadata": {
+                  "citation": "SEC 8-K, CrowdStrike Holdings, Inc., filed 2026-03-03, accession 0001535527-26-000007",
+                  "cik": "0001535527",
+                  "company_name": "CrowdStrike Holdings, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2026-03-03",
+                  "accession": "0001535527-26-000007",
+                  "document_type": "8-K",
+                  "filename": "crwd-20260303.htm",
+                  "ticker": "CRWD",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 4,
+                "score": -4.4140625,
+                "vectorScore": 0.4463311731815338,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000021344:0001552781-26-000017:e26024_ko-8k.htm",
+                "chunkId": "edgar:0000021344:0001552781-26-000017:e26024_ko-8k.htm:0001",
+                "title": "COCA COLA CO 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/21344/0001552781-26-000017.txt",
+                "publishedAt": "2026-01-14T00:00:00Z",
+                "snippet": "KO 8-K false 0000021344 0000021344 2026-01-13 2026-01-13 0000021344 ko:CommonStock0.25ParValueMember 2026-01-13 2026-01-13 0000021344 ko:Sec1.875NotesDue2026Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.750NotesDue2026Member 2026-01-13 2026-01-13 0000021344 ko:Sec1.125NotesDue2027Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.125NotesDue2029Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.125NotesDue20291Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.400NotesDue2030Member 2026-01-13 2026-01-13 0000021344 ko:Sec1.250NotesDue2031Member 2026-01-13 2026-01-13 0000021344 ko:Sec3.125NotesDue2032Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.375NotesDue2033Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.500NotesDue2033Member 2026-01-13 2026-01-13 0000021344 ko:Sec1.625NotesDue2035Member 2026-01-13 2026-01-13 0000021344 ko:Sec1.100NotesDue2036Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.950NotesDue2036Member 2026-01-13 2026-01-13 0000021344 ko:Sec3.375NotesDue2037Member 2026-01-13 2026-01-13 0000021344 ko:Sec0.800NotesDue2040Member 2026-01-13 2026-01-13 0000021344 ko:Sec1.000NotesDue2041Member 2026-01-13 2026-01-13 0000021344 ko:Sec3.500NotesDue2044Member 2026-01-13 2026-01-13 0000021344 ko:Sec3.750NotesDue2053Member 2026-01-13 2026-01-13 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION WASHINGTON, D.C. 20549 FORM 8-K CURRENT REPORT Pursuant to Section 13 or 15(d) of the Securities Exchange Act of 1934 Date of Report (Date of e",
+                "metadata": {
+                  "citation": "SEC 8-K, COCA COLA CO, filed 2026-01-14, accession 0001552781-26-000017",
+                  "cik": "0000021344",
+                  "company_name": "COCA COLA CO",
+                  "form": "8-K",
+                  "filed_on": "2026-01-14",
+                  "accession": "0001552781-26-000017",
+                  "document_type": "8-K",
+                  "filename": "e26024_ko-8k.htm",
+                  "ticker": "KO",
+                  "items": "5.02,9.01"
+                }
+              },
+              {
+                "rank": 5,
+                "score": -4.4453125,
+                "vectorScore": 0.4570240080356598,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000815097:0000950142-26-000454:eh260740928_8k.htm",
+                "chunkId": "edgar:0000815097:0000950142-26-000454:eh260740928_8k.htm:0001",
+                "title": "Carnival Corp Ltd. 8-K: FORM 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/815097/0000950142-26-000454.txt",
+                "publishedAt": "2026-02-20T00:00:00Z",
+                "snippet": "FORM 8-K false 0000815097 0000815097 2026-02-20 2026-02-20 0000815097 CCL:CarnivalPLCMember 2026-02-20 2026-02-20 0000815097 CCL:CommonStock0.01ParValueMember 2026-02-20 2026-02-20 0000815097 CCL:OrdinarySharesEachRepresentedByAmericanDepositarySharesMember CCL:CarnivalPLCMember 2026-02-20 2026-02-20 0000815097 CCL:Sec1.000SeniorNotesDue2029Member CCL:CarnivalPLCMember 2026-02-20 2026-02-20 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (date of earliest event reported) February 20, 2026 Carnival Corporation Carnival plc (Exact name of registrant as specified in its charter) (Exact name of registrant as specified in its charter) Republic of Panama England and Wales (State or other jurisdiction of incorporation) (State or other jurisdiction of incorporation) 001-9610 001-15136 (Commission File Number) (Commission File Number) 59-1562976 98-0357772 (I.R.S. Employer Identification No.) (I.R.S. Employer Identification No.) 3655 N.W. 87th Avenue Miami, Florida 33178-2428 Carnival House, 100 Harbour Parade, Southampton SO15 1ST, United Kingdom (Address of principal executive offices) (Zip code) (Address of principal executive offices) (Zip code) (305) 599-2600 011 44 23 8065 5000 (Registrant’s telephone number, including area code) (Registrant’s telephone number, including area code) None None (Forme",
+                "metadata": {
+                  "citation": "SEC 8-K, Carnival Corp Ltd., filed 2026-02-20, accession 0000950142-26-000454",
+                  "cik": "0000815097",
+                  "company_name": "Carnival Corp Ltd.",
+                  "form": "8-K",
+                  "filed_on": "2026-02-20",
+                  "accession": "0000950142-26-000454",
+                  "document_type": "8-K",
+                  "filename": "eh260740928_8k.htm",
+                  "ticker": "CCL",
+                  "items": "1.01,9.01"
+                }
+              }
+            ],
+            "candidateCounts": {
+              "sec_filings": 20
+            },
+            "models": {
+              "embed": "nvidia/nemotron-3-embed-1b",
+              "rerank": "nvidia/llama-nemotron-rerank-vl-1b-v2"
+            },
+            "index": {
+              "type": "HNSW",
+              "metric": "COSINE",
+              "params": {
+                "M": 16,
+                "efConstruction": 200
+              },
+              "searchParams": {
+                "ef": 128
+              }
+            },
+            "timings": {
+              "embedMs": 257.7,
+              "searchMs": 17.2,
+              "rerankMs": 512.3,
+              "totalMs": 787.1
+            }
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "retrieval_evidence",
+          "receiptId": "hermes-receipt:2ece5df4c4c6314213625fffdfb9ac7b3826f874e4e24ead5531ab3c7e7e4758",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-39311b8a-68a0-47de-9afa-16b1945c5cd9",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__retrieval__retrieve_evidence",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 990,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:51:45.788783Z",
+          "content": {
+            "query": "8-K filing January 2026 February 2026 March 2026 AMAT",
+            "sourceIds": [
+              "sec_filings"
+            ],
+            "collection": "us_equities_documents",
+            "collectionVersion": "us_equities_documents__03a5e71747bc",
+            "hits": [
+              {
+                "rank": 1,
+                "score": -2.76953125,
+                "vectorScore": 0.553674042224884,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000006951:0001628280-26-007661:amat-20260212.htm",
+                "chunkId": "edgar:0000006951:0001628280-26-007661:amat-20260212.htm:0001",
+                "title": "APPLIED MATERIALS INC /DE 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/6951/0001628280-26-007661.txt",
+                "publishedAt": "2026-02-12T00:00:00Z",
+                "snippet": "amat-202602120000006951FALSEAPPLIED MATERIALS INC /DE00000069512026-02-122026-02-12UNITED STATES SECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549____________________________________________________________________FORM 8-K ____________________________________________________________________CURRENT REPORTPursuant to Section 13 or 15(d) of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported): February 12, 2026____________________________________________________________________ Applied Materials, Inc.(Exact name of registrant as specified in its charter)____________________________________________________________________Delaware000-0692094-1655526(State or other jurisdiction of incorporation)(Commission File Number)(IRS Employer Identification No.)3050 Bowers AvenueP.O. Box 58039Santa Clara, CA 95052-8039(Address of principal executive offices)Registrant’s telephone number, including area code: (408) 727-5555N/A (Former name or former address, if changed since last report.) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communicati",
+                "metadata": {
+                  "citation": "SEC 8-K, APPLIED MATERIALS INC /DE, filed 2026-02-12, accession 0001628280-26-007661",
+                  "cik": "0000006951",
+                  "company_name": "APPLIED MATERIALS INC /DE",
+                  "form": "8-K",
+                  "filed_on": "2026-02-12",
+                  "accession": "0001628280-26-007661",
+                  "document_type": "8-K",
+                  "filename": "amat-20260212.htm",
+                  "ticker": "AMAT",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 2,
+                "score": -2.76953125,
+                "vectorScore": 0.5541960000991821,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000006951:0001628280-26-007444:amat-20260211.htm",
+                "chunkId": "edgar:0000006951:0001628280-26-007444:amat-20260211.htm:0001",
+                "title": "APPLIED MATERIALS INC /DE 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/6951/0001628280-26-007444.txt",
+                "publishedAt": "2026-02-12T00:00:00Z",
+                "snippet": "amat-202602110000006951FALSEAPPLIED MATERIALS INC /DE00000069512026-02-112026-02-11UNITED STATES SECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549____________________________________________________________________FORM 8-K ____________________________________________________________________CURRENT REPORTPursuant to Section 13 or 15(d) of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported): February 11, 2026____________________________________________________________________ Applied Materials, Inc.(Exact name of registrant as specified in its charter)____________________________________________________________________Delaware000-0692094-1655526(State or other jurisdiction of incorporation)(Commission File Number)(IRS Employer Identification No.)3050 Bowers AvenueP.O. Box 58039Santa Clara, CA 95052-8039(Address of principal executive offices)Registrant’s telephone number, including area code: (408) 727-5555N/A (Former name or former address, if changed since last report.) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communicati",
+                "metadata": {
+                  "citation": "SEC 8-K, APPLIED MATERIALS INC /DE, filed 2026-02-12, accession 0001628280-26-007444",
+                  "cik": "0000006951",
+                  "company_name": "APPLIED MATERIALS INC /DE",
+                  "form": "8-K",
+                  "filed_on": "2026-02-12",
+                  "accession": "0001628280-26-007444",
+                  "document_type": "8-K",
+                  "filename": "amat-20260211.htm",
+                  "ticker": "AMAT",
+                  "items": "7.01,8.01,9.01"
+                }
+              },
+              {
+                "rank": 3,
+                "score": -4.0625,
+                "vectorScore": 0.5000292062759399,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000002488:0000002488-26-000002:amd-20260116.htm",
+                "chunkId": "edgar:0000002488:0000002488-26-000002:amd-20260116.htm:0001",
+                "title": "ADVANCED MICRO DEVICES INC 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/2488/0000002488-26-000002.txt",
+                "publishedAt": "2026-01-20T00:00:00Z",
+                "snippet": "amd-202601160000002488false00000024882026-01-162026-01-16UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549FORM 8-K CURRENT REPORTPursuant to Section 13 or 15(d) of the Securities Exchange Act of 1934January 16, 2026Date of Report (Date of earliest event reported)ADVANCED MICRO DEVICES, INC. (Exact name of registrant as specified in its charter)Delaware001-0788294-1692300(State or Other Jurisdiction ofIncorporation)(CommissionFile Number)(IRS EmployerIdentification Number)2485 Augustine Drive Santa Clara, California 95054 (Address of principal executive offices) (Zip Code)(408) 749-4000 (Registrant’s telephone number, including area code)N/A(Former Name or Former Address, if Changed Since Last Report)Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c))Securities registered pursuant to Section 12(b) of the Act:Title of each classTrading Symbol(s) Name of each exchange on which registeredCommon Stock, $0.01 par valueAMDThe Nasdaq Global Select MarketIndicate by check mar",
+                "metadata": {
+                  "citation": "SEC 8-K, ADVANCED MICRO DEVICES INC, filed 2026-01-20, accession 0000002488-26-000002",
+                  "cik": "0000002488",
+                  "company_name": "ADVANCED MICRO DEVICES INC",
+                  "form": "8-K",
+                  "filed_on": "2026-01-20",
+                  "accession": "0000002488-26-000002",
+                  "document_type": "8-K",
+                  "filename": "amd-20260116.htm",
+                  "ticker": "AMD",
+                  "items": "5.02,9.01"
+                }
+              },
+              {
+                "rank": 4,
+                "score": -4.15625,
+                "vectorScore": 0.49917417764663696,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000006951:0001628280-26-007661:amat-20260212.htm",
+                "chunkId": "edgar:0000006951:0001628280-26-007661:amat-20260212.htm:0002",
+                "title": "APPLIED MATERIALS INC /DE 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/6951/0001628280-26-007661.txt",
+                "publishedAt": "2026-02-12T00:00:00Z",
+                "snippet": "period for complying with any new or revised financial accounting standards provided pursuant to Section 13(a) of the Exchange Act). ☐ Item 2.02 Results of Operations and Financial Condition.On February 12, 2026, Applied Materials, Inc. (“Applied Materials”) announced its financial results for its first quarter ended January 25, 2026. A copy of Applied Materials’ press release is attached hereto as Exhibit 99.1.The information in this Form 8-K, including Exhibit 99.1, is being furnished and shall not be deemed “filed” for purposes of Section 18 of the Securities Exchange Act of 1934, as amended (the “Exchange Act”), or otherwise subject to liability under that section, and shall not be deemed to be incorporated by reference in any filing of Applied Materials under the Securities Act of 1933, as amended, or the Exchange Act, unless expressly incorporated by specific reference in such filing. Item 9.01 Financial Statements and Exhibits.(d) Exhibits.Exhibit No.Description99.1Press Release issued by Applied Materials, Inc. dated February 12, 2026104Cover Page Interactive Data File (formatted as inline XBRL) SIGNATURESPursuant to the requirements of the Securities Exchange Act of 1934, the registrant has duly caused this report to be signed on its behalf by the undersigned hereunto duly authorized.Applied Materials, Inc. (Registrant) Date:February 12, 2026By:/s/ Teri A. LittleTeri A. LittleSenior Vice President, Chief Legal Officer and Corporate Secretary",
+                "metadata": {
+                  "citation": "SEC 8-K, APPLIED MATERIALS INC /DE, filed 2026-02-12, accession 0001628280-26-007661",
+                  "cik": "0000006951",
+                  "company_name": "APPLIED MATERIALS INC /DE",
+                  "form": "8-K",
+                  "filed_on": "2026-02-12",
+                  "accession": "0001628280-26-007661",
+                  "document_type": "8-K",
+                  "filename": "amat-20260212.htm",
+                  "ticker": "AMAT",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 5,
+                "score": -4.75,
+                "vectorScore": 0.4782771170139313,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000820313:0001104659-26-002183:tm262604d1_8k.htm",
+                "chunkId": "edgar:0000820313:0001104659-26-002183:tm262604d1_8k.htm:0001",
+                "title": "AMPHENOL CORP /DE/ 8-K: FORM 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/820313/0001104659-26-002183.txt",
+                "publishedAt": "2026-01-08T00:00:00Z",
+                "snippet": "false 0000820313 0000820313 2026-01-08 2026-01-08 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT Pursuant to Section 13 or 15(d) of The Securities Exchange Act of 1934 Date of Report (Date of earliest event reported): January 8, 2026 AMPHENOL CORPORATION (Exact name of registrant as specified in its charter) Delaware 1-10879 22-2785165 (State or other jurisdiction of incorporation) (Commission File Number) (IRS Employer Identification No.) 358 Hall Avenue, Wallingford, Connecticut 06492 (Address of principal executive offices) (Zip Code) Registrant’s telephone number, including area code: (203) 265-8900 Not Applicable (Former name or former address, if changed since last report) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ¨ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ¨ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ¨ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ¨ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of each exchange on which registered Class A Common",
+                "metadata": {
+                  "citation": "SEC 8-K, AMPHENOL CORP /DE/, filed 2026-01-08, accession 0001104659-26-002183",
+                  "cik": "0000820313",
+                  "company_name": "AMPHENOL CORP /DE/",
+                  "form": "8-K",
+                  "filed_on": "2026-01-08",
+                  "accession": "0001104659-26-002183",
+                  "document_type": "8-K",
+                  "filename": "tm262604d1_8k.htm",
+                  "ticker": "APH",
+                  "items": "5.02,7.01,9.01"
+                }
+              }
+            ],
+            "candidateCounts": {
+              "sec_filings": 20
+            },
+            "models": {
+              "embed": "nvidia/nemotron-3-embed-1b",
+              "rerank": "nvidia/llama-nemotron-rerank-vl-1b-v2"
+            },
+            "index": {
+              "type": "HNSW",
+              "metric": "COSINE",
+              "params": {
+                "M": 16,
+                "efConstruction": 200
+              },
+              "searchParams": {
+                "ef": 128
+              }
+            },
+            "timings": {
+              "embedMs": 309.3,
+              "searchMs": 11.0,
+              "rerankMs": 651.6,
+              "totalMs": 972.0
+            }
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "retrieval_evidence",
+          "receiptId": "hermes-receipt:2249bb341fdf7b3ca0c95df901c6baaa519f1b3d99f20087b0ff2522768dafd9",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-86a78629-e15a-4c83-8184-e1083e151e3a",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__retrieval__retrieve_evidence",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 910,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:52:00.573563Z",
+          "content": {
+            "query": "8-K filing January 2026 February 2026 March 2026 NFLX",
+            "sourceIds": [
+              "sec_filings"
+            ],
+            "collection": "us_equities_documents",
+            "collectionVersion": "us_equities_documents__03a5e71747bc",
+            "hits": [
+              {
+                "rank": 1,
+                "score": -1.53515625,
+                "vectorScore": 0.5418649911880493,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001065280:0001193125-26-082247:d120618d8k.htm",
+                "chunkId": "edgar:0001065280:0001193125-26-082247:d120618d8k.htm:0001",
+                "title": "NETFLIX INC 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1065280/0001193125-26-082247.txt",
+                "publishedAt": "2026-02-27T00:00:00Z",
+                "snippet": "8-K NETFLIX INC false 0001065280 0001065280 2026-02-27 2026-02-27 UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT Pursuant to Section 13 or 15(d) of The Securities Exchange Act of 1934 Date of Report (Date of earliest event reported): February 27, 2026 NETFLIX, INC. (Exact Name of Registrant as Specified in Charter) Delaware 001-35727 77-0467272 (State or Other Jurisdiction of Incorporation) (Commission File Number) (I.R.S. Employer Identification No.) 121 Albright Way Los Gatos, California, 95032 (Address of principal executive offices) (Zip Code) (408) 540-3700 (Registrant’s telephone number, include area code) Not applicable (Former name or former address, if changed since last report) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading symbol(s) Name of each exchange on which registered Common stock, par value $0.001 per share NFLX NASDAQ Gl",
+                "metadata": {
+                  "citation": "SEC 8-K, NETFLIX INC, filed 2026-02-27, accession 0001193125-26-082247",
+                  "cik": "0001065280",
+                  "company_name": "NETFLIX INC",
+                  "form": "8-K",
+                  "filed_on": "2026-02-27",
+                  "accession": "0001193125-26-082247",
+                  "document_type": "8-K",
+                  "filename": "d120618d8k.htm",
+                  "ticker": "NFLX",
+                  "items": "1.02"
+                }
+              },
+              {
+                "rank": 2,
+                "score": -2.025390625,
+                "vectorScore": 0.5175142884254456,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001065280:0001193125-26-015951:d37713d8k.htm",
+                "chunkId": "edgar:0001065280:0001193125-26-015951:d37713d8k.htm:0001",
+                "title": "NETFLIX INC 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1065280/0001193125-26-015951.txt",
+                "publishedAt": "2026-01-20T00:00:00Z",
+                "snippet": "8-K NETFLIX INC false 0001065280 0001065280 2026-01-19 2026-01-19 UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT Pursuant to Section 13 or 15(d) of The Securities Exchange Act of 1934 Date of Report (Date of earliest event reported): January 19, 2026 NETFLIX, INC. (Exact Name of Registrant as Specified in Charter) Delaware 001-35727 77-0467272 (State or Other Jurisdiction of Incorporation) (Commission File Number) (I.R.S. Employer Identification No.) 121 Albright Way Los Gatos, California, 95032 (Address of principal executive offices) (Zip Code) (408) 540-3700 (Registrant’s telephone number, include area code) Not applicable (Former name or former address, if changed since last report) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading symbol(s) Name of each exchange on which registered Common stock, par value $0.001 per share NFLX NASDAQ Glo",
+                "metadata": {
+                  "citation": "SEC 8-K, NETFLIX INC, filed 2026-01-20, accession 0001193125-26-015951",
+                  "cik": "0001065280",
+                  "company_name": "NETFLIX INC",
+                  "form": "8-K",
+                  "filed_on": "2026-01-20",
+                  "accession": "0001193125-26-015951",
+                  "document_type": "8-K",
+                  "filename": "d37713d8k.htm",
+                  "ticker": "NFLX",
+                  "items": "1.01,7.01,9.01"
+                }
+              },
+              {
+                "rank": 3,
+                "score": -2.037109375,
+                "vectorScore": 0.5154671669006348,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001065280:0001065280-26-000033:nflx-20260120.htm",
+                "chunkId": "edgar:0001065280:0001065280-26-000033:nflx-20260120.htm:0001",
+                "title": "NETFLIX INC 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1065280/0001065280-26-000033.txt",
+                "publishedAt": "2026-01-20T00:00:00Z",
+                "snippet": "nflx-20260120NETFLIX INC0001065280false00010652802026-01-202026-01-20UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549__________________________________FORM 8-K __________________________________CURRENT REPORTPursuant to Section 13 OR 15(d) of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported):January 20, 2026__________________________________NETFLIX, INC.(Exact name of registrant as specified in its charter)__________________________________Delaware001-3572777-0467272(State or other jurisdictionof incorporation)(CommissionFile Number)(I.R.S. EmployerIdentification No.)121 Albright Way, Los Gatos, California95032(Address of principal executive offices)(Zip Code)(408) 540-3700 (Registrant’s telephone number, including area code)(Former name or former address, if changed since last report)__________________________________Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c))Securities registered pursuant to Section 12(b) of the Act:Ti",
+                "metadata": {
+                  "citation": "SEC 8-K, NETFLIX INC, filed 2026-01-20, accession 0001065280-26-000033",
+                  "cik": "0001065280",
+                  "company_name": "NETFLIX INC",
+                  "form": "8-K",
+                  "filed_on": "2026-01-20",
+                  "accession": "0001065280-26-000033",
+                  "document_type": "8-K",
+                  "filename": "nflx-20260120.htm",
+                  "ticker": "NFLX",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 4,
+                "score": -4.8203125,
+                "vectorScore": 0.4666130542755127,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001045810:0001045810-26-000019:nvda-20260225.htm",
+                "chunkId": "edgar:0001045810:0001045810-26-000019:nvda-20260225.htm:0001",
+                "title": "NVIDIA CORP 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1045810/0001045810-26-000019.txt",
+                "publishedAt": "2026-02-25T00:00:00Z",
+                "snippet": "nvda-202602250001045810false00010458102026-02-252026-02-25UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWASHINGTON, DC 20549______________FORM 8-K CURRENT REPORTPURSUANT TO SECTION 13 OR 15(d) OFTHE SECURITIES EXCHANGE ACT OF 1934Date of Report (Date of earliest event reported): February 25, 2026NVIDIA CORPORATION(Exact name of registrant as specified in its charter)Delaware0-2398594-3177549(State or other jurisdiction(Commission(IRS Employerof incorporation)File Number)Identification No.)2788 San Tomas Expressway, Santa Clara, CA 95051 (Address of principal executive offices) (Zip Code)Registrant’s telephone number, including area code: (408) 486-2000 Not Applicable(Former name or former address, if changed since last report)Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c))Securities registered pursuant to Section 12(b) of the Act:Title of each classTrading Symbol(s)Name of each exchange on which registeredCommon Stock, $0.001 par value per shareNVDAThe Nasdaq Global Select Mark",
+                "metadata": {
+                  "citation": "SEC 8-K, NVIDIA CORP, filed 2026-02-25, accession 0001045810-26-000019",
+                  "cik": "0001045810",
+                  "company_name": "NVIDIA CORP",
+                  "form": "8-K",
+                  "filed_on": "2026-02-25",
+                  "accession": "0001045810-26-000019",
+                  "document_type": "8-K",
+                  "filename": "nvda-20260225.htm",
+                  "ticker": "NVDA",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 5,
+                "score": -5.1484375,
+                "vectorScore": 0.4744970202445984,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000109198:0000109198-26-000004:tjx-20260225.htm",
+                "chunkId": "edgar:0000109198:0000109198-26-000004:tjx-20260225.htm:0001",
+                "title": "TJX COMPANIES INC /DE/ 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/109198/0000109198-26-000004.txt",
+                "publishedAt": "2026-02-25T00:00:00Z",
+                "snippet": "tjx-20260225FALSE000010919800001091982026-02-252026-02-25UNITED STATESSECURITIES AND EXCHANGE COMMISSION WASHINGTON, DC 20549 FORM 8-K CURRENT REPORT Pursuant to Section 13 or 15(d) of The Securities Exchange Act of 1934 Date of Report (Date of earliest event reported): February 25, 2026 THE TJX COMPANIES, INC.(Exact name of registrant as specified in its charter)Delaware 1-4908 04-2207613(State or other jurisdiction of incorporation) (Commission File Number) (IRS Employer Identification No.) 770 Cochituate Road, Framingham, MA 01701 (Address of principal executive offices) (Zip Code) (508) 390-1000Registrant’s telephone number, including area code N/A(Former name or former address, if changed since last report) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act:Title of each classTrading Symbol(s)Name of each exchange on which registeredCommon Stock, par value $1.00 per shareTJXNew York Stock ExchangeIndicate by check mark whe",
+                "metadata": {
+                  "citation": "SEC 8-K, TJX COMPANIES INC /DE/, filed 2026-02-25, accession 0000109198-26-000004",
+                  "cik": "0000109198",
+                  "company_name": "TJX COMPANIES INC /DE/",
+                  "form": "8-K",
+                  "filed_on": "2026-02-25",
+                  "accession": "0000109198-26-000004",
+                  "document_type": "8-K",
+                  "filename": "tjx-20260225.htm",
+                  "ticker": "TJX",
+                  "items": "2.02,9.01"
+                }
+              }
+            ],
+            "candidateCounts": {
+              "sec_filings": 20
+            },
+            "models": {
+              "embed": "nvidia/nemotron-3-embed-1b",
+              "rerank": "nvidia/llama-nemotron-rerank-vl-1b-v2"
+            },
+            "index": {
+              "type": "HNSW",
+              "metric": "COSINE",
+              "params": {
+                "M": 16,
+                "efConstruction": 200
+              },
+              "searchParams": {
+                "ef": 128
+              }
+            },
+            "timings": {
+              "embedMs": 356.2,
+              "searchMs": 11.7,
+              "rerankMs": 523.2,
+              "totalMs": 891.2
+            }
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "retrieval_evidence",
+          "receiptId": "hermes-receipt:8904431f704c8a8199740d7cdfeaf286ecd98053c4445f53ec2921f4af953dca",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-553225dd-bd70-4f0b-899d-fc4efeffd9e0",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__retrieval__retrieve_evidence",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 960,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:52:20.911784Z",
+          "content": {
+            "query": "8-K filing January 2026 February 2026 March 2026 BMNR",
+            "sourceIds": [
+              "sec_filings"
+            ],
+            "collection": "us_equities_documents",
+            "collectionVersion": "us_equities_documents__03a5e71747bc",
+            "hits": [
+              {
+                "rank": 1,
+                "score": -2.849609375,
+                "vectorScore": 0.4685609042644501,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001829311:0001493152-26-002335:form8-k.htm",
+                "chunkId": "edgar:0001829311:0001493152-26-002335:form8-k.htm:0001",
+                "title": "BITMINE IMMERSION TECHNOLOGIES, INC. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1829311/0001493152-26-002335.txt",
+                "publishedAt": "2026-01-15T00:00:00Z",
+                "snippet": "false 0001829311 0001829311 2026-01-15 2026-01-15 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (Date of earliest event reported): January 15, 2026 BITMINE IMMERSION TECHNOLOGIES, INC. (Exact name of registrant as specified in its charter) Delaware 001-42675 84-3986354 (State or other jurisdiction of incorporation or organization) (Commission File Number) (IRS Employer Identification No.) 10845 Griffith Peak Dr. #2 Las Vegas, NV 89135 (Address of principal executive office) (Zip Code) (404) 816-8240 (Registrants’ telephone number, including area code) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of each exchange on which registered Common Stock, par value $0.0001 BMNR NYSE American LLC In",
+                "metadata": {
+                  "citation": "SEC 8-K, BITMINE IMMERSION TECHNOLOGIES, INC., filed 2026-01-15, accession 0001493152-26-002335",
+                  "cik": "0001829311",
+                  "company_name": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+                  "form": "8-K",
+                  "filed_on": "2026-01-15",
+                  "accession": "0001493152-26-002335",
+                  "document_type": "8-K",
+                  "filename": "form8-k.htm",
+                  "ticker": "BMNR",
+                  "items": "7.01,9.01"
+                }
+              },
+              {
+                "rank": 2,
+                "score": -2.953125,
+                "vectorScore": 0.5079357624053955,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001829311:0001493152-26-008462:form8-k.htm",
+                "chunkId": "edgar:0001829311:0001493152-26-008462:form8-k.htm:0001",
+                "title": "BITMINE IMMERSION TECHNOLOGIES, INC. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1829311/0001493152-26-008462.txt",
+                "publishedAt": "2026-03-02T00:00:00Z",
+                "snippet": "false 0001829311 0001829311 2026-03-02 2026-03-02 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (Date of earliest event reported): March 2, 2026 BITMINE IMMERSION TECHNOLOGIES, INC. (Exact name of registrant as specified in its charter) Delaware 001-42675 84-3986354 (State or other jurisdiction of incorporation or organization) (Commission File Number) (IRS Employer Identification No.) 10845 Griffith Peak Dr. #2 Las Vegas, NV 89135 (Address of principal executive office) (Zip Code) 203-401-8200 (Registrants’ telephone number, including area code) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of each exchange on which registered Common Stock, par value $0.0001 BMNR NYSE American LLC Indicat",
+                "metadata": {
+                  "citation": "SEC 8-K, BITMINE IMMERSION TECHNOLOGIES, INC., filed 2026-03-02, accession 0001493152-26-008462",
+                  "cik": "0001829311",
+                  "company_name": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+                  "form": "8-K",
+                  "filed_on": "2026-03-02",
+                  "accession": "0001493152-26-008462",
+                  "document_type": "8-K",
+                  "filename": "form8-k.htm",
+                  "ticker": "BMNR",
+                  "items": "7.01,9.01"
+                }
+              },
+              {
+                "rank": 3,
+                "score": -2.970703125,
+                "vectorScore": 0.5077924132347107,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001829311:0001493152-26-005707:form8-k.htm",
+                "chunkId": "edgar:0001829311:0001493152-26-005707:form8-k.htm:0001",
+                "title": "BITMINE IMMERSION TECHNOLOGIES, INC. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1829311/0001493152-26-005707.txt",
+                "publishedAt": "2026-02-09T00:00:00Z",
+                "snippet": "false 0001829311 0001829311 2026-02-09 2026-02-09 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (Date of earliest event reported): February 9, 2026 BITMINE IMMERSION TECHNOLOGIES, INC. (Exact name of registrant as specified in its charter) Delaware 001-42675 84-3986354 (State or other jurisdiction of incorporation or organization) (Commission File Number) (IRS Employer Identification No.) 10845 Griffith Peak Dr. #2 Las Vegas, NV 89135 (Address of principal executive office) (Zip Code) 203-401-8200 (Registrants’ telephone number, including area code) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of each exchange on which registered Common Stock, par value $0.0001 BMNR NYSE American LLC Indi",
+                "metadata": {
+                  "citation": "SEC 8-K, BITMINE IMMERSION TECHNOLOGIES, INC., filed 2026-02-09, accession 0001493152-26-005707",
+                  "cik": "0001829311",
+                  "company_name": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+                  "form": "8-K",
+                  "filed_on": "2026-02-09",
+                  "accession": "0001493152-26-005707",
+                  "document_type": "8-K",
+                  "filename": "form8-k.htm",
+                  "ticker": "BMNR",
+                  "items": "7.01,9.01"
+                }
+              },
+              {
+                "rank": 4,
+                "score": -3.173828125,
+                "vectorScore": 0.4851781129837036,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001829311:0001493152-26-003536:form8-k.htm",
+                "chunkId": "edgar:0001829311:0001493152-26-003536:form8-k.htm:0001",
+                "title": "BITMINE IMMERSION TECHNOLOGIES, INC. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1829311/0001493152-26-003536.txt",
+                "publishedAt": "2026-01-26T00:00:00Z",
+                "snippet": "false 0001829311 0001829311 2026-01-23 2026-01-23 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (Date of earliest event reported): January 23, 2026 BITMINE IMMERSION TECHNOLOGIES, INC. (Exact name of registrant as specified in its charter) Delaware 001-42675 84-3986354 (State or other jurisdiction of incorporation or organization) (Commission File Number) (IRS Employer Identification No.) 10845 Griffith Peak Dr. #2 Las Vegas, NV 89135 (Address of principal executive office) (Zip Code) (404) 816-8240 (Registrants’ telephone number, including area code) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of each exchange on which registered Common Stock, par value $0.0001 BMNR NYSE American LLC In",
+                "metadata": {
+                  "citation": "SEC 8-K, BITMINE IMMERSION TECHNOLOGIES, INC., filed 2026-01-26, accession 0001493152-26-003536",
+                  "cik": "0001829311",
+                  "company_name": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+                  "form": "8-K",
+                  "filed_on": "2026-01-26",
+                  "accession": "0001493152-26-003536",
+                  "document_type": "8-K",
+                  "filename": "form8-k.htm",
+                  "ticker": "BMNR",
+                  "items": "5.02,7.01,9.01"
+                }
+              },
+              {
+                "rank": 5,
+                "score": -3.1796875,
+                "vectorScore": 0.4847761392593384,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001829311:0001493152-26-002762:form8-k.htm",
+                "chunkId": "edgar:0001829311:0001493152-26-002762:form8-k.htm:0001",
+                "title": "BITMINE IMMERSION TECHNOLOGIES, INC. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1829311/0001493152-26-002762.txt",
+                "publishedAt": "2026-01-20T00:00:00Z",
+                "snippet": "false --08-31 0001829311 0001829311 2026-01-15 2026-01-15 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION Washington, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15(d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report (Date of earliest event reported): January 15, 2026 BITMINE IMMERSION TECHNOLOGIES, INC. (Exact name of registrant as specified in its charter) Delaware 001-42675 84-3986354 (State or other jurisdiction of incorporation or organization) (Commission File Number) (IRS Employer Identification No.) 10845 Griffith Peak Dr. #2 Las Vegas, NV 89135 (Address of principal executive office) (Zip Code) (404) 816-8240 (Registrants’ telephone number, including area code) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of each exchange on which registered Common Stock, par value $0.0001 BMNR NYSE America",
+                "metadata": {
+                  "citation": "SEC 8-K, BITMINE IMMERSION TECHNOLOGIES, INC., filed 2026-01-20, accession 0001493152-26-002762",
+                  "cik": "0001829311",
+                  "company_name": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+                  "form": "8-K",
+                  "filed_on": "2026-01-20",
+                  "accession": "0001493152-26-002762",
+                  "document_type": "8-K",
+                  "filename": "form8-k.htm",
+                  "ticker": "BMNR",
+                  "items": "3.03,5.03,5.07,7.01,9.01"
+                }
+              }
+            ],
+            "candidateCounts": {
+              "sec_filings": 20
+            },
+            "models": {
+              "embed": "nvidia/nemotron-3-embed-1b",
+              "rerank": "nvidia/llama-nemotron-rerank-vl-1b-v2"
+            },
+            "index": {
+              "type": "HNSW",
+              "metric": "COSINE",
+              "params": {
+                "M": 16,
+                "efConstruction": 200
+              },
+              "searchParams": {
+                "ef": 128
+              }
+            },
+            "timings": {
+              "embedMs": 339.3,
+              "searchMs": 10.6,
+              "rerankMs": 593.8,
+              "totalMs": 943.7
+            }
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "retrieval_evidence",
+          "receiptId": "hermes-receipt:3b26030a5475b24c232d5047482c490061ca4ee9534e5dcfbf441489bef9d5b0",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-c1b9a9ff-fbe6-4d1f-9ede-7a3b06b39b08",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__retrieval__retrieve_evidence",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 863,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:52:26.438389Z",
+          "content": {
+            "query": "8-K filing January 2026 February 2026 March 2026 IBM",
+            "sourceIds": [
+              "sec_filings"
+            ],
+            "collection": "us_equities_documents",
+            "collectionVersion": "us_equities_documents__03a5e71747bc",
+            "hits": [
+              {
+                "rank": 1,
+                "score": -2.96484375,
+                "vectorScore": 0.6064231991767883,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000051143:0000051143-26-000015:ibm-20260301.htm",
+                "chunkId": "edgar:0000051143:0000051143-26-000015:ibm-20260301.htm:0002",
+                "title": "INTERNATIONAL BUSINESS MACHINES CORP 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/51143/0000051143-26-000015.txt",
+                "publishedAt": "2026-03-03T00:00:00Z",
+                "snippet": "STATESSECURITIES AND EXCHANGE COMMISSIONWASHINGTON, D.C. 20549FORM 8-KCURRENT REPORT PURSUANT TO SECTION 13 OR 15 (d)OF THE SECURITIES EXCHANGE ACT OF 1934Date of Report: March 1, 2026(Date of earliest event reported)INTERNATIONAL BUSINESS MACHINES CORPORATION(Exact name of registrant as specified in its charter)New York 1-236013-0871985(State of Incorporation)(Commission File Number)(IRS employer Identification No.)One New Orchard RoadArmonk, New York10504(Address of principal executive offices)(Zip Code)914-499-1900(Registrant’s telephone number)Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions:☐ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c))Securities registered pursuant to Section 12(b) of the Act:Title of each classTrading symbol(s)Name of each exchange on which registeredCapital stock, par value $.20 per shareIBMNew York Stock ExchangeNYSE Texas0.300% Notes due 2026IBM 26BNew York Stock Exchange1.250% Notes due 2027IBM 27BNew York Stock Exchange3.375% Notes due 2027IBM 27FNew York Stock Exchange0.300% Notes due 2028IBM 28B",
+                "metadata": {
+                  "citation": "SEC 8-K, INTERNATIONAL BUSINESS MACHINES CORP, filed 2026-03-03, accession 0000051143-26-000015",
+                  "cik": "0000051143",
+                  "company_name": "INTERNATIONAL BUSINESS MACHINES CORP",
+                  "form": "8-K",
+                  "filed_on": "2026-03-03",
+                  "accession": "0000051143-26-000015",
+                  "document_type": "8-K",
+                  "filename": "ibm-20260301.htm",
+                  "ticker": "IBM",
+                  "items": "5.03,9.01"
+                }
+              },
+              {
+                "rank": 2,
+                "score": -3.1484375,
+                "vectorScore": 0.600149393081665,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000051143:0001104659-26-009343:tm264790d2_8k.htm",
+                "chunkId": "edgar:0000051143:0001104659-26-009343:tm264790d2_8k.htm:0002",
+                "title": "INTERNATIONAL BUSINESS MACHINES CORP 8-K: FORM 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/51143/0001104659-26-009343.txt",
+                "publishedAt": "2026-02-02T00:00:00Z",
+                "snippet": "xbrli:shares Title of each class Capital stock, par value $.20 per share Trading symbol IBM Common Stock UNITED STATES SECURITIES AND EXCHANGE COMMISSION WASHINGTON, D.C. 20549 FORM 8-K CURRENT REPORT PURSUANT TO SECTION 13 OR 15 (d) OF THE SECURITIES EXCHANGE ACT OF 1934 Date of Report: January 29, 2026 (Date of earliest event reported) INTERNATIONAL BUSINESS MACHINES CORPORATION (Exact name of registrant as specified in its charter) New York 1-2360 13-0871985 (State of Incorporation) (Commission File Number) (IRS employer Identification No.) One New Orchard Road Armonk, New York 10504 (Address of principal executive offices) (Zip Code) 914-499-1900 (Registrant’s telephone number) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions: ¨ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ¨ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ¨ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ¨ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading symbol(s) Name of each exchange on which registered Capital stock, par value $.20 per share IBM New York Stock Exchange NYSE Chicago 0.300% Notes due 2026 IBM 26B",
+                "metadata": {
+                  "citation": "SEC 8-K, INTERNATIONAL BUSINESS MACHINES CORP, filed 2026-02-02, accession 0001104659-26-009343",
+                  "cik": "0000051143",
+                  "company_name": "INTERNATIONAL BUSINESS MACHINES CORP",
+                  "form": "8-K",
+                  "filed_on": "2026-02-02",
+                  "accession": "0001104659-26-009343",
+                  "document_type": "8-K",
+                  "filename": "tm264790d2_8k.htm",
+                  "ticker": "IBM",
+                  "items": "9.01"
+                }
+              },
+              {
+                "rank": 3,
+                "score": -3.162109375,
+                "vectorScore": 0.572314441204071,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000051143:0000051143-26-000006:ibm-20260127.htm",
+                "chunkId": "edgar:0000051143:0000051143-26-000006:ibm-20260127.htm:0001",
+                "title": "INTERNATIONAL BUSINESS MACHINES CORP 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/51143/0000051143-26-000006.txt",
+                "publishedAt": "2026-01-30T00:00:00Z",
+                "snippet": "ibm-202601270000051143falseCHX00000511432026-01-272026-01-270000051143us-gaap:CommonStockMemberexch:XNYS2026-01-272026-01-270000051143us-gaap:CommonStockMemberexch:XCHI2026-01-272026-01-270000051143ibm:Notes0.300PercentDue2026Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes1.250PercentDue2027Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes3.375PercentDue2027Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes0.300PercentDue2028Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes1.750PercentDue2028Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes1.500PercentDue2029Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes0.875PercentDue2030Memberexch:XNYS2026-01-272026-01-270000051143ibm:A2.900NotesDue2030Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes1.750PercentDue2031Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes3.625PercentDue2031Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes0.650PercentDue2032Memberexch:XNYS2026-01-272026-01-270000051143ibm:A3.150NotesDue2033Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes1.250PercentDue2034Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes3.750PercentDue2035Memberexch:XNYS2026-01-272026-01-270000051143ibm:A3.450NotesDue2037Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes4.875PercentDue2038Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes1.200PercentDue2040Memberexch:XNYS2026-01-272026-01-270000051143ibm:Notes4.000PercentDue2043Memberexch:XNYS2026-01-272026-01-270000051143ibm:A3",
+                "metadata": {
+                  "citation": "SEC 8-K, INTERNATIONAL BUSINESS MACHINES CORP, filed 2026-01-30, accession 0000051143-26-000006",
+                  "cik": "0000051143",
+                  "company_name": "INTERNATIONAL BUSINESS MACHINES CORP",
+                  "form": "8-K",
+                  "filed_on": "2026-01-30",
+                  "accession": "0000051143-26-000006",
+                  "document_type": "8-K",
+                  "filename": "ibm-20260127.htm",
+                  "ticker": "IBM",
+                  "items": "5.02,9.01"
+                }
+              },
+              {
+                "rank": 4,
+                "score": -3.19921875,
+                "vectorScore": 0.5757318139076233,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000051143:0000051143-26-000004:ibm-20260128.htm",
+                "chunkId": "edgar:0000051143:0000051143-26-000004:ibm-20260128.htm:0001",
+                "title": "INTERNATIONAL BUSINESS MACHINES CORP 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/51143/0000051143-26-000004.txt",
+                "publishedAt": "2026-01-28T00:00:00Z",
+                "snippet": "ibm-202601280000051143falseCHX00000511432026-01-282026-01-280000051143us-gaap:CommonStockMemberexch:XCHI2026-01-282026-01-280000051143us-gaap:CommonStockMemberexch:XNYS2026-01-282026-01-280000051143ibm:Notes0.300PercentDue2026Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes1.250PercentDue2027Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes3.375PercentDue2027Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes0.300PercentDue2028Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes1.750PercentDue2028Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes1.500PercentDue2029Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes0.875PercentDue2030Memberexch:XNYS2026-01-282026-01-280000051143ibm:A2.900NotesDue2030Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes1.750PercentDue2031Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes3.625PercentDue2031Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes0.650PercentDue2032Memberexch:XNYS2026-01-282026-01-280000051143ibm:A3.150NotesDue2033Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes1.250PercentDue2034Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes3.750PercentDue2035Memberexch:XNYS2026-01-282026-01-280000051143ibm:A3.450NotesDue2037Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes4.875PercentDue2038Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes1.200PercentDue2040Memberexch:XNYS2026-01-282026-01-280000051143ibm:Notes4.000PercentDue2043Memberexch:XNYS2026-01-282026-01-280000051143ibm:A3",
+                "metadata": {
+                  "citation": "SEC 8-K, INTERNATIONAL BUSINESS MACHINES CORP, filed 2026-01-28, accession 0000051143-26-000004",
+                  "cik": "0000051143",
+                  "company_name": "INTERNATIONAL BUSINESS MACHINES CORP",
+                  "form": "8-K",
+                  "filed_on": "2026-01-28",
+                  "accession": "0000051143-26-000004",
+                  "document_type": "8-K",
+                  "filename": "ibm-20260128.htm",
+                  "ticker": "IBM",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 5,
+                "score": -4.05078125,
+                "vectorScore": 0.5578488707542419,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0000051143:0000051143-26-000006:ibm-20260127.htm",
+                "chunkId": "edgar:0000051143:0000051143-26-000006:ibm-20260127.htm:0003",
+                "title": "INTERNATIONAL BUSINESS MACHINES CORP 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/51143/0000051143-26-000006.txt",
+                "publishedAt": "2026-01-30T00:00:00Z",
+                "snippet": "Debentures due 2032IBM 32DNew York Stock Exchange7.00% Debentures due 2045IBM 45New York Stock Exchange7.125% Debentures due 2096IBM 96New York Stock ExchangeIndicate by check mark whether the registrant is an emerging growth company as defined in Rule 405 of the Securities Act of 1933 (§230.405 of this chapter) or Rule 12b-2 of the Securities Exchange Act of 1934 (§240.12b-2 of this chapter).Emerging growth company ☐If an emerging growth company, indicate by check mark if the registrant has elected not to use the extended transition period for complying with any new or revised financial accounting standards provided pursuant to Section 13(a) of the Exchange Act. ☐Item 5.02(d). Election of Directors.On January 30, 2026, IBM announced that Ramon Laguarta, current Chairman and Chief Executive Officer of PepsiCo, Inc., has been elected to the IBM Board of Directors, effective March 1, 2026. Mr. Laguarta will join the Directors and Corporate Governance Committee.IBM’s compensatory and other arrangements for non-management directors are set forth in the company’s Proxy Statement, dated March 10, 2025. The press release is attached as Exhibit 99.1 of this Form 8-K.Item 9.01. Financial Statements and Exhibits.(d)ExhibitsThe following exhibits are being furnished as part of this report:Exhibit No.Description of Exhibit99.1Press Release, dated January 30, 2026The following exhibit is being filed as part of this report:Exhibit No.Description of Exhibit104Cover Page Interactive Data Fil",
+                "metadata": {
+                  "citation": "SEC 8-K, INTERNATIONAL BUSINESS MACHINES CORP, filed 2026-01-30, accession 0000051143-26-000006",
+                  "cik": "0000051143",
+                  "company_name": "INTERNATIONAL BUSINESS MACHINES CORP",
+                  "form": "8-K",
+                  "filed_on": "2026-01-30",
+                  "accession": "0000051143-26-000006",
+                  "document_type": "8-K",
+                  "filename": "ibm-20260127.htm",
+                  "ticker": "IBM",
+                  "items": "5.02,9.01"
+                }
+              }
+            ],
+            "candidateCounts": {
+              "sec_filings": 20
+            },
+            "models": {
+              "embed": "nvidia/nemotron-3-embed-1b",
+              "rerank": "nvidia/llama-nemotron-rerank-vl-1b-v2"
+            },
+            "index": {
+              "type": "HNSW",
+              "metric": "COSINE",
+              "params": {
+                "M": 16,
+                "efConstruction": 200
+              },
+              "searchParams": {
+                "ef": 128
+              }
+            },
+            "timings": {
+              "embedMs": 280.9,
+              "searchMs": 11.8,
+              "rerankMs": 558.1,
+              "totalMs": 850.9
+            }
+          }
+        },
+        {
+          "schemaVersion": "2",
+          "artifactKind": "retrieval_evidence",
+          "receiptId": "hermes-receipt:3863c8008435655a38830124de0713e4ee8f6e5286a5072c5c3545662a0b9739",
+          "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+          "invocationId": "hermes-tool:call-a13bdc58-1675-48b8-9328-b7cf6ca6edd5",
+          "turnId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:a1505a0b-dfc6-462f-aa6a-00cc5f80ad41:e2c21343",
+          "toolName": "mcp__retrieval__retrieve_evidence",
+          "status": "completed",
+          "errorType": null,
+          "errorSummary": null,
+          "durationMs": 778,
+          "traceId": null,
+          "spanId": null,
+          "occurredAt": "2026-10-01T04:52:31.217315Z",
+          "content": {
+            "query": "8-K filing January 2026 February 2026 March 2026 CRWD",
+            "sourceIds": [
+              "sec_filings"
+            ],
+            "collection": "us_equities_documents",
+            "collectionVersion": "us_equities_documents__03a5e71747bc",
+            "hits": [
+              {
+                "rank": 1,
+                "score": -1.5234375,
+                "vectorScore": 0.5344336628913879,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001535527:0001535527-26-000007:crwd-20260303.htm",
+                "chunkId": "edgar:0001535527:0001535527-26-000007:crwd-20260303.htm:0001",
+                "title": "CrowdStrike Holdings, Inc. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1535527/0001535527-26-000007.txt",
+                "publishedAt": "2026-03-03T00:00:00Z",
+                "snippet": "crwd-202603030001535527false00015355272026-03-032026-03-03UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWASHINGTON, D.C. 20549FORM 8-K CURRENT REPORTPursuant to Section 13 or 15(d)of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported): March 3, 2026CrowdStrike Holdings, Inc. (Exact name of registrant as specified in its charter)______________________________________________________________________________________________________Delaware001-3893345-3788918(State or other jurisdictionof incorporation)(CommissionFile Number)(IRS EmployerIdentification No.)206 E. 9th StreetSuite 1400AustinTexas78701(Address of principal executive offices)(Zip Code)Registrant’s telephone number, including area code: (888) 512-8906 Not Applicable(Former name or former address, if changed since last report)Check the appropriate box below if the Form 8‑K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions (see General Instruction A.2. below):☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a‑12 under the Exchange Act (17 CFR 240.14a‑12)☐Pre-commencement communications pursuant to Rule 14d‑2(b) under the Exchange Act (17 CFR 240.14d‑2(b))☐Pre-commencement communications pursuant to Rule 13e‑4(c) under the Exchange Act (17 CFR 240.13e‑4(c))Securities registered pursuant to Section 12(b) of the Act:Title of each classTradingS",
+                "metadata": {
+                  "citation": "SEC 8-K, CrowdStrike Holdings, Inc., filed 2026-03-03, accession 0001535527-26-000007",
+                  "cik": "0001535527",
+                  "company_name": "CrowdStrike Holdings, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2026-03-03",
+                  "accession": "0001535527-26-000007",
+                  "document_type": "8-K",
+                  "filename": "crwd-20260303.htm",
+                  "ticker": "CRWD",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 2,
+                "score": -3.5,
+                "vectorScore": 0.46807682514190674,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001535527:0001535527-25-000005:crwd-20250304.htm",
+                "chunkId": "edgar:0001535527:0001535527-25-000005:crwd-20250304.htm:0001",
+                "title": "CrowdStrike Holdings, Inc. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1535527/0001535527-25-000005.txt",
+                "publishedAt": "2025-03-04T00:00:00Z",
+                "snippet": "crwd-202503040001535527false00015355272025-03-042025-03-04UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWASHINGTON, D.C. 20549FORM 8-K CURRENT REPORTPursuant to Section 13 or 15(d)of the Securities Exchange Act of 1934Date of Report (Date of earliest event reported): March 4, 2025CrowdStrike Holdings, Inc. (Exact name of registrant as specified in its charter)______________________________________________________________________________________________________Delaware001-3893345-3788918(State or other jurisdictionof incorporation)(CommissionFile Number)(IRS EmployerIdentification No.)206 E. 9th StreetSuite 1400AustinTexas78701(Address of principal executive offices)(Zip Code)Registrant’s telephone number, including area code: (888) 512-8906 Not Applicable(Former name or former address, if changed since last report)Check the appropriate box below if the Form 8‑K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions (see General Instruction A.2. below):☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a‑12 under the Exchange Act (17 CFR 240.14a‑12)☐Pre-commencement communications pursuant to Rule 14d‑2(b) under the Exchange Act (17 CFR 240.14d‑2(b))☐Pre-commencement communications pursuant to Rule 13e‑4(c) under the Exchange Act (17 CFR 240.13e‑4(c))Securities registered pursuant to Section 12(b) of the Act:Title of each classTradingS",
+                "metadata": {
+                  "citation": "SEC 8-K, CrowdStrike Holdings, Inc., filed 2025-03-04, accession 0001535527-25-000005",
+                  "cik": "0001535527",
+                  "company_name": "CrowdStrike Holdings, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2025-03-04",
+                  "accession": "0001535527-25-000005",
+                  "document_type": "8-K",
+                  "filename": "crwd-20250304.htm",
+                  "ticker": "CRWD",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 3,
+                "score": -4.30078125,
+                "vectorScore": 0.5001034736633301,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001769628:0001769628-26-000044:crwv-20260123.htm",
+                "chunkId": "edgar:0001769628:0001769628-26-000044:crwv-20260123.htm:0001",
+                "title": "CoreWeave, Inc. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1769628/0001769628-26-000044.txt",
+                "publishedAt": "2026-01-26T00:00:00Z",
+                "snippet": "crwv-20260123FALSE000176962800017696282026-01-232026-01-23 UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549___________________________________FORM 8-K___________________________________CURRENT REPORTPursuant to Section 13 or 15(d)of the Securities Exchange Act of 1934Date of Report (date of earliest event reported): January 23, 2026___________________________________CoreWeave, Inc.(Exact name of registrant as specified in its charter)___________________________________Delaware001-4256382-3060021(State or other jurisdiction ofincorporation or organization)(Commission File Number)(I.R.S. Employer Identification Number)290 W Mt. Pleasant Ave., Suite 4100Livingston, NJ07039(Address of registrant's principal executive offices)(Zip Code)Registrant's telephone number, including area code: (973) 270-9737___________________________________Not Applicable(Former name or former address, if changed since last report)___________________________________Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions (see General Instruction A.2. below):☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communications pursuant t",
+                "metadata": {
+                  "citation": "SEC 8-K, CoreWeave, Inc., filed 2026-01-26, accession 0001769628-26-000044",
+                  "cik": "0001769628",
+                  "company_name": "CoreWeave, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2026-01-26",
+                  "accession": "0001769628-26-000044",
+                  "document_type": "8-K",
+                  "filename": "crwv-20260123.htm",
+                  "ticker": "CRWV",
+                  "items": "3.02,7.01,8.01,9.01"
+                }
+              },
+              {
+                "rank": 4,
+                "score": -4.43359375,
+                "vectorScore": 0.5191861391067505,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001769628:0001769628-26-000094:crwv-20260226.htm",
+                "chunkId": "edgar:0001769628:0001769628-26-000094:crwv-20260226.htm:0001",
+                "title": "CoreWeave, Inc. 8-K: 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1769628/0001769628-26-000094.txt",
+                "publishedAt": "2026-02-26T00:00:00Z",
+                "snippet": "crwv-20260226FALSE000176962800017696282026-02-262026-02-26UNITED STATESSECURITIES AND EXCHANGE COMMISSIONWashington, D.C. 20549___________________________________FORM 8-K___________________________________CURRENT REPORTPursuant to Section 13 or 15(d)of the Securities Exchange Act of 1934Date of Report (date of earliest event reported): February 26, 2026___________________________________CoreWeave, Inc.(Exact name of registrant as specified in its charter)___________________________________Delaware001-4256382-3060021(State or other jurisdiction ofincorporation or organization)(Commission File Number)(I.R.S. Employer Identification Number)290 W Mt. Pleasant Ave., Suite 4100Livingston, NJ07039(Address of registrant's principal executive offices)(Zip Code)Registrant's telephone number, including area code: (973) 270-9737___________________________________Not Applicable(Former name or former address, if changed since last report)___________________________________Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions (see General Instruction A.2. below):☐Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)☐Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)☐Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))☐Pre-commencement communications pursuant t",
+                "metadata": {
+                  "citation": "SEC 8-K, CoreWeave, Inc., filed 2026-02-26, accession 0001769628-26-000094",
+                  "cik": "0001769628",
+                  "company_name": "CoreWeave, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2026-02-26",
+                  "accession": "0001769628-26-000094",
+                  "document_type": "8-K",
+                  "filename": "crwv-20260226.htm",
+                  "ticker": "CRWV",
+                  "items": "2.02,9.01"
+                }
+              },
+              {
+                "rank": 5,
+                "score": -4.5078125,
+                "vectorScore": 0.4617565870285034,
+                "sourceId": "sec_filings",
+                "documentId": "edgar:0001535527:0001104659-25-045244:tm2514190d1_8k.htm",
+                "chunkId": "edgar:0001535527:0001104659-25-045244:tm2514190d1_8k.htm:0001",
+                "title": "CrowdStrike Holdings, Inc. 8-K: FORM 8-K",
+                "url": "https://www.sec.gov/Archives/edgar/data/1535527/0001104659-25-045244.txt",
+                "publishedAt": "2025-05-07T00:00:00Z",
+                "snippet": "false 0001535527 0001535527 2025-05-06 2025-05-06 iso4217:USD xbrli:shares iso4217:USD xbrli:shares UNITED STATES SECURITIES AND EXCHANGE COMMISSION WASHINGTON, D.C. 20549 FORM 8-K CURRENT REPORT Pursuant to Section 13 or 15(d) of the Securities Exchange Act of 1934 Date of Report (Date of earliest event reported): May 6, 2025 CrowdStrike Holdings, Inc. (Exact name of registrant as specified in its charter) Delaware 001-38933 45-3788918 (State or other jurisdiction of incorporation) (Commission File Number) (IRS Employer Identification No.) 206 E. 9th StreetSuite 1400Austin, Texas 78701 (Address of principal executive office, including zip code) Registrant’s telephone number, including area code: (888) 512-8906 Not Applicable (Former name or former address, if changed since last report) Check the appropriate box below if the Form 8-K filing is intended to simultaneously satisfy the filing obligation of the registrant under any of the following provisions (see General Instruction A.2. below): ¨ Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425) ¨ Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12) ¨ Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b)) ¨ Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c)) Securities registered pursuant to Section 12(b) of the Act: Title of each class Trading Symbol(s) Name of ",
+                "metadata": {
+                  "citation": "SEC 8-K, CrowdStrike Holdings, Inc., filed 2025-05-07, accession 0001104659-25-045244",
+                  "cik": "0001535527",
+                  "company_name": "CrowdStrike Holdings, Inc.",
+                  "form": "8-K",
+                  "filed_on": "2025-05-07",
+                  "accession": "0001104659-25-045244",
+                  "document_type": "8-K",
+                  "filename": "tm2514190d1_8k.htm",
+                  "ticker": "CRWD",
+                  "items": "2.02,2.05,7.01,9.01"
+                }
+              }
+            ],
+            "candidateCounts": {
+              "sec_filings": 20
+            },
+            "models": {
+              "embed": "nvidia/nemotron-3-embed-1b",
+              "rerank": "nvidia/llama-nemotron-rerank-vl-1b-v2"
+            },
+            "index": {
+              "type": "HNSW",
+              "metric": "COSINE",
+              "params": {
+                "M": 16,
+                "efConstruction": 200
+              },
+              "searchParams": {
+                "ef": 128
+              }
+            },
+            "timings": {
+              "embedMs": 281.6,
+              "searchMs": 10.3,
+              "rerankMs": 473.4,
+              "totalMs": 765.3
+            }
+          }
+        }
+      ],
+      "sourceIds": [
+        "market_data",
+        "sec_filings"
+      ],
+      "benchmark": {
+        "schemaVersion": "1",
+        "jobId": "a1505a0b-dfc6-462f-aa6a-00cc5f80ad41",
+        "status": "completed",
+        "reason": null,
+        "measuredAt": "2026-10-01T04:54:59.169229Z",
+        "pairs": 5,
+        "stages": [
+          {
+            "invocationId": "hermes-tool:call-5fb2c6d7-2724-4f1b-bb7c-c4949a169251",
+            "receiptId": "hermes-receipt:9e1dcaab4a3e4539d0fa55c77e47c4e1e53ae6d8a844bb52570d23c7e2fafeda",
+            "toolName": "market_scan",
+            "outcome": "completed",
+            "parity": true,
+            "reason": null,
+            "cpu": {
+              "device": "cpu",
+              "library": "pandas",
+              "version": "2.3.3",
+              "trialsMs": [
+                25.603,
+                26.419,
+                24.711,
+                24.418,
+                25.711
+              ],
+              "medianMs": 25.603
+            },
+            "gpu": {
+              "device": "gpu",
+              "library": "cudf.pandas",
+              "version": "26.06.00",
+              "trialsMs": [
+                60.094,
+                57.991,
+                55.451,
+                55.282,
+                54.159
+              ],
+              "medianMs": 55.451
+            },
+            "speedup": null,
+            "speedupRange": null,
+            "qualified": false
+          },
+          {
+            "invocationId": "hermes-tool:call-cf3c9336-cfb3-4764-a18a-e047655577bc",
+            "receiptId": "hermes-receipt:7ac0011c65baab2559f1f3217b9ec3e1b1c544624fd44b87857a6558b59d36c8",
+            "toolName": "market_scan",
+            "outcome": "completed",
+            "parity": true,
+            "reason": null,
+            "cpu": {
+              "device": "cpu",
+              "library": "pandas",
+              "version": "2.3.3",
+              "trialsMs": [
+                25.104,
+                23.684,
+                25.73,
+                23.414,
+                24.705
+              ],
+              "medianMs": 24.705
+            },
+            "gpu": {
+              "device": "gpu",
+              "library": "cudf.pandas",
+              "version": "26.06.00",
+              "trialsMs": [
+                57.454,
+                57.252,
+                55.225,
+                58.428,
+                55.272
+              ],
+              "medianMs": 57.252
+            },
+            "speedup": null,
+            "speedupRange": null,
+            "qualified": false
+          }
+        ]
+      }
+    }
+  ]
+}

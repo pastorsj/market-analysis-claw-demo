@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 2,
+  "pack": {
+    "id": "synthetic-market",
+    "version": "1.0.0"
+  },
+  "recordedAt": "2026-10-01T04:34:08.119272Z",
+  "sessions": [
+    {
+      "id": "market-leaders",
+      "title": "Market Leaders",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "c1bc72b3-70ea-41a8-8bc7-262000d756b6",
+          "question": "Among the 12 most liquid issuers, which had the strongest and weakest returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare?"
+        }
+      ]
+    },
+    {
+      "id": "news-sentiment-reaction",
+      "title": "News & Price Reaction",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "7b7e5fe8-2e0d-492a-ac1b-b3973a15a87a",
+          "question": "For company news about the 12 most liquid issuers published from August 17 through August 24, 2026, how did the sentiment labels line up with the issuers' returns over the following five sessions? Describe the relationship without claiming causation."
+        }
+      ]
+    },
+    {
+      "id": "unusual-sessions",
+      "title": "Unusual Sessions",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "f5e7a266-39cd-4430-8790-8c7f59fa3c0b",
+          "question": "Treat January 2 through June 30, 2026 as the baseline for every issuer. Which 10 issuer sessions from July 1 through August 31, 2026 were the most unusual in return, volatility and volume, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
+        }
+      ]
+    },
+    {
+      "id": "peer-network",
+      "title": "Peer Network",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "9302256f-b83b-4036-ba49-9dacc00842e5",
+          "question": "In the return-correlation network from June through August 2026, which issuers are the most central, and which pairs moved together most closely?"
+        }
+      ]
+    },
+    {
+      "id": "cyber-disclosure-rules",
+      "title": "Cybersecurity Disclosures",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "60d4dedc-0054-4715-8151-d57b1282f12f",
+          "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any second-quarter 2026 filings in the corpus that report an incident."
+        }
+      ]
+    },
+    {
+      "id": "news-and-filings",
+      "title": "News & Filings",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "2dbaa54f-bd2e-4964-82e2-48b8e68f610f",
+          "question": "Which of the 12 most liquid issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real second-quarter 2026 SEC filings describe operational disruptions? The issuers are fictional and are not the filers: keep the two apart."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,434 @@
+{
+  "schema_version": "1",
+  "build": "us-equities@0.1.0+default+36d90f6e235a",
+  "id": "us-equities",
+  "version": "0.1.0",
+  "title": "US Equities",
+  "description": "Daily prices for about 1,600 US-listed stocks from January 2025 to March 2026, rolled up from real split-adjusted one-minute bars that intraday analytics read in place, with SEC company names, CIKs and SIC codes, plus the issuers' SEC EDGAR 8-K filings, eCFR Title 17 and optional GDELT world headlines as separate document sources.",
+  "as_of": "2026-03-12",
+  "disclaimer": "Real market data for a software demonstration. Not investment advice.",
+  "profile": "default",
+  "licenses": [
+    {
+      "name": "Private-dataset",
+      "title": "A private dataset, used as provided",
+      "redistribution": "restricted",
+      "notes": "The minute bars are provided by the dataset's owner for this non-commercial demo. This repository never commits or redistributes them."
+    },
+    {
+      "name": "US-Government-Public-Information",
+      "title": "United States government public information",
+      "path": "https://www.govinfo.gov/about/policies",
+      "redistribution": "allowed",
+      "notes": "The eCFR is authoritative current regulatory information but is not the official legal edition of the CFR."
+    },
+    {
+      "name": "SEC-EDGAR-Reuse",
+      "title": "SEC website information reuse terms",
+      "path": "https://www.sec.gov/about/webmaster-frequently-asked-questions",
+      "redistribution": "unknown",
+      "notes": "Filings are fetched from EDGAR at prepare time and never committed. Issuer-authored content may carry separate rights."
+    }
+  ],
+  "provenance": [
+    {
+      "id": "minute-bars",
+      "title": "US equities one-minute bars and GDELT world headlines, with SEC company metadata",
+      "kind": "external",
+      "synthetic": false,
+      "license": "Private-dataset",
+      "as_of": "2026-03-12",
+      "notes": "The bars become the market tables; the GDELT headlines are the opt-in world_news corpus, read in place. Company names, CIKs and exchanges come from SEC's company_tickers_exchange.json, and SIC codes from each company's EDGAR submissions, fetched at prepare time with SEC_USER_AGENT and cached."
+    },
+    {
+      "id": "ecfr-title-17",
+      "title": "Electronic Code of Federal Regulations, Title 17 (versioned API snapshot)",
+      "kind": "download",
+      "synthetic": false,
+      "license": "US-Government-Public-Information",
+      "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml",
+      "as_of": "2026-08-17",
+      "retrieved_on": "2026-09-22"
+    },
+    {
+      "id": "sec-edgar-issuers",
+      "title": "SEC EDGAR 8-K filings by this pack's issuers, 2025-01-02 to 2026-03-12",
+      "kind": "download",
+      "synthetic": false,
+      "license": "SEC-EDGAR-Reuse",
+      "url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "as_of": "2026-03-12",
+      "retrieved_on": "2026-09-30",
+      "requires_env": [
+        "SEC_USER_AGENT"
+      ],
+      "notes": "Selected by corpus/select_filings.py from each issuer's EDGAR submissions: every 8-K reporting Item 1.05, plus the latest 12 8-Ks of each issuer of the 100 most liquid stocks."
+    }
+  ],
+  "sources": [
+    {
+      "id": "market_data",
+      "name": "US Equities",
+      "description": "Daily prices for about 1,600 US-listed stocks, rolled up from real one-minute bars, with SEC company data.",
+      "agent_description": "Real daily prices (January 2, 2025 to March 12, 2026) of US-listed stocks, with SEC names, CIKs and SIC codes, a liquidity rank and same-SIC peers. Analyze them with market analytics and SQL. There is no ticker-linked news; filings are a separate source.",
+      "kind": "structured",
+      "capabilities": [
+        "structured_retrieval",
+        "structured_prediction",
+        "market_analytics"
+      ],
+      "synthetic": false,
+      "example_questions": [
+        "Which of the 50 most liquid stocks led returns over the latest 20 trading sessions?",
+        "Which sessions in early 2026 were most unusual among the 50 most liquid stocks?"
+      ]
+    },
+    {
+      "id": "sec_filings",
+      "name": "SEC Filings",
+      "description": "8-K current reports and EX-99 exhibits filed by the companies in the pack, January 2025 to March 2026, retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
+      "agent_description": "Retrieve citation-ready 8-K filings and EX-99 exhibits by companies in market_data, filed from January 2, 2025 to March 12, 2026: every 8-K reporting Item 1.05, and the latest 8-Ks of the 100 most liquid stocks. A separate document source: each passage names its company and ticker, but filings are not joined to the price tables.",
+      "kind": "documents",
+      "capabilities": [
+        "unstructured_retrieval"
+      ],
+      "synthetic": false,
+      "example_questions": [
+        "Which companies in the pack reported a material cybersecurity incident under Item 1.05?"
+      ]
+    },
+    {
+      "id": "market_regulations",
+      "name": "Market Regulations",
+      "description": "Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
+      "agent_description": "Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities regulation research.",
+      "kind": "documents",
+      "capabilities": [
+        "unstructured_retrieval"
+      ],
+      "synthetic": false,
+      "example_questions": [
+        "What current SEC disclosure requirements apply to a material cybersecurity incident?"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "market-leaders",
+      "label": "Market Leaders",
+      "tag": "ANALYTICS",
+      "description": "Scan the 50 most liquid US stocks for their strongest and weakest recent returns.",
+      "question": "Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare?",
+      "sources": [
+        "market_data"
+      ],
+      "featured": true
+    },
+    {
+      "id": "intraday-ranges",
+      "label": "Intraday Swings",
+      "tag": "INTRADAY",
+      "description": "Scan real one-minute bars for the sessions with the widest intraday swings.",
+      "question": "Among the 50 most liquid US stocks, which sessions from March 2 through March 12, 2026 had the widest intraday price ranges? For each, how did it trade from open to close, and how much of its volume came in the last 30 minutes?",
+      "sources": [
+        "market_data"
+      ],
+      "featured": true
+    },
+    {
+      "id": "unusual-sessions",
+      "label": "Unusual Sessions",
+      "tag": "ANOMALY",
+      "description": "Rank unusual return, volatility and volume combinations across the 50 most liquid stocks.",
+      "question": "Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations.",
+      "sources": [
+        "market_data"
+      ],
+      "featured": true
+    },
+    {
+      "id": "peer-network",
+      "label": "Peer Network",
+      "tag": "GRAPH",
+      "description": "Find the most central stocks in the return-correlation network of same-industry peers.",
+      "question": "Among declared industry peers, which stocks were the most central in the return-correlation network from December 2025 through March 12, 2026, and which pairs moved together most closely?",
+      "sources": [
+        "market_data"
+      ],
+      "featured": true
+    },
+    {
+      "id": "cyber-disclosure-rules",
+      "label": "Cybersecurity Disclosures",
+      "tag": "RETRIEVAL",
+      "description": "Pair the Form 8-K Item 1.05 rule with filings by companies in the pack that report an incident.",
+      "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05.",
+      "sources": [
+        "sec_filings",
+        "market_regulations"
+      ],
+      "featured": true
+    },
+    {
+      "id": "moves-and-filings",
+      "label": "Moves & Filings",
+      "tag": "HYBRID",
+      "description": "Price moves and SEC filings as two separate sources, joined only by company.",
+      "question": "Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-K filings from January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move.",
+      "sources": [
+        "market_data",
+        "sec_filings"
+      ],
+      "featured": true
+    },
+    {
+      "id": "large-universe-scan",
+      "label": "Whole-Market Scan",
+      "tag": "ANALYTICS",
+      "description": "Scan the 500 most liquid stocks at once.",
+      "question": "Across the 500 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2 to March 12, 2026, and how unusual was their trading volume?",
+      "sources": [
+        "market_data"
+      ]
+    },
+    {
+      "id": "outcome-prediction",
+      "label": "Five-Session Outlook",
+      "tag": "PREDICTION",
+      "description": "Rank the 50 most liquid stocks with a five-session prediction anchored before the outcomes.",
+      "question": "As of the March 5, 2026 market close, which of the 50 most liquid stocks are most likely to post a positive five-session return?",
+      "sources": [
+        "market_data"
+      ]
+    },
+    {
+      "id": "sector-sql",
+      "label": "Sector Breakdown",
+      "tag": "SQL",
+      "description": "Count stocks and summarize returns by SIC division with SQL.",
+      "question": "How many stocks are in each SIC division, and what was each division's median return from January 2 to March 12, 2026?",
+      "sources": [
+        "market_data"
+      ]
+    }
+  ],
+  "structured": {
+    "source": "market_data",
+    "database_name": "us_equities",
+    "database": "structured/us_equities.duckdb",
+    "tables": {
+      "assets": "tables/assets.parquet",
+      "ticker_history": "tables/ticker_history.parquet",
+      "trading_sessions": "tables/trading_sessions.parquet",
+      "daily_prices": "tables/daily_prices.parquet",
+      "asset_relationships": "tables/asset_relationships.parquet"
+    }
+  },
+  "analytics": {
+    "contract": "market-analytics/v1",
+    "news_table": null,
+    "session_close_utc": "21:00",
+    "universes": {
+      "top_50": {
+        "description": "The 50 most liquid stocks, by median daily dollar volume through the prediction anchor.",
+        "where": "liquidity_rank <= 50"
+      },
+      "liquid_500": {
+        "description": "The 500 most liquid stocks.",
+        "where": "liquidity_rank <= 500"
+      },
+      "all_assets": {
+        "description": "Every stock in the pack.",
+        "where": "true"
+      }
+    },
+    "relationship_graph": {
+      "window_start": "2025-12-01",
+      "window_end": "2026-03-12",
+      "mode": "sparse_declared_peers"
+    }
+  },
+  "prediction": {
+    "schema": "prediction",
+    "anchor": "2026-03-05T21:00:00+00:00",
+    "horizon_sessions": 5,
+    "entity": {
+      "table": "asset_entities",
+      "key": "asset_id"
+    },
+    "population": {
+      "view": "top_50_population",
+      "ids": [
+        "AAPL",
+        "ADBE",
+        "AMAT",
+        "AMD",
+        "AMZN",
+        "APP",
+        "AVGO",
+        "BA",
+        "BABA",
+        "BAC",
+        "BMNR",
+        "BRK.B",
+        "C",
+        "COIN",
+        "COST",
+        "CRCL",
+        "CRM",
+        "CRWD",
+        "CRWV",
+        "CSCO",
+        "CVX",
+        "GE",
+        "GOOG",
+        "GOOGL",
+        "GS",
+        "HD",
+        "IBM",
+        "INTC",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LLY",
+        "MA",
+        "META",
+        "MRK",
+        "MSFT",
+        "MU",
+        "NFLX",
+        "NVDA",
+        "ORCL",
+        "PFE",
+        "PG",
+        "QCOM",
+        "TSLA",
+        "TXN",
+        "UNH",
+        "V",
+        "WFC",
+        "WMT",
+        "XOM"
+      ]
+    },
+    "tables": {
+      "asset_entities": {
+        "primary_key": "asset_id"
+      },
+      "price_events": {
+        "primary_key": "price_id",
+        "time_column": "observed_at",
+        "links_to_entity": "asset_id"
+      },
+      "return_outcomes": {
+        "primary_key": "outcome_id",
+        "time_column": "realized_at",
+        "links_to_entity": "asset_id"
+      }
+    },
+    "forbidden_tables": [
+      "daily_prices"
+    ],
+    "templates": [
+      {
+        "id": "positive_return",
+        "name": "Positive five-session return",
+        "description": "Rank the 50 most liquid stocks by likelihood of a positive five-session adjusted-close return realized within 5 calendar days after the anchor.",
+        "pql": "PREDICT COUNT(return_outcomes.* WHERE return_outcomes.positive_return = true, 0, 5, days) > 0 FOR EACH asset_entities.asset_id"
+      },
+      {
+        "id": "material_downside",
+        "name": "Material five-session downside",
+        "description": "Rank the 50 most liquid stocks by likelihood of a five-session adjusted-close return below negative five percent realized within 5 calendar days after the anchor.",
+        "pql": "PREDICT COUNT(return_outcomes.* WHERE return_outcomes.forward_return_5d < -0.05, 0, 5, days) > 0 FOR EACH asset_entities.asset_id"
+      }
+    ]
+  },
+  "market": {
+    "bars": {
+      "dataset": "minute-bars",
+      "files": "market/stocks_1min/*_full_1min_adjsplit.parquet",
+      "symbol_from_path": "([^/]+)_full_1min_adjsplit\\.parquet$",
+      "columns": {
+        "time": "ts",
+        "open": "open",
+        "high": "high",
+        "low": "low",
+        "close": "close",
+        "volume": "volume"
+      },
+      "frequency": "1min",
+      "timezone": "America/New_York",
+      "regular_session": [
+        "09:30",
+        "16:00"
+      ],
+      "root": "/sources/minute-bars"
+    }
+  },
+  "documents": {
+    "collection": "us_equities_documents",
+    "sources": [
+      "sec_filings",
+      "market_regulations"
+    ],
+    "path": "corpus/documents.jsonl"
+  },
+  "parts": {
+    "structured": {
+      "rows": {
+        "assets": 1601,
+        "ticker_history": 1601,
+        "trading_sessions": 298,
+        "daily_prices": 452837,
+        "asset_relationships": 8862
+      },
+      "import": {
+        "dataset": "minute-bars",
+        "fingerprint": "d8b405106b9cda1e691f6204a85219e45ab1b392008e982087e732964f713899",
+        "rollup": {
+          "key": "637bec85cbde45be",
+          "files": 2200,
+          "symbols": 2200,
+          "rows": 572995,
+          "first_date": "2025-01-02",
+          "last_date": "2026-03-12",
+          "seconds": 3.2,
+          "created_at": "2026-09-30T06:03:44+00:00",
+          "cached": true
+        },
+        "symbols": 2200,
+        "sessions": 298,
+        "dropped": {
+          "warrants": 110,
+          "units": 50,
+          "rights": 27,
+          "preferred": 182,
+          "not_listed": 221,
+          "min_sessions": 9
+        },
+        "assets": 1601
+      },
+      "files": {
+        "tables/asset_relationships.parquet": "b2dc1f687dea3d50472697bf5bd3e87a69c2584395847d5643563e77ddb4362c",
+        "tables/assets.parquet": "6e53e4bd5057f1b015994f55cce26c07f738781daec66427c6b71bd3b1650d51",
+        "tables/daily_prices.parquet": "c1b9696ff2282abc7805583acadacc780d87391ca8aaf4b1565912079891d29e",
+        "tables/ticker_history.parquet": "5e864a6ae70553621998e5a11ec0ceb7e29f3161c2b771f15265b194764eb749",
+        "tables/trading_sessions.parquet": "b3e2723efa4f9c3f20d4a0440f12c7612d9207cf41507ded2e3e4e45f34dde99",
+        "structured/us_equities.duckdb": "77f1c9b11fbf34df1d8b436e637a29c32a40de09c3c53018303c0383020012cb",
+        "ontology/model.yaml": "8f231603ef529199f5ef9f9b7faff60e6846d8681b1bd03fec79acc9e6cc338d",
+        "prediction/graph.json": "dc3fade0ea1a3174be0578449504fd4e4d77dcdcde4b9e6b1b030cc5393fc373",
+        "prediction/templates.json": "16e4e4fc2c6197342f77e47bc3dafda40a6ab9e522ccaffd55d985ac3a27fdf1"
+      }
+    },
+    "corpus": {
+      "documents": {
+        "market_regulations": 3525,
+        "sec_filings": 1887
+      },
+      "files": {
+        "corpus/documents.jsonl": "ae8495ce8a5e2ae43c6f7f6802157ec6314bce6ff883dc7290f56ffdf68bdf1b"
+      }
+    }
+  }
+}
