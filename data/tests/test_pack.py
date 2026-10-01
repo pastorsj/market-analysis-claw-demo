@@ -44,6 +44,10 @@ def test_filings_are_a_document_source_in_both_packs_and_never_news():
         assert pack.manifest["market"]["news"] in (None, "news.parquet")  # a dataset table, never filings
 
 
+# The documents.jsonl id prefix of each document source that eval/retrieval.yaml names documents of
+DOCUMENT_PREFIXES = {"market_regulations": "ecfr-title17:", "world_news": "gdelt:"}
+
+
 @pytest.mark.parametrize("name", ["synthetic-market", "us-equities"])
 def test_retrieval_answer_checks_name_questions_and_pinned_filings(name):
     pack = load_pack(PACKS / name)
@@ -53,9 +57,11 @@ def test_retrieval_answer_checks_name_questions_and_pinned_filings(name):
     questions = {question["id"]: question for question in pack.questions}
 
     for question_id, check in checks.items():
-        assert set(questions[question_id]["sources"]) & {"sec_filings", "market_regulations"}, question_id
+        sources = set(questions[question_id]["sources"])
+        assert sources & {"sec_filings", "market_regulations", "world_news"}, question_id
         assert set(check.get("filings", [])) <= pinned, question_id
-        assert all(document.startswith("ecfr-title17:") for document in check.get("documents", [])), question_id
+        prefixes = tuple(prefix for source, prefix in DOCUMENT_PREFIXES.items() if source in sources)
+        assert all(document.startswith(prefixes) for document in check.get("documents", [])), question_id
 
 
 def test_a_broken_pack_reports_every_problem(pack_copy):

@@ -61,14 +61,34 @@ to the anchor only; the build writes their ids into `pack.json`.
 
 ## Questions
 
-`questions.yaml` holds ten questions; six are featured: market leaders among the 50 most liquid stocks, the
+`questions.yaml` holds 30 questions; six are featured: market leaders among the 50 most liquid stocks, the
 widest intraday swings from the minute bars (`intraday_scan`), unusual sessions among the 50 most liquid, the
 peer network, the Form 8-K Item 1.05 rule with the filings that report an incident, and February's biggest movers
-beside their own 8-Ks. Five two-turn `conversations` follow up on an answer: price context then weekly with a
-third stock, the peer network then its central stocks' returns, the leaders then their unusual sessions, two 8-K
-incident filings then the Title 17 requirements, and Regulation FD. `eval/oracles/` computes the analytics answers from a build and `eval/retrieval.yaml`
-names the documents a retrieval answer should cite; CI runs the oracles on the fixture's schema only, since the
-data is never in CI.
+beside their own 8-Ks. The others cover every tool and source:
+
+| Kind | Questions |
+|---|---|
+| Prices and returns (`market_scan`) | volatility ranking, peer-relative returns, the second half of 2025, the 500-stock scan |
+| Intraday, from the minute bars (`intraday_scan`) | drawdowns from the session high, the heaviest sessions and when their volume came |
+| Unusual sessions (`market_anomaly_scan`, PCA) | April 2025 against the first quarter, and the fourth quarter of 2025 across the 500 most liquid |
+| Peer network (`analyze_market_relationships`, PageRank) | the most central stocks' industries |
+| Kumo prediction (`predict_asset_outcomes`) | the five-session outlook, downside of more than 5%, five named stocks |
+| SQL with Auto Ontology (`ask_question`) | SIC divisions, listing exchanges, days with a move of more than 10% |
+| SEC filings | executive changes (Item 5.02), material agreements (1.01, 1.02), restructuring costs (2.05) |
+| Regulations (eCFR Title 17) | Schedules 13D and 13G, Rule 14a-8 shareholder proposals |
+| World headlines (GDELT, opt-in) | central banks, cyber attacks |
+| Two sources, kept apart | NVIDIA's prices and 8-Ks, five banks' January moves and results |
+
+Fifteen two-turn `conversations` follow up on an answer: price context then weekly with a third stock; four
+large stocks then the previous quarter, monthly; early-April 2025's steepest declines then the week after; the
+peer network then its central stocks' returns; the strongest peer links then the top pair; the leaders then their
+unusual sessions; minute-level volatility then inside the top sessions; a Kumo outlook then the returns that
+followed; SIC divisions then industries; 8-K incident filings then the Title 17 requirements; results 8-Ks then
+their figures; Regulation FD; Rule 10b5-1 trading plans; headlines that mention Nvidia then NVDA's prices; and
+Item 1.05 filers then their prices. With `DATA_CORPORA=sec_filings,market_regulations,world_news` and every
+profile, all 45 sessions can be recorded (`demo.sh record --all`). `eval/oracles/` computes the analytics answers
+from a build and `eval/retrieval.yaml` names the documents a retrieval answer should cite; CI runs the oracles on
+the fixture's schema only, since the data is never in CI.
 
 ## Known issues
 

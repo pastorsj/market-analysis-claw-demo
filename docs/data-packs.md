@@ -108,7 +108,7 @@ answer should cite.
 `questions.yaml` can also hold `conversations`: two to six turns asked in order in one conversation, so a later
 turn can refer to an earlier answer ("For those same two examples, ..."). They follow the same source and profile
 rules, share the questions' ids, are not listed in the UI, and are recorded by `record --all`, each as one replay
-session. `us-equities` has five.
+session. `us-equities` has 30 questions and 15 conversations, 45 sessions in all.
 
 ## Recordings
 
