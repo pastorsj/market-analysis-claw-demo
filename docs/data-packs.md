@@ -100,7 +100,13 @@ the pack. Its MCP description starts with "Unavailable in the active data pack",
 `synthetic-market`'s daily-bar profiles). The market skill tells the agent not to call it.
 
 `questions.yaml` holds each pack's demo questions. A question is offered only when every source it names is in
-the build and, if it lists `profiles`, the build uses one of them. Six are `featured` in each pack: they need
+the build and, if it lists `profiles`, the build uses one of them. Each declares the `tools` it is expected to use
+as technology pills, which the composer's demo scenario picker shows beside its label: `cudf` for any market tool,
+plus `cuml` for `market_anomaly_scan` and `cugraph` for `analyze_market_relationships`; `kumo`
+(`predict_asset_outcomes`), `retrieval` (`retrieve_evidence`, one pill whatever the sources) and `ontology`
+(`ask_question`). The names are the tool registry's `pills` ([contracts](../contracts/README.md#tool-registry)), and
+a test fails when a recorded answer did not use every tool its question declares (questions without a recording are
+skipped). `tag` (ANALYTICS, RETRIEVAL, ...) only groups questions in the docs. Six are `featured` in each pack: they need
 only the default profiles, fit the landing page on one screen, and are what `record` asks by default. Every
 analytics question has an oracle in `eval/oracles/`, and `eval/retrieval.yaml` names the documents a retrieval
 answer should cite.
@@ -130,6 +136,11 @@ the named questions or conversations and keeps the bundle's other sessions. A qu
 not succeed is left out (a re-recorded one keeps its earlier session), and the command exits 1. Review the files before committing: they hold questions, answers, evidence
 excerpts and model names. `./scripts/demo.sh replay` then serves the UI on the bundle alone, and stops with a
 hint when the pack has none. The format is in [`api/README.md`](../api/README.md#recordings).
+
+The replays list shows, under each recorded session, pills for the tools its runs actually used (the union over
+its turns). `record` writes them into `index.json`; for a bundle recorded before, the UI derives them from the
+recorded events. A market tool that ran on the CPU shows its CPU library (pandas, scikit-learn or NetworkX) in the
+same RAPIDS color, not the GPU name.
 
 Both packs are recorded, each with its six featured questions:
 

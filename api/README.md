@@ -136,11 +136,15 @@ are asked in order with one `conversation-id`, so each sees the answers before i
 
 ```text
 data/packs/<pack>/recordings/
-  index.json          {schemaVersion: 2, pack: {id, version}, recordedAt, sessions: [{id, title, featured, turns: [{jobId, question}]}]}
+  index.json          {schemaVersion: 2, pack: {id, version}, recordedAt, sessions: [{id, title, featured, turns: [{jobId, question}], tools}]}
   pack.json           copy of /data/active/pack.json
   sessions/<id>.json  {schemaVersion: 2, id, title, turns: [<export>]}
   database.json       {schemaVersion: 1, sources: [{id, name, databaseName, schema, previews, queries: [{sql, result}]}]}
 ```
+
+Each `index.json` session also lists the `tools` its runs used, `[{pill, device, tools}]`
+(`src/demo_api/pills.py`): one per technology pill, with the engine a market tool reported (`gpu` or `cpu`) and
+the tool ids behind it, for the UI's replays list.
 
 An export turn is `{jobId, question, submittedAt, completedAt, status, report: {markdown, citations[]} | null,
 events: [execution.v2], receipts: [ReceiptV2], sourceIds, benchmark, retrievalBenchmark}`. After each answer the

@@ -41,6 +41,8 @@ news beside real filings about operational disruptions (kept apart: the issuers 
 question needs a 1-minute profile (`ci` or `intraday`). `eval/oracles/` computes the analytics answers from a
 build, the slow tests run them on the `ci` build, and `eval/retrieval.yaml` names the documents a retrieval
 answer should cite.
+Each question declares the `tools` it is expected to use, as the demo scenario picker's pills
+([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)).
 
 ## How it is made
 
