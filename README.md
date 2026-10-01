@@ -64,7 +64,7 @@ describes the components, the request flow, the contracts and the trust boundari
 | Sandbox | NVIDIA OpenShell (gateway, supervisor, sandbox, CLI) | 0.1.2 |
 | Model router | NVIDIA Switchyard (`switchyard-server`) | 0.3.0 |
 | Models (default, build.nvidia.com) | Nemotron 3 Ultra 550B-A55B on every turn; Nemotron 3 Super 120B-A12B for auxiliary calls | hosted |
-| Models (with a GPT-6 Sol provider) | Sol pinned (`pinned-capable.nemotron-gpt`), or Nemotron 3 Ultra escalating to Sol, judged by Nemotron 3 Super | hosted |
+| Models (with a frontier-model provider) | Nemotron 3 Ultra escalating to GPT-6.1 Sol, judged by GPT-6.1 Sol (`escalation.nemotron-gpt`); Nemotron 3 Super for auxiliary calls | hosted |
 | Retrieval models | Nemotron 3 Embed 1B, Llama Nemotron Rerank VL 1B v2 | hosted |
 | Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone) | 1.4.3, 2.6.17, 2.6.25 |
 | Market analytics | pandas, scikit-learn, NetworkX; on GPU, RAPIDS cuDF, cuML and nx-cugraph | 2.3, 1.9, 3.6; 26.06 (CUDA 12) |

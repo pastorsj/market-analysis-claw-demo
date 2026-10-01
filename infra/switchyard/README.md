@@ -203,12 +203,12 @@ For the judge's reasons, set the `RUST_LOG` value above.
 ## Bake-off
 
 [`docs/models-and-routing.md`](../../docs/models-and-routing.md) has the method, the results and the
-recommendation. In short (2026-09-30, both packs, 17 questions run twice per arm, Nemotron on
-build.nvidia.com and GPT-6 Sol from an OpenAI-compatible gateway): GPT-6 Sol pinned passed 24 of 34 runs,
-Nemotron 3 Ultra → Sol escalation with the tuned judge 20, Ultra alone 13, and Super → Ultra 12.
-build.nvidia.com serves no GPT model, so its default is `passthrough.nemotron` (Ultra alone); with a
-provider that serves GPT-6 Sol, `pinned-capable.nemotron-gpt` is the better choice. Each arm
-is an `.env` change plus `./scripts/demo.sh restart switchyard`, which also resets latches and `/v1/stats`.
+recommendation. In short: on build.nvidia.com, which serves no frontier model, the default is
+`passthrough.nemotron` (Nemotron 3 Ultra alone). With a provider that serves a frontier model,
+`escalation.nemotron-gpt` (Ultra escalating to GPT-6.1 Sol, judged by GPT-6.1 Sol) was the best arm of the
+2026-10-01 bake-off on `us-equities`: 10 and 14 of 16 runs with its two graders, against 7 and 9 for GPT-6.1 Sol
+pinned and 8 and 12 for Claude Opus 5.5 pinned, with 10% of the agent turns on Sol. Each arm is an `.env` change
+plus `./scripts/demo.sh restart switchyard`, which also resets latches and `/v1/stats`.
 
 ## Run and test
 
