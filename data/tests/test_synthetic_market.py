@@ -30,7 +30,7 @@ ORACLE_ROWS = {
     "news_sentiment_reaction.sql": 3,
     "peer_pair_correlations.sql": 0,  # the 12 story issuers are all in different industries
     "sector_breakdown.sql": 6,
-    "story_event_context.sql": 12,
+    "story_event_context.sql": 23,
 }
 
 
@@ -138,10 +138,13 @@ class TestTheCiBuild:
         assert sorted(story) == sorted(top)
 
     def test_each_story_moves_its_publication_session(self, database):
-        oracle = (PACK / "eval" / "oracles" / "story_event_context.sql").read_text()
-        for *_, sentiment, _, publication_return, _ in database.execute(oracle).fetchall():
-            assert abs(publication_return) > 0.03
-            assert (publication_return > 0) == (sentiment == "positive")
+        oracle = database.execute((PACK / "eval" / "oracles" / "story_event_context.sql").read_text())
+        columns = [column[0] for column in oracle.description]
+        stories = [item for row in oracle.fetchall() if (item := dict(zip(columns, row, strict=True)))["is_story"]]
+        assert len(stories) == 12
+        for story in stories:
+            assert abs(story["publication_session_return"]) > 0.03
+            assert (story["publication_session_return"] > 0) == (story["sentiment_label"] == "positive")
 
     def test_prediction_views_see_nothing_after_the_anchor(self, database):
         for view, column in {"price_events": "observed_at", "news_events": "published_at"}.items():

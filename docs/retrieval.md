@@ -36,13 +36,14 @@ Re-running the index on unchanged input does nothing, and a changed input builds
 server keeps answering from the previous one. The default pack indexes about 5,200 documents
 (SEC EDGAR filings and eCFR Title 17) as about 23,600 chunks.
 
-**Search (`retrieval`, `127.0.0.1:8120/mcp`).** `retrieve_evidence(query, source_ids, top_k=8)`, with `top_k`
-at most 25:
+**Search (`retrieval`, `127.0.0.1:8120/mcp`).** `retrieve_evidence(query, source_ids, top_k=8)`; a `top_k` above
+8 (the schema allows 25) returns 8:
 1. Embed the query once.
 2. Search every selected source for the same share of candidates, `min(4 × top_k, 200 ÷ sources)`, in the
    build the alias points at (resolved once per call).
 3. Rerank all candidates together in one request and return the best `top_k` passages with their title, URL,
-   date, scores and metadata, plus the models, the index settings and timings.
+   date, scores and metadata, plus the models, the index settings and timings. A result longer than 30,000
+   characters as the agent reads it drops its lowest-ranked passages ([result size](#result-size)).
 
 The Hermes plugin sets `source_ids` to the job's selected document sources, and the tool refuses any source
 the pack does not declare as documents. Each call becomes a `retrieval_evidence` receipt, which the UI's
@@ -131,14 +132,19 @@ on every host, and the GPU index exists only for this comparison.
 
 ## Result size
 
-A passage is at most 2,400 characters, and each hit adds about 1 KB of ids, URL and metadata. The MCP SDK
-sends a result twice (structured content and the same JSON as text), and Hermes gives the model one copy.
+A passage is one chunk, at most 2,400 characters, and it is never cut shorter: the fact a question needs can sit
+at a chunk's end. Each hit adds about 1 KB of ids, URL and metadata. The MCP SDK sends a result twice
+(structured content and the same JSON as text), and Hermes gives the model one copy, inside a JSON string.
 
-| `top_k` | One copy | JSON-RPC response |
+Hermes hides an MCP result longer than 50,000 characters from the model ([tool result
+size](architecture.md#tool-result-size)), so a call returns at most 8 passages and drops its lowest-ranked ones
+while it is longer than 30,000 characters as the agent reads it. The longest eight eCFR chunks of the us-equities
+corpus come to 29,100 characters; eight 2,400-character SEC filing passages, 28,200.
+
+| `top_k` | As the agent reads it | JSON-RPC response |
 |---|---|---|
 | 3 | 11 KB | 21 KB |
-| 8 (default) | 27 KB | 53 KB |
-| 25 | 83 KB | 164 KB |
+| 8 (default and most) | 27 KB, 30 KB at most | 53 KB |
 
 OpenShell 0.1.2 caps MCP JSON-RPC request bodies at 64 KiB, not responses, so these pass. The receipt cuts
 each passage to 1,500 characters for the UI.

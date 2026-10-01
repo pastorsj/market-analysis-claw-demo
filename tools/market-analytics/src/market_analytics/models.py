@@ -99,6 +99,12 @@ class RankedAsset(BaseModel):
     asset_id: str
     score: float
     values: dict[Metric, float | None]
+    zscores: dict[Metric, float | None] = Field(
+        description=(
+            "Each metric's z-score among the universe's assets over the window: how many standard deviations the "
+            "value sits from their mean. Not a percentage"
+        )
+    )
     observation_count: int
     coverage_ratio: float = Field(description="Observations relative to the best-covered asset")
 
@@ -198,9 +204,18 @@ class NewsPriceEvent(BaseModel):
     asset_id: str
     published_at: UtcDatetime
     sentiment_label: SentimentLabel
-    aligned_session: UtcDatetime
-    outcome_session: UtcDatetime
-    forward_return: float
+    aligned_session: UtcDatetime | None = Field(
+        description="The asset's first session at or after publication; null when the data has none"
+    )
+    session_return: float | None = Field(
+        description="The aligned session's own return, from the previous session's close, a fraction"
+    )
+    outcome_session: UtcDatetime | None = Field(
+        description="return_horizon_sessions after the aligned session; null when the data ends before it"
+    )
+    forward_return: float | None = Field(
+        description="From the aligned session's close to the outcome session's, a fraction; null without an outcome"
+    )
 
 
 class SentimentReturnSummary(BaseModel):
@@ -210,14 +225,27 @@ class SentimentReturnSummary(BaseModel):
     median_forward_return: float
 
 
+class AssetNewsSummary(BaseModel):
+    asset_id: str
+    article_count: int = Field(description="Every article about the asset in the window, aligned or not")
+    positive_count: int
+    neutral_count: int
+    negative_count: int
+    aligned_event_count: int = Field(description="Articles with a forward return")
+    mean_forward_return: float | None = Field(description="Over the aligned articles; null when none")
+
+
 class NewsPriceRelationshipPayload(BaseModel):
     return_horizon_sessions: int
-    eligible_event_count: int
-    aligned_event_count: int
+    eligible_event_count: int = Field(description="Every article that matched the window and filters")
+    aligned_event_count: int = Field(description="Articles with a forward return; the summaries cover only these")
     coverage_ratio: float
     sentiment_return_correlation: float | None
     summaries: list[SentimentReturnSummary]
-    events: list[NewsPriceEvent]
+    asset_summaries: list[AssetNewsSummary] = Field(
+        description="Per asset, most articles first: label counts over every article and the mean forward return"
+    )
+    events: list[NewsPriceEvent] = Field(description="Every article, in publication order, aligned or not")
     events_truncated: bool
 
 

@@ -75,6 +75,22 @@ sequenceDiagram
 5. Every Hermes event, model call and receipt becomes one `execution.v2` event. The UI follows them over
    Server-Sent Events and draws the graph, the timeline and one explorer per tool call.
 
+### Tool result size
+
+Hermes (v2026.9.24) saves an MCP tool result longer than 50,000 characters to a file the sandboxed agent cannot
+read and gives the model a 1,500-character preview instead; when one turn's results together pass 200,000
+characters, it does the same to the largest of them. A cut result loses facts the answer needs. Hermes reads the
+first limit from `tool_budget.mcp_result_size_chars` in its config, but the stack leaves Hermes' defaults alone and
+keeps every result short instead, at most 30,000 characters as the agent reads it: the MCP text, inside Hermes'
+JSON envelope, with the plugin's `evidence_id`. Six such results, the most one recorded turn made at once, stay
+under the turn budget too.
+
+| Tool | How its result stays under 30,000 characters |
+|---|---|
+| `retrieve_evidence` | At most 8 whole passages (a passage is one 2,400-character chunk); a result still too long drops its lowest-ranked passages. Every passage it keeps has its full citation. |
+| Market tools | Each list is capped (40 `market_scan` assets, 25 anomalies, 30 intraday sessions, 50 news events and 50 assets' news summaries, 100 sentiment periods), then the least important list is shortened while the result is too long: a price series before the per-asset summaries, news events before their per-asset counts. The result's `warnings` summarize the rows left out, and its `*_truncated` flag is set. |
+| Any data tool, `ask_question` and `predict_asset_outcomes` included | The `execution-receipts` plugin measures the final string and, past 30,000 characters, drops rows from the end of the longest list (setting the result's own `truncated`), then cuts the longest text, and says what it left out in `shortened_to_fit`. The receipt is built from the whole result. |
+
 Relay, bundled with Hermes, exports the agent's OpenInference spans to Phoenix. Switchyard and the retrieval
 server export theirs to the same Phoenix project, so a job's trace shows the agent's turns, the router's
 decisions and the retrieval steps together.

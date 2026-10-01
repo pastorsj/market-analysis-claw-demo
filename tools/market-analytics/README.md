@@ -43,6 +43,19 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   `market_anomaly_scan`'s payload names its policy, `pca-reconstruction-market-v1`. Failures (bad arguments, deadlines, a dead worker)
   are results too, because MCP clients drop the structured content of an error response. An error message is
   at most 1,000 characters, the receipt's limit.
+- **Result size.** Hermes hides an MCP result longer than 50,000 characters from the model
+  ([tool result size](../../docs/architecture.md#tool-result-size)), so `budget.py` caps each list a result
+  holds (40 `market_scan` assets, 25 anomalies, 30 intraday sessions, 100 sentiment periods, 50 news events and
+  50 assets' news summaries) and then shortens the least important list while the result is longer than 30,000
+  characters as the agent reads it. Its `warnings` summarize the rows left out (ranks and the range of the value
+  that ranked them, or label counts), and the payload's `*_truncated` flag is set. `tests/test_budget.py`
+  measures each tool's worst case.
+- **Z-scores and news coverage.** `market_scan` reports every requested metric's z-score among the universe's
+  assets (`zscores`, population standard deviation), so a metric that does not rank still says how unusual a
+  value is. `analyze_news_price_relationship` lists and counts every article in the window: one whose horizon
+  runs past the data has a null `forward_return` and `outcome_session` but keeps its `session_return`, and
+  `asset_summaries` counts each asset's labels over every article. Its per-label summaries and correlation use
+  only the articles with a forward return.
 - **Timestamps.** Inside the worker every timestamp is tz-naive UTC `datetime64[ns]`: `data.py` normalizes the
   tables once at load, the dispatcher converts timezone-aware arguments to UTC, and the result models put the
   UTC offset back, so results still read `2026-08-24T21:00:00Z`. cudf.pandas cannot keep a tz-aware column on

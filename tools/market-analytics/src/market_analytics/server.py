@@ -34,6 +34,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import benchmark
+from . import budget
 from .data import ContractError
 from .data import Pack
 from .data import validate
@@ -121,7 +122,7 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
             except WorkerError as error:
                 result = failed("execution_failed", str(error))
         result.timing.total_ms = (time.perf_counter() - started) * 1000
-        return result
+        return budget.fit(result)
 
     @server.tool(annotations=READ_ONLY)
     async def market_scan(
@@ -145,11 +146,12 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
         """Rank a universe's assets by return, volume, volatility or peer-relative return over a window.
 
         Use direction=highest for leaders and direction=lowest for laggards; make two calls when both ends of the
-        ranking are needed. The other metrics are reported next to the ranking one. Returns and volatility are
+        ranking are needed. The other metrics are reported next to the ranking one, and every metric also has its
+        z-score among the universe's assets (zscores), which says how unusual a value is. Returns and volatility are
         fractions (0.25 is 25%; volatility is the daily standard deviation). A return runs from the close before
         the window's first session to its last close. peer_relative_return is an asset's return minus the mean
         return of the universe's assets, not of its industry peers. For "the N sessions ending D", pass end=D and
-        sessions=N instead of start.
+        sessions=N instead of start. At most 40 assets are listed.
         """
         return await run_in_worker(
             "market_scan",
@@ -181,7 +183,7 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
 
         Use it for unusual observed behavior, not for leaders and laggards or for predictions. Scores measure how
         unusual a session was; they are not probabilities, forecasts or evidence of a cause. observed_deviations
-        are robust z-scores against the baseline window, not returns or percentages.
+        are robust z-scores against the baseline window, not returns or percentages. At most 25 sessions are listed.
         """
         return await run_in_worker(
             "market_anomaly_scan",
@@ -211,7 +213,8 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
 
         Weekly and monthly series hold each period's last adjusted close and its total volume. The summary always
         comes from the daily bars, whatever the frequency; its return runs from the close before the window's first
-        session (start_price) to its last close.
+        session (start_price) to its last close. A long series is shortened to keep the result readable whole; the
+        summaries still cover the whole window.
         """
         return await run_in_worker(
             "price_context",
@@ -230,7 +233,8 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
         description=(
             f"{news}Count positive, neutral and negative news labels per day, week or month over a publication "
             "window. Name asset_ids or a universe_id to count only their news. The labels are stored with the news; "
-            "the timeline is descriptive and does not explain market moves."
+            "the timeline is descriptive and does not explain market moves. At most the 100 most recent periods are "
+            "listed."
         ),
     )
     async def sentiment_timeline(
@@ -261,10 +265,12 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
         annotations=READ_ONLY,
         description=(
             f"{news}Relate news sentiment labels to the returns that followed them. Each article is aligned with "
-            "its asset's first session at or after publication, and its forward return runs to "
-            "return_horizon_sessions sessions later. Name asset_ids or a universe_id to use only their news. "
-            "Reports per-label averages and the sentiment/return correlation. Correlation does not establish "
-            "causation."
+            "its asset's first session at or after publication (session_return is that session's own return), and "
+            "its forward return runs to return_horizon_sessions sessions later. Every article is listed and counted, "
+            "even when the data ends before its horizon: then its forward_return is null. Name asset_ids or a "
+            "universe_id to use only their news. Reports label counts and the mean forward return per asset "
+            "(asset_summaries), and per-label averages and the sentiment/return correlation over the articles with "
+            "a forward return. At most 50 events and 50 assets are listed. Correlation does not establish causation."
         ),
     )
     async def analyze_news_price_relationship(
@@ -275,7 +281,7 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
         universe_id: OptionalUniverse = None,
         source_names: SourceNames = None,
         return_horizon_sessions: Annotated[int, Field(ge=1, le=20)] = 2,
-        event_limit: Annotated[int, Field(ge=1, le=500, description="How many aligned events to list")] = 25,
+        event_limit: Annotated[int, Field(ge=1, le=500, description="How many events to list, at most 50")] = 25,
         source_ids: SourceIds = None,
     ) -> MarketResult[NewsPriceRelationshipPayload]:
         return await run_in_worker(
@@ -320,7 +326,7 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
             "Ranges, returns, drawdowns and volume shares are fractions (0.05 is 5%). "
             "max_drawdown is negative (-0.08 is an 8% fall from the session's high): rank the deepest with "
             "direction=lowest. "
-            "It reads the raw minute bars in place, batch by batch."
+            "It reads the raw minute bars in place, batch by batch. At most 30 sessions are listed."
         ),
     )
     async def intraday_scan(

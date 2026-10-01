@@ -340,6 +340,45 @@ def test_sql_rows_are_cut_to_25_rows_of_40_columns(hooks, api):
     assert content["databaseName"] == "market_analysis"
 
 
+def test_a_result_too_long_to_read_whole_is_shortened(hooks, api):
+    """Hermes hides an MCP result over 50,000 characters behind a preview; Auto Ontology can return 100 wide rows."""
+    rows = [{f"column_{c}": f"value {r}-{c} " * 3 for c in range(12)} for r in range(100)]
+    reasoning = "Resolved the question to daily_prices. " * 400
+    result = {"answer": "100 rows", "sql": "SELECT 1", "rows": rows, "row_count": 340, "truncated": True}
+    result |= {"reasoning": reasoning, "resolution_lineage": []}
+
+    output = run_tool(hooks, "ask_question", {"question": "Which assets?"}, result)
+
+    assert len(output) <= plugin.MAX_RESULT_CHARS < 50_000
+    read = json.loads(output)
+    assert list(read)[0] == "evidence_id" and read["evidence_id"] == posted_receipt(api)["receiptId"]
+    shortened = json.loads(read["result"])
+    assert 1 <= len(shortened["rows"]) < 100 and shortened["rows"] == rows[: len(shortened["rows"])]
+    assert shortened["truncated"] is True and shortened["row_count"] == 340
+    assert read["shortened_to_fit"].startswith(f"result.rows lists the first {len(shortened['rows'])} of 100 items")
+    assert len(posted_receipt(api)["content"]["rows"]) == 25, "the receipt is built from the whole result"
+
+
+def test_a_long_text_result_is_cut(hooks, api):
+    output = hooks.transform_tool_result(
+        tool_name=TOOLS["ask_question"]["hermes_name"],
+        args={"question": "x"},
+        result=json.dumps({"result": "plain text " * 10_000}),
+        session_id=JOB,
+        tool_call_id="call_9",
+    )
+
+    assert len(output) <= plugin.MAX_RESULT_CHARS
+    assert json.loads(output)["result"].endswith("…")
+
+
+def test_a_result_that_fits_is_unchanged_but_for_its_evidence_id(hooks, api):
+    output = json.loads(run_tool(hooks, "price_context", {}, PRICE_CONTEXT))
+
+    assert output.keys() == {"evidence_id", "result"}
+    assert json.loads(output["result"]) == PRICE_CONTEXT
+
+
 def test_the_lineage_keeps_only_complete_bindings(hooks, api):
     binding = {"phrase": "closing price", "ontology_object": "Close", "table": "main.daily_prices", "column": "close"}
     # Auto Ontology leaves out a table or column it could not resolve; an empty one must not fail the receipt either.

@@ -76,6 +76,9 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
    metrics: one with `direction=highest` and one with `direction=lowest`. Use
    the number of results the question asks for, and `limit=3` when it gives
    none. Report both ends. Do not fetch the whole universe to find the bottom.
+   To say how unusual another metric was for the ranked assets (their volume
+   next to a return ranking, say), add it to `metrics` and read its `zscores`
+   entry.
 5. For `market_anomaly_scan`, end the training window before the scoring window
    starts.
 6. Pass tickers or asset IDs exactly as the user or an earlier result gave them.
@@ -87,7 +90,11 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
    drawdowns with `direction=lowest`. When a question
    about news names a group, such as the most liquid issuers, pass that
    `universe_id` to `sentiment_timeline` or `analyze_news_price_relationship`;
-   without one they cover every issuer's news.
+   without one they cover every issuer's news. Take per-issuer news counts from
+   `asset_summaries`, which counts every article, rather than counting events.
+   An article whose `forward_return` is null still happened: the data ends
+   before its horizon. List it with its `session_return` and say the later
+   return is unavailable.
 8. A tool whose description starts with "Unavailable in the active data pack"
    fails with `news_unavailable` or `minute_bars_unavailable`. Do not call it or
    retry it. Say that the pack has no ticker-linked news or no minute bars, and
@@ -104,8 +111,8 @@ The tools return fractions, not percentages. Convert them when you write:
   session's running high.
 - `volatility` is the standard deviation of daily returns: 0.0286 is 2.86% a
   day.
-- `comparison=zscore` scores are z-scores against the universe's mean and
-  standard deviation: write "+2.1 z-score". The anomaly scan's
+- `comparison=zscore` scores and the `zscores` of every metric are z-scores
+  against the universe's mean and standard deviation: write "+2.1 z-score". The anomaly scan's
   `observed_deviations` are robust (median/MAD) z-scores against the baseline
   window: write "+4.2 robust z-score". Never write either as a percentage.
 - Never write a return as a multiple ("×") and never put a % sign on an
@@ -121,6 +128,9 @@ The tools return fractions, not percentages. Convert them when you write:
 - The relationship graph is fixed for the whole dataset and cannot be limited to
   a named group of assets. For correlations within a chosen group, use
   `querying-auto-ontology`.
+- A result lists a capped number of rows (40 `market_scan` assets, 50 news
+  events). When its `warnings` say rows were left out, say so, and narrow the
+  call rather than repeating it.
 - Do not call a tool only to demonstrate speed.
 - Do not give investment advice.
 
