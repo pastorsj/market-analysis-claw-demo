@@ -98,8 +98,10 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
 
 The tools return fractions, not percentages. Convert them when you write:
 
-- `return`, peer-relative return, `open_to_close_return`, `intraday_range`,
-  `max_drawdown` and volume shares: 0.2474 is 24.74%, and 1.0166 is +101.66%.
+- `return`, peer-relative return, `open_to_close_return`, `intraday_range`
+  and volume shares: 0.2474 is 24.74%, and 1.0166 is +101.66%.
+- `max_drawdown` is zero or negative: -0.031 is a 3.1% fall from the
+  session's running high.
 - `volatility` is the standard deviation of daily returns: 0.0286 is 2.86% a
   day.
 - `comparison=zscore` scores are z-scores against the universe's mean and
