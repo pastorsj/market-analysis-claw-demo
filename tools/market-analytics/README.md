@@ -163,7 +163,7 @@ tool calls and minute-bar scans themselves do not fall back: the last two GPU te
 accelerators are installed and the pack is loaded, so a fallback fails the call or the scan. To
 list fallbacks instead, set `LOG_FAST_FALLBACK=1` (cudf.pandas writes them to
 `cudf_pandas_unit_tests_debug.log` in the working directory) or run a call under `cudf.pandas.profiler.Profiler`.
-Lint with the repository's `ruff.toml`: `uv run ruff check . && uv run ruff format --check .`
+Lint with the repository's `ruff.toml` and CI's ruff version: `uvx ruff@0.16.9 check . && uvx ruff@0.16.9 format --check .`
 
 ## CPU and GPU timings
 

@@ -47,7 +47,6 @@ dev = [
     # The prediction tests build a real Kumo graph around a stubbed client.
     "market-analytics[kumo]",
     "pytest>=9.1",
-    "ruff>=0.16",
 ]
 
 [[tool.uv.index]]

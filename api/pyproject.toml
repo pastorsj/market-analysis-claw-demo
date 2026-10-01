@@ -32,7 +32,6 @@ dev = [
     "jsonschema>=4.26,<5",
     "pytest>=9.1,<10",
     "pytest-asyncio>=1.4,<2",
-    "ruff>=0.16.9,<0.17",
 ]
 
 [build-system]
