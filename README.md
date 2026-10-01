@@ -184,10 +184,11 @@ UI.
 
 ```bash
 ./scripts/demo.sh test              # unit (every Python project, ruff, skills lint), ui, contracts, compose
-./scripts/demo.sh test e2e          # UI build and Playwright: live smoke and replay of the recordings
+./scripts/demo.sh test e2e          # UI build and Playwright: live smoke and replay of every recorded session
 ./scripts/demo.sh test switchyard   # build Switchyard and dry-run every route template
 uv run --directory api pytest       # one project: also agent, data, data/generate, eval and tools/*
 npm --prefix ui run lint            # also type-check, test:ci, build and e2e
+npm --prefix ui run e2e:visual      # the UI's visual baselines, in Docker (ui/e2e/visual/README.md)
 scripts/gen-contracts.sh --check    # the generated schemas and TypeScript are up to date
 pre-commit run --all-files          # ruff, shellcheck, JSON/YAML/TOML checks, gitleaks
 ```

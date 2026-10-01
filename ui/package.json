@@ -13,7 +13,9 @@
     "test": "TZ=UTC vitest --no-watch",
     "test:watch": "TZ=UTC vitest",
     "test:ci": "TZ=UTC vitest run --coverage",
-    "e2e": "playwright test"
+    "e2e": "playwright test --project=smoke",
+    "e2e:visual": "e2e/visual/run.sh",
+    "e2e:visual:update": "e2e/visual/run.sh --update"
   },
   "dependencies": {
     "@nvidia/foundations-react-core": "^0.600.0",

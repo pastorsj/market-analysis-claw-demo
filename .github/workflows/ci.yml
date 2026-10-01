@@ -126,5 +126,15 @@ jobs:
       - run: npm run test:ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - name: e2e (live smoke; replay of the synthetic bundle and the pack's recordings)
+      - name: e2e (live smoke; replay of the fixture pack and of every recorded session of each pack)
         run: npm run e2e
+      - name: Visual baselines, in the Playwright image (ui/e2e/visual/README.md)
+        run: e2e/visual/run.sh --reuse-build
+      - name: Upload the visual diffs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-diffs
+          path: ui/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
