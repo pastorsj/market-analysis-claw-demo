@@ -38,19 +38,25 @@ The agent's models (through Switchyard) and Auto Ontology's reasoning models.
 | `INFERENCE_API_KEY` | – | Key for that endpoint (`nvapi-` for build.nvidia.com). Read by Switchyard, Auto Ontology and, when `RETRIEVER_API_KEY` is empty, the retrieval tools |
 | `SWITCHYARD_ROUTES` | `passthrough.nemotron` | The routing template in `infra/switchyard/routes/` |
 | `AGENT_EFFICIENT_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | The passthrough model; the model an escalation template tries first |
-| `AGENT_CAPABLE_MODEL` | `gpt-6-sol` | The model a session escalates to; the pinned model. Unused by `passthrough.nemotron` |
-| `AGENT_JUDGE_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | The escalation judge, and Hermes' auxiliary calls (thinking off) |
-| `CAPABLE_BASE_URL`, `CAPABLE_API_KEY` | empty | The capable model's own OpenAI-compatible endpoint and key. An empty endpoint means `INFERENCE_BASE_URL`. An empty key means `INFERENCE_API_KEY` only when the endpoint is empty or the same as `INFERENCE_BASE_URL`; another endpoint needs its own key, so the inference key never goes to another host |
+| `AGENT_AUX_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Hermes' auxiliary calls and the overload fallback (thinking off), in every template. Must differ from the efficient model |
+| `AGENT_CAPABLE_MODEL` | – (commented) | The model a session escalates to; the pinned model. Unused by `passthrough.nemotron` |
+| `AGENT_JUDGE_MODEL` | – (commented) | The escalation judge, escalation templates only: a frontier model's id at `CAPABLE_BASE_URL` in `*-gpt` and `*-claude` (another id than `AGENT_CAPABLE_MODEL`), a Nemotron id in `escalation.nemotron` |
+| `CAPABLE_BASE_URL`, `CAPABLE_API_KEY` | – (commented) | The capable model's own endpoint and key: OpenAI-compatible, or the Anthropic Messages API for the `*-claude` templates. An empty endpoint means `INFERENCE_BASE_URL`. An empty key means `INFERENCE_API_KEY` only when the endpoint is empty or the same as `INFERENCE_BASE_URL`; another endpoint needs its own key, so the inference key never goes to another host |
 | `SWITCHYARD_CONFIRMATIONS` | `1` | Consecutive "escalate" verdicts before a session switches (1 or 2) |
 | `AUTO_ONTOLOGY_REASONING_MODEL`, `AUTO_ONTOLOGY_NON_REASONING_MODEL` | `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b` | Auto Ontology's models (ontology profile) |
 
-The model ids a template uses must all differ. Which combination to use, and why the default is Nemotron 3
+The efficient, capable and judge models a template uses must all differ, and the aux model must differ
+from the efficient one. Which combination to use, and why the default is Nemotron 3
 Ultra alone, is in [models and routing](models-and-routing.md).
 
 **A capable model from another provider.** build.nvidia.com serves no GPT model, so the `*-gpt` templates
 (`escalation.nemotron-gpt`, `pinned-capable.nemotron-gpt`) need `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`
-pointed at an OpenAI-compatible provider that serves `AGENT_CAPABLE_MODEL` over the Responses API. Only the
-capable model goes there; the efficient and judge models stay on `INFERENCE_BASE_URL`. Then:
+pointed at an OpenAI-compatible provider that serves `AGENT_CAPABLE_MODEL` over the Responses API. The
+capable model and, in the escalation template, the judge go there; the efficient and aux models stay on
+`INFERENCE_BASE_URL`. The `*-claude`
+templates (`escalation.nemotron-claude`, `pinned-capable.nemotron-claude`) work the same way with a Claude
+model, such as Claude Opus 5.5, from an endpoint that serves it over the Anthropic Messages API: Anthropic's
+API (`CAPABLE_BASE_URL=https://api.anthropic.com/v1`) or a gateway that speaks that API. Then:
 
 ```bash
 ./scripts/demo.sh doctor --keys

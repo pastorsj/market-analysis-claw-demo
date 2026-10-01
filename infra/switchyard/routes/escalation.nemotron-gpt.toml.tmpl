@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# A Nemotron model answers over Chat Completions. A second Nemotron model judges every completed
-# turn; once it escalates, a GPT model (Responses API) serves the rest of the session. The GPT
-# model can come from its own endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to
-# the inference endpoint and key (the key only on that same endpoint).
-# requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL SWITCHYARD_CONFIRMATIONS
+# A Nemotron model answers over Chat Completions. A GPT model judges every completed turn; once it
+# escalates, the capable GPT model (Responses API) serves the rest of the session. A Nemotron model
+# serves Hermes' auxiliary and fallback calls. The GPT models come from the capable endpoint:
+# CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to the inference endpoint and key (the key only
+# on that same endpoint). Switchyard keys a route's targets by model id, so the judge needs another id
+# than the capable model: another id the provider lists for the same model, or another strong model.
+# requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL AGENT_AUX_MODEL SWITCHYARD_CONFIRMATIONS
 schema_version = 1
 
 [llm_clients.chat]
@@ -22,11 +24,11 @@ api_key_env = "CAPABLE_API_KEY"
 timeout_ms = 900000
 max_retries = 0
 
-[llm_clients.judge]                   # own client: a short deadline that bounds each verdict
-format = "openai_chat"
-base_url = "${INFERENCE_BASE_URL}"
-api_key_env = "INFERENCE_API_KEY"
-timeout_ms = 60000
+[llm_clients.judge]                   # own client: a deadline that bounds each verdict
+format = "openai_responses"
+base_url = "${CAPABLE_BASE_URL}"
+api_key_env = "CAPABLE_API_KEY"
+timeout_ms = 120000                   # every attempt of one verdict
 max_retries = 2                       # a verdict that still fails fails the agent's turn
 
 [targets.efficient]
@@ -40,13 +42,14 @@ llm_client = "responses"
 reasoning_effort = "medium"           # Hermes sends no effort to a custom provider
 extra_body = { store = false }
 
-[targets.judge]
+[targets.judge]                       # JSON-schema verdicts (Responses text.format)
 id = "${AGENT_JUDGE_MODEL}"
 llm_client = "judge"
-extra_body = { chat_template_kwargs = { enable_thinking = false } }
+reasoning_effort = "low"
+extra_body = { store = false }
 
-[targets.aux]                         # the judge model on the long-deadline client
-id = "${AGENT_JUDGE_MODEL}"
+[targets.aux]                         # a Nemotron model: auxiliary and fallback calls, never judged
+id = "${AGENT_AUX_MODEL}"
 llm_client = "chat"
 extra_body = { chat_template_kwargs = { enable_thinking = false } }
 

@@ -20,34 +20,37 @@ there is between Ultra alone and the all-Nemotron escalation (Super answers, Ult
 Super → Ultra 12. Super → Ultra was also twice as slow at the median (140 s against 72 s), failed 4 jobs
 against none, and left 6 of its 30 reports without a citation (Ultra alone: 4 of 34).
 
-**With a provider that serves GPT-6 Sol, pin it: `SWITCHYARD_ROUTES=pinned-capable.nemotron-gpt`**, with
-`CAPABLE_BASE_URL` and `CAPABLE_API_KEY` pointed at that provider ([configuration](configuration.md#1-inference-endpoint)).
-Sol pinned passed 24 of 34 runs, Ultra escalating to Sol 20, and Ultra alone 13. Sol was also the fastest
-of the three at the median (60 s), but its p95 was the worst (617 s): a model stream sometimes ended early and
-Hermes noticed only 5 to 10 minutes later ([limits](#limits-of-this-bake-off)).
+**With a provider that serves a frontier model, let Nemotron 3 Ultra lead and escalate to GPT-6.1 Sol:
+`SWITCHYARD_ROUTES=escalation.nemotron-gpt`**, with GPT-6.1 Sol as the capable model and as the escalation judge
+(under a second id at that provider), Nemotron 3 Super for auxiliary and fallback calls, and `CAPABLE_BASE_URL`
+and `CAPABLE_API_KEY` pointed at the provider ([configuration](configuration.md#1-inference-endpoint)). In the
+2026-10-01 frontier bake-off ([below](#the-2026-10-01-frontier-bake-off)) it passed 10 of 16 runs with the
+primary grader and 14 with the second, ahead of GPT-6.1 Sol pinned (7 and 9) and Claude Opus 5.5 pinned (8 and
+12), while GPT-6.1 Sol served 10% of the agent turns and, with its judge calls, 20% of the tokens.
 
-**Ultra → Sol escalation is not the default.** The tuned judge escalates less often and more usefully than
-before (10 of 34 runs; 7 of the 10 passed, 5 of them on questions Ultra alone did not pass both times), but
-it still trails Sol pinned by 4 runs, and it saves less than it seems: once a run escalates it stays on Sol,
-so Sol still served 93 of its 186 agent turns (Sol pinned: 219), and every turn before the switch also costs a
-judge call.
+**Pinned frontier is the fallback.** Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) was the stronger
+and steadier pinned arm (p95 72 s, no tool errors). GPT-6.1 Sol pinned lost runs to repeated tool-argument errors
+and two stalled streams ([below](#the-2026-10-01-frontier-bake-off)). On 2026-09-30, GPT-6 Sol pinned had beaten
+Ultra → Sol with a Nemotron 3 Super judge (24 against 20 of 34); a frontier judge reversed that.
 
-**What to use where:**
+**What to use where** (the two bake-offs used different question sets and endpoints, so compare within a date):
 
-| Situation | `SWITCHYARD_ROUTES` and models | Passed (of 34) |
+| Situation | `SWITCHYARD_ROUTES` and models | Passed |
 |---|---|---|
-| build.nvidia.com (default) | `passthrough.nemotron`, efficient Nemotron 3 Ultra (`nvidia/nemotron-3-ultra-550b-a55b`) | A0: 13 |
-| GPT-6 Sol from any OpenAI-compatible provider | `pinned-capable.nemotron-gpt`, capable GPT-6 Sol on `CAPABLE_BASE_URL` | A1: 24 |
-| Ultra escalating to GPT-6 Sol | `escalation.nemotron-gpt`, the same capable settings | A2: 20 |
-| All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`) | A4: 12 |
+| build.nvidia.com (default) | `passthrough.nemotron`, efficient Nemotron 3 Ultra (`nvidia/nemotron-3-ultra-550b-a55b`) | 2026-09-30: 13 of 34; 2026-10-01: 7 of 16 |
+| A provider serving GPT-6.1 Sol (recommended) | `escalation.nemotron-gpt`: Ultra → GPT-6.1 Sol, judged by GPT-6.1 Sol | 2026-10-01: 10 of 16 |
+| A provider serving Claude Opus 5.5 | `pinned-capable.nemotron-claude`, capable Claude Opus 5.5 on `CAPABLE_BASE_URL` | 2026-10-01: 8 of 16 |
+| GPT-6.1 Sol on every turn | `pinned-capable.nemotron-gpt` | 2026-10-01: 7 of 16 (GPT-6 Sol on 2026-09-30: 24 of 34) |
+| Ultra escalating to Claude Opus 5.5 | `escalation.nemotron-claude`, judged by Claude Opus 5.5 | 2026-10-01: 6 of 16 |
+| All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`) | 2026-09-30: 12 of 34 |
 
 Switching is an `.env` edit plus `./scripts/demo.sh restart switchyard`; the sandbox is not rebuilt.
 
 **One OpenAI-compatible endpoint for every model.** If your organization runs an OpenAI-compatible gateway
 that serves both Nemotron and GPT models, there are two ways to use it:
-- *Only for the capable model* (as the bake-off did): keep `INFERENCE_BASE_URL` on build.nvidia.com and set
+- *Only for the capable model* (as the 2026-09-30 bake-off did): keep `INFERENCE_BASE_URL` on build.nvidia.com and set
   `CAPABLE_BASE_URL` and `CAPABLE_API_KEY` to the gateway.
-- *For every model*: set `INFERENCE_BASE_URL` and `INFERENCE_API_KEY` to the gateway, leave `CAPABLE_*` empty,
+- *For every model* (as the 2026-10-01 bake-off did): set `INFERENCE_BASE_URL` and `INFERENCE_API_KEY` to the gateway, leave `CAPABLE_*` empty,
   use the model ids its `GET /v1/models` lists, and give the retriever its own build.nvidia.com key
   (`RETRIEVER_API_KEY`).
 
@@ -119,14 +122,65 @@ contradiction or no evidence. The bake-off below measures it ([the tuned judge](
 | Role | Model | build.nvidia.com id (`https://integrate.api.nvidia.com/v1`) |
 |---|---|---|
 | Efficient (default: every turn) | Nemotron 3 Ultra 550B-A55B | `nvidia/nemotron-3-ultra-550b-a55b` |
-| Judge and auxiliary calls, thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
+| Auxiliary and fallback calls (`AGENT_AUX_MODEL`), thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
+| Escalation judge in `*-gpt` and `*-claude` (`AGENT_JUDGE_MODEL`) | a frontier model from the capable provider: GPT-6.1 Sol or Claude Opus 5.5, under a second id there | not served |
 | Capable (escalation and pinned templates) | GPT-6 Sol, over the Responses API | not served; the id your provider lists, e.g. `gpt-6-sol` |
-| Judge for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| Capable (`*-claude` templates) | Claude Opus 5.5, over the Anthropic Messages API | not served; the id your provider lists, e.g. `claude-opus-5-5` |
+| Judge (and aux) for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
 | Candidate efficient model | Nemotron 3.5 Super | to be evaluated once it is served publicly |
 
 On any other OpenAI-compatible endpoint, use the ids its `GET /v1/models` lists; `./scripts/demo.sh doctor
 --keys` checks every id the template uses. Retrieval always uses the retriever endpoint (build.nvidia.com):
 `nvidia/nemotron-3-embed-1b` and `nvidia/llama-nemotron-rerank-vl-1b-v2`.
+
+## The 2026-10-01 frontier bake-off
+
+**Question.** Does Nemotron 3 Ultra with frontier escalation get close to frontier quality at lower frontier
+usage? Only the Nemotron-led arms are deployment candidates; the pinned frontier arms are reference ceilings.
+
+**Setup.** The `us-equities` pack on the same kind of A100 VM and stack as below, every profile. Every model came
+from an OpenAI-compatible inference gateway; the retriever stayed on build.nvidia.com. The 8 `us-equities`
+questions of the 2026-09-30 bake-off ran twice per arm (pass 2 in reverse arm order): 80 runs, one at a time, in
+1 h 34 min. `SWITCHYARD_CONFIRMATIONS=1`; the tuned judge prompt; Nemotron 3 Super for auxiliary and fallback
+calls. Each escalation arm was judged by its own frontier model under a second id at the gateway (Switchyard keys
+a route's targets by model id; [why](../infra/switchyard/README.md#routes)).
+
+**Scoring.** The deterministic checks below, with the oracles recomputed for the window-return change, and two
+answer graders on every run, three samples each with a majority vote: GPT-6 Sol (the 2026-09-30 grader and
+prompt) and Claude Opus 5.5 (the same prompt). A run passes when its deterministic check passes and the
+grader's majority says pass.
+
+| Arm | Role | Pass, GPT-6 Sol grader | Pass, Claude Opus 5.5 grader | Frontier share of agent turns | Frontier share of tokens, without / with judge calls | Escalated (false latches, rescues) | p50 / p95 s | Failed jobs, stalled runs |
+|---|---|---|---|---|---|---|---|---|
+| Ultra alone (`passthrough.nemotron`) | candidate | 7/16 | 10/16 | 0% | 0% | – | 16 / 120 | 0, 0 |
+| GPT-6.1 Sol pinned (`pinned-capable.nemotron-gpt`) | ceiling | 7/16 | 9/16 | 100% | 100% | – | 32 / 617 | 2, 2 |
+| Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) | ceiling | 8/16 | 12/16 | 100% | 100% | – | 28 / 72 | 0, 0 |
+| **Ultra → GPT-6.1 Sol (`escalation.nemotron-gpt`)** | candidate | **10/16** | **14/16** | 10% | 10% / 20% | 5/16 (1, 2) | 52 / 104 | 0, 0 |
+| Ultra → Claude Opus 5.5 (`escalation.nemotron-claude`) | candidate | 6/16 | 7/16 | 13% | 23% / 35% | 5/16 (1, 1) | 56 / 156 | 0, 1 |
+
+Tokens are Switchyard's per-session counts over every upstream call. A false latch is an escalated run of a
+question Ultra alone passed both times; a rescue is an escalated run that passed on one it did not.
+
+What it shows:
+- **Ultra → GPT-6.1 Sol was the best arm with both graders**, above both pinned ceilings, with every deterministic
+  check passed and no failed or stalled job. Its GPT-6.1 Sol calls, capable and judge together, used 255k input
+  tokens over the 16 runs, half of Sol pinned's 511k. The judge's own share was 124k input and 3.6k output tokens.
+- **The judge adds seconds, not minutes.** The GPT-6.1 Sol judge took 2.9 s per verdict at the median and 6.0 s
+  at p95, about 10 s per run. The Claude Opus 5.5 judge took 4.5 s and 11.5 s; one verdict hit its 120 s deadline
+  and the turn was retried.
+- **GPT-6.1 Sol pinned was held back by the tools and the stream, not by its answers.** It sent `market_scan` a
+  `start` and a `sessions` together, which the tool rejects, and repeated the call (23 tool errors), and 2 of its 16
+  runs failed on a stalled stream at 617 s, as on 2026-09-30. With escalation, Ultra drives the market tools and
+  GPT-6.1 Sol joins late, so neither happened.
+- **Ultra → Claude Opus 5.5 trailed Ultra alone.** The handoff to Claude worked in every escalated run, but the
+  Claude judge left more of Ultra's flawed reports alone (rankings out of order, wrong dates), and Claude's reports
+  on the Form 8-K question phrase the missing deadline in a way the deterministic check misses (pinned too).
+- **The graders agreed on 66 of 80 runs.** The Claude grader passed more runs in every arm (1 to 4 more). Both
+  ranked Claude Opus 5.5 pinned above GPT-6.1 Sol pinned, so the GPT-6 Sol grader showed no preference for its
+  own model family.
+
+Limits: 16 runs per arm on one pack, so a difference of one or two runs is noise; the gateway's Ultra rather than
+build.nvidia.com's; the pinned Sol arm's result depends on the `market_scan` argument rule above.
 
 ## How the bake-off was run
 
