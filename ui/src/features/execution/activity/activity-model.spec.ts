@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'vitest'
 import type { ExecutionEventV2 } from '../contract'
-import { fixtureEvents } from '../test-utils/fixtures'
+import { fixtureEvents, publicationEvents } from '../test-utils/fixtures'
 import {
   buildActionTimeline,
   buildThinkingActivity,
@@ -83,6 +83,8 @@ describe('Thinking', () => {
       tool('tool.completed', 'market_scan', 'scan-1', 5),
       tool('tool.started', 'market_scan', 'scan-2', 6),
       tool('tool.completed', 'market_scan', 'scan-2', 7, { error: true }),
+      tool('tool.started', 'ask_question', 'sql-1', 7),
+      tool('tool.completed', 'ask_question', 'sql-1', 7),
       run('run.failed', 8, 'failed'),
     ]
 
@@ -95,6 +97,8 @@ describe('Thinking', () => {
       ['Evaluating evidence', 'completed'],
       ['Market Scan · Call 1', 'completed'],
       ['Market Scan · Call 2', 'failed'],
+      // As the original named an Auto Ontology call
+      ['Auto Ontology Text-to-SQL', 'completed'],
       ['Run stopped', 'failed'],
     ])
     expect(items[1].description).toBe(
@@ -133,6 +137,27 @@ describe('Timeline', () => {
     ])
     expect(model.items[0].receiptId).toBe(fixtureEvents[4].artifactRefs[0])
     expect(formatTimelineDuration(model.items[0].startOffsetMs)).toBe('12 s')
+  })
+
+  test('resolves citations as a milestone, and spans the run its metrics report', () => {
+    const model = buildActionTimeline([
+      ...fixtureEvents,
+      ...publicationEvents(
+        { status: 'reference_ids_resolved', total_citations: 1 },
+        { wall_duration_ms: 90_000, tool_call_count: 4, known_tool_duration_ms: 7_000 }
+      ),
+    ])!
+
+    expect(model.items.slice(-2).map((item) => [item.label, item.service])).toEqual([
+      ['Answer ready', 'Response pipeline'],
+      ['Citations resolved', 'Response pipeline'],
+    ])
+    expect(formatTimelineDuration(model.durationMs)).toBe('1m 30s')
+    expect(model.metrics).toMatchObject({
+      wallDurationMs: 90_000,
+      toolCallCount: 4,
+      knownToolDurationMs: 7_000,
+    })
   })
 
   test('marks a start without an end incomplete, and a failed call failed', () => {

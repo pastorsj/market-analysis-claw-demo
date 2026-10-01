@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen, within } from '@/test-utils'
 import { resetReplayDatabase } from './data-viewer/database-client'
 import { ExecutionWorkspace } from './ExecutionWorkspace'
 import { useExecutionStore } from './store'
-import { fixtureEvents, readRecording, receiptOf } from './test-utils/fixtures'
+import { fixtureEvents, publicationEvents, readRecording, receiptOf } from './test-utils/fixtures'
 import type { ExecutionRecord } from './store'
 
 const JOB = fixtureEvents[0].jobId
@@ -76,6 +76,48 @@ describe('ExecutionWorkspace', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /Back to Answer/ }))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('shows the publication the API recorded: its last steps, citation resolution and run metrics', () => {
+    serveDatabase()
+    const events = [
+      ...fixtureEvents,
+      ...publicationEvents(
+        {
+          status: 'reference_ids_resolved',
+          total_citations: 1,
+          uncited_evidence_count: 0,
+          invalid_evidence_count: 0,
+        },
+        {
+          runtime_profile: 'enterprise-research',
+          wall_duration_ms: 65_000,
+          tool_call_count: 3,
+          known_tool_duration_ms: 4_200,
+        }
+      ),
+    ]
+    useExecutionStore.getState().addRecord({ ...turn, events })
+    renderWorkspace('replay')
+
+    const workspace = screen.getByRole('region', { name: 'Execution workspace' })
+    expect(within(workspace).getByText('Step 13 of 13')).toBeVisible()
+    expect(within(workspace).getByText('Run metrics available')).toBeVisible()
+    const summary = screen.getByRole('region', { name: 'Hermes run summary' })
+    // The resolution, not the receipts: the uncited retrieval was not offered for citation
+    expect(within(summary).getByText('1 cited evidence item(s)')).toBeVisible()
+    expect(within(summary).getByText('1m 05s')).toBeVisible()
+    expect(within(summary).getByText('3 tool call(s) · 4.2 s observed tool time')).toBeVisible()
+    expect(
+      within(summary).getByText(
+        '103,009 input · 3,208 output · Runtime profile: enterprise-research'
+      )
+    ).toBeVisible()
+    // Publishing completes the run's last stages, as the run's end does
+    expect(document.querySelector('[data-node-id="trusted-answer"]')).toHaveAttribute(
+      'data-state',
+      'completed'
+    )
   })
 
   it('steps through the run: a node opens only while its call is at the cursor', () => {

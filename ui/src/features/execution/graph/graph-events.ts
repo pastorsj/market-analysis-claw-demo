@@ -107,7 +107,10 @@ const eventKind = (event: ExecutionEventV2): GraphEventKind => {
     if (event.state === 'started' || event.state === 'progress') return 'invocation.started'
     return failed(event) ? 'invocation.failed' : 'invocation.completed'
   }
-  if (event.state === 'completed' && kind.startsWith('run.')) return 'run.completed'
+  // Publishing the answer (response formatted, citations resolved, run metrics) completes the run too
+  if (event.state === 'completed' && (kind.startsWith('run.') || kind.startsWith('report.'))) {
+    return 'run.completed'
+  }
   if (event.state === 'failed' || event.state === 'cancelled') return 'run.failed'
   // The agent is at work: heartbeats, reasoning, model calls and other runtime events
   return 'run.started'

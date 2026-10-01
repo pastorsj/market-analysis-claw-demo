@@ -69,9 +69,17 @@ describe('EvidenceInspector', () => {
       {
         detail: detail({ id: 'nvidia-kumo', label: 'NVIDIA Kumo' }),
         databaseName: 'market_analysis',
+        sourceIds: ['market_data', 'sec_filings'],
+        structuredSources: [{ id: 'market_data', name: 'Market Prices & Events' }],
       }
     )
-    expect(screen.getByLabelText('Sources used')).toHaveTextContent('market_analysis')
+    // The question's structured source by name, then the database the prediction read
+    const sources = screen.getByLabelText('Sources used')
+    expect(within(sources).getByText('Sources used')).toBeVisible()
+    expect([...sources.querySelectorAll('span')].map((chip) => chip.textContent)).toEqual([
+      'Market Prices & Events',
+      'market_analysis',
+    ])
     const calls = screen.getAllByTestId('execution-evidence-call')
     expect(within(calls[0]).getByText('Recorded call 1 of 2')).toBeVisible()
     expect(within(calls[0]).getByRole('heading', { name: 'NVIDIA Kumo Prediction' })).toBeVisible()

@@ -48,7 +48,13 @@ import {
   type GraphComponent,
   type InspectableExecutionNodeId,
 } from './graph'
-import { projectRun, runEnded, type RunProjection, type ToolCall } from './projection'
+import {
+  projectRun,
+  publishedMetrics,
+  runEnded,
+  type RunProjection,
+  type ToolCall,
+} from './projection'
 import { OPERATION_LABELS } from './receipt-summary'
 import { TOOL_LOGOS, toolFor, type NodeLogo } from './registry'
 import { ReplayControls } from './replay/ReplayControls'
@@ -204,6 +210,12 @@ const stepLabel = (event: ExecutionEventV2 | undefined): string | undefined => {
       return 'Answer complete'
     case 'run.failed':
       return 'Run failed'
+    case 'report.completed':
+      return 'Response formatted'
+    case 'report.reference_resolution':
+      return 'Citations resolved'
+    case 'report.metrics':
+      return 'Run metrics available'
   }
   const graphEvent = toGraphEvent(event)
   if (graphEvent.kind === 'artifact.available') {
@@ -254,36 +266,86 @@ const formatDurationMs = (durationMs: number | null): string => {
 const formatMetricCount = (count: number | null): string =>
   count === null ? 'Unavailable' : new Intl.NumberFormat('en-US').format(count)
 
-/** Publication, runtime and token usage of a run that has ended. */
+const count = (value: unknown): number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0
+
+/** The display attributes of the run's last event of this kind. */
+const lastAttributes = (
+  events: readonly ExecutionEventV2[],
+  kind: string
+): Record<string, unknown> | null =>
+  [...events].reverse().find((event) => event.eventKind === kind)?.display.attributes ?? null
+
+/**
+ * Publication, runtime and token usage of a run that has ended. The API records the citation
+ * resolution and the run's metrics as the run's last events; a run recorded before them gets its
+ * publication from the answer's citations and the receipts.
+ */
 const RunSummary = ({
   run,
+  events,
+  receipts,
   citedEvidenceIds,
 }: {
   run: RunProjection
+  events: readonly ExecutionEventV2[]
+  receipts: Record<string, ReceiptV2>
   citedEvidenceIds: string[] | null
 }): ReactNode => {
   const cited = new Set(citedEvidenceIds ?? [])
-  const uncited = new Set(
-    run.toolCalls.flatMap((call) => call.receiptIds).filter((id) => !cited.has(id))
-  ).size
-  const wallMs =
-    run.startedAt && run.endedAt
-      ? Math.max(0, Math.round(elapsedMs(run.startedAt, run.endedAt)))
-      : null
-  const toolMs = run.toolCalls.reduce(
-    (total, call) =>
-      total + (call.endedAt ? Math.max(0, elapsedMs(call.startedAt, call.endedAt)) : 0),
-    0
+  const resolution = lastAttributes(events, 'report.reference_resolution')
+  const metrics = publishedMetrics(events)
+  // Evidence the answer could have cited: the run's completed receipts
+  const available = new Set(
+    run.toolCalls
+      .flatMap((call) => call.receiptIds)
+      .filter((id) => receipts[id]?.status === 'completed')
   )
+  const citedCount = resolution ? count(resolution.total_citations) : cited.size
+  const uncited = resolution
+    ? count(resolution.uncited_evidence_count)
+    : [...available].filter((id) => !cited.has(id)).length
+  const invalid = resolution ? count(resolution.invalid_evidence_count) : 0
+  const status =
+    typeof resolution?.status === 'string'
+      ? resolution.status
+      : citedEvidenceIds === null
+        ? null
+        : cited.size
+          ? 'reference_ids_resolved'
+          : available.size
+            ? 'evidence_uncited'
+            : 'no_evidence'
+  const runtimeProfile = metrics?.runtimeProfile ?? null
+  const wallMs =
+    metrics?.wallDurationMs ??
+    (run.startedAt && run.endedAt
+      ? Math.max(0, Math.round(elapsedMs(run.startedAt, run.endedAt)))
+      : null)
+  const toolMs =
+    metrics?.knownToolDurationMs ??
+    run.toolCalls.reduce(
+      (total, call) =>
+        total + (call.endedAt ? Math.max(0, elapsedMs(call.startedAt, call.endedAt)) : 0),
+      0
+    )
+  const toolCallCount = metrics?.toolCallCount ?? run.toolCalls.length
   const tokens = run.inputTokens + run.outputTokens
 
   return (
     <section className={styles.runSummary} aria-label="Hermes run summary">
       <div>
         <small>Publication</small>
-        <strong>{cited.size ? 'Citation/reference IDs resolved' : 'Answer published'}</strong>
+        <strong>
+          {status === null
+            ? 'Answer published'
+            : status === 'reference_ids_resolved'
+              ? 'Citation/reference IDs resolved'
+              : status.replaceAll('_', ' ')}
+        </strong>
         <span>
-          {cited.size} cited evidence item(s)
+          {citedCount} cited evidence item(s)
+          {invalid ? ` · ${invalid} unresolved` : ''}
           {uncited ? ` · ${uncited} available but uncited` : ''}
         </span>
       </div>
@@ -291,8 +353,7 @@ const RunSummary = ({
         <small>Runtime</small>
         <strong>{formatDurationMs(wallMs)}</strong>
         <span>
-          {run.toolCalls.length} tool call(s) · {formatDurationMs(Math.round(toolMs))} observed tool
-          time
+          {toolCallCount} tool call(s) · {formatDurationMs(Math.round(toolMs))} observed tool time
         </span>
       </div>
       <div>
@@ -300,6 +361,7 @@ const RunSummary = ({
         <strong>{formatMetricCount(tokens || null)} tokens</strong>
         <span>
           {formatMetricCount(run.inputTokens)} input · {formatMetricCount(run.outputTokens)} output
+          {runtimeProfile ? ` · Runtime profile: ${runtimeProfile}` : ''}
         </span>
       </div>
     </section>
@@ -591,14 +653,15 @@ export const ExecutionWorkspace = ({
     const invocationId = currentEvent?.invocationId
     return invocationId ? all.filter((receipt) => receipt.invocationId === invocationId) : []
   }, [currentEvent?.invocationId, receipts, selectedDetail, shown, terminalInspection])
+  const packSources = liveMode ? (availableDataSources ?? NO_SOURCES) : replaySources
   const browsable = useMemo(
-    () =>
-      browsableSources(
-        liveMode ? (availableDataSources ?? NO_SOURCES) : replaySources,
-        sourceIds,
-        Object.values(receipts)
-      ),
-    [availableDataSources, liveMode, receipts, replaySources, sourceIds]
+    () => browsableSources(packSources, sourceIds, Object.values(receipts)),
+    [packSources, receipts, sourceIds]
+  )
+  // The pack's sources with a database, which the explorers name a question's structured source by
+  const databaseSources = useMemo(
+    () => packSources.filter((source) => source.database_name),
+    [packSources]
   )
   // Receipts load from the job export in live mode
   const receiptsLoading =
@@ -694,6 +757,8 @@ export const ExecutionWorkspace = ({
         question={question}
         receipts={inspectorReceipts}
         databaseName={packDatabaseName}
+        sourceIds={sourceIds}
+        structuredSources={databaseSources}
         loading={receiptsLoading}
         onClose={closeInspector}
       />
@@ -746,7 +811,12 @@ export const ExecutionWorkspace = ({
       <ReplayControls replay={replay} currentLabel={stepLabel(currentEvent)} />
 
       {runEnded(shown.status) && (
-        <RunSummary run={shown} citedEvidenceIds={stored?.citedEvidenceIds ?? null} />
+        <RunSummary
+          run={shown}
+          events={events}
+          receipts={receipts}
+          citedEvidenceIds={stored?.citedEvidenceIds ?? null}
+        />
       )}
 
       <div className={styles.graphRegion}>

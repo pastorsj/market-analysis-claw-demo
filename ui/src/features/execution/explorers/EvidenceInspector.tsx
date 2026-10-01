@@ -26,6 +26,10 @@ export interface EvidenceInspectorProps {
   receipts: readonly ReceiptV2[]
   /** The pack's database, which a Kumo prediction reads but its receipt does not name */
   databaseName?: string
+  /** The data sources the question used */
+  sourceIds?: readonly string[]
+  /** The pack's structured sources, which name the question's database source */
+  structuredSources?: ReadonlyArray<{ id: string; name: string }>
   loading?: boolean
   onClose: () => void
 }
@@ -58,12 +62,17 @@ const receiptSources = (receipt: ReceiptV2, databaseName: string | undefined): s
   }
 }
 
+const NO_SOURCE_IDS: readonly string[] = []
+const NO_STRUCTURED_SOURCES: ReadonlyArray<{ id: string; name: string }> = []
+
 export const EvidenceInspector = ({
   detail,
   cursor,
   question,
   receipts,
   databaseName,
+  sourceIds = NO_SOURCE_IDS,
+  structuredSources = NO_STRUCTURED_SOURCES,
   loading = false,
   onClose,
 }: EvidenceInspectorProps): ReactNode => {
@@ -76,16 +85,25 @@ export const EvidenceInspector = ({
       })),
     [databaseName, receipts]
   )
-  const sourceNames = useMemo(
-    () => [
+  // As the original showed them: the question's structured source by name, then what each receipt read
+  // (a retrieval source by name when it is a structured one, else by id).
+  const sourceNames = useMemo(() => {
+    const nameOf = (id: string) => structuredSources.find((source) => source.id === id)?.name || id
+    return [
       ...new Set(
-        receipts
-          .flatMap((receipt) => receiptSources(receipt, databaseName))
-          .filter((name) => name.trim())
+        [
+          ...sourceIds.flatMap((id) =>
+            structuredSources.some((source) => source.id === id) ? [nameOf(id)] : []
+          ),
+          ...receipts.flatMap((receipt) =>
+            receipt.artifactKind === 'retrieval_evidence'
+              ? receiptSources(receipt, databaseName).map(nameOf)
+              : receiptSources(receipt, databaseName)
+          ),
+        ].filter((name) => name.trim())
       ),
-    ],
-    [databaseName, receipts]
-  )
+    ]
+  }, [databaseName, receipts, sourceIds, structuredSources])
 
   useEffect(() => {
     closeButtonRef.current?.focus()
