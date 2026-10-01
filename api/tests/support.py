@@ -66,6 +66,16 @@ PACK = {
             "featured": False,
         },
     ],
+    "conversations": [
+        {
+            "id": "leaders-follow-up",
+            "label": "Leaders Follow-up",
+            "tag": "ANALYTICS",
+            "description": "A scan, then a follow-up.",
+            "sources": ["market_analysis_structured"],
+            "turns": ["Which assets had the weakest returns?", "How volatile were those assets?"],
+        },
+    ],
     "structured": {
         "source": "market_analysis_structured",
         "database_name": "market_analysis",

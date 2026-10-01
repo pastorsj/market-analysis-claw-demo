@@ -15,6 +15,7 @@ from collections import Counter
 from collections.abc import Iterable
 from collections.abc import Mapping
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +57,7 @@ class Pack:
     directory: Path
     manifest: dict[str, Any]
     questions: list[dict[str, Any]]
+    conversations: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def id(self) -> str:
@@ -154,6 +156,11 @@ class Pack:
                 for question in self.questions
                 if set(question["sources"]) <= served and profile in question.get("profiles", [profile])
             ],
+            "conversations": [
+                conversation
+                for conversation in self.conversations
+                if set(conversation["sources"]) <= served and profile in conversation.get("profiles", [profile])
+            ],
         }
         if self.structured:
             resolved["structured"] = {
@@ -212,7 +219,7 @@ def load_pack(directory: Path) -> Pack:
     errors = _schema_errors("questions.schema.json", questions, manifest["questions"])
     if errors:
         raise PackError(manifest["id"], errors)
-    pack = Pack(directory, manifest, questions["questions"])
+    pack = Pack(directory, manifest, questions["questions"], questions.get("conversations", []))
     errors = cross_reference_errors(pack)
     if errors:
         raise PackError(pack.id, errors)
@@ -340,12 +347,15 @@ def cross_reference_errors(pack: Pack) -> list[str]:
             f"template {name} is declared twice" for name in _duplicates(t["id"] for t in prediction["templates"])
         ]
 
-    errors += [f"question {name} is declared twice" for name in _duplicates(q["id"] for q in pack.questions)]
-    for question in pack.questions:
-        for source_id in sorted(set(question["sources"]) - set(sources)):
-            errors.append(f"question {question['id']}: unknown source {source_id!r}")
-        for profile in sorted(set(question.get("profiles", [])) - profiles):
-            errors.append(f"question {question['id']}: unknown profile {profile!r}")
+    # Questions and conversations share one id space: each is one replay session, recordings/sessions/<id>.json
+    asked = [("question", question) for question in pack.questions]
+    asked += [("conversation", conversation) for conversation in pack.conversations]
+    errors += [f"question {name} is declared twice" for name in _duplicates(entry["id"] for _, entry in asked)]
+    for kind, entry in asked:
+        for source_id in sorted(set(entry["sources"]) - set(sources)):
+            errors.append(f"{kind} {entry['id']}: unknown source {source_id!r}")
+        for profile in sorted(set(entry.get("profiles", [])) - profiles):
+            errors.append(f"{kind} {entry['id']}: unknown profile {profile!r}")
     if not any(question.get("featured") for question in pack.questions):
         errors.append("at least one question must be featured")
     return errors

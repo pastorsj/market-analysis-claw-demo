@@ -17,6 +17,7 @@ async def test_pack_lists_questions_the_running_sources_can_answer(api, data_dir
     pack = (await api.get("/v1/pack")).json()
     assert (pack["id"], pack["title"]) == ("market-analysis", "Synthetic Multi-Asset Market Analysis")
     assert [(q["id"], q["featured"]) for q in pack["questions"]] == [("market-leaders", True), ("filings", False)]
+    assert [(c["id"], len(c["turns"])) for c in pack["conversations"]] == [("leaders-follow-up", 2)]
 
     (data_dir / "collection-manifest.json").unlink()
     assert [q["id"] for q in (await api.get("/v1/pack")).json()["questions"]] == ["market-leaders"]

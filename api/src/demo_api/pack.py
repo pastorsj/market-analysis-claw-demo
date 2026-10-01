@@ -110,7 +110,7 @@ class ActivePack:
         return sources
 
     def public_view(self) -> dict[str, Any]:
-        """``GET /v1/pack``: what the UI shows on its landing page."""
+        """``GET /v1/pack``: what the UI shows on its landing page, and the conversations `demo-api record` asks."""
         manifest = self.manifest()
         available = {source.id for source in self.sources()}
         return {
@@ -120,6 +120,11 @@ class ActivePack:
                 | {"featured": bool(question.get("featured", False))}
                 for question in manifest.get("questions", [])
                 if set(question.get("sources", [])) <= available
+            ],
+            "conversations": [
+                {key: conversation.get(key) for key in ("id", "label", "tag", "description", "sources", "turns")}
+                for conversation in manifest.get("conversations", [])
+                if set(conversation.get("sources", [])) <= available
             ],
         }
 

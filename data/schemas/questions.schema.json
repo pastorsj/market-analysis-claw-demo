@@ -43,6 +43,49 @@
           }
         }
       }
+    },
+    "conversations": {
+      "description": "Multi-turn conversations, each recorded as one replay session (demo.sh record --all): every turn is asked in the same conversation, after the answer to the turn before it.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "tag", "sources", "turns"],
+        "properties": {
+          "id": {
+            "description": "Unique among the pack's questions and conversations.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "tag": {
+            "description": "The capability badge of the conversation.",
+            "enum": ["ANALYTICS", "ANOMALY", "GRAPH", "HYBRID", "INTRADAY", "PQL", "PREDICTION", "RAG", "RETRIEVAL", "ROUTER", "SQL"]
+          },
+          "description": { "type": "string", "maxLength": 300 },
+          "sources": {
+            "description": "The sources every turn uses.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$" }
+          },
+          "profiles": {
+            "description": "Offer the conversation only in these generator profiles.",
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }
+          },
+          "turns": {
+            "description": "The questions in order; a later turn may refer to an earlier answer.",
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 6,
+            "items": { "type": "string", "minLength": 10, "maxLength": 2000 }
+          }
+        }
+      }
     }
   }
 }

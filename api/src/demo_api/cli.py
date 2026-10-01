@@ -15,10 +15,14 @@ The v2 bundle, which the UI replays from ``data/packs/<pack>/recordings/``::
                            answers ran and of the data viewer's starting query for each table, so the data
                            viewer works in replay
 
-Each pack question becomes one single-turn session, asked one at a time. After an answer that
-called market analytics tools, the recorder asks for its CPU/GPU comparison
+Each pack question becomes one single-turn session, asked one at a time. Each pack conversation
+(questions.yaml ``conversations``, recorded with ``--all`` or by id) becomes one session of several
+turns, asked in order in one conversation, so a later turn sees the earlier answers. After an
+answer that called market analytics tools, the recorder asks for its CPU/GPU comparison
 (POST .../benchmark), which the export then carries; on a CPU-only stack there is none. A
-question that does not succeed is left out of the bundle and makes the command exit 1.
+question or conversation that does not succeed is left out of the bundle and makes the command
+exit 1. Recording named ids (``--question``) updates those sessions of an existing bundle and
+keeps its other sessions; recording a whole set replaces the bundle.
 
 ``demo-api snapshot-database --out <recordings>`` rewrites only ``database.json`` of a bundle.
 """
@@ -51,58 +55,77 @@ def record(
     client: httpx.Client, *, data_dir: Path, out_dir: Path, question_ids: list[str], featured_only: bool, timeout: float
 ) -> int:
     pack = client.get("/v1/pack").raise_for_status().json()
-
-    def wanted(question: dict[str, Any]) -> bool:
-        if question_ids:
-            return question["id"] in question_ids
-        return question["featured"] or not featured_only
-
-    questions = [question for question in pack["questions"] if wanted(question)]
-    if not questions:
+    # Every session the pack can record, in pack order: (id, title, featured, sources, the questions of its turns)
+    planned = [
+        (question["id"], question["label"], question["featured"], question["sources"], [question["question"]])
+        for question in pack["questions"]
+    ] + [
+        (conversation["id"], conversation["label"], False, conversation["sources"], conversation["turns"])
+        for conversation in pack.get("conversations", [])
+    ]
+    order = [session_id for session_id, *_ in planned]
+    wanted = [
+        session
+        for session in planned
+        if (session[0] in question_ids if question_ids else session[2] or not featured_only)
+    ]
+    if not wanted:
         print("No pack questions match; nothing to record.", file=sys.stderr)
         return 1
-    (out_dir / "sessions").mkdir(parents=True, exist_ok=True)
-    sessions: list[dict[str, Any]] = []
+    sessions_dir = out_dir / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    sessions: dict[str, dict[str, Any]] = {}
+    index_path = out_dir / "index.json"
+    if question_ids and index_path.is_file():
+        previous = json.loads(index_path.read_text(encoding="utf-8"))
+        if previous.get("pack", {}).get("id") == pack["id"]:
+            sessions = {session["id"]: session for session in previous["sessions"] if session["id"] in order}
     failures = 0
-    for question in questions:
-        print(f"Asking {question['id']}: {question['question']}", file=sys.stderr)
-        turn = _ask(client, question, timeout=timeout)
-        if turn["status"] != "success":
-            print(f"  {turn['status']}; left out of the bundle", file=sys.stderr)
-            failures += 1
-            continue
-        session = {"schemaVersion": 2, "id": question["id"], "title": question["label"], "turns": [turn]}
-        _write_json(out_dir / "sessions" / f"{question['id']}.json", session)
-        sessions.append(
-            {
-                "id": question["id"],
-                "title": question["label"],
-                "featured": question["featured"],
-                "turns": [{"jobId": turn["jobId"], "question": turn["question"]}],
+    for session_id, title, featured, sources, questions in wanted:
+        conversation_id = f"record-{uuid.uuid4()}"
+        turns: list[dict[str, Any]] = []
+        for number, question in enumerate(questions, 1):
+            step = f" (turn {number} of {len(questions)})" if len(questions) > 1 else ""
+            print(f"Asking {session_id}{step}: {question}", file=sys.stderr)
+            turn = _ask(client, question, sources, conversation_id=conversation_id, timeout=timeout)
+            if turn["status"] != "success":
+                print(f"  {turn['status']}; left out of the bundle", file=sys.stderr)
+                failures += 1
+                break
+            turns.append(turn)
+        else:
+            session = {"schemaVersion": 2, "id": session_id, "title": title, "turns": turns}
+            _write_json(sessions_dir / f"{session_id}.json", session)
+            sessions[session_id] = {
+                "id": session_id,
+                "title": title,
+                "featured": featured,
+                "turns": [{"jobId": turn["jobId"], "question": turn["question"]} for turn in turns],
             }
-        )
+    # The bundle holds only its sessions, so database.json covers only the queries they ran
+    for path in sessions_dir.glob("*.json"):
+        if path.stem not in sessions:
+            path.unlink()
     shutil.copyfile(data_dir / "pack.json", out_dir / "pack.json")
     snapshot_database(client, out_dir)
     index = {
         "schemaVersion": 2,
         "pack": {"id": pack["id"], "version": pack["version"]},
         "recordedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "sessions": sessions,
+        "sessions": sorted(sessions.values(), key=lambda session: order.index(session["id"])),
     }
-    _write_json(out_dir / "index.json", index)
-    print(f"Recorded {len(sessions)} of {len(questions)} questions into {out_dir}", file=sys.stderr)
+    _write_json(index_path, index)
+    recorded = len(wanted) - failures
+    print(f"Recorded {recorded} of {len(wanted)} sessions; {out_dir} holds {len(sessions)}", file=sys.stderr)
     return 1 if failures else 0
 
 
-def _ask(client: httpx.Client, question: dict[str, Any], *, timeout: float) -> dict[str, Any]:
+def _ask(
+    client: httpx.Client, question: str, sources: list[str], *, conversation_id: str, timeout: float
+) -> dict[str, Any]:
     job_id = str(uuid.uuid4())
-    body = {
-        "agent_type": "hermes",
-        "input": question["question"],
-        "data_sources": question["sources"],
-        "job_id": job_id,
-    }
-    headers = {"conversation-id": f"record-{job_id}"}
+    body = {"agent_type": "hermes", "input": question, "data_sources": sources, "job_id": job_id}
+    headers = {"conversation-id": conversation_id}
     client.post("/v1/jobs/async/submit", json=body, headers=headers).raise_for_status()
     deadline = time.monotonic() + timeout
     while True:
@@ -188,8 +211,15 @@ def main(argv: list[str] | None = None) -> int:
     record_parser.add_argument("--api-url", default="http://api:8000", help="the running API (default: on the stack)")
     record_parser.add_argument("--out", type=Path, required=True, help="the pack's recordings directory")
     record_parser.add_argument("--data-dir", type=Path, help="the active pack (default: DATA_ACTIVE_DIR)")
-    record_parser.add_argument("--question", action="append", default=[], help="a question id (repeatable)")
-    record_parser.add_argument("--all", action="store_true", help="every question, not only the featured ones")
+    record_parser.add_argument(
+        "--question",
+        action="append",
+        default=[],
+        help="a question or conversation id (repeatable); updates only those sessions of the bundle",
+    )
+    record_parser.add_argument(
+        "--all", action="store_true", help="every question and conversation, not only the featured questions"
+    )
     record_parser.add_argument("--timeout", type=float, default=1_500, help="seconds to wait for one answer")
     snapshot_parser = commands.add_parser("snapshot-database", help="rewrite a bundle's database.json")
     snapshot_parser.add_argument("--api-url", default="http://api:8000", help="the running API (default: on the stack)")

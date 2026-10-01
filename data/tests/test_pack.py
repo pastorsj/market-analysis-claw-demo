@@ -96,6 +96,34 @@ def test_a_broken_pack_reports_every_problem(pack_copy):
     )
 
 
+def test_conversations_share_the_question_ids_and_name_known_sources(pack_copy):
+    pack_dir = pack_copy("us-equities")
+
+    def break_conversations(document):
+        document["conversations"][0]["id"] = "market-leaders"
+        document["conversations"][1]["sources"] = ["market_prices"]
+
+    edit_yaml(pack_dir / "questions.yaml", break_conversations)
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert sorted(raised.value.errors) == [
+        "conversation peer-network-follow-up: unknown source 'market_prices'",
+        "question market-leaders is declared twice",
+    ]
+
+
+def test_resolve_serves_only_the_conversations_the_build_can_answer():
+    pack = load_pack(PACKS / "us-equities")
+    resolved = pack.resolve(pack.resolve_profile(None), pack.select_corpora(["market_regulations"]))
+
+    conversations = {conversation["id"]: conversation for conversation in resolved["conversations"]}
+    assert "filings-to-regulations" not in conversations  # needs sec_filings, which is not built
+    assert "regulation-fd-follow-up" in conversations
+    assert all(len(conversation["turns"]) >= 2 for conversation in conversations.values())
+
+
 def test_files_are_read_only_from_an_external_dataset(pack_copy):
     pack_dir = pack_copy("us-equities")
     edit_yaml(pack_dir / "pack.yaml", lambda m: m["documents"]["corpora"][2].update(origin="ecfr-title-17"))

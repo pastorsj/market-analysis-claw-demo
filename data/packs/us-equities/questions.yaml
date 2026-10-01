@@ -98,3 +98,63 @@ questions:
     Which world news headlines in the corpus mention the Federal Reserve or another central bank? List their
     outlets and dates, and cite the headlines.
   sources: [world_news]
+# Multi-turn conversations, each recorded as one replay session with --all: a later turn refers to an earlier answer.
+conversations:
+- id: price-context-follow-up
+  label: Price Context Follow-up
+  tag: ANALYTICS
+  description: Summarize two stocks' daily price context, then add a third and aggregate the series weekly.
+  sources: [market_data]
+  turns:
+  - >-
+    Summarize the daily price context for NVIDIA (NVDA) and Apple (AAPL) from February 2 through February 27, 2026,
+    including each stock's return, price range and average volume.
+  - Keep that same window and add Microsoft (MSFT), but aggregate the displayed series weekly.
+- id: peer-network-follow-up
+  label: Peer Network Follow-up
+  tag: GRAPH
+  description: Find the most central peers, then compare their returns and volatility over the same window.
+  sources: [market_data]
+  turns:
+  - >-
+    Among declared industry peers, which five stocks were the most central in the return-correlation network from
+    December 2025 through March 12, 2026?
+  - >-
+    For the three most central stocks in that result, compare their returns and daily volatility over the same
+    window.
+- id: leaders-unusual-sessions
+  label: Leaders & Unusual Sessions
+  tag: ANOMALY
+  description: Rank the strongest and weakest recent returns, then check those stocks for unusual sessions.
+  sources: [market_data]
+  turns:
+  - >-
+    Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns over the
+    20 trading sessions ending March 12, 2026?
+  - >-
+    Using 2025 as the baseline, did any of those six stocks have unusual sessions in that same window? Name the
+    sessions and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations.
+- id: filings-to-regulations
+  label: Filings & Regulations
+  tag: RETRIEVAL
+  description: Pick two 8-K cybersecurity incident filings, then compare them with the Title 17 requirements.
+  sources: [sec_filings, market_regulations]
+  turns:
+  - >-
+    Which 8-K filings in the corpus report a cybersecurity incident under Item 1.05? Select two examples with
+    materially different disclosed impacts, and cite the filings.
+  - >-
+    For those same two examples, compare the disclosed facts with the Title 17 cybersecurity incident disclosure
+    requirements, and identify what the evidence does not establish.
+- id: regulation-fd-follow-up
+  label: Regulation FD Follow-up
+  tag: RETRIEVAL
+  description: Explain when Regulation FD requires public disclosure, then separate intentional from unintentional cases.
+  sources: [market_regulations]
+  turns:
+  - >-
+    Under Regulation FD in Title 17, when must an issuer publicly disclose material nonpublic information that it
+    shared with certain persons outside the company? Cite the relevant sections.
+  - >-
+    Now separate the intentional and the unintentional selective disclosure cases, and say how the issuer may make
+    the public disclosure, keeping the section citations.
