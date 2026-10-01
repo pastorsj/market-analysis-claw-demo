@@ -372,6 +372,23 @@ def test_a_long_text_result_is_cut(hooks, api):
     assert json.loads(output)["result"].endswith("…")
 
 
+def test_a_second_copy_of_a_long_result_is_left_out(hooks, api):
+    rows = [{"value": "x" * 100} for _ in range(400)]
+    envelope = {"result": json.dumps({"rows": rows[:5]}), "structuredContent": {"rows": rows}}
+
+    output = hooks.transform_tool_result(
+        tool_name=TOOLS["ask_question"]["hermes_name"],
+        args={"question": "x"},
+        result=json.dumps(envelope),
+        session_id=JOB,
+        tool_call_id="call_8",
+    )
+
+    read = json.loads(output)
+    assert len(output) <= plugin.MAX_RESULT_CHARS and "structuredContent" not in read
+    assert json.loads(read["result"]) == {"rows": rows[:5]}
+
+
 def test_a_result_that_fits_is_unchanged_but_for_its_evidence_id(hooks, api):
     output = json.loads(run_tool(hooks, "price_context", {}, PRICE_CONTEXT))
 

@@ -304,6 +304,9 @@ def shorten(envelope: dict) -> str:
     except ValueError:
         value = envelope["result"]
     notes: dict[str, str] = {}
+    if value and "structuredContent" in envelope:  # a second copy beside the text: the text is enough
+        envelope = {key: item for key, item in envelope.items() if key != "structuredContent"}
+        notes["structuredContent"] = "structuredContent is left out; result holds the same data"
 
     def render() -> str:
         result = value if isinstance(value, str) else json.dumps(value, indent=2, ensure_ascii=False)
