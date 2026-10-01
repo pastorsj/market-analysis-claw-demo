@@ -3,8 +3,9 @@
 """The cybersecurity-disclosure check: does an answer state Form 8-K Item 1.05's deadline correctly, or say plainly
 that the evidence does not give it?
 
-The retrieved Title 17 text holds Form 8-K (17 CFR 249.308) but not the form's item instructions, so no passage
-states the four-business-day deadline. Either answer is right:
+The eCFR's Title 17 holds Form 8-K (17 CFR 249.308) but not the form's item instructions; the regulations corpus
+also holds them, from the SEC's 2023 cybersecurity rule (88 FR 51896, Appendix C), but a search may not return that
+passage. Either answer is right:
 
 - the deadline itself: four business days (after the company determines the incident is material);
 - a flag that the evidence does not give the deadline, in any wording: "the deadline is not stated in the retrieved

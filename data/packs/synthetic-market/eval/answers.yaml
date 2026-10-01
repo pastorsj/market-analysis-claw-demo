@@ -81,11 +81,13 @@ questions:
       cybersecurity incident and its material or reasonably likely material impact, within four business days after
       the company determines the incident is material (a determination made without unreasonable delay); disclosure
       may be delayed when the US Attorney General finds a substantial risk to national security or public safety.
-      The Title 17 corpus holds 17 CFR 249.308 (Form 8-K) and 17 CFR 229.106 (Regulation S-K Item 106) but not Form
-      8-K's item instructions, so no retrieved passage states the four-business-day deadline: stating it while
-      flagging that the retrieved text does not contain it, or saying it cannot be verified from the corpus, are both
-      acceptable; presenting it as a fact the citations support is an unsupported claim. Credit only sections and
-      filings that appear in the evidence. In the 2026 Q2 filing sample the only 8-K that reports Item 1.05 is CB
+      The regulations corpus holds 17 CFR 249.308 (Form 8-K) and 17 CFR 229.106 (Regulation S-K Item 106) from the
+      eCFR, and the SEC's 2023 cybersecurity disclosure rule (88 FR 51896): its Appendix C holds Form 8-K's General
+      Instruction B.1 ("A report pursuant to Item 1.05 is to be filed within four business days after the registrant
+      determines that it has experienced a material cybersecurity incident") and Item 1.05's text. A deadline cited
+      to a passage of that appendix is supported; a deadline the evidence does not hold is not, but flagging that
+      the retrieved text does not contain it is acceptable. Credit only sections and filings that appear in the
+      evidence. In the 2026 Q2 filing sample the only 8-K that reports Item 1.05 is CB
       Financial Services' filing of 2026-05-11 (accession 0001605301-26-000021).
 
   news-and-filings:
@@ -112,10 +114,13 @@ questions:
       - {id: stories_named_10_of_12, named: "story_events[:].asset_id", at_least: 10}
       - {id: percent_grounding_90, percent_grounding: 0.9}
     facts: >-
-      Each of the 12 most liquid issuers has one planted story between 2026-08-17 and 2026-08-28. Return on the
-      publication session and over the two sessions after it: {story_events: asset_id, published_at,
-      publication_session_return, following_two_session_return}. A good answer covers all 12 (or says how many it
-      found) with returns that match.
+      The 12 most liquid issuers had 23 company news items between 2026-08-17 and 2026-08-28, among them each
+      issuer's one planted story (is_story). Each item's return on the session it aligns to (the first closing, at
+      21:00 UTC, at or after publication) and over the two sessions after it: {story_events: news_id, asset_id,
+      is_story, published_at, publication_session_return, following_two_session_return}. The data ends on
+      2026-08-31, so the five items of 2026-08-28 have no two-session return; a good answer still lists them with
+      their publication-session return and says the later return is unavailable. It covers every item (or says how
+      many it found) with returns that match.
 
   outcome-prediction:
     tools: [[predict_asset_outcomes]]

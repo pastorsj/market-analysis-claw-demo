@@ -80,11 +80,13 @@ questions:
       cybersecurity incident and its material or reasonably likely material impact, within four business days after
       the company determines the incident is material (a determination made without unreasonable delay); disclosure
       may be delayed when the US Attorney General finds a substantial risk to national security or public safety.
-      The Title 17 corpus holds 17 CFR 249.308 (Form 8-K) and 17 CFR 229.106 (Regulation S-K Item 106) but not Form
-      8-K's item instructions, so no retrieved passage states the four-business-day deadline: stating it while
-      flagging that the retrieved text does not contain it, or saying it cannot be verified from the corpus, are both
-      acceptable; presenting it as a fact the citations support is an unsupported claim. Credit only sections and
-      filings that appear in the evidence. The 8-Ks in the corpus that report Item 1.05: Conduent (CNDT,
+      The regulations corpus holds 17 CFR 249.308 (Form 8-K) and 17 CFR 229.106 (Regulation S-K Item 106) from the
+      eCFR, and the SEC's 2023 cybersecurity disclosure rule (88 FR 51896): its Appendix C holds Form 8-K's General
+      Instruction B.1 ("A report pursuant to Item 1.05 is to be filed within four business days after the registrant
+      determines that it has experienced a material cybersecurity incident") and Item 1.05's text. A deadline cited
+      to a passage of that appendix is supported; a deadline the evidence does not hold is not, but flagging that
+      the retrieved text does not contain it is acceptable. Credit only sections and filings that appear in the
+      evidence. The 8-Ks in the corpus that report Item 1.05: Conduent (CNDT,
       2025-04-14), Coinbase (COIN, 2025-05-15), Data I/O (DAIO, 2025-08-21 and an update on 2025-09-10), BayFirst
       (BAFN, 2025-10-30) and Coupang (CPNG, 2025-12-16).
 
@@ -135,6 +137,6 @@ questions:
       - {id: weakest_named, named: "universe_bottom[0].asset_id"}
     facts: >-
       The 500 most liquid stocks (liquid_500). Return over the sessions from 2026-01-02 to 2026-03-12, from the close
-      before the first session to the last close, with the z-score of the stock's mean daily volume against the
-      universe. 20 strongest: {universe_top: asset_id, total_return, volume_zscore}. 20 weakest: {universe_bottom:
+      before the first session to the last close, with the z-score of the stock's total volume in the window among
+      the 500 (market_scan's volume z-score). 20 strongest: {universe_top: asset_id, total_return, volume_zscore}. 20 weakest: {universe_bottom:
       asset_id, total_return, volume_zscore}.
