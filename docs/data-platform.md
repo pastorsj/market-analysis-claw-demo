@@ -236,9 +236,9 @@ the symbol can be found in a column or in the path, and when the files are order
 - **The `us-equities` minute bars** have one file per symbol (`<SYMBOL>_full_1min_adjsplit.parquet`), sorted by time. Its columns
   are `ts` (naive US/Eastern wall-clock time), `timestamp` (the same wall-clock time in microseconds), `open`,
   `high`, `low` and `close` (float32, split-adjusted), `volume` (float64), `symbol_id` and `asset_class_id`.
-  Bars run from 04:00 to 19:59. Reads are partitioned by symbol through the file list. Its files carry no
-  min/max statistics for `ts`, so a date window cannot prune row groups: each file (two row groups of about
-  120,000 bars) is read whole.
+  Bars run from 04:00 to 19:59. Reads are partitioned by symbol through the file list. Every file carries
+  min/max statistics for `ts`, so a file wholly outside the window is skipped. Most files are a single row
+  group, so a file with any bar in the window is read whole.
 - **The canonical layout** is what `synthetic-market` writes, and what a new real dataset should use:
 
   ```text
