@@ -62,7 +62,7 @@ two), unjudged, not a bake-off. What they showed:
 
 - **Citation tokens.** Ultra there often writes `【evidence:<id>】` or `【hermes-receipt:<id>】` instead of
   `[evidence:<id>]`, or names the receipt in prose. Before the API accepted the bracketed forms, 4 of 5
-  answers in the first run had no citations. In the committed bundle 5 of 6 are cited; the Event Reaction
+  answers in the first run had no citations. In the committed bundle 4 of 5 are cited; the Event Reaction
   answer names its receipts in a prose "Sources" line, which does not count.
 - **Event Reaction is unstable, as H1 was.** Of four attempts, two listed the eight planted events and their
   returns through Auto Ontology. One reached the Hermes run deadline after asking Auto Ontology to read a

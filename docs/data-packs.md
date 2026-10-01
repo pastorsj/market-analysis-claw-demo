@@ -118,7 +118,8 @@ excerpts and model names. `./scripts/demo.sh replay` then serves the UI on the b
 hint when the pack has none. The format is in [`api/README.md`](../api/README.md#recordings).
 
 The current packs are not recorded yet. The committed bundle is the one recorded for the pack they replaced,
-`market-analysis` (a generated market of 12 fictional issuers), which is otherwise gone:
+`market-analysis` (a generated market of 2,000 fictional issuers, 12 of them the reviewed set; the bundle was
+recorded on its 2,000-issuer qualification profile), which is otherwise gone:
 
 ```bash
 DATA_PACK=market-analysis ./scripts/demo.sh replay

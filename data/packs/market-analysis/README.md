@@ -1,6 +1,7 @@
 # market-analysis (retired)
 
-The first demo pack, a generated market of 12 fictional issuers, was replaced by
+The first demo pack, a generated market of 2,000 fictional issuers, 12 of them the reviewed set (the bundle was
+recorded on its 2,000-issuer qualification profile), was replaced by
 [`synthetic-market`](../synthetic-market/README.md) and [`us-equities`](../us-equities/README.md). Only its replay
 bundle is left, in `recordings/`, until the new packs are recorded:
 
