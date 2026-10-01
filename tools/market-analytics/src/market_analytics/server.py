@@ -151,7 +151,7 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
         fractions (0.25 is 25%; volatility is the daily standard deviation). A return runs from the close before
         the window's first session to its last close. peer_relative_return is an asset's return minus the mean
         return of the universe's assets, not of its industry peers. For "the N sessions ending D", pass end=D and
-        sessions=N instead of start. At most 40 assets are listed.
+        sessions=N instead of start. At most 50 assets are listed.
         """
         return await run_in_worker(
             "market_scan",

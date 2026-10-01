@@ -313,9 +313,10 @@ async def test_left_out_rows_are_summarized(pack: Pack) -> None:
         news = await client.call_tool("analyze_news_price_relationship", ARGUMENTS["analyze_news_price_relationship"])
         prices = (await client.call_tool("price_context", ARGUMENTS["price_context"])).structured_content
 
-    assert len(scan["payload"]["observations"]) == 40
-    assert scan["warnings"][-1].startswith("Listed ranks 1-40 of the 500 assets the call asked for")
-    assert "ranks 41-500 are left out, with score from -0.1235 to -0.1235" in scan["warnings"][-1]
+    listed = len(scan["payload"]["observations"])
+    assert 40 <= listed <= 50, "the cap, or fewer when four metrics with their z-scores do not fit"
+    assert scan["warnings"][-1].startswith(f"Listed ranks 1-{listed} of the 500 assets the call asked for")
+    assert f"ranks {listed + 1}-500 are left out, with score from -0.1235 to -0.1235" in scan["warnings"][-1]
 
     payload = news.structured_content["payload"]
     assert payload["events_truncated"] and len(payload["events"]) <= 50

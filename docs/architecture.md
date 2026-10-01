@@ -88,7 +88,7 @@ under the turn budget too.
 | Tool | How its result stays under 30,000 characters |
 |---|---|
 | `retrieve_evidence` | At most 8 whole passages (a passage is one 2,400-character chunk); a result still too long drops its lowest-ranked passages. Every passage it keeps has its full citation. |
-| Market tools | Each list is capped (40 `market_scan` assets, 25 anomalies, 30 intraday sessions, 50 news events and 50 assets' news summaries, 100 sentiment periods), then the least important list is shortened while the result is too long: a price series before the per-asset summaries, news events before their per-asset counts. The result's `warnings` summarize the rows left out, and its `*_truncated` flag is set. |
+| Market tools | Each list is capped (50 `market_scan` assets, 25 anomalies, 30 intraday sessions, 50 news events and 50 assets' news summaries, 100 sentiment periods), then the least important list is shortened while the result is too long: a price series before the per-asset summaries, news events before their per-asset counts. The result's `warnings` summarize the rows left out, and its `*_truncated` flag is set. |
 | Any data tool, `ask_question` and `predict_asset_outcomes` included | The `execution-receipts` plugin measures the final string and, past 30,000 characters, drops rows from the end of the longest list (setting the result's own `truncated`), then cuts the longest text, and says what it left out in `shortened_to_fit`. The receipt is built from the whole result. |
 
 Relay, bundled with Hermes, exports the agent's OpenInference spans to Phoenix. Switchyard and the retrieval

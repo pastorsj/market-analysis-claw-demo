@@ -45,7 +45,7 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   at most 1,000 characters, the receipt's limit.
 - **Result size.** Hermes hides an MCP result longer than 50,000 characters from the model
   ([tool result size](../../docs/architecture.md#tool-result-size)), so `budget.py` caps each list a result
-  holds (40 `market_scan` assets, 25 anomalies, 30 intraday sessions, 100 sentiment periods, 50 news events and
+  holds (50 `market_scan` assets, 25 anomalies, 30 intraday sessions, 100 sentiment periods, 50 news events and
   50 assets' news summaries) and then shortens the least important list while the result is longer than 30,000
   characters as the agent reads it. Its `warnings` summarize the rows left out (ranks and the range of the value
   that ranked them, or label counts), and the payload's `*_truncated` flag is set. `tests/test_budget.py`

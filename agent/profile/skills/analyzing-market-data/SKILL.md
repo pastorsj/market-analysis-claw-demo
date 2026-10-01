@@ -128,7 +128,7 @@ The tools return fractions, not percentages. Convert them when you write:
 - The relationship graph is fixed for the whole dataset and cannot be limited to
   a named group of assets. For correlations within a chosen group, use
   `querying-auto-ontology`.
-- A result lists a capped number of rows (40 `market_scan` assets, 50 news
+- A result lists a capped number of rows (50 `market_scan` assets, 50 news
   events). When its `warnings` say rows were left out, say so, and narrow the
   call rather than repeating it.
 - Do not call a tool only to demonstrate speed.

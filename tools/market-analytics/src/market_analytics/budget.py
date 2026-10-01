@@ -162,7 +162,7 @@ def _links(noun: str) -> Callable[[list[Row], list[Row], Row], str]:
 
 
 LISTINGS: dict[str, tuple[Listing, ...]] = {
-    "market_scan": (Listing("observations", 40, _ranked("assets", lambda _: "score")),),
+    "market_scan": (Listing("observations", 50, _ranked("assets", lambda _: "score")),),
     "market_anomaly_scan": (Listing("observations", 25, _ranked("sessions", lambda _: "anomaly_score")),),
     "intraday_scan": (Listing("observations", 30, _ranked("sessions", lambda payload: payload["rank_by"])),),
     "price_context": (
