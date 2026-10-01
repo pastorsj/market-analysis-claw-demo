@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/pastorsj/market-analysis-claw-demo/data/schemas/documents.schema.json",
+  "$id": "urn:market-analysis-claw-demo:schemas:documents",
   "title": "One line of corpus/documents.jsonl",
   "description": "A whole source document. Chunking belongs to retrieval ingestion, which embeds `text` only; metadata is for filtering and citations.",
   "type": "object",

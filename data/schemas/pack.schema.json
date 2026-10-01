@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/pastorsj/market-analysis-claw-demo/data/schemas/pack.schema.json",
+  "$id": "urn:market-analysis-claw-demo:schemas:pack",
   "title": "Data pack manifest (pack.yaml)",
   "description": "One swappable demo world: tables, document corpora, the source catalog, analytics and prediction settings, and demo questions. Paths are relative to the pack directory. Cross-references that JSON Schema cannot express are checked by `demo-data validate`.",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/pastorsj/market-analysis-claw-demo/data/schemas/questions.schema.json",
+  "$id": "urn:market-analysis-claw-demo:schemas:questions",
   "title": "Pack demo questions (questions.yaml)",
   "type": "object",
   "additionalProperties": false,
