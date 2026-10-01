@@ -178,6 +178,9 @@ def test_digest_tracks_build_inputs_only(pack_copy):
     assert pack.digest("interactive", corpora, "another builder") != digest
     (pack.directory / "README.md").write_text("data card")
     (pack.directory / "eval" / "notes.md").write_text("not an input")
+    # data generate's resumable work directory, left by an interrupted run
+    (pack.directory / "text" / ".work" / "seeds").mkdir(parents=True)
+    (pack.directory / "text" / ".work" / "seeds" / "companies.parquet").write_bytes(b"seed")
     assert pack.digest("interactive", corpora, "builder") == digest
     (pack.directory / "ontology.yaml").write_text(pack.path("ontology.yaml").read_text() + "\n")
     assert pack.digest("interactive", corpora, "builder") != digest

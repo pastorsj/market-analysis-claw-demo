@@ -26,6 +26,8 @@ from jsonschema import FormatChecker
 DATA_ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = DATA_ROOT / "schemas"
 DIGEST_EXCLUDES = {"README.md", "eval", "recordings", "tests"}
+# Directories skipped at any depth: caches, and `data generate`'s resumable work directory (text/.work).
+DIGEST_SKIPPED_DIRS = {"__pycache__", ".work"}
 # Corpus formats read in place from an external dataset (`files`) rather than pinned by a manifest in the pack.
 IN_PLACE_FORMATS = ("gdelt-parquet",)
 # The tables the market importer (market.py) writes from an external dataset, besides an optional news table.
@@ -114,7 +116,8 @@ class Pack:
     def digest(
         self, profile: str, corpora: list[dict[str, Any]], builder_version: str, inputs: Iterable[str] = ()
     ) -> str:
-        """Content digest of everything a build depends on (README, eval/, recordings/ and tests/ excluded).
+        """Content digest of everything a build depends on (README, eval/, recordings/, tests/ and the
+        DIGEST_SKIPPED_DIRS excluded).
 
         `inputs` identify what the build reads from outside the pack, such as an SEC snapshot. External datasets
         need nothing here: pack.yaml pins their fingerprints.
@@ -125,7 +128,8 @@ class Pack:
             sha.update(f"\0{value}".encode())
         for file in sorted(self.directory.rglob("*")):
             relative = file.relative_to(self.directory)
-            if file.is_file() and relative.parts[0] not in DIGEST_EXCLUDES and "__pycache__" not in relative.parts:
+            skipped = relative.parts[0] in DIGEST_EXCLUDES or not DIGEST_SKIPPED_DIRS.isdisjoint(relative.parts)
+            if file.is_file() and not skipped:
                 sha.update(f"\0{relative.as_posix()}\0".encode())
                 sha.update(file.read_bytes())
         return sha.hexdigest()
