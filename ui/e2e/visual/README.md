@@ -58,6 +58,7 @@ is only as good as the review of its pixels. A new view needs a test in `parity.
 above. Bumping `@playwright/test` changes the image and its Chromium, so expect to update all of
 them.
 
-On an Apple silicon Mac the image runs natively as arm64 (Chromium does not run under amd64
-emulation); CI compares on x86-64 with a small tolerance (`maxDiffPixelRatio` in `parity.spec.ts`)
-for anti-aliasing that differs between the two.
+On an Apple silicon Mac the image runs natively as arm64 (its Chromium crashes under amd64
+emulation). The baselines here were rendered that way, and CI's x86-64 run matched them with no
+tolerance. If a future image renders the two differently, set a small `maxDiffPixelRatio` in the
+`visual` project rather than rendering on one of them only.
