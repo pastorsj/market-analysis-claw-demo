@@ -39,6 +39,8 @@ export interface ExecutionRun {
   retrievalBenchmark: RetrievalBenchmark | null
   /** From the data pack's recordings: no live job behind it, in either mode */
   recorded: boolean
+  /** The recordings archive it came from (`archiveId`), when known */
+  archive: string | null
 }
 
 /** A job's execution record as the API exports it and a recording stores it. */
@@ -52,6 +54,8 @@ export interface ExecutionRecord {
   retrievalBenchmark?: unknown
   /** Loaded from the data pack's recordings */
   recorded?: boolean
+  /** The recordings archive it came from */
+  archive?: string | null
 }
 
 interface ExecutionState {
@@ -74,6 +78,7 @@ const emptyRun = (jobId: string): ExecutionRun => ({
   benchmark: null,
   retrievalBenchmark: null,
   recorded: false,
+  archive: null,
 })
 
 /** The evidence ids of a report's citations (`{evidenceId, …}`), each once. */
@@ -141,6 +146,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     benchmark,
     retrievalBenchmark,
     recorded,
+    archive,
   }) => {
     const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
     const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
@@ -157,6 +163,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
             benchmark: toBenchmark(benchmark) ?? run.benchmark,
             retrievalBenchmark: toRetrievalBenchmark(retrievalBenchmark) ?? run.retrievalBenchmark,
             recorded: recorded ?? run.recorded,
+            archive: archive ?? run.archive,
           },
         },
         dropped: state.dropped + dropped,

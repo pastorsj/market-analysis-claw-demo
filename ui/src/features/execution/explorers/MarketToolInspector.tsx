@@ -272,7 +272,10 @@ const AnomalyResult = ({ payload }: { payload: RecordValue }): ReactNode => {
           <span>Observed multivariate anomalies</span>
           <h4>{formatCompact(integer(payload.flagged_observations))} flagged observations</h4>
         </div>
-        <small>PCA reconstruction</small>
+        {/* The policy id as the original showed it; results recorded before it name the method */}
+        <small>
+          {text(payload.policy_id) ? humanize(text(payload.policy_id)) : 'PCA reconstruction'}
+        </small>
       </header>
       <div className={styles.resultMetadata} aria-label="Anomaly analysis summary">
         <span>
@@ -752,20 +755,27 @@ export const MarketToolInspector = ({
   const acceleration = gpuAccelerationForReceipt(receipt)
   const engine = result.engine
   const device = engine?.device.toUpperCase() ?? 'CPU'
-  const assets = assetCount(result)
+  const assets = number(result.assetCount) ?? assetCount(result)
   const universe = text(result.publicParameters.universe_id)
   const warnings = [...result.warnings, ...result.limitations]
   const engineLabel = engine
     ? `${acceleration?.label || engineLibraryLabel(engine.library)} ${engine.version}`
     : 'Engine not started'
-  const otherWork = result.timing.totalMs - result.timing.computeMs
+  const { computeMs, totalMs } = result.timing
+  // The engine's setup and whole time, as the tool recorded them; results recorded before those fields have
+  // the service's total and the call as the agent timed it (whole milliseconds), as before
+  const setupMs = number(result.timing.setupMs)
+  const engineMs = number(result.timing.engineMs)
+  const recordedTiming = setupMs !== null && engineMs !== null
+  const otherWork = recordedTiming ? setupMs : totalMs - computeMs
   const timingDetails = engine
     ? [
         { label: 'Other engine work', value: otherWork >= 0 ? otherWork : null },
-        { label: `${device} compute`, value: result.timing.computeMs },
-        { label: 'Engine total', value: result.timing.totalMs },
+        { label: `${device} compute`, value: computeMs },
+        { label: 'Engine total', value: recordedTiming ? engineMs : totalMs },
       ].filter((item): item is { label: string; value: number } => item.value !== null)
     : []
+  const toolTotal = recordedTiming ? totalMs : receipt.durationMs
 
   return (
     <section
@@ -785,7 +795,7 @@ export const MarketToolInspector = ({
             <span aria-hidden="true">{device}</span>
             <div>
               <strong>{engineLabel}</strong>
-              <small>{engine?.library ?? 'No engine reported'}</small>
+              <small>{text(engine?.engineId) ?? engine?.library ?? 'No engine reported'}</small>
             </div>
           </div>
         </header>
@@ -806,7 +816,7 @@ export const MarketToolInspector = ({
           </div>
           <div>
             <dt>Tool total</dt>
-            <dd>{formatDuration(receipt.durationMs)}</dd>
+            <dd>{formatDuration(toolTotal)}</dd>
             <small>Measured execution</small>
           </div>
           <div>

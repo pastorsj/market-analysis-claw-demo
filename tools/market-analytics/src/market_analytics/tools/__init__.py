@@ -93,12 +93,20 @@ GPU_LIBRARIES: dict[Family, tuple[str, str]] = {
     "ml": ("cuml.accel", "cuml"),
     "graph": ("nx-cugraph", "nx_cugraph"),
 }
+# The engine ids the receipts show, by family and device: the same method on each device, so a CPU id names the
+# GPU id's twin. Bump the version when an engine's method changes its results.
+ENGINE_IDS: dict[Family, dict[str, str]] = {
+    "tabular": {"cpu": "pandas-cpu.v1", "gpu": "cudf-gpu.v1"},
+    "ml": {"cpu": "sklearn-pca-anomaly-cpu.v1", "gpu": "cuml-pca-anomaly-gpu.v1"},
+    "graph": {"cpu": "networkx-pagerank-cpu.v1", "gpu": "cugraph-pagerank-gpu.v1"},
+}
 
 
 def engine(family: Family) -> Engine:
-    gpu = os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu"
-    label, module = (GPU_LIBRARIES if gpu else CPU_LIBRARIES)[family]
-    return Engine(device="gpu" if gpu else "cpu", library=label, version=importlib.import_module(module).__version__)
+    device = "gpu" if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu" else "cpu"
+    label, module = (GPU_LIBRARIES if device == "gpu" else CPU_LIBRARIES)[family]
+    version = importlib.import_module(module).__version__
+    return Engine(device=device, library=label, version=version, engine_id=ENGINE_IDS[family][device])
 
 
 def _naive_utc(value: Any) -> Any:
@@ -109,31 +117,45 @@ def _naive_utc(value: Any) -> Any:
 
 
 def run(data: MarketData, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """Run one tool and return its MarketResult as JSON-ready data. Never raises."""
+    """Run one tool and return its MarketResult as JSON-ready data. Never raises.
+
+    The timing has three measured spans on one clock: the setup before the calculation (reading the arguments),
+    the calculation (`compute_ms`), and the setup after it (building and serializing the result). The setup is
+    their sum and `engine_ms` the whole span; the server sets `total_ms`, the call as the service saw it.
+    """
     tool = TOOLS[name]
     started = time.perf_counter()
     outcome: dict[str, Any]
     if not available(data.pack, name):
         code, message = UNAVAILABLE[tool.needs]
         outcome = {"status": "failed", "error": Failure(code=code, message=message)}
+        computing = computed = time.perf_counter()
     else:
-        outcome = _outcome(data, name, arguments)
-    elapsed_ms = (time.perf_counter() - started) * 1000
+        converted = {key: _naive_utc(value) for key, value in arguments.items()}
+        computing = time.perf_counter()
+        outcome = _outcome(data, name, converted)
+        computed = time.perf_counter()
     result = MarketResult(
         operation_id=name,
         source_id=data.pack.source_id,
         database_name=data.pack.database_name,
-        timing=Timing(compute_ms=elapsed_ms, total_ms=elapsed_ms),  # the server replaces total_ms
+        timing=Timing(compute_ms=0.0, total_ms=0.0),  # set below, once the result is serialized
         **outcome,
-    )
-    return result.model_dump(mode="json", serialize_as_any=True)
+    ).model_dump(mode="json", serialize_as_any=True)
+    finished = time.perf_counter()
+    compute_ms = (computed - computing) * 1000
+    setup_ms = ((computing - started) + (finished - computed)) * 1000
+    engine_ms = (finished - started) * 1000
+    # The server replaces total_ms with the call's whole time in the service
+    timing = Timing(compute_ms=compute_ms, setup_ms=setup_ms, engine_ms=engine_ms, total_ms=engine_ms)
+    return result | {"timing": timing.model_dump(mode="json")}
 
 
 def _outcome(data: MarketData, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     """The MarketResult fields a tool call decides: its status and payload, or its error."""
     tool = TOOLS[name]
     try:
-        output = tool.run(data, **{key: _naive_utc(value) for key, value in arguments.items()})
+        output = tool.run(data, **arguments)
     except InvalidRequest as error:
         return {"status": "failed", "error": Failure(code="invalid_request", message=str(error))}
     except Exception:
@@ -145,6 +167,7 @@ def _outcome(data: MarketData, name: str, arguments: dict[str, Any]) -> dict[str
         "payload": output.payload,
         "engine": engine(tool.family),
         "rows_scanned": output.rows_scanned,
+        "asset_count": int(output.assets),
         "warnings": list(output.warnings),
         "limitations": list(tool.limitations),
     }

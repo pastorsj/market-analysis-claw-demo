@@ -28,7 +28,7 @@ describe('buildGpuAccelerationByNode', () => {
 
   it('counts each call once and merges a technology across calls', () => {
     const second = withEngine(
-      { device: 'gpu', library: 'cuml.accel', version: '26.6.0' },
+      { device: 'gpu', library: 'cuml.accel', version: '26.6.0', engineId: null },
       'another-call'
     )
     const badge = buildGpuAccelerationByNode([anomaly, anomaly, second]).get('market-anomaly-scan')
@@ -39,10 +39,14 @@ describe('buildGpuAccelerationByNode', () => {
 
   it('never badges a CPU run, an unknown library or a failed receipt', () => {
     expect(
-      gpuAccelerationForReceipt(withEngine({ device: 'cpu', library: 'pandas', version: '2' }))
+      gpuAccelerationForReceipt(
+        withEngine({ device: 'cpu', library: 'pandas', version: '2', engineId: null })
+      )
     ).toBeNull()
     expect(
-      gpuAccelerationForReceipt(withEngine({ device: 'gpu', library: 'torch', version: '2' }))
+      gpuAccelerationForReceipt(
+        withEngine({ device: 'gpu', library: 'torch', version: '2', engineId: null })
+      )
     ).toBeNull()
     expect(gpuAccelerationForReceipt({ ...anomaly, status: 'failed' })).toBeNull()
   })

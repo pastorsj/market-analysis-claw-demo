@@ -63,7 +63,9 @@ def run(
             batches=scan.batches,
             observations=[],
         )
-        return Output(payload, rows_scanned=0, empty=True, warnings=("No minute bars matched the assets and window.",))
+        return Output(
+            payload, rows_scanned=0, assets=0, empty=True, warnings=("No minute bars matched the assets and window.",)
+        )
 
     sessions = with_metrics(scan.result)
     ranked = sessions.sort_values(
@@ -83,7 +85,7 @@ def run(
             for rank, row in enumerate(rows, start=1)
         ],
     )
-    return Output(payload, rows_scanned=scan.rows)
+    return Output(payload, rows_scanned=scan.rows, assets=payload.assets_scanned)
 
 
 def session_profile(frame: pd.DataFrame, *, opening_end: int, closing_start: int) -> pd.DataFrame:

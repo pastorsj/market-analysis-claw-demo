@@ -53,11 +53,18 @@ class Engine(BaseModel):
     device: Literal["cpu", "gpu"]
     library: str = Field(description="pandas, scikit-learn and networkx on CPU; cudf.pandas, cuml.accel, nx-cugraph")
     version: str
+    engine_id: str = Field(description="The engine by method and device: cudf-gpu.v1, or its CPU twin pandas-cpu.v1")
 
 
 class Timing(BaseModel):
-    compute_ms: float = Field(description="Time the worker spent computing the result")
-    total_ms: float = Field(description="End to end, including queueing for the worker")
+    """Milliseconds, with sub-millisecond precision: the service's call, the worker's share and its calculation."""
+
+    compute_ms: float = Field(description="The worker's calculation")
+    setup_ms: float | None = Field(
+        None, description="The worker's other work on the call: reading the arguments, then building the result"
+    )
+    engine_ms: float | None = Field(None, description="The worker's whole handling of the call: setup and compute")
+    total_ms: float = Field(description="End to end in the service, including the wait for the worker")
 
 
 def _clipped(message: str) -> str:
@@ -79,6 +86,7 @@ class MarketResult[PayloadT: BaseModel](BaseModel):
     engine: Engine | None = None
     timing: Timing
     rows_scanned: int = Field(0, description="Input rows the calculation ran over")
+    asset_count: int | None = Field(None, description="Distinct assets in those rows")
     warnings: list[str] = []
     limitations: list[str] = []
 
@@ -119,6 +127,10 @@ class AnomalyObservation(BaseModel):
 
 
 class MarketAnomalyPayload(BaseModel):
+    policy_id: Literal["pca-reconstruction-market-v1"] = Field(
+        "pca-reconstruction-market-v1",
+        description="The scoring policy: PCA reconstruction error, flagged above the baseline's 95th percentile",
+    )
     universe_id: str
     feature_names: list[str]
     training_observations: int

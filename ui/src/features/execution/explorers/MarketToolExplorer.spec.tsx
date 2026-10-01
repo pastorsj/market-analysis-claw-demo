@@ -15,7 +15,12 @@ const call = (index: number, device: 'cpu' | 'gpu'): AnalyticsResultReceipt => {
     invocationId: `call-${index}`,
     content: {
       ...receipt.content!,
-      engine: { device, library: device === 'gpu' ? 'cuml.accel' : 'scikit-learn', version: '1' },
+      engine: {
+        device,
+        library: device === 'gpu' ? 'cuml.accel' : 'scikit-learn',
+        version: '1',
+        engineId: null,
+      },
     },
   }
 }

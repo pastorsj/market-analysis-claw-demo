@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import json
+from datetime import UTC
 from datetime import datetime
 
 from ..data import MarketData
@@ -26,6 +28,24 @@ COLUMNS: dict[Metric, str] = {
 }
 
 
+def both_windows(universe_id: str, end: datetime, sessions: int, metrics: list[Metric]) -> str:
+    """The rejection of a call with both start and sessions, written so the model can fix the call in one retry:
+    which argument to drop, and the call to make instead, built from its own arguments."""
+    retry = json.dumps(
+        {
+            "universe_id": universe_id,
+            "end": (end if end.tzinfo else end.replace(tzinfo=UTC)).astimezone(UTC).isoformat().replace("+00:00", "Z"),
+            "sessions": sessions,
+            "metrics": metrics,
+        }
+    )
+    return (
+        "start and sessions cannot both be given: sessions already sets the window's start, counting back from end. "
+        f"Call market_scan again without start, for the {sessions} sessions ending at end: {retry} "
+        "(keep your other arguments). For a date range instead, drop sessions and keep start and end."
+    )
+
+
 def run(
     data: MarketData,
     *,
@@ -43,7 +63,7 @@ def run(
     prices = data.prices
     prices = prices[prices["asset_id"].isin(data.universe(universe_id))]
     if sessions is not None and start is not None:
-        raise InvalidRequest("give start or sessions, not both: sessions counts back from end")
+        raise InvalidRequest(both_windows(universe_id, end, sessions, metrics))
     if sessions is not None:
         # "The N sessions ending D": the N latest sessions on or before D. Selecting them by value keeps a
         # timestamp read from the frame out of scalar comparisons, which cudf.pandas runs on the CPU.
@@ -63,7 +83,9 @@ def run(
             assets_ranked=0,
             observations=[],
         )
-        return Output(payload, rows_scanned=0, empty=True, warnings=("No prices matched the universe and window.",))
+        return Output(
+            payload, rows_scanned=0, assets=0, empty=True, warnings=("No prices matched the universe and window.",)
+        )
 
     # A return runs from the close before the window's first session (data.py's return_base) to its last close.
     summary = bars.groupby("asset_id").agg(
@@ -111,4 +133,4 @@ def run(
         assets_ranked=len(summary),
         observations=observations,
     )
-    return Output(payload, rows_scanned=len(bars))
+    return Output(payload, rows_scanned=len(bars), assets=len(summary))

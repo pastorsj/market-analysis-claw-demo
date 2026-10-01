@@ -29,6 +29,7 @@
         "minimum_percentile": null
       },
       "payload": {
+        "policy_id": "pca-reconstruction-market-v1",
         "universe_id": "reviewed_assets",
         "feature_names": [
           "adjusted_return_1d",
@@ -121,13 +122,17 @@
       "engine": {
         "device": "gpu",
         "library": "cuml.accel",
-        "version": "26.6.0"
+        "version": "26.6.0",
+        "engineId": "cuml-pca-anomaly-gpu.v1"
       },
       "timing": {
-        "computeMs": 128.4,
-        "totalMs": 135.6
+        "computeMs": 7.4897,
+        "setupMs": 1.2584,
+        "engineMs": 8.7481,
+        "totalMs": 9.8312
       },
       "rowsScanned": 1992,
+      "assetCount": 12,
       "warnings": [],
       "limitations": [
         "Anomaly scores describe unusual observed feature combinations; they are not forecasts or probabilities.",

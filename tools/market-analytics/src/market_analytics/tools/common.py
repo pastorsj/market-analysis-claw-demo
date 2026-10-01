@@ -19,6 +19,7 @@ from ..models import InvalidRequest
 class Output:
     payload: BaseModel
     rows_scanned: int
+    assets: int  # distinct assets in the rows scanned
     empty: bool = False
     warnings: tuple[str, ...] = ()
 

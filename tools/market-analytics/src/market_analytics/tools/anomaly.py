@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 from sklearn import config_context
 from sklearn.decomposition import PCA
 
@@ -110,4 +111,6 @@ def run(
         flagged_observations=int((score_error > threshold).sum()),
         observations=observations,
     )
-    return Output(payload, rows_scanned=len(training) + len(scoring), empty=not observations)
+    # Concatenated, then counted: both windows' assets, on the GPU under cudf.pandas
+    assets = pd.concat([training["asset_id"], scoring["asset_id"]]).nunique()
+    return Output(payload, rows_scanned=len(training) + len(scoring), assets=assets, empty=not observations)

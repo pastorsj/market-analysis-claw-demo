@@ -30,11 +30,50 @@ describe('MarketToolInspector', () => {
       )
     ).toBeVisible()
     expect(within(card).getByText('cuML 26.6.0')).toBeVisible()
-    expect(within(card).getByText('cuml.accel')).toBeVisible()
+    expect(within(card).getByText('cuml-pca-anomaly-gpu.v1')).toBeVisible()
+    expect(within(card).getByText('1,992 rows')).toBeVisible()
+    expect(within(card).getByText('12 assets')).toBeVisible()
     expect(within(card).getByText('GPU observed')).toBeVisible()
-    expect(within(card).getByText('173 ms')).toBeVisible()
+    // The tool's own total and the engine's times, as recorded, to the hundredth of a millisecond
+    expect(within(card).getByText('9.83 ms')).toBeVisible()
+    const timing = within(card).getByLabelText('Engine timing details')
+    expect(timing).toHaveTextContent('Other engine work1.26 ms')
+    expect(timing).toHaveTextContent('GPU compute7.49 ms')
+    expect(timing).toHaveTextContent('Engine total8.75 ms')
     expect(within(card).getByText('market_analysis')).toBeVisible()
     expect(screen.getByTestId('market-tool-inspector')).toHaveAttribute('data-accelerated', 'true')
+  })
+
+  it('shows a receipt recorded before the engine id, asset count and setup time as before', () => {
+    const receipt = receiptOf('analytics_result')
+    const content = receipt.content!
+    const { engineId: _engineId, ...engine } = content.engine!
+    const { setupMs: _setupMs, engineMs: _engineMs, ...timing } = content.timing
+    const { assetCount: _assetCount, ...rest } = content
+    const { policy_id: _policyId, ...payload } = content.payload!
+    renderReceipt({
+      ...receipt,
+      content: {
+        ...rest,
+        engine,
+        timing: { ...timing, computeMs: 128.4, totalMs: 135.6 },
+        payload,
+      } as unknown as Content,
+    })
+
+    const card = screen.getByTestId('market-tool-receipt')
+    expect(within(card).getByText('cuml.accel')).toBeVisible()
+    expect(within(card).getByText('reviewed_assets', { selector: 'small' })).toBeVisible()
+    expect(within(card).getByText('173 ms')).toBeVisible() // the call as the agent timed it
+    const details = within(card).getByLabelText('Engine timing details')
+    expect(details).toHaveTextContent('Other engine work7.2 ms') // total − compute
+    expect(details).toHaveTextContent('Engine total135.6 ms')
+    expect(screen.getByText('PCA reconstruction')).toBeVisible()
+  })
+
+  it('names the anomaly policy as the original did', () => {
+    renderReceipt(receiptOf('analytics_result'))
+    expect(screen.getByText('Pca-Reconstruction-Market-V1')).toBeVisible()
   })
 
   it('ranks the flagged anomalies with their strongest deviation', () => {
@@ -47,7 +86,9 @@ describe('MarketToolInspector', () => {
 
   it('shows a CPU call as a plain tool receipt', () => {
     renderReceipt(
-      withContent({ engine: { device: 'cpu', library: 'scikit-learn', version: '1.7.2' } })
+      withContent({
+        engine: { device: 'cpu', library: 'scikit-learn', version: '1.7.2', engineId: null },
+      })
     )
     expect(screen.getByText('Tool execution receipt')).toBeVisible()
     expect(screen.getByText('scikit-learn 1.7.2')).toBeVisible()

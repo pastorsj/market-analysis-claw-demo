@@ -39,7 +39,7 @@ Ultra → Sol with a Nemotron 3 Super judge (24 against 20 of 34); a frontier ju
 |---|---|---|
 | build.nvidia.com (default) | `passthrough.nemotron`, efficient Nemotron 3 Ultra (`nvidia/nemotron-3-ultra-550b-a55b`) | 2026-09-30: 13 of 34; 2026-10-01: 7 of 16 |
 | A provider serving GPT-6.1 Sol (recommended) | `escalation.nemotron-gpt`: Ultra → GPT-6.1 Sol, judged by GPT-6.1 Sol | 2026-10-01: 10 of 16 |
-| A provider serving Claude Opus 5.5 | `pinned-capable.nemotron-claude`, capable Claude Opus 5.5 on `CAPABLE_BASE_URL` | 2026-10-01: 8 of 16 |
+| A provider serving Claude Opus 5.5 | `pinned-capable.nemotron-claude`, capable Claude Opus 5.5 on `CAPABLE_BASE_URL` | 2026-10-01: 9 of 16 |
 | GPT-6.1 Sol on every turn | `pinned-capable.nemotron-gpt` | 2026-10-01: 7 of 16 (GPT-6 Sol on 2026-09-30: 24 of 34) |
 | Ultra escalating to Claude Opus 5.5 | `escalation.nemotron-claude`, judged by Claude Opus 5.5 | 2026-10-01: 6 of 16 |
 | All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`) | 2026-09-30: 12 of 34 |
@@ -148,15 +148,18 @@ a route's targets by model id; [why](../infra/switchyard/README.md#routes)).
 **Scoring.** The deterministic checks below, with the oracles recomputed for the window-return change, and two
 answer graders on every run, three samples each with a majority vote: GPT-6 Sol (the 2026-09-30 grader and
 prompt) and Claude Opus 5.5 (the same prompt). A run passes when its deterministic check passes and the
-grader's majority says pass.
+grader's majority says pass. The first scoring failed three Claude-written Form 8-K reports that said, in words
+the check did not know ("can't cite ... the filing deadline", "neither is stated here"), that the evidence lacks
+the deadline. The check now accepts any such flag about the deadline and still fails any other deadline; the
+results below are the re-scored ones (one more pass for Claude Opus 5.5 pinned, two for Ultra → Claude Opus 5.5).
 
 | Arm | Role | Pass, GPT-6 Sol grader | Pass, Claude Opus 5.5 grader | Frontier share of agent turns | Frontier share of tokens, without / with judge calls | Escalated (false latches, rescues) | p50 / p95 s | Failed jobs, stalled runs |
 |---|---|---|---|---|---|---|---|---|
 | Ultra alone (`passthrough.nemotron`) | candidate | 7/16 | 10/16 | 0% | 0% | – | 16 / 120 | 0, 0 |
 | GPT-6.1 Sol pinned (`pinned-capable.nemotron-gpt`) | ceiling | 7/16 | 9/16 | 100% | 100% | – | 32 / 617 | 2, 2 |
-| Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) | ceiling | 8/16 | 12/16 | 100% | 100% | – | 28 / 72 | 0, 0 |
+| Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) | ceiling | 9/16 | 13/16 | 100% | 100% | – | 28 / 72 | 0, 0 |
 | **Ultra → GPT-6.1 Sol (`escalation.nemotron-gpt`)** | candidate | **10/16** | **14/16** | 10% | 10% / 20% | 5/16 (1, 2) | 52 / 104 | 0, 0 |
-| Ultra → Claude Opus 5.5 (`escalation.nemotron-claude`) | candidate | 6/16 | 7/16 | 13% | 23% / 35% | 5/16 (1, 1) | 56 / 156 | 0, 1 |
+| Ultra → Claude Opus 5.5 (`escalation.nemotron-claude`) | candidate | 8/16 | 9/16 | 13% | 23% / 35% | 5/16 (1, 3) | 56 / 156 | 0, 1 |
 
 Tokens are Switchyard's per-session counts over every upstream call. A false latch is an escalated run of a
 question Ultra alone passed both times; a rescue is an escalated run that passed on one it did not.
@@ -169,12 +172,13 @@ What it shows:
   at p95, about 10 s per run. The Claude Opus 5.5 judge took 4.5 s and 11.5 s; one verdict hit its 120 s deadline
   and the turn was retried.
 - **GPT-6.1 Sol pinned was held back by the tools and the stream, not by its answers.** It sent `market_scan` a
-  `start` and a `sessions` together, which the tool rejects, and repeated the call (23 tool errors), and 2 of its 16
+  `start` and a `sessions` together, which the tool rejects, and repeated the call (23 tool errors; the rejection
+  now names the argument to drop and gives the call to make), and 2 of its 16
   runs failed on a stalled stream at 617 s, as on 2026-09-30. With escalation, Ultra drives the market tools and
   GPT-6.1 Sol joins late, so neither happened.
-- **Ultra → Claude Opus 5.5 trailed Ultra alone.** The handoff to Claude worked in every escalated run, but the
-  Claude judge left more of Ultra's flawed reports alone (rankings out of order, wrong dates), and Claude's reports
-  on the Form 8-K question phrase the missing deadline in a way the deterministic check misses (pinned too).
+- **Ultra → Claude Opus 5.5 did no better than Ultra alone** (8 and 9 against 7 and 10). The handoff to Claude
+  worked in every escalated run, but the Claude judge left more of Ultra's flawed reports alone (rankings out of
+  order, wrong dates).
 - **The graders agreed on 66 of 80 runs.** The Claude grader passed more runs in every arm (1 to 4 more). Both
   ranked Claude Opus 5.5 pinned above GPT-6.1 Sol pinned, so the GPT-6 Sol grader showed no preference for its
   own model family.
@@ -235,7 +239,7 @@ and BMNR.
 | `news-sentiment-reaction` | gives the oracle's mean five-session return for each sentiment label (12 most liquid issuers); addresses causation |
 | `unusual-sessions` | says the scores are neither forecasts nor explanations |
 | `peer-network` | names the oracle's most correlated declared-peer pair |
-| `cyber-disclosure-rules` | cites Form 8-K Item 1.05, gives the four-business-day deadline or says the corpus does not state it, and names a company whose 8-K in the corpus reports Item 1.05 |
+| `cyber-disclosure-rules` | cites Form 8-K Item 1.05, gives the four-business-day deadline or says, in any words, that the evidence does not state it (and gives no other deadline), and names a company whose 8-K in the corpus reports Item 1.05 |
 | `news-and-filings` | names the issuer with the most negative news; retrieved from the SEC filings |
 | `moves-and-filings` | names the oracle's three strongest and three weakest stocks of February; retrieved from the SEC filings |
 | `story-event-context` | names at least 10 of the 12 story issuers; at least 90% of its percentages match a receipt |
