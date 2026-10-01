@@ -28,6 +28,10 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: shellcheck
         run: git ls-files -z '*.sh' | xargs -0 uvx --from "$SHELLCHECK" shellcheck -x
+      - name: ruff (infra/phoenix, the one Python file outside the uv projects)
+        run: |
+          uvx "$RUFF" check infra/phoenix
+          uvx "$RUFF" format --check infra/phoenix
       - name: Compose config for every profile set, with no .env
         run: scripts/demo.sh test compose
       - name: No data files outside the synthetic text and the test fixtures
