@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "build": "synthetic-market@1.0.0+standard+b9573d3e1b59",
+  "build": "synthetic-market@1.0.0+standard+f65756f60868",
   "id": "synthetic-market",
   "version": "1.0.0",
   "title": "Synthetic US Equities",
@@ -122,6 +122,9 @@
       "sources": [
         "market_data"
       ],
+      "tools": [
+        "cudf"
+      ],
       "featured": true
     },
     {
@@ -132,6 +135,9 @@
       "question": "For company news about the 12 most liquid issuers published from August 17 through August 24, 2026, how did the sentiment labels line up with the issuers' returns over the following five sessions? Describe the relationship without claiming causation.",
       "sources": [
         "market_data"
+      ],
+      "tools": [
+        "cudf"
       ],
       "featured": true
     },
@@ -144,6 +150,10 @@
       "sources": [
         "market_data"
       ],
+      "tools": [
+        "cudf",
+        "cuml"
+      ],
       "featured": true
     },
     {
@@ -154,6 +164,10 @@
       "question": "In the return-correlation network from June through August 2026, which issuers are the most central, and which pairs moved together most closely?",
       "sources": [
         "market_data"
+      ],
+      "tools": [
+        "cudf",
+        "cugraph"
       ],
       "featured": true
     },
@@ -167,6 +181,9 @@
         "sec_filings",
         "market_regulations"
       ],
+      "tools": [
+        "retrieval"
+      ],
       "featured": true
     },
     {
@@ -179,6 +196,10 @@
         "market_data",
         "sec_filings"
       ],
+      "tools": [
+        "cudf",
+        "retrieval"
+      ],
       "featured": true
     },
     {
@@ -189,6 +210,9 @@
       "question": "For each company news story about the 12 most liquid issuers published from August 17 through August 28, 2026, what was the issuer's return on the publication session and over the two sessions after it?",
       "sources": [
         "market_data"
+      ],
+      "tools": [
+        "cudf"
       ]
     },
     {
@@ -199,6 +223,9 @@
       "question": "At the August 24, 2026 market-close anchor, rank the 12 most liquid issuers by the likelihood of a positive return over the next five trading sessions.",
       "sources": [
         "market_data"
+      ],
+      "tools": [
+        "kumo"
       ]
     },
     {
@@ -209,6 +236,9 @@
       "question": "How many issuers are in each sector, and what was each sector's median return over the 20 trading sessions ending August 31, 2026?",
       "sources": [
         "market_data"
+      ],
+      "tools": [
+        "ontology"
       ]
     },
     {
@@ -220,12 +250,16 @@
       "sources": [
         "market_data"
       ],
+      "tools": [
+        "cudf"
+      ],
       "profiles": [
         "standard",
         "large"
       ]
     }
   ],
+  "conversations": [],
   "structured": {
     "source": "market_data",
     "database_name": "synthetic_market",
@@ -348,7 +382,7 @@
         "09:30",
         "16:00"
       ],
-      "root": "/data/cache/generated/1ca5659e6931f72c"
+      "root": "/data/cache/generated/a4068089ddb5aae4"
     }
   },
   "documents": {
@@ -357,7 +391,102 @@
       "sec_filings",
       "market_regulations"
     ],
-    "path": "corpus/documents.jsonl"
+    "path": "corpus/documents.jsonl",
+    "benchmark_queries": [
+      {
+        "query": "departure of a chief financial officer and the appointment of a successor",
+        "sources": [
+          "sec_filings"
+        ]
+      },
+      {
+        "query": "entry into a material definitive credit agreement with a syndicate of lenders",
+        "sources": [
+          "sec_filings"
+        ]
+      },
+      {
+        "query": "results of the annual meeting of shareholders and the votes on director elections",
+        "sources": [
+          "sec_filings"
+        ]
+      },
+      {
+        "query": "completion of an acquisition or disposition of a business",
+        "sources": [
+          "sec_filings"
+        ]
+      },
+      {
+        "query": "press release announcing quarterly financial results furnished as an exhibit",
+        "sources": [
+          "sec_filings"
+        ]
+      },
+      {
+        "query": "amendments to the articles of incorporation or bylaws",
+        "sources": [
+          "sec_filings"
+        ]
+      },
+      {
+        "query": "beneficial ownership report after acquiring more than five percent of a class of equity securities",
+        "sources": [
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "management's assessment of internal control over financial reporting",
+        "sources": [
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "net capital requirements for brokers and dealers",
+        "sources": [
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "locating securities to borrow before effecting a short sale",
+        "sources": [
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "conditions for resales of restricted securities under the safe harbor",
+        "sources": [
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "disclosure of executive compensation in proxy statements",
+        "sources": [
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "disclosure of a material cybersecurity incident and the timing of the report",
+        "sources": [
+          "sec_filings",
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "share repurchase program authorizations and the rules for issuer repurchases",
+        "sources": [
+          "sec_filings",
+          "market_regulations"
+        ]
+      },
+      {
+        "query": "changes in a registrant's certifying accountant",
+        "sources": [
+          "sec_filings",
+          "market_regulations"
+        ]
+      }
+    ]
   },
   "parts": {
     "structured": {
@@ -398,7 +527,7 @@
         "tables/daily_prices.parquet": "a79befea158bdbe7b462ab54237c8d76ed4a1d5f4f0c40d5ad0cc9dbfaab7846",
         "tables/ticker_history.parquet": "8c59b071f6a75fea534523a984908a48179eb324adcdb18c3718342980366d41",
         "tables/trading_sessions.parquet": "88c3f650eb639cf9ec4ea9640aa90c60ff22d8e12689f0851510cd6922fe724b",
-        "structured/synthetic_market.duckdb": "cd667d38a96faa83b369dd216e95ef89dcd905bec4ac18260bc1edee7202f453",
+        "structured/synthetic_market.duckdb": "81f85f7f02c499e07043d8fd9b028d61ce77d93bb1bfaa905bb76ab1d7931b37",
         "ontology/model.yaml": "c6551ae4cc3fb6196d5d1a4566cc189a05a99c4348f1ea29916e3a7131f24df2",
         "prediction/graph.json": "83cede57e89567148fc25a4f1cea7be439ae9560a977f8e9df7a993e271664ca",
         "prediction/templates.json": "26f6b451f85b59ee2172ccc714b4065e2ff3edacface974aeca305d9a649689d"

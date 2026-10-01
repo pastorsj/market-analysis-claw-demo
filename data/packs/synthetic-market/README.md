@@ -44,6 +44,20 @@ answer should cite.
 Each question declares the `tools` it is expected to use, as the demo scenario picker's pills
 ([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)).
 
+### Recorded answers
+
+`recordings/` holds the ten questions of the `standard` profile, recorded on 2026-10-01 with the `.env.example`
+models (Nemotron 3 Ultra alone, on build.nvidia.com) and reviewed against `eval/oracles/` and the evidence. Four
+were wrong and asked again, twice at most. Three are still wrong, and the bundle keeps them as Ultra answered:
+
+- `news-and-filings` (featured) counts negative news only among the articles `analyze_news_price_relationship`
+  could align to a forward return, so it names GIOR, PRAL and KASI with three negative items each; the oracle has
+  GIOR and KASI with four. It also finds no Q2 2026 filing about an operational disruption.
+- `story-event-context` leaves out the stories published on 2026-08-28, whose two following sessions run past the
+  data, without saying so, and cites no evidence.
+- `sector-sql` gives each sector's median daily return over the 20 sessions (and says so), not the median of the
+  issuers' 20-session returns that the question asks for and the oracle computes.
+
 ## How it is made
 
 Two stages, so a build is deterministic and offline while the text still comes from Nemotron:
@@ -105,7 +119,7 @@ records the latest run.
 | `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
 | `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
-| `recordings/` | the replay bundle of the featured questions (`demo.sh record`, [recordings](../../../docs/data-packs.md#recordings)) |
+| `recordings/` | the replay bundle of the ten questions of the `standard` profile (`demo.sh record --all` with the `.env.example` models, [recordings](../../../docs/data-packs.md#recordings)); `intraday-ranges` needs a minute-bar profile |
 
 ## Licenses
 

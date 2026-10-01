@@ -142,20 +142,26 @@ its turns). `record` writes them into `index.json`; for a bundle recorded before
 recorded events. A market tool that ran on the CPU shows its CPU library (pandas, scikit-learn or NetworkX) in the
 same RAPIDS color, not the GPU name.
 
-Both packs are recorded, each with its six featured questions:
+Both packs are recorded: `synthetic-market`'s ten questions of its default (`standard`) profile, and every
+`us-equities` session, its 30 questions and 15 two-turn conversations (45 sessions, 60 answers). The
+synthetic pack's eleventh question, `intraday-ranges`, needs a minute-bar profile (`ci` or `intraday`), so its
+bundle leaves it out.
 
 ```bash
 ./scripts/demo.sh replay                          # synthetic-market, the default
 DATA_PACK=us-equities ./scripts/demo.sh replay
 ```
 
-The bundles were recorded on 2026-10-01 with the `.env.example` models (Nemotron 3 Ultra alone, on
-build.nvidia.com) and every profile, including `ontology` and the local Kumo NIM, on a Brev A100 VM, so every
-answer that called the market tools also carries its CPU/GPU comparison for the Benchmark tab. They predate the
-GPU Milvus, so no turn carries a Milvus comparison (`retrievalBenchmark`) yet: a bundle recorded on the GPU
-profile from now on does. Each question
-was asked once and succeeded, in 14 s to 7.5 minutes; 11 of the 12 answers cite their evidence. The bundles keep
-Ultra's faults rather than hiding them ([models and routing](models-and-routing.md#the-default-on-buildnvidiacom)).
+Both were recorded on 2026-10-01 on a Brev A100 VM with every profile, including `ontology`, the local Kumo
+NIM and the GPU Milvus, so every answer that called the market tools carries its CPU/GPU comparison for the
+Benchmark tab, and every answer that searched documents carries the Milvus CPU/GPU index comparison
+(`retrievalBenchmark`). `synthetic-market` was recorded with the `.env.example` models and corpora (Nemotron 3
+Ultra alone, on build.nvidia.com), as a public user runs it. `us-equities`, the hosted demo's pack, was recorded
+as that deployment runs: `DATA_CORPORA=sec_filings,market_regulations,world_news` and Nemotron 3 Ultra escalating
+to GPT-6.1 Sol (`escalation.nemotron-gpt`) on an OpenAI-compatible endpoint serving both. The recorder writes
+served model ids under their public names (`nemotron-3-ultra`, `gpt-6.1-sol`). Every answer was reviewed against
+the pack's oracles and evidence; the ones that were wrong were asked again, and the bundles keep the faults that
+remained rather than hiding them (each pack's README lists them).
 The `us-equities` bundle holds results derived from its external dataset: the answers' figures and, in
 `database.json`, the first rows of each table (a few dozen rows of daily prices), never the minute bars.
 

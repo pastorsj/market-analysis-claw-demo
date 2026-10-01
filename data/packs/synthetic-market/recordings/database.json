@@ -651,7 +651,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 769
+          "duration_ms": 690
         },
         "assets": {
           "table": "assets",
@@ -818,7 +818,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 697
+          "duration_ms": 685
         },
         "company_news": {
           "table": "company_news",
@@ -935,7 +935,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 719
+          "duration_ms": 731
         },
         "daily_prices": {
           "table": "daily_prices",
@@ -1082,7 +1082,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 749
+          "duration_ms": 691
         },
         "ticker_history": {
           "table": "ticker_history",
@@ -1226,7 +1226,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 695
+          "duration_ms": 710
         },
         "prediction.asset_entities": {
           "table": "prediction.asset_entities",
@@ -1303,7 +1303,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 692
+          "duration_ms": 702
         },
         "prediction.news_events": {
           "table": "prediction.news_events",
@@ -1380,7 +1380,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 720
+          "duration_ms": 721
         },
         "prediction.price_events": {
           "table": "prediction.price_events",
@@ -1467,7 +1467,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 722
+          "duration_ms": 717
         },
         "prediction.return_outcomes": {
           "table": "prediction.return_outcomes",
@@ -1554,7 +1554,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 771
+          "duration_ms": 734
         },
         "prediction.top_12_population": {
           "table": "prediction.top_12_population",
@@ -1591,10 +1591,64 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 686
+          "duration_ms": 706
         }
       },
       "queries": [
+        {
+          "sql": "WITH recent_dates AS (SELECT trading_date FROM synthetic_market.main.trading_sessions WHERE trading_date <= DATE '2026-08-31' ORDER BY trading_date DESC LIMIT 20), asset_counts AS (SELECT sector, COUNT(DISTINCT asset_id) AS issuer_count FROM synthetic_market.main.assets GROUP BY sector), median_returns AS (SELECT a.sector, MEDIAN(dp.total_return_1d) AS median_return FROM synthetic_market.main.assets a JOIN synthetic_market.main.daily_prices dp ON a.asset_id = dp.asset_id JOIN recent_dates rd ON dp.trading_date = rd.trading_date GROUP BY a.sector) SELECT ac.sector, ac.issuer_count, mr.median_return FROM asset_counts ac LEFT JOIN median_returns mr ON ac.sector = mr.sector ORDER BY ac.sector;",
+          "result": {
+            "columns": [
+              "sector",
+              "issuer_count",
+              "median_return"
+            ],
+            "types": [
+              "VARCHAR",
+              "BIGINT",
+              "DOUBLE"
+            ],
+            "rows": [
+              [
+                "Construction",
+                41,
+                0.0010557255092956686
+              ],
+              [
+                "Finance, Insurance and Real Estate",
+                425,
+                0.0008214532573163069
+              ],
+              [
+                "Manufacturing",
+                792,
+                0.0013738018380901051
+              ],
+              [
+                "Mining",
+                119,
+                -0.0009788732317390636
+              ],
+              [
+                "Retail Trade",
+                138,
+                -0.0005718639166656936
+              ],
+              [
+                "Services",
+                304,
+                0.0002115828219330096
+              ],
+              [
+                "Transportation, Communications, Electric, Gas and Sanitary Services",
+                181,
+                -0.0001536595917986383
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 756
+          }
+        },
         {
           "sql": "SELECT * FROM \"main\".\"asset_relationships\" LIMIT 25",
           "result": {
@@ -1790,7 +1844,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 696
+            "duration_ms": 725
           }
         },
         {
@@ -2231,7 +2285,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 696
+            "duration_ms": 713
           }
         },
         {
@@ -2537,7 +2591,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 700
+            "duration_ms": 711
           }
         },
         {
@@ -2924,7 +2978,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 706
+            "duration_ms": 736
           }
         },
         {
@@ -3122,7 +3176,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 696
+            "duration_ms": 682
           }
         },
         {
@@ -3293,7 +3347,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 716
+            "duration_ms": 699
           }
         },
         {
@@ -3400,7 +3454,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 681
+            "duration_ms": 675
           }
         },
         {
@@ -3598,7 +3652,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 713
+            "duration_ms": 714
           }
         },
         {
@@ -3823,7 +3877,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 717
+            "duration_ms": 740
           }
         },
         {
@@ -4048,7 +4102,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 729
+            "duration_ms": 734
           }
         },
         {
@@ -4099,7 +4153,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 693
+            "duration_ms": 686
           }
         }
       ]

@@ -124,8 +124,9 @@ turn is recommended), or a different endpoint for every model, see
 ```
 
 This serves the UI alone on the sessions recorded with the data pack, at <http://127.0.0.1:3100>: the answers,
-their evidence and the execution graphs, with no `.env`, keys, API or GPU. Both packs ship their six featured
-questions recorded; `DATA_PACK=us-equities ./scripts/demo.sh replay` replays the other one
+their evidence and the execution graphs, with no `.env`, keys, API or GPU. `synthetic-market` ships its ten
+questions recorded, and `us-equities` all 45 of its sessions (30 questions and 15 two-turn conversations);
+`DATA_PACK=us-equities ./scripts/demo.sh replay` replays the other one
 ([data packs](docs/data-packs.md#recordings)). `./scripts/demo.sh up` returns to live mode.
 
 ## Example questions
