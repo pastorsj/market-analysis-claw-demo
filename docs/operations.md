@@ -5,8 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 # Operations
 
-Running the demo day to day: the lifecycle commands, Phoenix, jobs and recordings, troubleshooting, and
-running it on a Brev VM. Run `./scripts/demo.sh` with no arguments for the command list.
+Running the demo day to day: the lifecycle commands, Phoenix, jobs and recordings, the on-demand checks of a
+running deployment, troubleshooting, and running it on a Brev VM. Run `./scripts/demo.sh` with no arguments for
+the command list.
 
 ## Lifecycle
 
@@ -80,6 +81,65 @@ The API's settings are in [`api/README.md`](../api/README.md#environment).
 
 `replay` swaps the UI container into replay mode on the same port. [Data packs](data-packs.md#recordings)
 covers the options and what to review before committing a bundle.
+
+## On-demand checks
+
+Three commands check a running deployment. You run them by hand, for example before a demo or after changing the
+host; CI never runs them. Every question they ask runs live and costs model calls.
+
+| Command | What it checks | Needs |
+|---|---|---|
+| `./scripts/demo.sh test live --url URL` | The deployment's health and pack, then each featured question of its active pack asked through the UI: success, a resolved citation, the picker's tool pills against the tools the run called, the replay, the closing events and a latency budget | Node.js 22 (Playwright fetches Chromium), and the URL of the deployment's UI |
+| `./scripts/demo.sh eval [--pack P] [--runs N] [--questions ID,...]` | Answer quality: the oracle checks of the pack's `eval/answers.yaml`, and with `GRADER_*` set an LLM grader ([eval](../eval/README.md)) | uv; by default this host's UI, else `--url` |
+| `./scripts/demo.sh test gpu [--perf]` | On an NVIDIA GPU host, the CPU/GPU parity tests; `--perf` also the running stack's GPU speedups against floors from the A100 recordings ([thresholds](../eval/README.md#thresholds)). Skips on a CPU host | uv; for `--perf`, the stack up with `analytics-gpu` |
+
+**The live test** opens the deployment the way a visitor does. The URL is the UI's, given on the command line and
+never stored: `http://127.0.0.1:3100` on the host, the same address through the SSH tunnel of
+[Brev VM mode](#brev-vm-mode) (step 8), or a link to the UI that opens without an interactive sign-in.
+
+```bash
+./scripts/demo.sh test live --url http://127.0.0.1:3100
+./scripts/demo.sh test live --url http://127.0.0.1:3100 --questions market-leaders,peer-network
+./scripts/demo.sh test live --url http://127.0.0.1:3100 --budget 300 --budget cyber-disclosure-rules=600
+```
+
+It checks `/api/health` (live mode), `/api/v1/pack` and the data sources, and that the landing page lists the
+featured questions. Then, one at a time, each in a new browser session, it picks each featured question in the
+composer's scenario picker, sends it, and checks:
+
+| Check | Passes when |
+|---|---|
+| success | the job ends `success` |
+| citations | the report cites at least one receipt of the run, and every citation resolves |
+| pills | the picker shows the pills `questions.yaml` declares, and the run used each of them (the pills its replay shows) |
+| replay | the job's export loads, its event stream replays every event and ends `success`, and after a reload the reopened session's execution view shows the run's closing events |
+| closing | the run ends on `run.completed`, `report.completed`, `report.reference_resolution` and `report.metrics` |
+| latency | the job finished within its budget |
+
+A question's budget is three times the duration of its recording in this checkout, rounded up to 30 s and kept
+between 2 and 10 minutes (5 minutes without a recording): on `synthetic-market`, 2 minutes for Market Leaders and 7
+for the cybersecurity question.
+`--budget SECONDS` sets one for every question and `--budget ID=SECONDS` one for a question. A job still running
+21 minutes after it was sent is cancelled. The test prints a table and exits 1 if any check failed:
+
+```text
+ok   health: status ok, mode live
+ok   pack synthetic-market 1.0.0: 6 question(s): market-leaders, news-sentiment-reaction, ...
+ok   landing: 6 featured
+
+Question                 Result  success  citations  pills  replay  closing  latency  Details
+market-leaders           PASS    ok       ok         ok     ok      ok       ok       citations: 1 cited; pills: cuDF; ...
+cyber-disclosure-rules   PASS    ok       ok         ok     ok      ok       ok       citations: 4 cited; pills: Retrieval; ...
+```
+
+`ui/test-results/live/` keeps the results as JSON, without screenshots or traces. The checks are unit-tested in
+`ui/e2e-live/checks.test.ts`; to try the whole test without a deployment, run it against the stand-in in
+[`ui/README.md`](../ui/README.md#test).
+
+**The eval** and **the GPU guard** are described in [`eval/README.md`](../eval/README.md): what each checks, the
+grader's environment (it must be a frontier model), the run directory, the `answers.yaml` and `perf.yaml` formats,
+and how the GPU floors were set. `test gpu --perf` also measures the Milvus index comparison again
+(`retrieval-benchmark`), which the Benchmark tab then shows.
 
 ## Disk
 
@@ -385,10 +445,11 @@ profile and the default corpora. `up` needed nothing else installed.
 
    The CPU/GPU parity test runs on the VM itself with Brev's uv, which fetches Python 3.12 and the RAPIDS
    wheels (about 5 GB to download, 8.5 GB in `tools/market-analytics/.venv`; the sync took 1 minute, the tests
-   30 s):
+   30 s). `--perf` then checks the running stack's GPU speedups ([on-demand checks](#on-demand-checks)):
 
    ```bash
-   cd tools/market-analytics && uv sync --extra gpu-cu12 && uv run pytest -m gpu
+   ./scripts/demo.sh test gpu            # uv sync --extra gpu-cu12 and pytest -m gpu in tools/market-analytics
+   ./scripts/demo.sh test gpu --perf
    ```
 
 **Troubleshooting on the VM.** What came up on the A100 VM, besides the [general table](#troubleshooting):

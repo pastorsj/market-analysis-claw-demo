@@ -29,6 +29,9 @@ def main(argv: list[str] | None = None) -> None:
         help="serve retrieve_evidence, build the index, or compare it with a GPU index (analytics-gpu)",
     )
     parser.add_argument("--data-dir", type=Path, default=Path("/data/active"), help="the active data pack")
+    parser.add_argument(
+        "--again", action="store_true", help="benchmark: measure a build that was already measured once more"
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -40,7 +43,7 @@ def main(argv: list[str] | None = None) -> None:
         ingest.run(settings, args.data_dir)
     elif args.command == "benchmark":
         try:
-            benchmark.run(settings, args.data_dir)
+            benchmark.run(settings, args.data_dir, again=args.again)
         except Exception:  # the comparison is optional: log it, and let the stack start without one
             logging.getLogger(__name__).exception("the CPU/GPU index comparison failed; the Benchmark tab will lack it")
     else:

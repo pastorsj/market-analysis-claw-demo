@@ -118,7 +118,7 @@ records the latest run.
 | `generator/build.py`, `generator/model.yaml` | the seeded market and its constants |
 | `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot, Federal Register rule and EDGAR filings (URL and SHA-256 of every file) |
-| `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
+| `eval/` | SQL oracles for the analytics answers, the documents retrieval answers cite, the answer checks (`answers.yaml`) and the GPU guard's cases (`perf.yaml`) of the on-demand checks ([eval](../../../eval/README.md)); never read at runtime |
 | `recordings/` | the replay bundle of the ten questions of the `standard` profile (`demo.sh record --all` with the `.env.example` models, [recordings](../../../docs/data-packs.md#recordings)); `intraday-ranges` needs a minute-bar profile |
 
 ## Licenses

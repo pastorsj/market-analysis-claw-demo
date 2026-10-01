@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [agent, api, data, data/generate, tools/retrieval, tools/market-analytics, tools/auto-ontology]
+        project: [agent, api, data, data/generate, eval, tools/retrieval, tools/market-analytics, tools/auto-ontology]
     defaults:
       run:
         working-directory: ${{ matrix.project }}

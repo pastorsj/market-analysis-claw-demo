@@ -109,7 +109,8 @@ a test fails when a recorded answer did not use every tool its question declares
 skipped). `tag` (ANALYTICS, RETRIEVAL, ...) only groups questions in the docs. Six are `featured` in each pack: they need
 only the default profiles, fit the landing page on one screen, and are what `record` asks by default. Every
 analytics question has an oracle in `eval/oracles/`, and `eval/retrieval.yaml` names the documents a retrieval
-answer should cite.
+answer should cite. `eval/answers.yaml` holds the answer checks of `demo.sh eval`, and `eval/perf.yaml` the GPU
+guard's cases ([eval](../eval/README.md)).
 
 `questions.yaml` can also hold `conversations`: two to six turns asked in order in one conversation, so a later
 turn can refer to an earlier answer ("For those same two examples, ..."). They follow the same source and profile

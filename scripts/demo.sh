@@ -19,7 +19,7 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 readonly COMPOSE_PROJECT=market-demo # the name in compose.yaml
 readonly UP_TIMEOUT=3600 # the first data build downloads SEC EDGAR and embeds the corpus
-readonly PYTHON_PROJECTS="agent api data data/generate tools/retrieval tools/market-analytics tools/auto-ontology"
+readonly PYTHON_PROJECTS="agent api data data/generate eval tools/retrieval tools/market-analytics tools/auto-ontology"
 readonly RUFF=ruff@0.16.9 # the version in .pre-commit-config.yaml
 # Profile sets `test compose` renders; each must be valid with no .env.
 readonly PROFILE_SETS="core core,retrieval,analytics core,retrieval,analytics-gpu,kumo
@@ -67,6 +67,16 @@ Data and recordings
 Development
   test [unit|ui|e2e|contracts|compose|switchyard|all]
                           default: unit ui contracts compose
+
+On demand (run by hand, never by CI)
+  test live --url URL [--questions ID,...] [--budget SECONDS|ID=SECONDS]...
+                          ask the active pack's featured questions on a running deployment
+                          through its UI and API, and check each answer, replay and latency
+  test gpu [--perf]       on an NVIDIA GPU host: the CPU/GPU parity tests; --perf also checks
+                          the running analytics-gpu stack's speedups against the A100 floors
+  eval [--pack P] [--runs N] [--questions ID,...] [--url URL]
+                          answer-quality eval of a running deployment (default: this host's UI):
+                          oracle checks, plus an LLM grader when GRADER_* are set (eval/README.md)
 
 Configuration comes from .env (see .env.example); a shell variable overrides it.
 Profiles come from COMPOSE_PROFILES (default core,retrieval,analytics).
@@ -422,14 +432,24 @@ reindex() {
   fi
 }
 
-# test [SUITE...]
+# test [SUITE...] | test live --url URL ... | test gpu [--perf]
 cmd_test() {
+  case ${1:-} in
+    live | gpu)
+      local suite=$1
+      shift
+      log "test $suite"
+      "test_$suite" "$@"
+      return
+      ;;
+  esac
   local suites=${*:-unit ui contracts compose} suite
   [ "$suites" != all ] || suites="unit ui e2e contracts compose switchyard"
   for suite in $suites; do
     case $suite in
       unit | ui | e2e | contracts | compose | switchyard) log "test $suite" && "test_$suite" ;;
-      *) die "$EXIT_USAGE" "usage: demo.sh test [unit|ui|e2e|contracts|compose|switchyard|all]" ;;
+      *) die "$EXIT_USAGE" "usage: demo.sh test [unit|ui|e2e|contracts|compose|switchyard|all], test live --url URL," \
+        "or test gpu [--perf]" ;;
     esac
   done
 }
@@ -458,6 +478,113 @@ test_e2e() {
     install=(npx playwright install --with-deps chromium)
   fi
   (cd "$ROOT/ui" && { [ -d node_modules ] || npm ci; } && npm run build && "${install[@]}" && npm run e2e)
+}
+
+# test live --url URL [--questions ID,...] [--budget SECONDS|ID=SECONDS]...: the active pack's featured questions,
+# asked one at a time through a running deployment's UI (ui/e2e-live). The URL is the UI's, passed here and never
+# stored: http://127.0.0.1:3100 on the host, an SSH tunnel to it, or a link to it. Each question runs live and costs
+# model calls. Manual only: CI never runs it.
+test_live() {
+  local url="" questions="" budgets="" install=(npx playwright install chromium)
+  local usage="usage: demo.sh test live --url URL [--questions ID,...] [--budget SECONDS|ID=SECONDS]..."
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --url | --questions | --budget) [ $# -ge 2 ] || die "$EXIT_USAGE" "$usage" ;;
+      *) die "$EXIT_USAGE" "$usage" ;;
+    esac
+    case $1 in
+      --url) url=$2 ;;
+      --questions) questions=$2 ;;
+      --budget) budgets=${budgets:+$budgets,}$2 ;;
+    esac
+    shift 2
+  done
+  case $url in
+    http://?* | https://?*) ;;
+    *) die "$EXIT_USAGE" "$usage (the deployment's UI, e.g. http://127.0.0.1:3100)" ;;
+  esac
+  command -v npx >/dev/null || die "$EXIT_CONFIG" "test live drives a browser with Playwright: install Node.js 22"
+  if [ "$(uname -s)" = Linux ]; then
+    install=(npx playwright install --with-deps chromium)
+  fi
+  (cd "$ROOT/ui" && { [ -d node_modules ] || npm ci; } && "${install[@]}" &&
+    LIVE_URL=$url LIVE_QUESTIONS=$questions LIVE_BUDGETS=$budgets npx playwright test --config playwright.live.config.ts)
+}
+
+# test gpu [--perf]: on a host with an NVIDIA GPU, the CPU/GPU parity tests of market analytics (their RAPIDS venv
+# takes about 9 GB on the first run). --perf then measures the running analytics-gpu stack: the active pack's
+# eval/perf.yaml cases through market analytics' POST /benchmark, and the Milvus index comparison measured again,
+# each against its floor (eval/README.md). On a host without a GPU it skips, and succeeds.
+test_gpu() {
+  local perf=false
+  case "$*" in
+    "") ;;
+    --perf) perf=true ;;
+    *) die "$EXIT_USAGE" "usage: demo.sh test gpu [--perf]" ;;
+  esac
+  if ! command -v nvidia-smi >/dev/null || ! nvidia-smi -L >/dev/null 2>&1; then
+    log "no NVIDIA GPU on this host: skipping the GPU tests"
+    return 0
+  fi
+  command -v uv >/dev/null || die "$EXIT_CONFIG" "test gpu runs with uv on the host: install uv"
+  log "GPU parity of market analytics (cudf.pandas, cuml.accel, nx-cugraph against pandas)"
+  (cd "$ROOT/tools/market-analytics" && uv sync --locked --extra gpu-cu12 &&
+    uv run --locked --extra gpu-cu12 pytest -q -m gpu)
+  if $perf; then
+    gpu_perf
+  fi
+}
+
+# The GPU guard on the running stack. Its inputs are copied out of the demo-data volume: the active build's
+# pack.json (which pack and profile) and the Milvus comparison, measured again first with `benchmark --again`.
+gpu_perf() {
+  local work status=0 retrieval=(--no-retrieval)
+  load_env
+  require_env
+  has_profile analytics-gpu ||
+    die "$EXIT_CONFIG" "test gpu --perf measures the running GPU service: add analytics-gpu to COMPOSE_PROFILES" \
+      "and run ./scripts/demo.sh up"
+  [ -n "$(dc ps -q --status running market-analytics-gpu 2>/dev/null)" ] ||
+    die "$EXIT_UNAVAILABLE" "market-analytics-gpu is not running: run ./scripts/demo.sh up"
+  work=$(mktemp -d)
+  dc exec -T api cat /data/active/pack.json >"$work/pack.json"
+  if has_profile retrieval; then
+    log "measuring the Milvus CPU index and its GPU copy again"
+    dc up -d --wait milvus-gpu
+    dc run --rm --no-deps retrieval-benchmark benchmark --again
+    dc exec -T api cat /data/active/retrieval-benchmark.json >"$work/retrieval.json" 2>/dev/null || true
+    retrieval=(--retrieval-benchmark "$work/retrieval.json")
+  fi
+  log "GPU guard: the active pack's cases against their floors"
+  uv run --project "$ROOT/eval" --locked demo-eval --repo "$ROOT" perf --build "$work/pack.json" "${retrieval[@]}" ||
+    status=$?
+  rm -rf "$work"
+  return "$status"
+}
+
+# eval [--pack P] [--runs N] [--questions ID,...] [--url URL] [--out DIR]: the answer-quality eval (eval/README.md)
+# on a running deployment, by default this host's UI. The optional grader reads GRADER_BASE_URL, GRADER_API_KEY and
+# GRADER_MODEL from the environment only. Each question runs live and costs model calls.
+cmd_eval() {
+  local url="" args=() usage="usage: demo.sh eval [--pack P] [--runs N] [--questions ID,...] [--url URL] [--out DIR]"
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --url | --pack | --runs | --questions | --out | --max-wait) [ $# -ge 2 ] || die "$EXIT_USAGE" "$usage" ;;
+      *) die "$EXIT_USAGE" "$usage" ;;
+    esac
+    if [ "$1" = --url ]; then
+      url=$2
+    else
+      args+=("$1" "$2")
+    fi
+    shift 2
+  done
+  command -v uv >/dev/null || die "$EXIT_CONFIG" "eval runs with uv on the host: install uv"
+  if [ -z "$url" ]; then
+    load_env
+    url=http://127.0.0.1:$UI_PORT
+  fi
+  uv run --project "$ROOT/eval" --locked demo-eval --repo "$ROOT" run --url "$url" ${args[@]+"${args[@]}"}
 }
 
 test_contracts() {
@@ -511,7 +638,7 @@ main() {
   local command=${1:-}
   case $command in
     "" | -h | --help | help) usage ;;
-    init | doctor | up | down | restart | status | logs | replay | record | data | test | check)
+    init | doctor | up | down | restart | status | logs | replay | record | data | test | check | eval)
       shift
       "cmd_$command" "$@"
       ;;
