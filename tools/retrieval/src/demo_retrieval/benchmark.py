@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import UTC
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from statistics import fmean
 from typing import Any
@@ -106,10 +107,13 @@ class Vectors:
         scores = self.matrix[np.isin(self.sources, list(scope))] @ vector
         return [_rounded(score) for score in np.sort(scores)[::-1][:k]]
 
+    @cached_property
+    def rows(self) -> dict[str, int]:
+        return {str(chunk_id): row for row, chunk_id in enumerate(self.ids)}
+
     def scorer(self, vector: np.ndarray) -> Callable[[str], float]:
         """A chunk's exact score for this query vector."""
-        rows = {str(chunk_id): row for row, chunk_id in enumerate(self.ids)}
-        return lambda chunk_id: _rounded(self.matrix[rows[chunk_id]] @ vector)
+        return lambda chunk_id: _rounded(self.matrix[self.rows[chunk_id]] @ vector)
 
 
 def _rounded(score: float) -> float:
