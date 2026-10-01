@@ -113,8 +113,9 @@ is at <http://127.0.0.1:6006>.
 
 The first `up` builds every image, downloads about 1.4 GB of SEC EDGAR filings and embeds them, so it takes a
 while (about 45 minutes with every profile on a Brev A100); later runs reuse all of it. `.env.example` defaults to build.nvidia.com, with
-Nemotron 3 Ultra answering every turn. To escalate to GPT-6 Sol from another OpenAI-compatible provider, or to
-use a different endpoint for every model, see [configuration](docs/configuration.md#1-inference-endpoint).
+Nemotron 3 Ultra answering every turn. To use GPT-6 Sol from another OpenAI-compatible provider (pinned on every
+turn is recommended), or a different endpoint for every model, see
+[configuration](docs/configuration.md#1-inference-endpoint).
 
 ### Replay, with no keys
 
@@ -255,7 +256,7 @@ Each component also has its own README with its environment and tests.
   government information, but not the official legal edition of the CFR.
 - **Hosted models, with their terms.** Every model call goes to a hosted endpoint and is subject to that
   provider's terms. The default endpoint, build.nvidia.com, is open to anyone with an NVIDIA account but
-  serves no GPT model; the escalation templates take GPT-6 Sol from a provider you configure.
+  serves no GPT model; the `*-gpt` templates take GPT-6 Sol from a provider you configure.
 - **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
   `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
   need exact rows or custom SQL, such as the per-sector counts and median returns (`sector-sql`). The replay bundle was recorded with it.
