@@ -44,7 +44,9 @@ def run(
         )
     if series.empty:
         payload = PriceContextPayload(frequency=frequency, summaries=[], series=[], series_truncated=False)
-        return Output(payload, rows_scanned=0, empty=True, warnings=("No prices matched the assets and window.",))
+        return Output(
+            payload, rows_scanned=0, assets=0, empty=True, warnings=("No prices matched the assets and window.",)
+        )
 
     # The summary always comes from the daily bars; frequency shapes only the series. Its return runs from the close
     # before the window's first session (data.py's return_base), as market_scan's does.
@@ -68,4 +70,4 @@ def run(
         series_truncated=truncated,
     )
     warnings = (f"The series is cut to the first {point_limit} points.",) if truncated else ()
-    return Output(payload, rows_scanned=len(bars), warnings=warnings)
+    return Output(payload, rows_scanned=len(bars), assets=len(summary), warnings=warnings)

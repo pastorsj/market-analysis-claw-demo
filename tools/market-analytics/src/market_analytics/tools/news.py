@@ -48,7 +48,9 @@ def sentiment_timeline(
         payload = SentimentTimelinePayload(
             frequency=frequency, articles_considered=0, points=[], points_truncated=False
         )
-        return Output(payload, rows_scanned=0, empty=True, warnings=("No articles matched the filters and window.",))
+        return Output(
+            payload, rows_scanned=0, assets=0, empty=True, warnings=("No articles matched the filters and window.",)
+        )
 
     labels = articles["sentiment_label"]
     periods = (
@@ -77,7 +79,7 @@ def sentiment_timeline(
         points_truncated=len(recent) < len(periods),
     )
     warnings = (f"Only the most recent {point_limit} periods are returned.",) if payload.points_truncated else ()
-    return Output(payload, rows_scanned=len(articles), warnings=warnings)
+    return Output(payload, rows_scanned=len(articles), assets=articles["asset_id"].nunique(), warnings=warnings)
 
 
 def news_price_relationship(
@@ -114,7 +116,8 @@ def news_price_relationship(
             events_truncated=False,
         )
         warning = "No article had a complete forward-return window." if len(articles) else "No articles matched."
-        return Output(payload, rows_scanned=len(articles), empty=True, warnings=(warning,))
+        assets = articles["asset_id"].nunique()
+        return Output(payload, rows_scanned=len(articles), assets=assets, empty=True, warnings=(warning,))
 
     # A list of aggregations, renamed: cudf.pandas has no named aggregation on a single column.
     summaries = (
@@ -147,7 +150,7 @@ def news_price_relationship(
         events_truncated=len(events) > event_limit,
     )
     warnings = (f"Only the first {event_limit} aligned events are listed.",) if payload.events_truncated else ()
-    return Output(payload, rows_scanned=len(articles), warnings=warnings)
+    return Output(payload, rows_scanned=len(articles), assets=articles["asset_id"].nunique(), warnings=warnings)
 
 
 def sentiment_score(labels: pd.Series) -> pd.Series:

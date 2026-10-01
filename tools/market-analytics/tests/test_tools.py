@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The market tools, called through the same dispatcher the worker uses."""
 
+import json
 import math
 import shutil
 from dataclasses import replace
@@ -48,8 +49,14 @@ def test_market_scan_ranks_both_ends_of_a_universe(data: MarketData) -> None:
     laggard = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], direction="lowest", **JUNE)
 
     assert leaders["status"] == "succeeded"
-    assert leaders["engine"] == {"device": "cpu", "library": "pandas", "version": leaders["engine"]["version"]}
+    assert leaders["engine"] == {
+        "device": "cpu",
+        "library": "pandas",
+        "version": leaders["engine"]["version"],
+        "engine_id": "pandas-cpu.v1",
+    }
     assert leaders["rows_scanned"] == 3 * 22  # three assets, 22 June sessions
+    assert leaders["asset_count"] == 3
     payload = leaders["payload"]
     assert payload["assets_ranked"] == 3
     assert [row["asset_id"] for row in payload["observations"]] == sorted(returns, key=returns.get, reverse=True)[:2]
@@ -98,8 +105,32 @@ def test_market_scan_counts_the_sessions_ending_at_end(data: MarketData) -> None
 
     neither = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], end=JUNE["end"])
     assert neither["error"]["code"] == "invalid_request"
-    both = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], sessions=5, **JUNE)
-    assert both["error"]["message"].startswith("give start or sessions, not both")
+
+
+def test_market_scan_with_start_and_sessions_says_how_to_fix_the_call(data: MarketData) -> None:
+    """Still rejected, with the argument to drop and the call to make instead, from the call's own arguments: a
+    model that read only "not both" retried the same call over and over."""
+    arguments = {"universe_id": "reviewed_assets", "metrics": ["return", "volatility"], "sessions": 5, **JUNE}
+    both = run(data, "market_scan", **arguments)
+
+    assert both["status"] == "failed"
+    assert both["payload"] is None
+    assert both["error"]["code"] == "invalid_request"
+    message = both["error"]["message"]
+    assert message.startswith("start and sessions cannot both be given")
+    assert "again without start" in message
+    assert "drop sessions and keep start and end" in message
+    retry = json.loads(message[message.index("{") : message.index("}") + 1])
+    assert retry == {
+        "universe_id": "reviewed_assets",
+        "end": "2026-06-30T23:59:59Z",
+        "sessions": 5,
+        "metrics": ["return", "volatility"],
+    }
+    # The suggested call works, and fits the receipt's error summary (600 characters)
+    del arguments["start"]
+    assert run(data, "market_scan", **arguments)["status"] == "succeeded"
+    assert len(message) <= 600
 
 
 def test_market_scan_reports_an_empty_window_and_invalid_arguments(data: MarketData) -> None:
@@ -151,7 +182,10 @@ def test_anomaly_scan_ranks_the_planted_crash_first(data: MarketData) -> None:
 
     assert result["status"] == "succeeded"
     assert result["engine"]["library"] == "scikit-learn"
+    assert result["engine"]["engine_id"] == "sklearn-pca-anomaly-cpu.v1"
+    assert result["asset_count"] == 3  # the reviewed assets, in both windows
     payload = result["payload"]
+    assert payload["policy_id"] == "pca-reconstruction-market-v1"
     assert (payload["training_observations"], payload["scoring_observations"]) == (90, 60)
     top = payload["observations"]
     assert [row["rank"] for row in top] == [1, 2, 3]
@@ -316,8 +350,10 @@ def test_market_relationships_rank_pagerank_centrality(data: MarketData) -> None
     result = run(data, "analyze_market_relationships", top_k=2)
 
     assert result["engine"]["library"] == "networkx"
+    assert result["engine"]["engine_id"] == "networkx-pagerank-cpu.v1"
     payload = result["payload"]
     assert (payload["node_count"], payload["edge_count"]) == (4, 12)
+    assert result["asset_count"] == 4
     assert payload["window_start"] == "2026-06-01"
     assert [asset["rank"] for asset in payload["central_assets"]] == [1, 2]
     assert payload["strongest_edges"][0]["source_asset_id"] == "asset-alpha"
@@ -394,3 +430,30 @@ def test_tools_without_their_data_in_the_pack_report_it(daily_only: MarketData) 
     assert news["error"]["message"].startswith("The active data pack has no ticker-linked news table")
     assert intraday["error"]["code"] == "minute_bars_unavailable"
     assert run(daily_only, "market_scan", universe_id="all_assets", metrics=["return"], **JUNE)["status"] == "succeeded"
+
+
+def test_a_result_records_its_timing_to_the_microsecond(data: MarketData) -> None:
+    """The receipt card shows the setup and engine times as recorded, with sub-millisecond precision: the setup
+    and the calculation are measured spans of the engine's whole handling of the call."""
+    timing = run(data, "price_context", asset_ids=["ALPH", "BETA"], **JUNE)["timing"]
+
+    assert set(timing) == {"compute_ms", "setup_ms", "engine_ms", "total_ms"}
+    assert 0 < timing["setup_ms"] < timing["engine_ms"]
+    assert 0 < timing["compute_ms"] < timing["engine_ms"]
+    assert timing["setup_ms"] + timing["compute_ms"] == pytest.approx(timing["engine_ms"])
+    assert not all(float(value).is_integer() for value in timing.values())
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments", "assets"),
+    [
+        ("price_context", {"asset_ids": ["ALPH", "BETA"], **JUNE}, 2),
+        ("sentiment_timeline", {"universe_id": "reviewed_assets", **JUNE}, 2),  # June's articles cover two of the three
+        ("intraday_scan", {"universe_id": "reviewed_assets", **THREE_DAYS}, 3),
+    ],
+)
+def test_a_result_counts_the_assets_it_ran_over(data: MarketData, tool: str, arguments: dict, assets: int) -> None:
+    result = run(data, tool, **arguments)
+    assert result["status"] == "succeeded"
+    assert result["asset_count"] == assets
+    assert result["engine"]["engine_id"] == "pandas-cpu.v1"

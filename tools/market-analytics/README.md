@@ -34,8 +34,13 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   worker is up.
 - **Results.** Every market tool returns a `MarketResult` (see `src/market_analytics/models.py`): `status`
   (`succeeded`, `empty` or `failed`), `source_id`, `database_name`, the tool's `payload`, `error`,
-  `engine {device, library, version}`, `timing {compute_ms, total_ms}`, `rows_scanned`, `warnings` and
-  `limitations`. This is what the execution receipt shows. Failures (bad arguments, deadlines, a dead worker)
+  `engine {device, library, version, engine_id}`, `timing {compute_ms, setup_ms, engine_ms, total_ms}`,
+  `rows_scanned`, `asset_count`, `warnings` and `limitations`. This is what the execution receipt shows. The
+  engine id names the method and device (`cudf-gpu.v1`, `cuml-pca-anomaly-gpu.v1`, `cugraph-pagerank-gpu.v1`
+  and their CPU twins `pandas-cpu.v1`, `sklearn-pca-anomaly-cpu.v1`, `networkx-pagerank-cpu.v1`). The timing is
+  in milliseconds to the microsecond: the worker's calculation, its other work on the call (the arguments before,
+  the result after), the two together, and the call end to end in the service, including the wait for the worker.
+  `market_anomaly_scan`'s payload names its policy, `pca-reconstruction-market-v1`. Failures (bad arguments, deadlines, a dead worker)
   are results too, because MCP clients drop the structured content of an error response. An error message is
   at most 1,000 characters, the receipt's limit.
 - **Timestamps.** Inside the worker every timestamp is tz-naive UTC `datetime64[ns]`: `data.py` normalizes the
