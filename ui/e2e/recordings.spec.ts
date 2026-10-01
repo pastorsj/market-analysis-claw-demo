@@ -10,7 +10,7 @@
 
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { DATA_PACKS_DIR, PACK_REPLAY_URL } from '../playwright.config'
+import { DATA_PACKS_DIR, PACK_REPLAY_URL, RECORDED_PACK } from '../playwright.config'
 
 interface RecordedEvent {
   eventId: string
@@ -18,7 +18,7 @@ interface RecordedEvent {
   invocationId?: string | null
 }
 
-const RECORDINGS = `${DATA_PACKS_DIR}/market-analysis/recordings`
+const RECORDINGS = `${DATA_PACKS_DIR}/${RECORDED_PACK}/recordings`
 const readJson = <T>(file: string): T => JSON.parse(readFileSync(`${RECORDINGS}/${file}`, 'utf8'))
 
 const index = readJson<{ sessions: { id: string; title: string }[] }>('index.json')

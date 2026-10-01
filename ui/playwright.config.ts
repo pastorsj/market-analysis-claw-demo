@@ -17,6 +17,8 @@ export const LIVE_URL = 'http://127.0.0.1:3991'
 export const REPLAY_URL = 'http://127.0.0.1:3992'
 export const PACK_REPLAY_URL = 'http://127.0.0.1:3993'
 export const DATA_PACKS_DIR = `${process.cwd()}/../data/packs`
+/** The data pack whose committed recordings the replay suite runs against */
+export const RECORDED_PACK = 'market-analysis'
 
 const uiServer = (url: string, env: Record<string, string>) => ({
   command: 'node .next/standalone/server.js',
@@ -63,7 +65,7 @@ export default defineConfig({
     uiServer(PACK_REPLAY_URL, {
       UI_MODE: 'replay',
       PACKS_DIR: DATA_PACKS_DIR,
-      DATA_PACK: 'market-analysis',
+      DATA_PACK: RECORDED_PACK,
     }),
   ],
 })
