@@ -70,6 +70,17 @@ def test_unknown_evidence_is_removed_and_flagged(tool_registry):
     assert report.invalid_evidence_ids == ["hermes-receipt:unknown"]
 
 
+def test_the_evidence_limitation_comes_before_the_sources_list(tool_registry):
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    scan = evidence[0].evidence_id
+    report = publish_report(f"Valid [evidence:{scan}], invalid [evidence:hermes-receipt:unknown].", evidence)
+
+    body, _, sources = report.markdown.partition("\n\n## Sources\n\n")
+    assert body.startswith("Valid [1], invalid.\n\n## Evidence limitation\n\n")
+    assert sources == f"- [1] Market analytics result — market anomaly scan — evidence `{scan}`"
+    assert report.invalid_evidence_ids == ["hermes-receipt:unknown"]
+
+
 def test_failed_receipts_cannot_be_cited(tool_registry):
     failed = [r for r in load_contract("receipts.json") if r["status"] == "failed"]
     assert citations_from_receipts(failed, tool_registry) == []

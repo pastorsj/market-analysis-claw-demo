@@ -130,11 +130,13 @@ def publish_report(draft: str, evidence: list[Citation]) -> PublishedReport:
 
     markdown = _EVIDENCE_TOKEN.sub(resolve, markdown)
     markdown = re.sub(r"[ \t]+(?=\n)", "", markdown).strip()
+    # The limitation goes before the Sources list: the UI and the next turn's history drop everything from
+    # the Sources heading on.
+    if invalid:
+        markdown = f"{markdown}\n\n{_EVIDENCE_LIMITATION}"
     if cited:
         lines = [f"- [{number}] {item.label} — evidence `{item.evidence_id}`" for number, item in enumerate(cited, 1)]
         markdown = f"{markdown}\n\n## Sources\n\n" + "\n".join(lines)
-    if invalid:
-        markdown = f"{markdown}\n\n{_EVIDENCE_LIMITATION}"
     return PublishedReport(
         markdown=markdown,
         citations=[item.wire(number) for number, item in enumerate(cited, 1)],
