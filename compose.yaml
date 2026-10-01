@@ -15,7 +15,7 @@
 #   docker compose --env-file infra/openshell/versions.env --env-file .env ...
 #
 # Every host port is published on 127.0.0.1 only, except the UI's when UI_BIND_HOST says
-# otherwise (for a trusted proxy such as a Brev secure link). The sandbox reaches services as
+# otherwise (for a link that requires sign-in, such as a Brev link). The sandbox reaches services as
 # host.openshell.internal:<port>, which the host-networked OpenShell supervisor maps to
 # 127.0.0.1. No variable is required (never ${VAR:?}), so the replay profile needs no .env.
 # Keys reach services as Compose secrets (/run/secrets/<name>), not environment variables.

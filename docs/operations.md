@@ -155,7 +155,7 @@ For the sandbox specifically, see the troubleshooting table in
 
 The GPU tier (`analytics-gpu`, the local Kumo NIM) runs on a Linux x86_64 VM with an NVIDIA GPU, such as a
 Brev A100 instance. Nothing about the demo changes: the same `demo.sh`, bound to the VM's loopback, reached
-over SSH, or with the UI alone shared through a Brev secure link (step 8). These steps were run on 2026-09-29
+over SSH, or with the UI alone shared through a Brev link (step 8). These steps were run on 2026-09-29
 on a fresh Brev A100 (40 GB) VM with 12 vCPUs, 83 GiB of memory and a 533 GB disk (Ubuntu 22.04, kernel 6.8,
 Docker 29.8 with Compose 5.5, driver 595, NVIDIA Container Toolkit 1.20, as Brev provisions it), with every
 profile and the default corpora. `up` needed nothing else installed.
@@ -261,7 +261,7 @@ profile and the default corpora. `up` needed nothing else installed.
    company lookup; downloading 1,887 filing documents 6 minutes; embedding 24,484 chunks 16 minutes), and
    `synthetic-market` 17 minutes (the structured part 20 s; the corpus 53 s from the download cache; 23,646
    chunks 15 minutes). Once both were built, switching `DATA_PACK` and running `up` took 42 to 65 s. Each
-   pack's six featured questions then succeeded through the Brev secure link, in 24 s to 6 minutes each; one
+   pack's six featured questions then succeeded through the Brev link, in 24 s to 6 minutes each; one
    took 13 minutes, and one failed and succeeded when asked again, while build.nvidia.com answered most
    Nemotron 3 Ultra requests with "Service temporarily overloaded".
 
@@ -339,10 +339,10 @@ profile and the default corpora. `up` needed nothing else installed.
    Then open <http://127.0.0.1:3100> (UI) and <http://127.0.0.1:6006> (Phoenix). With Brev's CLI set up, the
    instance name works as the SSH host.
 
-   **Or share the UI through a Brev secure link**, for people without SSH access. The link's proxy does not
-   reach the VM's loopback: it connects over Brev's private network interface (`wt0`) to the link's port,
-   so with the default binding the link answers 503 (`Connection refused` on the error page). Publish the UI,
-   and only the UI, beyond loopback:
+   **Or share the UI through a Brev link that requires sign-in**, for people without SSH access. The link's
+   proxy does not reach the VM's loopback: it connects over Brev's private network interface (`wt0`) to the
+   link's port, so with the default binding the link answers 503 (`Connection refused` on the error page).
+   Publish the UI, and only the UI, beyond loopback:
 
    ```bash
    # In .env on the VM
@@ -360,10 +360,12 @@ profile and the default corpora. `up` needed nothing else installed.
    and `doctor` and `up` warn while it is not `127.0.0.1`.
 
    Security: the UI has no sign-in, and through it anyone who can open the link can run the agent and spend
-   your inference credits. Whether the link asks for a Brev sign-in is set in the Brev console, not here;
-   use `0.0.0.0` only for a proxy you trust, and set it back to `127.0.0.1` when you are done (then
-   `up --no-build` again). Phoenix stays tunnel-only: the UI's **Open in Phoenix** link points at
-   <http://127.0.0.1:6006> on the viewer's own machine, so it works only for someone running the SSH tunnel
+   your inference credits. Whether the link asks for a Brev sign-in is set in the Brev console, not here:
+   turn sign-in on before you set `0.0.0.0`, and set it back to `127.0.0.1` when you are done (then
+   `up --no-build` again). Never keep `UI_BIND_HOST=0.0.0.0` on a link without sign-in while `.env` holds an
+   organization gateway's key: anyone with the URL can run the agent on it. Phoenix stays tunnel-only: the
+   UI's **Phoenix** button and its **Open trace in Phoenix** and **Open failed span in Phoenix** links point
+   at <http://127.0.0.1:6006> on the viewer's own machine, so they work only for someone running the SSH tunnel
    above.
 9. **Tests on the VM** (optional) need uv, which Brev's image has (in `~/.local/bin`, on a login shell's
    `PATH`), and Node.js 22, which it lacks. `test e2e` installs Chromium's system libraries with apt through
@@ -397,6 +399,7 @@ profile and the default corpora. `up` needed nothing else installed.
 | Every GPU parity test errors while the worker loads the pack | `CUDF_PANDAS_FAIL_ON_FALLBACK` is set, and starting the worker falls back four times; unset it (step 7) |
 
 Do not publish the demo's ports on the VM's public interface or through a public port share; the one
-exception is the UI behind a trusted proxy such as a Brev secure link (step 8). The UI has no sign-in and
+exception is the UI behind a link that requires sign-in, such as a Brev link with sign-in set in the Brev
+console (step 8). The UI has no sign-in and
 spends your inference credits, and Switchyard, Phoenix and the Auto Ontology MCP server have no
 authentication at all.

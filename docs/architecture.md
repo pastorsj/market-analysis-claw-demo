@@ -112,12 +112,12 @@ enforces on them.
 ## Trust boundaries
 
 The demo is a single-user local application. It has no user accounts, so everything it serves stays on the
-host's loopback interface, unless `UI_BIND_HOST` opens the UI to a trusted proxy. Within that, the agent is
+host's loopback interface, unless `UI_BIND_HOST` opens the UI to a link that requires sign-in. Within that, the agent is
 treated as untrusted: it reads documents and tool results that could carry prompt injections.
 
 | Boundary | What enforces it |
 |---|---|
-| Host network | Every port is published on `127.0.0.1`, except the UI's when `UI_BIND_HOST` is set for a trusted proxy (a Brev secure link). That exposes the UI and its `/api/v1` proxy (job submit, the data viewer's query) with no sign-in; `doctor` warns. Switchyard (no inbound authentication), Phoenix (trace payloads) and the Auto Ontology MCP server (trusted service mode) must never be published further. On a remote host, use an SSH tunnel. |
+| Host network | Every port is published on `127.0.0.1`, except the UI's when `UI_BIND_HOST` is set for a link that requires sign-in (a Brev link with sign-in set in the Brev console). That exposes the UI and its `/api/v1` proxy (job submit, the data viewer's query) with no sign-in; `doctor` warns. Switchyard (no inbound authentication), Phoenix (trace payloads) and the Auto Ontology MCP server (trusted service mode) must never be published further. On a remote host, use an SSH tunnel. |
 | Browser → API | The UI proxies only `pack`, `data_sources/**`, job submit, job reads and cancel. `/internal/**` and everything else is a 404. In replay mode the proxy calls nothing. |
 | Sandbox network | The sandbox has no network interface. The host-networked OpenShell supervisor makes every connection after checking the policy: each MCP endpoint allows the handshake and an explicit tool list, Switchyard allows chat completions and the model list, the API allows only the three `/internal/hermes` routes, and Phoenix allows only `POST /v1/traces`. Only Hermes' interpreter may connect. |
 | Sandbox filesystem | Landlock (a hard requirement): Hermes and the skills are read-only, `HERMES_HOME` and the workspace are writable. The Hermes tools exposed to runs are the skills toolset and the MCP data tools only: no terminal, file, browser or web tools. |
