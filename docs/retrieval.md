@@ -101,10 +101,12 @@ on every host, and the GPU index exists only for this comparison.
   storage, its own volume, no host port), and `retrieval-benchmark`, a one-shot that `retrieval` waits for.
   Without the profile neither runs, and the Benchmark tab says the stack runs the CPU index only.
 - **The GPU index.** The one-shot reads the active build's chunk ids, sources and vectors from `milvus`, and
-  writes them, L2-normalized, to a collection of the same name in `milvus-gpu` under `GPU_CAGRA` (NVIDIA cuVS
-  CAGRA: inner product, `intermediate_graph_degree = 64`, `graph_degree = 32`, built with IVF-PQ; searches use
-  `itopk_size = 128`, `search_width = 4`). Inner product on normalized vectors ranks as cosine does on the CPU.
-  Older builds' copies are dropped, so the GPU holds one. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
+  writes them, L2-normalized, to a collection of the same name in `milvus-gpu` under `GPU_IVF_FLAT` (NVIDIA
+  cuVS IVF-Flat, as the original demo used: inner product, `nlist = 128`; searches probe `nprobe = 64` lists).
+  Inner product on normalized vectors ranks as cosine does on the CPU. Older builds' copies are dropped, so the
+  GPU holds one, and a copy under another index is rebuilt. `GPU_CAGRA` was tried first and returned wrong
+  neighbors on these 2,048-dimension vectors in Milvus 2.6.25 on an A100 (recall 0, with IVF-PQ or NN-descent
+  graph builds and with either metric), while `GPU_IVF_FLAT` and `GPU_BRUTE_FORCE` matched the exact neighbors. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
   memory pool (1 GiB at start, 4 GiB at most).
 - **The workload.** The pack's held-out queries (`documents.benchmark_queries` in `pack.yaml`, 15 per pack,
   never the demo questions), each embedded once with Nemotron Embed. Three profiles: one query per request,
@@ -120,7 +122,8 @@ on every host, and the GPU index exists only for this comparison.
 - **Result.** `/data/active/retrieval-benchmark.json` (contract `RetrievalBenchmark`,
   [contracts](../contracts/README.md)). The API serves it as `GET /v1/jobs/async/job/{id}/retrieval-benchmark`
   for a run whose retrieval calls searched the same build, and a job export, so a recording, carries it. An
-  unchanged build is not measured again; `data reindex` measures a new one. The one-shot never fails the
+  unchanged build is not measured again, unless its GPU copy was built under another index; `data reindex`
+  measures a new one. The one-shot never fails the
   stack: a problem is logged (`demo.sh logs retrieval-benchmark`), and the tab shows no comparison.
 
 ## Result size

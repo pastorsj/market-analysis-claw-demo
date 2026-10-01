@@ -49,7 +49,7 @@ export interface RetrievalProfile {
 export interface RetrievalBackend {
   role: 'cpu' | 'gpu'
   /**
-   * e.g. HNSW or GPU_CAGRA
+   * e.g. HNSW or GPU_IVF_FLAT
    */
   indexType: string
   status: 'completed' | 'failed'

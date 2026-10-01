@@ -108,7 +108,7 @@ no analytics service, the answer is `status: "unavailable"` with the reason, and
 a completed or failed comparison is stored with the job, which `export` then carries.
 
 **Milvus.** On a GPU host (analytics-gpu with retrieval) the `retrieval-benchmark` one-shot measures each index
-build once: the pack's held-out queries on the CPU index and on a `GPU_CAGRA` copy in a GPU Milvus
+build once: the pack's held-out queries on the CPU index and on a `GPU_IVF_FLAT` copy in a GPU Milvus
 ([retrieval](../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)), into
 `/data/active/retrieval-benchmark.json` (`src/demo_api/benchmark/retrieval.py`, contract
 `contracts/schemas/retrieval-benchmark.schema.json`). `GET .../retrieval-benchmark` returns it for a finished job

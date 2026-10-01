@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """retrieval-benchmark: the GPU copy of the build, the timed profiles, the quality gates and the claim.
 
-Milvus Lite stands in for both servers here, with a FLAT index for the GPU copy; the box runs GPU_CAGRA.
+Milvus Lite stands in for both servers here, with a FLAT index for the GPU copy; the box runs GPU_IVF_FLAT.
 """
 
 from __future__ import annotations
@@ -81,6 +81,22 @@ def test_an_unchanged_build_is_not_measured_again(gpu_settings, with_queries, nv
 
     assert benchmark.run(gpu_settings, with_queries, gpu_index=FLAT, gpu_search_params=FLAT_SEARCH) == first
     assert nvidia_api.calls == []
+
+
+def test_a_copy_under_another_index_is_rebuilt_and_measured_again(gpu_settings, with_queries, manifest, nvidia_api):
+    """After a change of the GPU index, an unchanged build's copy and its result are stale."""
+    benchmark.run(gpu_settings, with_queries, gpu_index=FLAT, gpu_search_params=FLAT_SEARCH)
+    nvidia_api.calls.clear()
+    other = {"index_type": "IVF_FLAT", "metric_type": "IP", "params": {"nlist": 4}}
+
+    result = benchmark.run(gpu_settings, with_queries, gpu_index=other, gpu_search_params=FLAT_SEARCH)
+
+    assert nvidia_api.calls  # measured again: the queries were embedded
+    assert {profile["gpu"]["indexType"] for profile in result["profiles"]} == {"IVF_FLAT"}
+    gpu = MilvusClient(uri=gpu_settings.milvus_gpu_uri)
+    [index] = gpu.list_indexes(manifest.physical_collection, field_name=store.VECTOR_FIELD)
+    assert gpu.describe_index(manifest.physical_collection, index_name=index)["index_type"] == "IVF_FLAT"
+    gpu.close()
 
 
 def test_nothing_is_compared_without_a_gpu_milvus_or_queries(settings, gpu_settings, data_dir, manifest):

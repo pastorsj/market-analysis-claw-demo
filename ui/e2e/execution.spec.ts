@@ -111,7 +111,7 @@ test('the Agent Activity panel shows a recorded run: thinking, timeline and its 
   await expect(milvus).toContainText('Milvus Vector Search')
   await expect(milvus).toContainText('1.2× faster vector search') // concurrent requests first
   await expect(milvus.getByTestId('retrieval-benchmark-gpu')).toContainText(
-    'GPU_CAGRA · NVIDIA cuVS'
+    'GPU_IVF_FLAT · NVIDIA cuVS'
   )
   await expect(milvus.getByTestId('retrieval-benchmark-cpu')).toContainText('HNSW')
   await milvus.getByRole('button', { name: 'Single query' }).click()

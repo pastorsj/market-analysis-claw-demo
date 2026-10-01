@@ -119,7 +119,7 @@ describe('BenchmarkTab', () => {
     // The concurrency profile first, as the original showed it
     expect(panel).toHaveTextContent('1.2× faster vector search')
     expect(screen.getByTestId('retrieval-benchmark-gpu')).toHaveTextContent(
-      'GPU_CAGRA · NVIDIA cuVS'
+      'GPU_IVF_FLAT · NVIDIA cuVS'
     )
     expect(screen.getByTestId('retrieval-benchmark-cpu')).toHaveTextContent('HNSW')
     expect(panel).toHaveTextContent('15 held-out queries')
