@@ -47,11 +47,17 @@ overloaded.
 | `passthrough.nemotron` | efficient, every turn, no judge, no capable model | **default** on build.nvidia.com (Nemotron 3 Ultra) |
 | `pinned-capable.nemotron-gpt` | capable GPT, every turn, no judge | a provider that serves GPT-6 Sol (the bake-off winner) |
 | `escalation.nemotron-gpt` | escalation: efficient → capable GPT (Responses API) | efficient model first, GPT-6 Sol on escalation |
+| `pinned-capable.nemotron-claude` | capable Claude, every turn, no judge | a provider that serves Claude, e.g. Claude Opus 5.5 |
+| `escalation.nemotron-claude` | escalation: efficient → capable Claude (Anthropic Messages API) | efficient model first, Claude on escalation |
 | `escalation.nemotron` | escalation: efficient → capable model (Chat Completions) | all-Nemotron, e.g. on build.nvidia.com |
 
 The suffix names the model families the template expects:
 - `.nemotron-gpt`: the capable model is GPT. GPT tool calling needs the Responses API, so it runs
   with `reasoning_effort = "medium"` and `store = false`.
+- `.nemotron-claude`: the capable model is Claude, over the Anthropic Messages API (`x-api-key` and
+  `anthropic-version` headers, `/v1/messages`). That API has no `reasoning_effort`, so the target sets
+  `output_config.effort = "medium"` through `extra_body` instead; Switchyard also marks the prompt for
+  Anthropic's prompt caching. Every other model in the template still speaks Chat Completions.
 - `.nemotron`: every model speaks Chat Completions, for example all-Nemotron on build.nvidia.com.
 
 The capable model's client reads `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`. The endpoint defaults to
@@ -97,7 +103,7 @@ Without the fallback, Hermes kept retrying for about 5 minutes and then failed t
 | `SWITCHYARD_ROUTES` | yes | Template name from `routes/`, without `.toml.tmpl`. |
 | `INFERENCE_BASE_URL` | yes | OpenAI-compatible base URL, e.g. `https://integrate.api.nvidia.com/v1` (build.nvidia.com). |
 | `INFERENCE_API_KEY` | yes | Read from `/run/secrets/inference_api_key` when that file exists (the Compose secret), else from the environment. |
-| `CAPABLE_BASE_URL` | no | The capable model's OpenAI-compatible base URL. Empty means `INFERENCE_BASE_URL`. |
+| `CAPABLE_BASE_URL` | no | The capable model's base URL: OpenAI-compatible, or the Anthropic Messages API for `*-claude` (e.g. `https://api.anthropic.com/v1`). Empty means `INFERENCE_BASE_URL`. |
 | `CAPABLE_API_KEY` | no | Its key, read from `/run/secrets/capable_api_key` when that file exists, else from the environment. Empty means `INFERENCE_API_KEY` when `CAPABLE_BASE_URL` is empty or equals `INFERENCE_BASE_URL`; with another endpoint a template that uses the capable model needs it. |
 | `AGENT_EFFICIENT_MODEL`, `AGENT_JUDGE_MODEL` | yes | Model ids at the inference endpoint. |
 | `AGENT_CAPABLE_MODEL` | all but `passthrough.nemotron` | Model id at the capable endpoint. The models a template uses must all differ. |
@@ -131,6 +137,12 @@ AGENT_JUDGE_MODEL=nvidia/nemotron-3-super-120b-a12b
 SWITCHYARD_ROUTES=escalation.nemotron-gpt
 AGENT_CAPABLE_MODEL=gpt-6-sol
 CAPABLE_BASE_URL=https://<openai-compatible-endpoint>/v1
+CAPABLE_API_KEY=<that provider's key>
+
+# Ultra escalating to Claude Opus 5.5, from Anthropic's API or any endpoint that speaks it.
+SWITCHYARD_ROUTES=escalation.nemotron-claude
+AGENT_CAPABLE_MODEL=claude-opus-5-5
+CAPABLE_BASE_URL=https://api.anthropic.com/v1
 CAPABLE_API_KEY=<that provider's key>
 
 # All-Nemotron escalation on build.nvidia.com: Super answers, Ultra takes over.

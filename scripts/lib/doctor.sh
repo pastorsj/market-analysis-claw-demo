@@ -224,6 +224,8 @@ check_inference() {
     case $SWITCHYARD_ROUTES in
       *-gpt) problem "SWITCHYARD_ROUTES=$SWITCHYARD_ROUTES needs a GPT model: set CAPABLE_BASE_URL and" \
         "CAPABLE_API_KEY to an OpenAI-compatible endpoint that serves it (build.nvidia.com does not)" ;;
+      *-claude) problem "SWITCHYARD_ROUTES=$SWITCHYARD_ROUTES needs a Claude model: set CAPABLE_BASE_URL and" \
+        "CAPABLE_API_KEY to an endpoint that serves it over the Anthropic Messages API (build.nvidia.com does not)" ;;
     esac
   fi
 }
@@ -286,7 +288,11 @@ check_keys() {
   # shellcheck disable=SC2086 # model ids have no spaces
   models_listed inference "$INFERENCE_BASE_URL" "$INFERENCE_API_KEY" $models
   if uses_capable_model; then
-    models_listed capable "$CAPABLE_BASE_URL" "$CAPABLE_API_KEY" "$AGENT_CAPABLE_MODEL"
+    case $SWITCHYARD_ROUTES in
+      # The Anthropic Messages API lists models for an x-api-key, as Switchyard authenticates there.
+      *-claude) MODELS_AUTH=anthropic models_listed capable "$CAPABLE_BASE_URL" "$CAPABLE_API_KEY" "$AGENT_CAPABLE_MODEL" ;;
+      *) models_listed capable "$CAPABLE_BASE_URL" "$CAPABLE_API_KEY" "$AGENT_CAPABLE_MODEL" ;;
+    esac
   fi
   if has_profile retrieval || has_profile ontology; then
     models_listed retriever "${RETRIEVER_BASE_URL:-https://$BUILD_NVIDIA_HOST/v1}" "$RETRIEVER_API_KEY" \
@@ -294,13 +300,17 @@ check_keys() {
   fi
 }
 
-# models_listed NAME BASE_URL KEY MODEL...
+# [MODELS_AUTH=anthropic] models_listed NAME BASE_URL KEY MODEL...
 models_listed() {
-  local name=$1 url=$2 key=$3 listed model
+  local name=$1 url=$2 key=$3 listed model header='header = "Authorization: Bearer %s"\n'
   shift 3
   [ -n "$url" ] && [ -n "$key" ] || return 0 # already reported as empty
+  if [ "${MODELS_AUTH:-}" = anthropic ]; then
+    header='header = "x-api-key: %s"\nheader = "anthropic-version: 2023-06-01"\n'
+  fi
   # curl reads the header from stdin, so the key never appears in a process listing.
-  if ! listed=$(printf 'header = "Authorization: Bearer %s"\n' "$key" |
+  # shellcheck disable=SC2059 # the format is one of the two constant strings above
+  if ! listed=$(printf "$header" "$key" |
     curl -fsS --max-time 30 --config - "$url/models" | tr -d ' \t\n'); then
     problem "$name: GET $url/models failed with the configured key"
     return 0

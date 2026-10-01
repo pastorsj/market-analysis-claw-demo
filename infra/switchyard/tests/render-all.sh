@@ -39,6 +39,13 @@ run_entrypoint() {
         AGENT_CAPABLE_MODEL=gpt-6-sol \
         AGENT_JUDGE_MODEL=nvidia/nemotron-3-super-120b-a12b "$@"
       ;;
+    *.nemotron-claude)
+      set -- INFERENCE_BASE_URL=https://integrate.api.nvidia.com/v1 \
+        CAPABLE_BASE_URL=https://capable.example.com/v1 CAPABLE_API_KEY=dummy-capable-not-a-key \
+        AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-ultra-550b-a55b \
+        AGENT_CAPABLE_MODEL=claude-opus-5-5 \
+        AGENT_JUDGE_MODEL=nvidia/nemotron-3-super-120b-a12b "$@"
+      ;;
     *)
       set -- INFERENCE_BASE_URL=https://integrate.api.nvidia.com/v1 \
         AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-super-120b-a12b \
@@ -135,6 +142,18 @@ expect "passthrough needs no capable key, whatever the capable endpoint" \
   exits 0 passthrough.nemotron CAPABLE_BASE_URL=https://capable.example.com/v1
 rm "$work/capable-secret"
 expect "an empty CAPABLE_API_KEY for another endpoint exits 64" exits 64 escalation.nemotron-gpt CAPABLE_API_KEY=
+
+# Claude speaks the Anthropic Messages API: its client has that format, and its target carries no
+# Responses-only option (Switchyard rejects reasoning_effort on that client).
+messages_client_on_capable_endpoint() {
+  grep -A1 '^format = "anthropic_messages"' "$work/routes.toml" | grep -q 'base_url = "https://capable.example.com/v1"'
+}
+for name in escalation.nemotron-claude pinned-capable.nemotron-claude; do
+  expect "$name: the capable model uses the Anthropic Messages client" exits 0 "$name"
+  expect "  ...on the capable endpoint" messages_client_on_capable_endpoint
+  expect "  ...without reasoning_effort or store" not grep -q -e '^reasoning_effort' -e 'store = ' "$work/routes.toml"
+  expect "  ...with an empty CAPABLE_API_KEY for another endpoint, exits 64" exits 64 "$name" CAPABLE_API_KEY=
+done
 expect "passthrough needs no capable model" exits 0 passthrough.nemotron AGENT_CAPABLE_MODEL=
 expect "  ...and renders none" not grep -q -e 'CAPABLE' -e 'targets.capable' "$work/routes.toml"
 
