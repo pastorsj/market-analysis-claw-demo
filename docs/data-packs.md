@@ -28,7 +28,7 @@ a document corpus, each through its own tool.
 | Company data | Names and profiles written by Nemotron with NeMo Data Designer, checked against SEC's ticker lists | SEC names, CIKs and SIC codes |
 | Ticker-linked news | `company_news`: seeded events with Nemotron headlines, and 12 planted stories | None: `sentiment_timeline` and `analyze_news_price_relationship` report that they are unavailable |
 | `sec_filings` | 1,000 real 8-K and 6-K filings from 2026 Q2, by any filer (the issuers are fictional) | 1,074 8-Ks filed by the pack's own companies over its price window |
-| Other documents | `market_regulations`: eCFR Title 17 | `market_regulations`, and `world_news`: 8,192 GDELT headlines (opt-in) |
+| Other documents | `market_regulations`: eCFR Title 17 and the SEC's 2023 cybersecurity disclosure rule (Form 8-K Item 1.05 and its deadline) | `market_regulations`, and `world_news`: 8,192 GDELT headlines (opt-in) |
 | Needs | Nothing for the structured part; `SEC_USER_AGENT` for `sec_filings` | `demo.sh data fetch` first; `SEC_USER_AGENT` for company data and `sec_filings` |
 
 The synthetic market has planted facts, so answers can be checked: `eval/oracles/*.sql` computes them from a
@@ -187,6 +187,6 @@ built tables. The database name is the pack id in snake case.
 - `us-equities`' minute bars and GDELT headlines are a private dataset, used as provided and never committed or
   redistributed here.
 - eCFR is United States government public information. The eCFR is authoritative but is not the official legal
-  edition of the CFR.
+  edition of the CFR. The Federal Register rule is United States government public information too.
 - SEC EDGAR content falls under the SEC's website reuse terms, and issuer-authored content may carry its own
   rights; its redistribution terms are unknown. The filings are fetched at build time and never committed.

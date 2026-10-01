@@ -24,6 +24,7 @@ from jsonschema import Draft202012Validator
 from demo_data import external
 from demo_data.corpus import ecfr
 from demo_data.corpus import edgar
+from demo_data.corpus import federal_register
 from demo_data.corpus import gdelt
 from demo_data.corpus import markdown
 from demo_data.corpus.common import CorpusError
@@ -35,6 +36,7 @@ from demo_data.pack import Pack
 PINNED: dict[str, Callable[[str, Path, Downloads], list[Document]]] = {
     "ecfr-xml": ecfr.documents,
     "edgar-filings": edgar.documents,
+    "federal-register-xml": federal_register.documents,
     "markdown": markdown.documents,
 }
 IN_PLACE: dict[str, Callable[[str, list[Path]], list[Document]]] = {

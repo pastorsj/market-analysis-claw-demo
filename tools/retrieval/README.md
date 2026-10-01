@@ -90,7 +90,7 @@ URL and model, the chunking and the index parameters.
 
 ## Tool result
 
-`retrieve_evidence(query, source_ids, top_k=8)` returns:
+`retrieve_evidence(query, source_ids, top_k=8)` returns at most 8 passages (a larger `top_k` returns 8):
 
 - `hits[]`: `rank`, `score` (rerank logit), `vector_score` (cosine), `source_id`, `document_id`, `chunk_id`,
   `title`, `url`, `published_at`, `snippet` and `metadata`.
@@ -104,20 +104,23 @@ URL and model, the chunking and the index parameters.
 
 ### Size
 
-A passage is a chunk of up to 2,400 characters. Each hit adds about 1 KB of ids, URL, citation, other metadata
-and JSON indentation, so one copy of a result is at most about `top_k × 3.3 KB`.
+A passage is a chunk of up to 2,400 characters, never cut shorter. Each hit adds about 1 KB of ids, URL,
+citation, other metadata and JSON indentation.
 
 The MCP SDK sends every result twice: once as `structuredContent` and once as the same JSON in a text block.
 The response on the wire is therefore about double one copy. Hermes drops `structuredContent` when a text block
-repeats it, so the model reads only one copy.
+repeats it, so the model reads only one copy, as a JSON string, with the receipts plugin's `evidence_id`.
 
-These are the worst-case sizes, measured in-process with every hit a full chunk and EDGAR-style metadata:
+Hermes saves a result longer than 50,000 characters to a file the agent cannot read
+([tool result size](../../docs/architecture.md#tool-result-size)). So `budget.py` caps a call at 8 passages and
+drops the lowest-ranked ones while the result is longer than 30,000 characters as the agent reads it; a lone
+passage that is still too long has its title, metadata and text cut. `tests/test_budget.py` measures the worst
+case: eight full chunks of text that JSON escapes twice, with long titles, URLs and metadata.
 
-| `top_k` | one copy | JSON-RPC response |
+| `top_k` | as the agent reads it | JSON-RPC response |
 |---|---|---|
 | 3 | 11 KB | 21 KB |
-| 8 (default) | 27 KB | 53 KB |
-| 25 | 83 KB | 164 KB |
+| 8 (default and most) | 27 KB, 30 KB at most | 53 KB |
 
 OpenShell 0.1.2 limits JSON-RPC bodies to 64 KiB by default, but only request bodies (the tool arguments), so
 these responses pass through.

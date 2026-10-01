@@ -12,7 +12,7 @@ of it is investment advice.
 |---|---|---|---|
 | `market_data` | structured | generated, synthetic | Fictional issuers, their daily prices, declared peers and ticker-linked company news, in DuckDB and Parquet, with leakage-safe prediction views; in the 1-minute profiles, minute bars that `intraday_scan` reads in place |
 | `sec_filings` | documents | downloaded, real | SEC EDGAR 8-K and 6-K filings from 2026 Q2 (1,000 pinned filings) |
-| `market_regulations` | documents | downloaded, real | eCFR Title 17 as of 2026-08-17 |
+| `market_regulations` | documents | downloaded, real | eCFR Title 17 as of 2026-08-17, and the SEC's 2023 cybersecurity disclosure rule (88 FR 51896): its summary and amended form text, Form 8-K Item 1.05 and its deadline among them |
 
 The filings are real companies and the issuers are fictional, so the two never mix: no filing is turned into
 news, and questions that use both keep them apart.
@@ -117,7 +117,7 @@ records the latest run.
 | `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set |
 | `generator/build.py`, `generator/model.yaml` | the seeded market and its constants |
 | `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
-| `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
+| `corpus/*.manifest.json` | the pinned eCFR snapshot, Federal Register rule and EDGAR filings (URL and SHA-256 of every file) |
 | `eval/` | SQL oracles for the analytics answers, the documents retrieval answers cite, the answer checks (`answers.yaml`) and the GPU guard's cases (`perf.yaml`) of the on-demand checks ([eval](../../../eval/README.md)); never read at runtime |
 | `recordings/` | the replay bundle of the ten questions of the `standard` profile (`demo.sh record --all` with the `.env.example` models, [recordings](../../../docs/data-packs.md#recordings)); `intraday-ranges` needs a minute-bar profile |
 

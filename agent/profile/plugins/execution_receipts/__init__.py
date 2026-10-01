@@ -8,7 +8,8 @@ Hermes calls four hooks:
   but takes no argument), and blocks MCP tools that are not in the tool registry and ``skill_manage``.
 - ``post_tool_call`` and ``transform_tool_result`` turn a data tool's result into a receipt
   (``contracts/schemas/receipt.schema.json``) and post it to the job API, once per call, and
-  ``transform_tool_result`` adds the receipt id to the result as ``evidence_id``, so the agent can cite it.
+  ``transform_tool_result`` adds the receipt id to the result as ``evidence_id``, so the agent can cite it. It also
+  shortens a result the agent could not read whole (``MAX_RESULT_CHARS``).
   Hermes' agent loop fires ``transform_tool_result`` first and a direct dispatch fires ``post_tool_call``
   first; a blocked or raised call gets only ``post_tool_call``. Whichever comes first records the receipt.
 - ``post_api_request`` reports which model Switchyard served for each model call, and at which tier.
@@ -37,6 +38,12 @@ REGISTRY_PATH = Path("/opt/agent/contracts/tool-registry.json")
 TIMEOUT_SECONDS = 5
 # A job answers 503 until it has recorded its Hermes run, which can trail the run's first calls by a moment.
 ATTEMPTS = 3
+
+# Hermes saves an MCP result longer than 50,000 characters to a file the sandboxed agent cannot read and shows the
+# model a 1,500-character preview instead. The data tools keep their results under this many characters as the
+# agent reads them; the plugin shortens one that does not (Auto Ontology's rows, say) the same way.
+MAX_RESULT_CHARS = 30_000
+SHORTENED_NOTE = "shortened_to_fit"
 
 # The display-safe fitting rules from contracts/README.md. The job API rejects a receipt with any
 # key that matches this pattern, so the plugin drops such keys first.
@@ -146,11 +153,23 @@ class ExecutionReceipts:
         self._record(**call)
 
     def transform_tool_result(self, *, result: str | None = None, **call: Any) -> str | None:
-        """Put ``evidence_id`` first in a result whose completed receipt the job API stored, so no cut drops it."""
+        """Put ``evidence_id`` first in a result whose completed receipt the job API stored, so no cut drops it, and
+        shorten a data tool's result that is too long for the agent to read whole."""
         evidence_id = self._record(result=result, **call)
-        if evidence_id is None or result is None:
+        if result is None or call.get("tool_name") not in self.tools:
             return None
-        return json.dumps({"evidence_id": evidence_id, **json.loads(result)}, ensure_ascii=False)
+        try:
+            envelope = json.loads(result)
+        except ValueError:
+            return None
+        if not isinstance(envelope, dict):
+            return None
+        if evidence_id is not None:
+            envelope = {"evidence_id": evidence_id, **envelope}
+        output = json.dumps(envelope, ensure_ascii=False)
+        if len(output) > MAX_RESULT_CHARS:
+            return shorten(envelope)
+        return output if evidence_id is not None else None
 
     def _record(
         self,
@@ -272,6 +291,76 @@ def build_receipt(
         "occurredAt": _timestamp(),
         "content": content,
     }
+
+
+def shorten(envelope: dict) -> str:
+    """The Hermes MCP envelope, ``{"result": "<the tool's JSON text>", ...}``, at most ``MAX_RESULT_CHARS`` long.
+
+    The longest list in the tool's result loses rows from its end (a result that says it is ``truncated`` says so),
+    then the longest text is cut, until the envelope fits; ``shortened_to_fit`` says what was left out.
+    """
+    try:
+        value = json.loads(envelope["result"]) if isinstance(envelope.get("result"), str) else envelope.get("result")
+    except ValueError:
+        value = envelope["result"]
+    notes: dict[str, str] = {}
+    if value and "structuredContent" in envelope:  # a second copy beside the text: the text is enough
+        envelope = {key: item for key, item in envelope.items() if key != "structuredContent"}
+        notes["structuredContent"] = "structuredContent is left out; result holds the same data"
+
+    def render() -> str:
+        result = value if isinstance(value, str) else json.dumps(value, indent=2, ensure_ascii=False)
+        noted = {**envelope, "result": result, **({SHORTENED_NOTE: "; ".join(notes.values())} if notes else {})}
+        return json.dumps(noted, ensure_ascii=False)
+
+    output = render()
+    original: dict[str, int] = {}
+    while len(output) > MAX_RESULT_CHARS:
+        found = _longest(value, lists=True)
+        if found is not None:
+            path, rows = found
+            original.setdefault(path, len(rows))
+            del rows[max(1, len(rows) - max(1, len(rows) // 4)) :]
+            notes[path] = f"{path} lists the first {len(rows)} of {original[path]} items"
+            if isinstance(value, dict) and "truncated" in value:
+                value["truncated"] = True
+        elif (text := _longest(value, lists=False)) is not None:
+            path, (container, key) = text
+            kept = max(0, len(container[key]) - (len(output) - MAX_RESULT_CHARS) - 200)
+            container[key] = container[key][: min(kept, len(container[key]) // 2)] + "…"
+            notes[path] = f"{path} is cut"
+        elif isinstance(value, str) and len(value) > 1:
+            value = value[: max(1, len(value) - (len(output) - MAX_RESULT_CHARS) - 200)] + "…"
+            notes["result"] = "the result text is cut"
+        else:
+            break
+        output = render()
+    return output
+
+
+def _longest(value: Any, *, lists: bool, path: str = "result") -> Any:
+    """The longest list with more than one item (``lists``), or the longest string over 200 characters, inside
+    ``value``: ``(path, list)`` or ``(path, (container, key))``."""
+    best: Any = None
+    best_size = 0
+
+    def visit(item: Any, where: str, container: Any = None, key: Any = None) -> None:
+        nonlocal best, best_size
+        if isinstance(item, dict):
+            for name, child in item.items():
+                visit(child, f"{where}.{name}", item, name)
+        elif isinstance(item, list):
+            size = len(json.dumps(item, ensure_ascii=False))
+            if lists and len(item) > 1 and size > best_size:
+                best, best_size = (where, item), size
+            for index, child in enumerate(item):
+                visit(child, f"{where}[{index}]", item, index)
+        elif isinstance(item, str) and not lists and container is not None and len(item) > 200:
+            if len(item) > best_size:
+                best, best_size = (where, (container, key)), len(item)
+
+    visit(value, path)
+    return best
 
 
 def invocation_id(tool_call_id: str) -> str:

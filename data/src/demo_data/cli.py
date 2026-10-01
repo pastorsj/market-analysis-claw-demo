@@ -238,7 +238,7 @@ def require_env(pack: Pack, corpora: list[dict[str, Any]]) -> None:
     ]
     if missing:
         blocked = {source for source, _ in missing}
-        others = [corpus["source"] for corpus in corpora if corpus["source"] not in blocked]
+        others = list(dict.fromkeys(corpus["source"] for corpus in corpora if corpus["source"] not in blocked))
         problems = "; ".join(f"{source} needs {variable}" for source, variable in missing)
         if others:
             problems += f" (or skip it: set DATA_CORPORA={','.join(others)} for both --structured and --corpus)"

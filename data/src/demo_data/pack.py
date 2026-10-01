@@ -125,7 +125,7 @@ class Pack:
         need nothing here: pack.yaml pins their fingerprints.
         """
         sha = hashlib.sha256(f"{builder_version}\0{profile}\0".encode())
-        sha.update(",".join(sorted(corpus["source"] for corpus in corpora)).encode())
+        sha.update(",".join(sorted({corpus["source"] for corpus in corpora})).encode())
         for value in inputs:
             sha.update(f"\0{value}".encode())
         for file in sorted(self.directory.rglob("*")):
@@ -198,7 +198,7 @@ class Pack:
             built = {corpus["source"] for corpus in corpora}
             resolved["documents"] = {
                 "collection": m["documents"].get("collection", f"{self.id.replace('-', '_')}_documents"),
-                "sources": [corpus["source"] for corpus in corpora],
+                "sources": list(dict.fromkeys(corpus["source"] for corpus in corpora)),
                 "path": "corpus/documents.jsonl",
             }
             queries = [q for q in m["documents"].get("benchmark_queries", []) if set(q["sources"]) <= built]
@@ -322,7 +322,11 @@ def cross_reference_errors(pack: Pack) -> list[str]:
             errors.append(f"{label}: manifest {corpus['manifest']} not found")
         elif _json_object(manifest_path).get("source_id") != corpus["source"]:
             errors.append(f"{label}: manifest {corpus['manifest']} does not declare source_id {corpus['source']!r}")
-    errors += [f"source {name} has more than one corpus" for name in _duplicates(c["source"] for c in corpora)]
+    # A source may draw on several corpora (market_regulations: the eCFR and a Federal Register rule); DATA_CORPORA
+    # names sources, so all of a source's corpora are opt-in or none are.
+    for name in sorted({c["source"] for c in corpora}):
+        if len({bool(c.get("opt_in", False)) for c in corpora if c["source"] == name}) > 1:
+            errors.append(f"source {name} has opt-in and default corpora")
     corpus_sources = {corpus["source"] for corpus in corpora}
     for number, query in enumerate(m.get("documents", {}).get("benchmark_queries", []), start=1):
         if unknown := sorted(set(query["sources"]) - corpus_sources):

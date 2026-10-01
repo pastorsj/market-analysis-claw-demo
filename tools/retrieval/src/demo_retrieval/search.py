@@ -26,6 +26,10 @@ from . import store
 from .settings import Settings
 
 CANDIDATES_PER_HIT = 4
+# A passage is at most one chunk long (ingest.CHUNK_SIZE); a longer one ends in an ellipsis. Passages are not cut
+# shorter: the fact a question needs can sit at a chunk's end (Form 8-K's Item 1.05 deadline sits at characters
+# 1,403 to 1,540 of its chunk), so a result fits its size budget by returning fewer passages instead.
+MAX_SNIPPET_CHARS = 2400
 
 tracer = trace.get_tracer(__name__)
 
@@ -165,9 +169,18 @@ def _hit(rank: int, candidate: store.Candidate, score: float) -> Hit:
         title=fields["title"],
         url=fields["url"],
         published_at=fields["published_at"],
-        snippet=fields["text"],
+        snippet=clip(fields["text"], MAX_SNIPPET_CHARS),
         metadata={key: value for key, value in fields.items() if key not in store.SCALAR_FIELDS},
     )
+
+
+def clip(text: str, limit: int) -> str:
+    """`text`, or its first `limit` characters cut at a word boundary and ending in an ellipsis."""
+    if len(text) <= limit:
+        return text
+    head = text[: limit - 1]
+    space = head.rfind(" ")
+    return (head[:space] if space > limit * 0.8 else head).rstrip() + "…"
 
 
 def _span(name: str, kind: SpanKind, attributes: dict[str, Any]) -> AbstractContextManager[Span]:

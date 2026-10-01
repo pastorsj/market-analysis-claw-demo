@@ -20,6 +20,7 @@ from demo_data import corpus
 from demo_data import external
 from demo_data.corpus import ecfr
 from demo_data.corpus import edgar
+from demo_data.corpus import federal_register
 from demo_data.corpus import gdelt
 from demo_data.corpus import markdown
 from demo_data.corpus.common import CorpusError
@@ -98,6 +99,82 @@ def test_ecfr_rejects_another_title(tmp_path):
             as_of="2026-08-17",
             snapshot_url="https://example.com",
         )
+
+
+RULE = {
+    "url": "https://www.federalregister.gov/documents/full_text/xml/2023/08/04/2023-16194.xml",
+    "html_url": "https://www.federalregister.gov/documents/2023/08/04/2023-16194/cybersecurity-risk-management",
+    "document_number": "2023-16194",
+    "citation": "88 FR 51896",
+    "published_on": "2023-08-04",
+    "title": "Cybersecurity Risk Management, Strategy, Governance, and Incident Disclosure",
+    "release": "Release Nos. 33-11216; 34-97989",
+}
+
+
+def test_federal_register_keeps_the_summary_and_each_appendix_of_form_text(tmp_path):
+    downloads = Downloads(tmp_path / "downloads")
+    digest = cached(downloads, FIXTURES / "federal-register" / "rule-mini.xml")
+    pin = RULE | {"sha256": digest}
+    manifest = write_manifest(tmp_path / "fr.json", {"source_id": "market_regulations", "document": pin})
+
+    summary, form_8k, form_10k = federal_register.documents("market_regulations", manifest, downloads)
+
+    assert [summary.document_id, form_8k.document_id, form_10k.document_id] == [
+        "fr-2023-16194:summary",
+        "fr-2023-16194:appendix-c-form-8-k",
+        "fr-2023-16194:appendix-d-form-10-k",
+    ]
+    assert form_8k.title == f"{RULE['title']}: Appendix C—Form 8-K"
+    assert form_8k.text.split("\n\n") == [
+        f"{RULE['title']}. Final rule, {RULE['release']}, 88 FR 51896 (August 4, 2023). Appendix C—Form 8-K.",
+        "FORM 8-K",
+        "* * *",
+        "B. Events To Be Reported and Time for Filing of Reports",
+        "1. A report pursuant to Item 1.05 is to be filed within four business days after the registrant determines "
+        "that it has experienced a material cybersecurity incident.",
+        "Item 1.05 Material Cybersecurity Incidents",
+        "(a) If the registrant experiences a cybersecurity incident that is determined by the registrant to be "
+        "material, describe the material aspects of the nature, scope, and timing of the incident.",
+    ]
+    assert (form_8k.url, form_8k.published_at) == (RULE["html_url"], "2023-08-04T00:00:00Z")
+    assert form_8k.metadata == {
+        "citation": "88 FR 51896 (August 4, 2023), Appendix C—Form 8-K",
+        "document_number": "2023-16194",
+        "release": "Release Nos. 33-11216; 34-97989",
+        "part": "Appendix C—Form 8-K",
+        "published_on": "2023-08-04",
+        "snapshot_url": RULE["url"],
+    }
+    # The summary and dates, without footnote markers; the preamble's discussion is left out.
+    assert summary.text.split("\n\n")[1:] == [
+        "SUMMARY:",
+        "The Commission is adopting amendments to require current disclosure about material cybersecurity incidents.",
+        "DATES:",
+        "Effective date: The amendments are effective September 5, 2023.",
+    ]
+    assert not any("long discussion" in document.text for document in (summary, form_8k, form_10k))
+
+
+def test_federal_register_rejects_another_rule(tmp_path):
+    with pytest.raises(CorpusError, match="not the rule the manifest names"):
+        federal_register.parse_rule(
+            FIXTURES / "federal-register" / "rule-mini.xml", source_id="s", pin=RULE | {"title": "Another rule"}
+        )
+
+
+def test_the_pinned_rule_manifests_name_the_form_8k_deadline_source():
+    """Both packs pin the same rule; its sha256 is the federalregister.gov full-text XML of 2023-16194."""
+    for name in ("synthetic-market", "us-equities"):
+        pack = load_pack(Path(__file__).parents[1] / "packs" / name)
+        (rule,) = [c for c in pack.manifest["documents"]["corpora"] if c["format"] == "federal-register-xml"]
+        pin = json.loads(pack.path(rule["manifest"]).read_text())["document"]
+        assert (rule["source"], pin["document_number"], pin["citation"]) == (
+            "market_regulations",
+            "2023-16194",
+            RULE["citation"],
+        )
+        assert pin["sha256"] == "c1f5314824b4f97e08bc791a0098f33a37b7d65198c392a7b3652c43ac42119e"
 
 
 @pytest.fixture

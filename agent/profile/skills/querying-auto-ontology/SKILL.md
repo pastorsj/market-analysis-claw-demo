@@ -65,6 +65,10 @@ or `evidence`.
   Those tools are not enabled here, so go straight to `ask_question`.
 - Keep measures at their natural grain. Ask for totals before a one-to-many join
   can multiply them.
+- A return over a window is one number per asset, measured as the market tools
+  measure it: from the close on the session before the window's first session
+  to the last close in the window. Say so in the question, and ask for the
+  median or average of those per-asset returns, never of daily returns.
 - Ask separate questions for different time grains, such as daily and monthly.
 - A correlation in the rows is not a cause.
 
@@ -75,9 +79,11 @@ many assets does each sector have?"
 
 ```
 ask_question(
-    question="For each sector, compute the equal-weight average adjusted return "
-             "from 2026-08-01 to 2026-08-31 and the number of assets in the sector. "
-             "Sort sectors by that return, highest first.",
+    question="For each asset, compute its return from its adjusted close on the "
+             "last session before 2026-08-01 to its last adjusted close on or before "
+             "2026-08-31. Then, for each sector, give the number of assets and the "
+             "average of those per-asset returns. Sort sectors by that average, "
+             "highest first.",
 )
 ```
 

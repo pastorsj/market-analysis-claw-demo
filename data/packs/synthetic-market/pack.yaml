@@ -56,6 +56,19 @@ provenance:
     url: https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml
     as_of: "2026-08-17"
     retrieved_on: "2026-09-22"
+  - id: federal-register-2023-16194
+    title: >-
+      SEC final rule, Cybersecurity Risk Management, Strategy, Governance, and Incident Disclosure (88 FR 51896),
+      Federal Register XML
+    kind: download
+    synthetic: false
+    license: US-Government-Public-Information
+    url: https://www.federalregister.gov/documents/full_text/xml/2023/08/04/2023-16194.xml
+    as_of: "2023-08-04"
+    retrieved_on: "2026-10-01"
+    notes: >-
+      The rule's summary and its appendices of amended form text: Form 8-K General Instruction B.1 and Item 1.05,
+      Form 10-K Item 1C, Form 20-F Item 16K and Form S-3. The preamble's discussion is left out.
   - id: sec-edgar-2026-q2
     title: SEC EDGAR 2026 Q2 master index and 1,000 sampled 8-K/6-K filings
     kind: download
@@ -136,6 +149,12 @@ documents:
       origin: ecfr-title-17
       format: ecfr-xml
       manifest: corpus/ecfr-title17-2026-08-17.manifest.json
+    # The CFR does not hold the SEC forms' text, so Form 8-K's Item 1.05 and its deadline come from the rule that
+    # adopted them.
+    - source: market_regulations
+      origin: federal-register-2023-16194
+      format: federal-register-xml
+      manifest: corpus/fr-2023-16194.manifest.json
   # Held-out queries for the Benchmark tab's CPU/GPU Milvus index comparison (analytics-gpu profile): never
   # the demo questions. A build keeps those whose sources it indexed (docs/retrieval.md).
   benchmark_queries:
@@ -199,10 +218,13 @@ sources:
       - Which second-quarter 2026 current reports describe a material cybersecurity incident?
   - id: market_regulations
     name: Market Regulations
-    description: Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.
+    description: >-
+      Current public eCFR Title 17 sections and the SEC's 2023 cybersecurity disclosure rule, retrieved from
+      Milvus with NVIDIA Nemotron Embed and Rerank.
     agent_description: >-
       Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities
-      regulation research.
+      regulation research, and the form text the SEC's 2023 cybersecurity disclosure rule adopted (Form 8-K Item
+      1.05 and its filing deadline, Form 10-K Item 1C), which the CFR does not hold.
     kind: documents
     capabilities: [unstructured_retrieval]
     synthetic: false

@@ -72,11 +72,18 @@ when a prediction target or the set of entities cannot be inferred.
 - Put `[evidence:<evidence_id>]` directly after each claim it supports, using
   the exact ID from a result in this turn. Use two tokens when a claim combines
   two results. In a table, put the token in the row it supports.
-- Write the token exactly as shown, with ASCII square brackets. A source named
-  in prose is not a citation.
+- Write the token exactly as shown, with ASCII square brackets and nothing
+  else inside them: no rank, page, or note. A source named in prose is not a
+  citation.
+- Write an evidence ID only inside a token: never in code, bold, parentheses,
+  or a list of evidence.
 - Never invent an evidence ID, URL, document, row, score, or query.
 - Do not write a Sources or References section and do not use numbered `[1]`
   markers. The application checks each token and appends the source list.
+- In a follow-up, earlier answers show their citations as numbered markers
+  such as `[1]`. They point at earlier evidence: never copy them. Cite only
+  evidence IDs from this turn's results, and call the tools again for any claim
+  you repeat from an earlier answer.
 
 ## Answer format
 

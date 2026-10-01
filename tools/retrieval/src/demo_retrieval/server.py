@@ -15,6 +15,7 @@ from pydantic import Field
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from . import budget
 from .datapack import CollectionManifest
 from .datapack import Pack
 from .search import RetrievalResult
@@ -38,17 +39,20 @@ def create_server(retriever: Retriever, document_sources: frozenset[str]) -> MCP
         source_ids: Annotated[
             list[str], Field(description="Document sources to search. The application sets this for each run.")
         ],
-        top_k: Annotated[int, Field(ge=1, le=25, description="How many passages to return")] = 8,
+        top_k: Annotated[
+            int, Field(ge=1, le=25, description=f"How many passages to return; at most {budget.MAX_HITS} are returned")
+        ] = 8,
     ) -> RetrievalResult:
         """Search the selected document sources and return the best passages with title, URL and date.
 
-        Passages from all sources are ranked together by an NVIDIA Nemotron reranker. Search each topic once, and
-        rephrase at most once: when the passages lack a detail, say so instead of searching again.
+        Passages from all sources are ranked together by an NVIDIA Nemotron reranker; one call returns at most 8.
+        Search each topic once, and rephrase at most once: when the passages lack a detail, say so instead of
+        searching again.
         """
         requested = sorted(set(source_ids))
         if not requested or not document_sources.issuperset(requested):
             raise ToolError(f"source_ids must be a non-empty subset of {sorted(document_sources)}, got {source_ids}")
-        return await retriever.retrieve(query, requested, top_k)
+        return budget.fit(await retriever.retrieve(query, requested, min(top_k, budget.MAX_HITS)))
 
     @server.custom_route("/health", methods=["GET"])
     async def health(_: Request) -> JSONResponse:

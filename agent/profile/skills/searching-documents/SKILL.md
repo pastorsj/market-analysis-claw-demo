@@ -20,8 +20,8 @@ metadata:
 # Searching documents
 
 `retrieve_evidence` searches every document source selected for this turn. It
-ranks passages with NVIDIA Nemotron retrieval models and returns short passages
-with their titles, citations, and dates.
+ranks passages with NVIDIA Nemotron retrieval models and returns up to 8
+passages with their titles, citations, and dates.
 
 ## When to Use
 
@@ -39,10 +39,9 @@ Numbers calculated from data belong to `analyzing-market-data` or
 | Argument | Value |
 | --- | --- |
 | `query` | A focused description of the passage you need |
-| `top_k` | Leave unset at first; raise it only if the first result is too thin |
+| `top_k` | Leave unset: it returns 8 passages, the most one call returns |
 
-The application limits the search to the selected sources. Pass only `query`
-and, when needed, `top_k`.
+The application limits the search to the selected sources. Pass only `query`.
 
 ## Procedure
 
@@ -81,4 +80,5 @@ retrieve_evidence(query="disclosure requirements and deadline after a material c
 ```
 
 Answer from the returned passages and cite the result's `evidence_id` after each
-claim.
+claim as `[evidence:<evidence_id>]`. One token covers every passage of the
+result: do not add a passage's rank or title inside the brackets.

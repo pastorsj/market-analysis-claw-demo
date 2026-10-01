@@ -8,6 +8,8 @@ import json
 from datetime import UTC
 from datetime import datetime
 
+import pandas as pd
+
 from ..data import MarketData
 from ..models import Comparison
 from ..models import Direction
@@ -100,12 +102,15 @@ def run(
     summary["peer_relative_return"] = summary["total_return"] - summary["total_return"].mean()
     summary["coverage_ratio"] = summary["observation_count"] / summary["observation_count"].max()
 
+    # Every requested metric's z-score among the universe's assets, so a metric that does not rank still says how
+    # unusual each listed asset's value is (a volume next to a return ranking).
+    for metric in metrics:
+        summary[f"zscore_{metric}"] = _zscores(summary[COLUMNS[metric]])
     primary = summary[COLUMNS[metrics[0]]]
     if comparison == "magnitude":
         summary["score"] = primary.abs()
     elif comparison == "zscore":
-        spread = primary.std(ddof=0)
-        summary["score"] = (primary - primary.mean()) / spread if spread > 0 else 0.0
+        summary["score"] = summary[f"zscore_{metrics[0]}"]
     else:
         summary["score"] = primary
     ranked = (
@@ -120,6 +125,7 @@ def run(
             asset_id=row["asset_id"],
             score=row["score"],
             values={metric: row[COLUMNS[metric]] for metric in metrics},
+            zscores={metric: row[f"zscore_{metric}"] for metric in metrics},
             observation_count=row["observation_count"],
             coverage_ratio=row["coverage_ratio"],
         )
@@ -134,3 +140,9 @@ def run(
         observations=observations,
     )
     return Output(payload, rows_scanned=len(bars), assets=len(summary))
+
+
+def _zscores(values: pd.Series) -> pd.Series | float:
+    """(value - mean) / standard deviation over the assets (population, ddof=0); 0 when every value is the same."""
+    spread = values.std(ddof=0)
+    return (values - values.mean()) / spread if spread > 0 else 0.0
