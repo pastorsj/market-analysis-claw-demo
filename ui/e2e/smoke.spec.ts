@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { LIVE_URL, REPLAY_URL } from '../playwright.config'
 
 /** The chat store's saved state: a live session whose job was running when the page closed. */
@@ -34,11 +34,25 @@ const SAVED_LIVE_SESSION = JSON.stringify({
   version: 0,
 })
 
+/**
+ * Opens the live landing page with its featured questions. The server renders them only when the
+ * API answers `GET /v1/pack` within 3 s, which a busy test run can miss now and then: reload until
+ * they are there.
+ */
+const gotoLanding = async (page: Page) => {
+  await expect(async () => {
+    await page.goto('/')
+    await expect(
+      page.getByRole('region', { name: 'Featured questions' }).getByRole('link')
+    ).toHaveCount(6, { timeout: 2_000 })
+  }).toPass({ timeout: 20_000 })
+}
+
 test.describe('live mode', () => {
   test.use({ baseURL: LIVE_URL })
 
   test('a featured question is asked and answered with its cited evidence', async ({ page }) => {
-    await page.goto('/')
+    await gotoLanding(page)
     await expect(page).toHaveTitle('Enterprise Research')
 
     await page.getByRole('link', { name: /Market Leaders/ }).click()
@@ -131,7 +145,7 @@ test.describe('live mode', () => {
       for (const colorScheme of ['light', 'dark'] as const) {
         const where = `${viewport.width}x${viewport.height} ${colorScheme}`
         await page.emulateMedia({ colorScheme })
-        await page.goto('/')
+        await gotoLanding(page)
         const featured = page.getByRole('region', { name: 'Featured questions' })
         await expect(featured.getByRole('link')).toHaveCount(6)
 
