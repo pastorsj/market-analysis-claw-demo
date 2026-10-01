@@ -6,7 +6,7 @@
 # once it escalates the capable model serves the rest of the session. The capable model can come
 # from its own endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to the inference
 # endpoint and key (the key only on that same endpoint).
-# requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL SWITCHYARD_CONFIRMATIONS
+# requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL AGENT_AUX_MODEL SWITCHYARD_CONFIRMATIONS
 schema_version = 1
 
 [llm_clients.chat]
@@ -45,8 +45,8 @@ id = "${AGENT_JUDGE_MODEL}"
 llm_client = "judge"
 extra_body = { chat_template_kwargs = { enable_thinking = false } }
 
-[targets.aux]                         # the judge model on the long-deadline client
-id = "${AGENT_JUDGE_MODEL}"
+[targets.aux]                         # auxiliary and fallback calls, never judged
+id = "${AGENT_AUX_MODEL}"
 llm_client = "chat"
 extra_body = { chat_template_kwargs = { enable_thinking = false } }
 

@@ -39,26 +39,38 @@ overloaded.
 | `market-research` | every agent turn | depends on the template (below) |
 | `market-research-efficient` | bake-off baselines, debugging | the efficient model |
 | `market-research-capable` | bake-off baselines, debugging | the capable model (not in `passthrough.nemotron`) |
-| `market-research-aux` | Hermes auxiliary calls (compression and similar) | the judge model with thinking off. These calls are never judged. |
-| `market-research-fallback` | the rest of a run whose model is overloaded (below) | the same model as `market-research-aux` |
+| `market-research-aux` | Hermes auxiliary calls (compression and similar) | the aux model (`AGENT_AUX_MODEL`, Nemotron 3 Super by default) with thinking off. These calls are never judged. |
+| `market-research-fallback` | the rest of a run whose model is overloaded (below) | the aux model, as `market-research-aux` |
 
 | `SWITCHYARD_ROUTES` | `market-research` | For |
 |---|---|---|
 | `passthrough.nemotron` | efficient, every turn, no judge, no capable model | **default** on build.nvidia.com (Nemotron 3 Ultra) |
 | `pinned-capable.nemotron-gpt` | capable GPT, every turn, no judge | a provider that serves GPT-6 Sol (the bake-off winner) |
-| `escalation.nemotron-gpt` | escalation: efficient → capable GPT (Responses API) | efficient model first, GPT-6 Sol on escalation |
+| `escalation.nemotron-gpt` | escalation: efficient → capable GPT (Responses API), judged by a GPT model | efficient model first, GPT-6.1 Sol on escalation |
 | `pinned-capable.nemotron-claude` | capable Claude, every turn, no judge | a provider that serves Claude, e.g. Claude Opus 5.5 |
-| `escalation.nemotron-claude` | escalation: efficient → capable Claude (Anthropic Messages API) | efficient model first, Claude on escalation |
-| `escalation.nemotron` | escalation: efficient → capable model (Chat Completions) | all-Nemotron, e.g. on build.nvidia.com |
+| `escalation.nemotron-claude` | escalation: efficient → capable Claude (Anthropic Messages API), judged by a Claude model | efficient model first, Claude on escalation |
+| `escalation.nemotron` | escalation: efficient → capable model (Chat Completions), judged by a Nemotron model | all-Nemotron, e.g. on build.nvidia.com (it has no frontier model) |
 
-The suffix names the model families the template expects:
-- `.nemotron-gpt`: the capable model is GPT. GPT tool calling needs the Responses API, so it runs
-  with `reasoning_effort = "medium"` and `store = false`.
+The suffix names the model families the template expects. Every template serves Hermes' auxiliary
+and fallback calls with the Nemotron aux model.
+- `.nemotron-gpt`: the capable model and the escalation judge are GPT models from the capable
+  endpoint. GPT tool calling needs the Responses API, so the capable model runs with
+  `reasoning_effort = "medium"` and `store = false`; the judge uses the Responses API too, on a client
+  of its own, with `reasoning_effort = "low"` and JSON-schema verdicts (`text.format`).
 - `.nemotron-claude`: the capable model is Claude, over the Anthropic Messages API (`x-api-key` and
   `anthropic-version` headers, `/v1/messages`). That API has no `reasoning_effort`, so the target sets
   `output_config.effort = "medium"` through `extra_body` instead; Switchyard also marks the prompt for
-  Anthropic's prompt caching. Every other model in the template still speaks Chat Completions.
-- `.nemotron`: every model speaks Chat Completions, for example all-Nemotron on build.nvidia.com.
+  Anthropic's prompt caching. The judge is a Claude model on a client of its own; its JSON-schema
+  verdict goes in `output_config.format`, which leaves no room for an `output_config.effort` default,
+  so the judge runs at the model's default effort.
+- `.nemotron`: every model speaks Chat Completions, for example all-Nemotron on build.nvidia.com. Its
+  judge is a Nemotron model on the inference endpoint, because build.nvidia.com serves no frontier model.
+
+**The judge and the capable model need different ids.** Switchyard keys a route's targets by model id:
+one id on two clients in the same route is rejected, and one id twice on one client must have identical
+settings. So a frontier judge cannot share the capable model's id and still have its own client, effort
+and deadline. Use another id the provider lists for the same model (for example a second deployment
+or a dated snapshot), or another strong model from that provider.
 
 The capable model's client reads `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`. The endpoint defaults to
 the inference endpoint, and the key to the inference key on that endpoint only: the inference key
@@ -69,8 +81,10 @@ on build.nvidia.com.
 **How escalation works.** It uses Switchyard's `llm_classifier` router in `mode = "escalation"`.
 On each turn of a session that has not latched:
 1. Switchyard calls the efficient model and buffers its reply.
-2. The judge rates the completed turn using `judge-prompt.md`. It returns a JSON-schema verdict,
-   with thinking off, a 60 s deadline and 2 retries. It escalates only for a failure it can name:
+2. The judge rates the completed turn using `judge-prompt.md`. It returns a JSON-schema verdict on
+   a client of its own. In the frontier templates the judge is a GPT or Claude model from the capable
+   endpoint, with a 120 s deadline for every attempt of one verdict and 2 retries; in the all-Nemotron
+   template it is a Nemotron model with thinking off and a 60 s deadline. It escalates only for a failure it can name:
    a stuck or invalid tool loop, an error used as data, or a final report with a missing citation,
    a wrong window or unit, an unanswered part, a contradiction or no evidence.
 3. After `SWITCHYARD_CONFIRMATIONS` consecutive "escalate" verdicts, the buffered reply is
@@ -105,8 +119,9 @@ Without the fallback, Hermes kept retrying for about 5 minutes and then failed t
 | `INFERENCE_API_KEY` | yes | Read from `/run/secrets/inference_api_key` when that file exists (the Compose secret), else from the environment. |
 | `CAPABLE_BASE_URL` | no | The capable model's base URL: OpenAI-compatible, or the Anthropic Messages API for `*-claude` (e.g. `https://api.anthropic.com/v1`). Empty means `INFERENCE_BASE_URL`. |
 | `CAPABLE_API_KEY` | no | Its key, read from `/run/secrets/capable_api_key` when that file exists, else from the environment. Empty means `INFERENCE_API_KEY` when `CAPABLE_BASE_URL` is empty or equals `INFERENCE_BASE_URL`; with another endpoint a template that uses the capable model needs it. |
-| `AGENT_EFFICIENT_MODEL`, `AGENT_JUDGE_MODEL` | yes | Model ids at the inference endpoint. |
-| `AGENT_CAPABLE_MODEL` | all but `passthrough.nemotron` | Model id at the capable endpoint. The models a template uses must all differ. |
+| `AGENT_EFFICIENT_MODEL`, `AGENT_AUX_MODEL` | yes | Model ids at the inference endpoint. The aux model (Nemotron 3 Super by default, thinking off) serves Hermes' auxiliary and fallback calls; it must differ from the efficient model. |
+| `AGENT_CAPABLE_MODEL` | all but `passthrough.nemotron` | Model id at the capable endpoint. |
+| `AGENT_JUDGE_MODEL` | escalation templates | The escalation judge: a model id at the capable endpoint in `*-gpt` and `*-claude`, at the inference endpoint in `escalation.nemotron`. The efficient, capable and judge models must all differ. |
 | `SWITCHYARD_CONFIRMATIONS` | escalation templates | `1` or `2`. |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | no | For example `http://phoenix:6006/v1/traces`. Set only this one: the generic `OTEL_EXPORTER_OTLP_ENDPOINT` also turns on metrics export, which Phoenix does not accept. |
 | `OTEL_SERVICE_NAME` | no | Defaults to `switchyard-server`. |
@@ -114,7 +129,7 @@ Without the fallback, Hermes kept retrying for about 5 minutes and then failed t
 | `INFERENCE_API_KEY_FILE`, `CAPABLE_API_KEY_FILE`, `SWITCHYARD_STATE_DIR`, `TMPDIR` | no | Paths for running `entrypoint.sh` outside the image. Defaults: the secret paths above, `/var/lib/switchyard` and `/tmp`. |
 
 Configuration mistakes exit 64 with a message before anything listens: an empty variable, equal
-model ids, a confirmations value other than 1 or 2, or an unknown template. `--dry-run` catches the
+model ids (above), a confirmations value other than 1 or 2, or an unknown template. `--dry-run` catches the
 rest, such as a malformed URL.
 
 The routing log lives in `/var/lib/switchyard`, the `switchyard-data` volume. It is owned by uid
@@ -127,29 +142,32 @@ Hermes always requests `market-research`. The startup log line names the templat
 and whether the capable model has its own key.
 
 ```dotenv
-# Default: build.nvidia.com (nvapi- key), Nemotron 3 Ultra on every turn.
+# Default: build.nvidia.com (nvapi- key), Nemotron 3 Ultra on every turn, Super for auxiliary calls.
 INFERENCE_BASE_URL=https://integrate.api.nvidia.com/v1
 SWITCHYARD_ROUTES=passthrough.nemotron
 AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-ultra-550b-a55b
-AGENT_JUDGE_MODEL=nvidia/nemotron-3-super-120b-a12b
+AGENT_AUX_MODEL=nvidia/nemotron-3-super-120b-a12b
 
-# Ultra escalating to GPT-6 Sol from any OpenAI-compatible provider that serves it.
+# Ultra escalating to GPT-6.1 Sol, judged by a GPT model, from a provider serving both.
 SWITCHYARD_ROUTES=escalation.nemotron-gpt
-AGENT_CAPABLE_MODEL=gpt-6-sol
-CAPABLE_BASE_URL=https://<openai-compatible-endpoint>/v1
+AGENT_CAPABLE_MODEL=<the GPT-6.1 Sol id at that provider>
+AGENT_JUDGE_MODEL=<another id there: the same model's second id, or another strong GPT model>
+CAPABLE_BASE_URL=https://<a provider serving the frontier model>/v1
 CAPABLE_API_KEY=<that provider's key>
 
-# Ultra escalating to Claude Opus 5.5, from Anthropic's API or any endpoint that speaks it.
+# Ultra escalating to Claude Opus 5.5, judged by a Claude model, over the Anthropic Messages API.
 SWITCHYARD_ROUTES=escalation.nemotron-claude
 AGENT_CAPABLE_MODEL=claude-opus-5-5
-CAPABLE_BASE_URL=https://api.anthropic.com/v1
+AGENT_JUDGE_MODEL=<another Claude id at that provider>
+CAPABLE_BASE_URL=https://<a provider serving the frontier model>/v1
 CAPABLE_API_KEY=<that provider's key>
 
-# All-Nemotron escalation on build.nvidia.com: Super answers, Ultra takes over.
+# All-Nemotron escalation on build.nvidia.com: Super answers, Ultra takes over, Lightning judges.
 SWITCHYARD_ROUTES=escalation.nemotron
 AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-super-120b-a12b
 AGENT_CAPABLE_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 AGENT_JUDGE_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+AGENT_AUX_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
 ```
 
 ## Reading routing.jsonl
@@ -201,7 +219,8 @@ Normally Compose runs this as the `switchyard` service (profile `core`) through
 docker build -t market-demo/switchyard:local infra/switchyard
 docker run --rm -p 127.0.0.1:4000:4000 -e SWITCHYARD_ROUTES -e SWITCHYARD_CONFIRMATIONS \
   -e INFERENCE_BASE_URL -e INFERENCE_API_KEY -e CAPABLE_BASE_URL -e CAPABLE_API_KEY \
-  -e AGENT_EFFICIENT_MODEL -e AGENT_CAPABLE_MODEL -e AGENT_JUDGE_MODEL market-demo/switchyard:local
+  -e AGENT_EFFICIENT_MODEL -e AGENT_CAPABLE_MODEL -e AGENT_JUDGE_MODEL -e AGENT_AUX_MODEL \
+  market-demo/switchyard:local
 curl -s 127.0.0.1:4000/v1/models | jq -r '.data[].id'
 ```
 

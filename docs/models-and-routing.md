@@ -119,10 +119,11 @@ contradiction or no evidence. The bake-off below measures it ([the tuned judge](
 | Role | Model | build.nvidia.com id (`https://integrate.api.nvidia.com/v1`) |
 |---|---|---|
 | Efficient (default: every turn) | Nemotron 3 Ultra 550B-A55B | `nvidia/nemotron-3-ultra-550b-a55b` |
-| Judge and auxiliary calls, thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
+| Auxiliary and fallback calls (`AGENT_AUX_MODEL`), thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
+| Escalation judge in `*-gpt` and `*-claude` (`AGENT_JUDGE_MODEL`) | a frontier model from the capable provider: GPT-6.1 Sol or Claude Opus 5.5, under a second id there | not served |
 | Capable (escalation and pinned templates) | GPT-6 Sol, over the Responses API | not served; the id your provider lists, e.g. `gpt-6-sol` |
 | Capable (`*-claude` templates) | Claude Opus 5.5, over the Anthropic Messages API | not served; the id your provider lists, e.g. `claude-opus-5-5` |
-| Judge for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| Judge (and aux) for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
 | Candidate efficient model | Nemotron 3.5 Super | to be evaluated once it is served publicly |
 
 On any other OpenAI-compatible endpoint, use the ids its `GET /v1/models` lists; `./scripts/demo.sh doctor
