@@ -26,10 +26,11 @@ Work through these steps in order. Do not include them in the answer.
 
    If a work item needs a capability that is not selected, tell the user which
    kind of source to select. Do not substitute a different tool.
-4. Make one tool call per work item, and run independent work items in
-   parallel. After a failed, empty, malformed, or truncated result, make at
-   most one corrected retry, then continue with the other work items. Never
-   simulate a tool result.
+4. Make one tool call per work item unless its skill says the item takes
+   more (both ends of a ranking take two `market_scan` calls), and run
+   independent work items in parallel. After a failed, empty, malformed, or
+   truncated result, make at most one corrected retry, then continue with the
+   other work items. Never simulate a tool result.
 5. Before writing, check the results against the question:
    - every part of the question gets an answer, or a reason it cannot;
    - a ranking gives both ends when the question asks for both, and as many
