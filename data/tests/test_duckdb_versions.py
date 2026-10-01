@@ -11,8 +11,6 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-import pytest
-
 from demo_data.pack import DATA_ROOT
 
 REPOSITORY = DATA_ROOT.parent
@@ -32,6 +30,6 @@ def test_the_writer_is_not_newer_than_any_reader():
         for lock in REPOSITORY.glob(pattern)
         if lock.parent != DATA_ROOT and (version := locked_duckdb(lock))
     }
-    if not readers:
-        pytest.skip("no other uv project in this checkout locks duckdb")
+    # Fails, rather than passing on nothing, if a move ever takes a reader out of the glob patterns.
+    assert {"api", "tools/market-analytics"} <= readers.keys(), readers
     assert {name: version for name, version in readers.items() if version < writer} == {}
