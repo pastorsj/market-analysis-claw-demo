@@ -492,6 +492,8 @@ export const ExecutionWorkspace = ({
   const stored = useExecutionRun(jobId)
   // A recorded run (every run in replay mode) has no live job behind it
   const liveMode = mode === 'live' && !stored?.recorded
+  // As the original labeled them: a recorded run by its archive and job id, a live one by its job id
+  const runKey = stored?.archive ? `recorded:${stored.archive}:${jobId}` : jobId
   const availableDataSources = useLayoutStore((state) => state.availableDataSources)
   const packDatabaseName = useLayoutStore(selectPackDatabaseName)
   const replaySources = useReplaySources(!liveMode)
@@ -784,7 +786,7 @@ export const ExecutionWorkspace = ({
               <span className={styles.runStatus} data-state={graphStatus}>
                 {graphStatus}
               </span>
-              <code title={jobId}>{jobId}</code>
+              <code title={runKey}>{runKey}</code>
             </div>
           </div>
           <button type="button" className={styles.backButton} onClick={onClose}>

@@ -110,6 +110,19 @@ const toToolPills = (value: unknown): ToolPillUse[] =>
     )
   )
 
+/**
+ * The recordings archive a recorded run belongs to, as the original keyed its runs
+ * ("recorded:<archive>:<job id>"): when the bundle was recorded, then its pack, e.g.
+ * `20261001T045512Z-us-equities`.
+ */
+export const archiveId = (index: RecordingIndex): string => {
+  const recordedAt = index.recordedAt
+    .replace(/\.\d+/, '')
+    .replace(/[-:]/g, '')
+    .replace(/\+0000$/, 'Z')
+  return `${recordedAt}-${index.pack.id}`
+}
+
 /** The chat's view of a recorded session. */
 const toRecordedSession = (session: RecordingSession): RecordedSession => ({
   id: session.id,
@@ -142,11 +155,15 @@ export const recordings: RecordingsSource = {
     }))
   },
   load: async (sessionId) => {
-    const session = parseSession(
-      await getJson(`/api/recordings/sessions/${encodeURIComponent(sessionId)}.json`)
-    )
+    const [session, archive] = await Promise.all([
+      getJson(`/api/recordings/sessions/${encodeURIComponent(sessionId)}.json`).then(parseSession),
+      // Only the run's label needs it: without the index, the run shows its job id alone
+      getJson('/api/recordings/index.json')
+        .then((index) => archiveId(parseIndex(index)))
+        .catch(() => null),
+    ])
     const { addRecord } = useExecutionStore.getState()
-    for (const turn of session.turns) addRecord({ ...turn, recorded: true })
+    for (const turn of session.turns) addRecord({ ...turn, recorded: true, archive })
     return toRecordedSession(session)
   },
 }

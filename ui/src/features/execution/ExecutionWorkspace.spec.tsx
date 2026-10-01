@@ -261,6 +261,22 @@ describe('ExecutionWorkspace', () => {
     })
   })
 
+  it('labels a recorded run by its archive and job id, as the original did, and a live run by its job id', () => {
+    serveDatabase()
+    useExecutionStore
+      .getState()
+      .addRecord({ ...turn, recorded: true, archive: '20260928T060000Z-e2e' })
+    const { unmount } = renderWorkspace('replay')
+    const label = `recorded:20260928T060000Z-e2e:${JOB}`
+    expect(screen.getByText(label)).toHaveAttribute('title', label)
+    unmount()
+
+    useExecutionStore.setState({ runs: {}, dropped: 0 })
+    useExecutionStore.getState().addRecord(turn)
+    renderWorkspace('replay')
+    expect(screen.getByText(JOB)).toHaveAttribute('title', JOB)
+  })
+
   it('in live mode, replays a recorded session’s run from the recording, not the API', async () => {
     const fetchMock = serveDatabase()
     useExecutionStore.getState().addRecord({ ...turn, recorded: true })
