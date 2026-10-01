@@ -3,8 +3,8 @@
 """retrieval-benchmark: the CPU index against an NVIDIA GPU (cuVS) index of the same vectors (analytics-gpu profile).
 
 The one-shot reads the active build's vectors from Milvus and mirrors them, L2-normalized, into the GPU Milvus
-(MILVUS_GPU_URI) under a GPU_CAGRA index. It embeds the pack's held-out queries once (documents.benchmark_queries) and
-times their vector searches on both indexes in three workload profiles: one query per request, batches of five query
+(MILVUS_GPU_URI) under a GPU_IVF_FLAT index. It embeds the pack's held-out queries once (documents.benchmark_queries)
+and times their vector searches on both indexes in three workload profiles: one query per request, batches of five query
 vectors, and five concurrent requests. Each profile warms both indexes up, then repeats its requests three times,
 alternating which index goes first. Only the Milvus search call is timed; nothing is reranked.
 
@@ -16,8 +16,8 @@ result goes to retrieval-benchmark.json beside collection-manifest.json, where t
 build (demo_api.benchmark.RetrievalBenchmark).
 
 Answers never come from the GPU mirror: retrieve_evidence searches the CPU index on every host. On an unchanged build
-the one-shot is a no-op. It never fails the stack: a problem is logged, and the Benchmark tab says no comparison
-applies.
+whose GPU copy has the current index the one-shot is a no-op; a new GPU index rebuilds the copy and measures again. It
+never fails the stack: a problem is logged, and the Benchmark tab says no comparison applies.
 """
 
 from __future__ import annotations
@@ -164,7 +164,7 @@ def run(
     gpu = MilvusClient(uri=settings.milvus_gpu_uri)
     try:
         previous = _previous(data_dir, collection)
-        if previous is not None and gpu.has_collection(collection):
+        if previous is not None and gpu.has_collection(collection) and _has_index(gpu, collection, gpu_index):
             logger.info("%s was already measured: %s", collection, data_dir / BENCHMARK)
             return previous
         vectors = read_vectors(cpu, collection)
@@ -245,7 +245,8 @@ def mirror(client: MilvusClient, alias: str, collection: str, vectors: Vectors, 
     Older builds' copies are dropped, so the GPU holds one.
     """
     rows = len(vectors.ids)
-    if client.has_collection(collection) and _row_count(client, collection) == rows:
+    current = client.has_collection(collection) and _row_count(client, collection) == rows
+    if current and _has_index(client, collection, index):
         logger.info("reusing the GPU copy of %s", collection)
     else:
         if client.has_collection(collection):
@@ -272,6 +273,16 @@ def mirror(client: MilvusClient, alias: str, collection: str, vectors: Vectors, 
     for name in client.list_collections():
         if name.startswith(store.build_name(alias, "")) and name != collection:
             client.drop_collection(name)
+
+
+def _has_index(client: MilvusClient, collection: str, index: dict[str, Any]) -> bool:
+    """Whether the collection's vector index is `index`: its type, metric and every build parameter."""
+    names = client.list_indexes(collection, field_name=store.VECTOR_FIELD)
+    if len(names) != 1:
+        return False
+    described = client.describe_index(collection, index_name=names[0])
+    wanted = {"index_type": index["index_type"], "metric_type": index["metric_type"], **index.get("params", {})}
+    return all(str(described.get(key)) == str(value) for key, value in wanted.items())
 
 
 def _row_count(client: MilvusClient, collection: str) -> int:

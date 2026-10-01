@@ -17,7 +17,7 @@ One image, three commands:
 - `demo-retrieval serve` (default): the MCP server. It uses streamable HTTP at `:8120/mcp`, has a `GET /health`
   check, and runs as the `retrieval` service.
 - `demo-retrieval benchmark`: the `retrieval-benchmark` one-shot of the analytics-gpu profile. It copies the active
-  build's vectors into a GPU Milvus (`MILVUS_GPU_URI`) under `GPU_CAGRA`, times the pack's held-out queries
+  build's vectors into a GPU Milvus (`MILVUS_GPU_URI`) under `GPU_IVF_FLAT`, times the pack's held-out queries
   (`documents.benchmark_queries`) on both indexes, and writes `/data/active/retrieval-benchmark.json` for the
   Benchmark tab ([retrieval](../../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)). Answers never use
   the GPU copy. Without `MILVUS_GPU_URI` it does nothing.

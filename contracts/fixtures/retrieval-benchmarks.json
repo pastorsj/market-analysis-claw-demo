@@ -31,7 +31,7 @@
         },
         "gpu": {
           "role": "gpu",
-          "indexType": "GPU_CAGRA",
+          "indexType": "GPU_IVF_FLAT",
           "status": "completed",
           "requestCount": 45,
           "vectorCount": 45,
@@ -73,7 +73,7 @@
         },
         "gpu": {
           "role": "gpu",
-          "indexType": "GPU_CAGRA",
+          "indexType": "GPU_IVF_FLAT",
           "status": "completed",
           "requestCount": 9,
           "vectorCount": 45,
@@ -115,7 +115,7 @@
         },
         "gpu": {
           "role": "gpu",
-          "indexType": "GPU_CAGRA",
+          "indexType": "GPU_IVF_FLAT",
           "status": "completed",
           "requestCount": 45,
           "vectorCount": 45,

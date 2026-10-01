@@ -13,7 +13,7 @@
           "type": "string"
         },
         "indexType": {
-          "description": "e.g. HNSW or GPU_CAGRA",
+          "description": "e.g. HNSW or GPU_IVF_FLAT",
           "maxLength": 64,
           "minLength": 1,
           "type": "string"

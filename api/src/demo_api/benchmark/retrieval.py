@@ -42,7 +42,7 @@ class RetrievalBackend(ContractModel):
     """One index's timed searches in one profile."""
 
     role: Literal["cpu", "gpu"]
-    index_type: str = Field(min_length=1, max_length=64, description="e.g. HNSW or GPU_CAGRA")
+    index_type: str = Field(min_length=1, max_length=64, description="e.g. HNSW or GPU_IVF_FLAT")
     status: Literal["completed", "failed"]
     request_count: NonNegativeInt
     vector_count: NonNegativeInt

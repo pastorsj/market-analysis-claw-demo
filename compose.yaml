@@ -317,7 +317,7 @@ services:
       retries: 30
       start_period: 90s
 
-  # The analytics-gpu profile's second Milvus, on the GPU image: it holds a GPU_CAGRA (NVIDIA cuVS) copy of the active
+  # The analytics-gpu profile's second Milvus, on the GPU image: it holds a GPU_IVF_FLAT (NVIDIA cuVS) copy of the active
   # build for the Benchmark tab's Milvus comparison. retrieve_evidence never searches it; answers come from `milvus`.
   milvus-gpu:
     <<: *milvus
