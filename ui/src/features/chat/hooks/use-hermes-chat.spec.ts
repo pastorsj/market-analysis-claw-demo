@@ -3,12 +3,13 @@
 
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { cancelJob, getJobStatus, submitJob } from '@/adapters/api'
+import { ApiRequestError, cancelJob, getJobStatus, submitJob } from '@/adapters/api'
 import { useLayoutStore } from '@/features/layout/store'
 import { useChatStore } from '../store'
 import { useHermesChat } from './use-hermes-chat'
 
-vi.mock('@/adapters/api', () => ({
+vi.mock('@/adapters/api', async (importOriginal) => ({
+  ApiRequestError: (await importOriginal<typeof import('@/adapters/api')>()).ApiRequestError,
   cancelJob: vi.fn(),
   getJobReport: vi.fn(),
   getJobStatus: vi.fn(),
@@ -74,6 +75,32 @@ describe('useHermesChat', () => {
 
   test('recovers through the job status when the API was unreachable', async () => {
     vi.mocked(submitJob).mockRejectedValue(new Error('Failed to start research: 502'))
+    vi.mocked(getJobStatus).mockResolvedValue({ job_id: 'x', status: 'running', error: null })
+
+    send('Which assets led?')
+
+    await waitFor(() => expect(chat().isDeepResearchStreaming).toBe(true))
+    expect(chat().currentConversation?.messages.some((m) => m.messageType === 'error')).toBe(false)
+  })
+
+  test('reports a submission the API refused while starting, instead of following a job it never created', async () => {
+    const message =
+      'Failed to start research: 503 - The API is starting or stopping. Try again shortly.'
+    vi.mocked(submitJob).mockRejectedValue(new ApiRequestError(message, 503, true))
+
+    send('Which assets led?')
+
+    await waitFor(() =>
+      expect(chat().currentConversation?.messages.at(-1)?.errorData?.errorMessage).toBe(message)
+    )
+    expect(getJobStatus).not.toHaveBeenCalled()
+    expect(chat().isStreaming).toBe(false)
+  })
+
+  test('recovers through the job status when the UI proxy could not reach the API', async () => {
+    vi.mocked(submitJob).mockRejectedValue(
+      new ApiRequestError('Failed to start research: 502 - The API is unavailable', 502, false)
+    )
     vi.mocked(getJobStatus).mockResolvedValue({ job_id: 'x', status: 'running', error: null })
 
     send('Which assets led?')

@@ -15,6 +15,7 @@ export {
 } from './data-sources-client'
 
 export {
+  ApiRequestError,
   cancelJob,
   createDeepResearchClient,
   getJobReport,

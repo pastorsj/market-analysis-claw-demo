@@ -231,16 +231,32 @@ interface SubmitJobResponse {
   status: DeepResearchJobStatus
 }
 
-const errorDetails = async (response: Response): Promise<string> => {
+/** An HTTP error answer to a job request. */
+export class ApiRequestError extends Error {
+  readonly status: number
+  /** Whether the API itself answered (a `detail` body), rather than the UI proxy or one in front of it */
+  readonly fromApi: boolean
+
+  constructor(message: string, status: number, fromApi: boolean) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
+    this.fromApi = fromApi
+  }
+}
+
+const errorDetails = async (response: Response): Promise<{ details: string; fromApi: boolean }> => {
   const text = await response.text().catch(() => '')
   try {
     const body = JSON.parse(text) as { error?: { message?: unknown }; detail?: unknown }
-    if (typeof body.error?.message === 'string') return body.error.message
-    if (typeof body.detail === 'string') return body.detail
+    const message = typeof body.error?.message === 'string' ? body.error.message : body.detail
+    return {
+      details: typeof message === 'string' ? message : text,
+      fromApi: body.detail !== undefined,
+    }
   } catch {
-    // Not JSON; use the raw text.
+    return { details: text, fromApi: false } // Not JSON; use the raw text.
   }
-  return text
 }
 
 const request = async <T>(path: string, context: string, init?: RequestInit): Promise<T> => {
@@ -249,8 +265,12 @@ const request = async <T>(path: string, context: string, init?: RequestInit): Pr
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
   if (!response.ok) {
-    const details = await errorDetails(response)
-    throw new Error(`${context}: ${response.status}${details ? ` - ${details}` : ''}`)
+    const { details, fromApi } = await errorDetails(response)
+    throw new ApiRequestError(
+      `${context}: ${response.status}${details ? ` - ${details}` : ''}`,
+      response.status,
+      fromApi
+    )
   }
   return response.json() as Promise<T>
 }

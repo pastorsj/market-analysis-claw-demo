@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { submitJob } from '@/adapters/api'
+import { ApiRequestError, submitJob } from '@/adapters/api'
 import { useLayoutStore } from '@/features/layout/store'
 import { getDeepResearchJobLoadFailureKind } from '../lib/deep-research-errors'
 import { useChatStore } from '../store'
@@ -25,6 +25,17 @@ interface UseHermesChatReturn {
   /** Cancel the running job */
   stop: () => void
 }
+
+/**
+ * Whether a failed submission may still have been admitted. Only a lost
+ * answer leaves that open: no response at all, or a 502-504 from the UI
+ * proxy (or one in front of it) that never reached the API. An answer from
+ * the API itself, such as its 503 while it starts, means no job was created.
+ */
+const isSubmissionOutcomeUnknown = (error: unknown): boolean =>
+  error instanceof ApiRequestError
+    ? !error.fromApi && error.status >= 502 && error.status <= 504
+    : getDeepResearchJobLoadFailureKind(error) === 'backend_unreachable'
 
 export const useHermesChat = (): UseHermesChatReturn => {
   // A page that is being hidden must not overwrite the recovery record with a
@@ -90,7 +101,7 @@ export const useHermesChat = (): UseHermesChatReturn => {
         const current = useChatStore.getState()
         // A transport error cannot tell whether the job was admitted; recover
         // through the durable job status instead of reporting a false failure.
-        if (getDeepResearchJobLoadFailureKind(error) === 'backend_unreachable') {
+        if (isSubmissionOutcomeUnknown(error)) {
           current.setStreaming(false)
           current.setLoading(false)
           void current.reconnectToActiveJob()
