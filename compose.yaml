@@ -4,7 +4,8 @@
 # The whole demo in one Compose file. Profiles pick what runs:
 #   core           OpenShell gateway + Hermes forwarder, Switchyard, Phoenix, data, API, UI
 #   retrieval      Milvus, the document corpus and index, the retrieval MCP server
-#   analytics      market analytics MCP server on CPU (analytics-gpu: on RAPIDS; never both)
+#   analytics      market analytics MCP server on CPU (analytics-gpu: on RAPIDS; never both). analytics-gpu with
+#                  retrieval also runs a GPU Milvus for the Benchmark tab's CPU/GPU index comparison
 #   kumo           Kumo Relational NIM behind predict_asset_outcomes (x86_64 + NVIDIA GPU)
 #   ontology       Auto Ontology, required (the vendor/auto-ontology submodule, private until it is published)
 #   replay         the UI alone, on the recorded sessions: no keys, no API, no GPU
@@ -292,7 +293,7 @@ services:
 
   # ---------------------------------------------------------------- retrieval
   # CPU standalone Milvus: embedded etcd and local storage, no MinIO (official standalone_embed.sh).
-  milvus:
+  milvus: &milvus
     <<: *restart
     profiles: [retrieval]
     image: milvusdb/milvus:v2.6.25@sha256:29f7668e64df1c6d5cdadbfbee99f38c72e4001054f149a298725acae57230ad
@@ -315,6 +316,18 @@ services:
       retries: 30
       start_period: 90s
 
+  # The analytics-gpu profile's second Milvus, on the GPU image: it holds a GPU_CAGRA (NVIDIA cuVS) copy of the active
+  # build for the Benchmark tab's Milvus comparison. retrieve_evidence never searches it; answers come from `milvus`.
+  milvus-gpu:
+    <<: *milvus
+    profiles: [analytics-gpu]
+    image: milvusdb/milvus:v2.6.25-gpu@sha256:801ed126476797845ba9e3cc0043d68b57468d429858d7b8e4fb43af0a12a15f
+    gpus: all
+    volumes:
+      - milvus-gpu-data:/var/lib/milvus
+      - ./tools/retrieval/milvus/embedEtcd.yaml:/milvus/configs/embedEtcd.yaml:ro
+      - ./tools/retrieval/milvus/gpu.yaml:/milvus/configs/user.yaml:ro # the GPU memory pool
+
   data-corpus:
     <<: *data
     profiles: [retrieval]
@@ -332,10 +345,25 @@ services:
       milvus: { condition: service_healthy }
       data-corpus: { condition: service_completed_successfully }
 
+  # analytics-gpu with retrieval: times the build's vector searches on `milvus` and on its copy in `milvus-gpu`, once
+  # per build, into /data/active/retrieval-benchmark.json for the API. It never fails the stack.
+  retrieval-benchmark:
+    <<: *retrieval
+    profiles: [analytics-gpu]
+    command: [benchmark]
+    healthcheck: { disable: true } # the image healthcheck is for `serve`
+    environment:
+      <<: *retrieval-env
+      MILVUS_GPU_URI: http://milvus-gpu:19530
+    volumes: [demo-data:/data] # writes /data/active/retrieval-benchmark.json
+    depends_on:
+      milvus-gpu: { condition: service_healthy }
+      retrieval-index: { condition: service_completed_successfully, required: false } # not without retrieval
+
   retrieval:
     <<: [*retrieval, *restart]
     profiles: [retrieval]
-    build: tools/retrieval # also retrieval-index's image
+    build: tools/retrieval # also retrieval-index's and retrieval-benchmark's image
     command: [serve]
     ports: ["127.0.0.1:8120:8120"]
     environment:
@@ -345,6 +373,7 @@ services:
     volumes: [demo-data:/data:ro]
     depends_on:
       retrieval-index: { condition: service_completed_successfully }
+      retrieval-benchmark: { condition: service_completed_successfully, required: false } # analytics-gpu only
       # The server keeps the collection of the build it started on: restart it when the data one-shot is
       # recreated for another build, as market analytics (demo.sh data prepare restarts it itself).
       data: { condition: service_completed_successfully, restart: true }
@@ -530,6 +559,7 @@ volumes:
   api-data: {}
   phoenix-data: {}
   milvus-data: {}
+  milvus-gpu-data: {}
   switchyard-data: {}
   openshell-state: {}
   openshell-client: {}

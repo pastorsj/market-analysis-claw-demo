@@ -22,6 +22,7 @@ class Settings:
     rerank_model: str
     rerank_url: str | None
     milvus_uri: str
+    milvus_gpu_uri: str | None = None  # the GPU Milvus of the analytics-gpu profile, for retrieval-benchmark only
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] = os.environ) -> Settings:
@@ -40,4 +41,5 @@ class Settings:
             rerank_model=get("RETRIEVER_RERANK_MODEL", "nvidia/llama-nemotron-rerank-vl-1b-v2"),
             rerank_url=get("RETRIEVER_RERANK_URL") or None,
             milvus_uri=get("MILVUS_URI", "http://milvus:19530"),
+            milvus_gpu_uri=get("MILVUS_GPU_URI") or None,
         )

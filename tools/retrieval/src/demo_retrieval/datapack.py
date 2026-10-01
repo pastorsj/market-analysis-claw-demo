@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""The active data pack (/data/active): pack.json and corpus/documents.jsonl in, collection-manifest.json out."""
+"""The active data pack (/data/active): pack.json and corpus/documents.jsonl in, collection-manifest.json (and on a
+GPU host retrieval-benchmark.json) out."""
 
 from __future__ import annotations
 
@@ -20,18 +21,31 @@ from .store import VECTOR_FIELD
 
 DOCUMENTS = Path("corpus/documents.jsonl")
 MANIFEST = Path("collection-manifest.json")
+BENCHMARK = Path("retrieval-benchmark.json")
+
+
+@dataclass(frozen=True)
+class BenchmarkQuery:
+    query: str
+    source_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class Pack:
     collection: str  # documents.collection: the Milvus alias that retrieve_evidence searches
     document_sources: frozenset[str]  # the only source_ids retrieve_evidence accepts
+    # documents.benchmark_queries: held-out queries for the CPU/GPU index comparison (retrieval-benchmark)
+    benchmark_queries: tuple[BenchmarkQuery, ...] = ()
 
     @classmethod
     def load(cls, data_dir: Path) -> Pack:
         pack = json.loads((data_dir / "pack.json").read_text())
         sources = frozenset(source["id"] for source in pack["sources"] if source.get("kind") == "documents")
-        return cls(collection=pack["documents"]["collection"], document_sources=sources)
+        queries = tuple(
+            BenchmarkQuery(query=entry["query"], source_ids=tuple(entry["sources"]))
+            for entry in pack["documents"].get("benchmark_queries", [])
+        )
+        return cls(collection=pack["documents"]["collection"], document_sources=sources, benchmark_queries=queries)
 
 
 class CorpusDocument(BaseModel):

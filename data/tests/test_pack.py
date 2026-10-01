@@ -168,11 +168,15 @@ def test_resolve_serves_only_what_the_build_contains(synthetic_pack, tmp_path):
     assert list(resolved["analytics"]["universes"]) == ["top_12", "all_assets"]
     assert resolved["analytics"]["relationship_graph"]["mode"] == "full_correlation"
     assert resolved["structured"]["database"] == "structured/synthetic_market.duckdb"
+    queries = resolved["documents"].pop("benchmark_queries")
     assert resolved["documents"] == {
         "collection": "synthetic_market_documents",
         "sources": ["market_regulations"],
         "path": "corpus/documents.jsonl",
     }
+    # The Milvus comparison's held-out queries: only those on the corpora the build indexed
+    assert len(queries) == 6
+    assert all(query["sources"] == ["market_regulations"] for query in queries)
 
 
 def test_resolve_reports_the_bars_a_profile_writes(synthetic_pack, tmp_path):
@@ -218,3 +222,17 @@ def test_digest_tracks_build_inputs_only(pack_copy):
     assert pack.digest("interactive", corpora, "builder") == digest
     (pack.directory / "ontology.yaml").write_text(pack.path("ontology.yaml").read_text() + "\n")
     assert pack.digest("interactive", corpora, "builder") != digest
+
+
+def test_benchmark_queries_must_search_corpora_of_the_pack(pack_copy):
+    pack_dir = pack_copy()
+
+    def add_query(manifest):
+        manifest["documents"]["benchmark_queries"].append({"query": "anything", "sources": ["market_data"]})
+
+    edit_yaml(pack_dir / "pack.yaml", add_query)
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert raised.value.errors == ["benchmark query 16: ['market_data'] have no corpus"]

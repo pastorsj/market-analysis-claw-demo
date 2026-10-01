@@ -282,6 +282,20 @@
               }
             }
           }
+        },
+        "benchmark_queries": {
+          "description": "Held-out queries for the Benchmark tab's CPU/GPU Milvus index comparison (analytics-gpu profile). Each names the document sources it searches; a build keeps those whose sources it has.",
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["query", "sources"],
+            "properties": {
+              "query": { "$ref": "#/$defs/text" },
+              "sources": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/source_id" } }
+            }
+          }
         }
       }
     },

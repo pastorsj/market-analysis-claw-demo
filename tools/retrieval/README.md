@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 The `retrieve_evidence` MCP tool. It searches the active data pack's document sources with NVIDIA Nemotron
 embed and rerank models (through LangChain's `langchain-nvidia-ai-endpoints`) over Milvus.
 
-One image, two commands:
+One image, three commands:
 
 - `demo-retrieval ingest`: the `retrieval-index` one-shot. It reads `/data/active/corpus/documents.jsonl`,
   splits documents into chunks, embeds the chunks as passages, loads them into a new Milvus collection, points
@@ -16,6 +16,11 @@ One image, two commands:
   resumes an interrupted build (see [data contract](#data-contract)).
 - `demo-retrieval serve` (default): the MCP server. It uses streamable HTTP at `:8120/mcp`, has a `GET /health`
   check, and runs as the `retrieval` service.
+- `demo-retrieval benchmark`: the `retrieval-benchmark` one-shot of the analytics-gpu profile. It copies the active
+  build's vectors into a GPU Milvus (`MILVUS_GPU_URI`) under `GPU_CAGRA`, times the pack's held-out queries
+  (`documents.benchmark_queries`) on both indexes, and writes `/data/active/retrieval-benchmark.json` for the
+  Benchmark tab ([retrieval](../../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)). Answers never use
+  the GPU copy. Without `MILVUS_GPU_URI` it does nothing.
 
 ## How it fits
 
@@ -43,6 +48,7 @@ SDK's `tools/call retrieve_evidence` span.
 | `RETRIEVER_RERANK_MODEL` | `nvidia/llama-nemotron-rerank-vl-1b-v2` | |
 | `RETRIEVER_RERANK_URL` | unset | Full rerank URL; see below |
 | `MILVUS_URI` | `http://milvus:19530` | A local `*.db` path uses Milvus Lite (dev only) |
+| `MILVUS_GPU_URI` | unset | `benchmark` only: the GPU Milvus (`http://milvus-gpu:19530` under analytics-gpu) |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | unset | e.g. `http://phoenix:6006/v1/traces`; no spans are exported when unset |
 
 `NVIDIA_BASE_URL` and `NVIDIA_API_KEY` are never read.
@@ -144,7 +150,8 @@ The store is plain `pymilvus` 2.6, matching the Milvus 2.6 server, with an expli
 - dynamic fields for each source's extra metadata.
 
 `milvus/embedEtcd.yaml` and `milvus/user.yaml` configure the single-container Milvus: embedded etcd, local
-storage, no MinIO. They come from the official `standalone_embed.sh` recipe.
+storage, no MinIO. They come from the official `standalone_embed.sh` recipe. `milvus-gpu` uses the same recipe on
+the GPU image, with `milvus/gpu.yaml` as its `user.yaml`: a GPU memory pool of 1 GiB at start, 4 GiB at most.
 
 ## Run
 
@@ -160,7 +167,7 @@ Raw Compose needs the OpenShell pins, `.env` and the `core` profile, which `retr
 run --rm retrieval-index`.
 
 The image runs as uid 1000. `ingest` writes the manifest into `/data/active`, so `retrieval-index` mounts the
-`demo-data` volume read-write; `retrieval` mounts it read-only.
+`demo-data` volume read-write, as `retrieval-benchmark` does for its result; `retrieval` mounts it read-only.
 
 Locally, with Milvus Lite:
 

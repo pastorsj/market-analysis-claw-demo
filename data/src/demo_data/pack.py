@@ -195,11 +195,15 @@ class Pack:
             frequency = self.profiles.get(profile, {}).get("params", {}).get("frequency")
             resolved["market"] = {"bars": bars | ({"frequency": frequency} if frequency else {})}
         if corpora:
+            built = {corpus["source"] for corpus in corpora}
             resolved["documents"] = {
                 "collection": m["documents"].get("collection", f"{self.id.replace('-', '_')}_documents"),
                 "sources": [corpus["source"] for corpus in corpora],
                 "path": "corpus/documents.jsonl",
             }
+            queries = [q for q in m["documents"].get("benchmark_queries", []) if set(q["sources"]) <= built]
+            if queries:
+                resolved["documents"]["benchmark_queries"] = queries
         return resolved
 
 
@@ -319,6 +323,10 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         elif _json_object(manifest_path).get("source_id") != corpus["source"]:
             errors.append(f"{label}: manifest {corpus['manifest']} does not declare source_id {corpus['source']!r}")
     errors += [f"source {name} has more than one corpus" for name in _duplicates(c["source"] for c in corpora)]
+    corpus_sources = {corpus["source"] for corpus in corpora}
+    for number, query in enumerate(m.get("documents", {}).get("benchmark_queries", []), start=1):
+        if unknown := sorted(set(query["sources"]) - corpus_sources):
+            errors.append(f"benchmark query {number}: {unknown} have no corpus")
     served = {corpus["source"] for corpus in corpora} | ({structured["source"]} if structured else set())
     errors += [f"source {source_id} has no corpus or structured data" for source_id in sorted(set(sources) - served)]
 
