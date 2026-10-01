@@ -19,6 +19,24 @@ const openSession = async (page: Page, title: string) => {
     .click()
 }
 
+test('the replays list shows the tools each recorded run used', async ({ page }) => {
+  await page.goto('/research')
+  const pills = (title: string) =>
+    page
+      .getByRole('button', { name: `Recorded session: ${title}; Completed` })
+      .locator('.tool-pill')
+
+  // Listed in the bundle's index, as `demo-api record` writes them
+  await expect(pills('Unusual moves and filings')).toHaveText(['cuDF', 'cuML', 'Retrieval'])
+  // Derived from the recorded events, for an index that predates them
+  await expect(pills('Dividends and news likelihood')).toHaveText(['Kumo', 'Ontology'])
+  await expect(pills('Unusual moves and filings').first()).toHaveAttribute('data-family', 'rapids')
+  await expect(pills('Dividends and news likelihood').first()).toHaveAttribute(
+    'data-family',
+    'nvidia'
+  )
+})
+
 test('a recorded session replays its run as a graph and opens an explorer', async ({ page }) => {
   const apiCalls: string[] = []
   page.on('request', (request) => {

@@ -30,6 +30,7 @@ const recordings: RecordingsSource = {
       title: 'Market leaders',
       recordedAt: '2026-09-01T00:00:00Z',
       questions: ['Which assets led?'],
+      tools: [],
     },
   ],
   load: async () => ({
@@ -130,7 +131,7 @@ describe('MainLayout', () => {
           {
             id: 'market-leaders',
             label: 'Market Leaders',
-            path: 'ANALYTICS',
+            tools: ['cudf'],
             description: 'Scan the most liquid issuers.',
             question: 'Which assets led?',
             sourceIds: ['market_news'],
@@ -141,7 +142,10 @@ describe('MainLayout', () => {
 
     expect(screen.getByTestId('demo-scenario-control')).toHaveTextContent('Demo scenario')
     await userEvent.click(screen.getByTestId('demo-scenario-select'))
-    await userEvent.click(await screen.findByRole('option', { name: /Market Leaders/ }))
+    const option = await screen.findByRole('option', { name: /Market Leaders/ })
+    // The tools it is expected to use, as pills in place of the old type tag
+    expect(option.querySelector('.tool-pill')).toHaveTextContent('cuDF')
+    await userEvent.click(option)
 
     expect(screen.getByRole('textbox', { name: 'Chat message input' })).toHaveValue(
       'Which assets led?'

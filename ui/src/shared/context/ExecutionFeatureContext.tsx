@@ -15,6 +15,7 @@
 'use client'
 
 import { createContext, useContext, type ComponentType, type ReactNode } from 'react'
+import type { ToolPillUse } from '@/shared/components/ToolPills'
 
 /** One record of a job's SSE stream (`GET /v1/jobs/async/job/{id}/stream`), as the API sent it. */
 export interface JobStreamEvent {
@@ -77,6 +78,8 @@ export interface RecordedSessionSummary extends Pick<
 > {
   /** Its questions, one per turn */
   questions: string[]
+  /** The tools its runs used, as pills */
+  tools: ToolPillUse[]
 }
 
 export interface RecordingsSource {

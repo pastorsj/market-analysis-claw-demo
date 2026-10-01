@@ -10,6 +10,7 @@ const QUESTION = {
   label: 'Market Leaders',
   question: 'Which assets had the strongest returns?',
   sources: ['market_analysis_structured'],
+  tools: [],
   featured: true,
 }
 

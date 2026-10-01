@@ -32,6 +32,7 @@ import {
 } from '@/features/speech-input'
 import { useAppConfig } from '@/shared/context'
 import { useLayoutStore } from '../store'
+import { ToolPills } from '@/shared/components/ToolPills'
 import { getActiveDemoScenario, getAvailableDemoScenarios, type DemoScenario } from '../scenarios'
 import { ChartFlow, Globe, Paperplane, StopCircle } from '@/adapters/ui/icons'
 
@@ -266,9 +267,10 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
                   value: scenario.id,
                   children: scenario.label,
                   slotRight: (
-                    <Text kind="label/semibold/xs" className="text-secondary font-mono">
-                      {scenario.path}
-                    </Text>
+                    <ToolPills
+                      pills={scenario.tools.map((pill) => ({ pill }))}
+                      className="justify-end"
+                    />
                   ),
                   attributes: {
                     SelectItem: {

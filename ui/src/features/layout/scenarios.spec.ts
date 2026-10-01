@@ -8,7 +8,7 @@ const SCENARIOS = toDemoScenarios([
   {
     id: 'market-leaders',
     label: 'Market Leaders',
-    tag: 'ANALYTICS',
+    tools: ['cudf'],
     description: 'Scan the most liquid issuers.',
     question: 'Which issuers led?',
     sources: ['market_data'],
@@ -17,7 +17,7 @@ const SCENARIOS = toDemoScenarios([
   {
     id: 'cyber-disclosure-rules',
     label: 'Cybersecurity Disclosures',
-    tag: 'RETRIEVAL',
+    tools: ['retrieval'],
     question: 'What does Item 1.05 require?',
     sources: ['sec_filings', 'market_regulations'],
     featured: false,
@@ -25,11 +25,11 @@ const SCENARIOS = toDemoScenarios([
 ])
 
 describe('demo scenarios', () => {
-  test('come from the pack questions, with the tag as the path', () => {
+  test('come from the pack questions, with the tools they are expected to use', () => {
     expect(SCENARIOS[0]).toEqual({
       id: 'market-leaders',
       label: 'Market Leaders',
-      path: 'ANALYTICS',
+      tools: ['cudf'],
       description: 'Scan the most liquid issuers.',
       question: 'Which issuers led?',
       sourceIds: ['market_data'],

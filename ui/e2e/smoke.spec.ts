@@ -62,7 +62,13 @@ test.describe('live mode', () => {
     await page.getByTestId('demo-scenario-select').click()
     // Only the questions whose data sources the API offers
     await expect(page.getByRole('option')).toHaveCount(5)
-    await page.getByRole('option', { name: /Peer Network/ }).click()
+    // Each with pills for the tools it is expected to use
+    const peers = page.getByRole('option', { name: /Peer Network/ })
+    await expect(peers.locator('.tool-pill')).toHaveText(['cuDF', 'cuGraph'])
+    await expect(
+      page.getByRole('option', { name: /Unusual Sessions/ }).locator('.tool-pill')
+    ).toHaveText(['cuDF', 'cuML'])
+    await peers.click()
 
     await expect(composer).toHaveValue(/^In the return-correlation network/)
     await expect(page.getByTestId('demo-scenario-select')).toContainText('Peer Network')

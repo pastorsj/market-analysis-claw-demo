@@ -8,12 +8,13 @@
  */
 
 import type { PackQuestion } from '@/adapters/api/pack-client'
+import type { Pill } from '@/shared/components/ToolPills'
 
 export interface DemoScenario {
   id: string
   label: string
-  /** The kind of answer, shown beside the label (e.g. ANALYTICS, RETRIEVAL) */
-  path: string
+  /** The tools it is expected to use, shown beside the label as pills */
+  tools: Pill[]
   description: string
   question: string
   sourceIds: string[]
@@ -24,7 +25,7 @@ export const toDemoScenarios = (questions: readonly PackQuestion[]): DemoScenari
   questions.map((question) => ({
     id: question.id,
     label: question.label,
-    path: question.tag ?? '',
+    tools: [...question.tools],
     description: question.description ?? question.question,
     question: question.question,
     sourceIds: [...question.sources],
