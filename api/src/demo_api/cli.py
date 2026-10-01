@@ -25,6 +25,10 @@ question or conversation that does not succeed is left out of the bundle and mak
 exit 1. Recording named ids (``--question``) updates those sessions of an existing bundle and
 keeps its other sessions; recording a whole set replaces the bundle.
 
+Served model ids are written under their public names. An OpenAI-compatible gateway may serve a model
+under a provider-prefixed id (``openai/openai/gpt-6.1-sol``, ``nvidia/nvidia/nemotron-3-ultra``); the
+bundle keeps the model's own name (``gpt-6.1-sol``, ``nemotron-3-ultra``), wherever the id appears.
+
 ``demo-api snapshot-database --out <recordings>`` rewrites only ``database.json`` of a bundle.
 """
 
@@ -32,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
 import time
@@ -52,6 +57,22 @@ PREVIEW_ROWS = 8  # the rows the data viewer previews (ui/src/features/execution
 # The query the data viewer's SQL tab starts from for a table (DatabaseBrowser.tsx), so replay can run it too
 DEFAULT_TABLE_SQL = 'SELECT * FROM "{schema}"."{table}" LIMIT 25'
 BENCHMARK_TIMEOUT_SECONDS = 900.0
+# A gateway's provider-prefixed model id: <provider>/<publisher>/<model>, e.g. openai/openai/gpt-6.1-sol
+PREFIXED_MODEL = re.compile(
+    r"\b(?:nvidia|openai|azure|anthropic|aws|bedrock|gcp|google|vertex|meta)/(?:nvidia|openai|anthropic|google|meta)"
+    r"/(?=[A-Za-z0-9])([A-Za-z0-9._:-]+)"
+)
+
+
+def public_model_ids(value: Any) -> Any:
+    """``value`` with every provider-prefixed model id replaced by the model's own name (the last segment)."""
+    if isinstance(value, str):
+        return PREFIXED_MODEL.sub(r"\1", value)
+    if isinstance(value, dict):
+        return {key: public_model_ids(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [public_model_ids(item) for item in value]
+    return value
 
 
 def record(
@@ -148,7 +169,7 @@ def _ask(
         print(f"  error: {status['error']}", file=sys.stderr)
     if status["status"] == "success":
         _benchmark(client, job_id)
-    return client.get(f"/v1/jobs/async/job/{job_id}/export").raise_for_status().json()
+    return public_model_ids(client.get(f"/v1/jobs/async/job/{job_id}/export").raise_for_status().json())
 
 
 def _benchmark(client: httpx.Client, job_id: str) -> None:
