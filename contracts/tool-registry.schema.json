@@ -26,7 +26,8 @@
         "description",
         "explorer",
         "receipt_kind",
-        "profile"
+        "profile",
+        "pills"
       ],
       "properties": {
         "id": {
@@ -70,8 +71,20 @@
         "profile": {
           "description": "The Compose profile that provides the tool.",
           "enum": ["retrieval", "analytics", "kumo", "ontology"]
+        },
+        "pills": {
+          "description": "The technology pills the UI shows for a question or a recorded run that uses the tool.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/Pill" }
         }
       }
+    },
+    "Pill": {
+      "title": "Pill",
+      "description": "A technology pill, in display order. cudf, cuml and cugraph are the GPU libraries of the market tools (on the CPU: pandas, scikit-learn and NetworkX); questions.yaml `tools` names these too.",
+      "enum": ["cudf", "cuml", "cugraph", "kumo", "retrieval", "ontology"]
     }
   }
 }

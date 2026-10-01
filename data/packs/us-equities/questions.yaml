@@ -17,6 +17,7 @@ questions:
     Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions
     ending March 12, 2026, and how did their daily volatility compare?
   sources: [market_data]
+  tools: [cudf]
   featured: true
 - id: intraday-ranges
   label: Intraday Swings
@@ -27,6 +28,7 @@ questions:
     price ranges? For each, how did it trade from open to close, and how much of its volume came in the last 30
     minutes?
   sources: [market_data]
+  tools: [cudf]
   featured: true
 - id: unusual-sessions
   label: Unusual Sessions
@@ -37,6 +39,7 @@ questions:
     among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
     forecasts nor explanations.
   sources: [market_data]
+  tools: [cudf, cuml]
   featured: true
 - id: peer-network
   label: Peer Network
@@ -46,6 +49,7 @@ questions:
     Among declared industry peers, which stocks were the most central in the return-correlation network from
     December 2025 through March 12, 2026, and which pairs moved together most closely?
   sources: [market_data]
+  tools: [cudf, cugraph]
   featured: true
 - id: cyber-disclosure-rules
   label: Cybersecurity Disclosures
@@ -55,6 +59,7 @@ questions:
     What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by
     when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05.
   sources: [sec_filings, market_regulations]
+  tools: [retrieval]
   featured: true
 - id: moves-and-filings
   label: Moves & Filings
@@ -65,6 +70,7 @@ questions:
     February 2026? Separately, what did those six companies disclose in their 8-K filings from January through
     March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move.
   sources: [market_data, sec_filings]
+  tools: [cudf, retrieval]
   featured: true
 - id: large-universe-scan
   label: Whole-Market Scan
@@ -74,6 +80,7 @@ questions:
     Across the 500 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2 to
     March 12, 2026, and how unusual was their trading volume?
   sources: [market_data]
+  tools: [cudf]
 - id: outcome-prediction
   label: Five-Session Outlook
   tag: PREDICTION
@@ -82,6 +89,7 @@ questions:
     As of the March 5, 2026 market close, which of the 50 most liquid stocks are most likely to post a positive
     five-session return?
   sources: [market_data]
+  tools: [kumo]
 - id: sector-sql
   label: Sector Breakdown
   tag: SQL
@@ -90,6 +98,7 @@ questions:
     How many stocks are in each SIC division, and what was each division's median return from January 2 to
     March 12, 2026?
   sources: [market_data]
+  tools: [ontology]
 - id: world-news-rates
   label: World Headlines
   tag: RETRIEVAL
@@ -98,6 +107,7 @@ questions:
     Which world news headlines in the corpus mention the Federal Reserve or another central bank? List their
     outlets and dates, and cite the headlines.
   sources: [world_news]
+  tools: [retrieval]
 - id: volatility-ranking
   label: Volatility Ranking
   tag: ANALYTICS
@@ -106,6 +116,7 @@ questions:
     Among the 50 most liquid US stocks, which five had the highest and which five the lowest daily volatility over
     the 60 trading sessions ending March 12, 2026, and what were their returns over those sessions?
   sources: [market_data]
+  tools: [cudf]
 - id: peer-relative-returns
   label: Peer-Relative Returns
   tag: ANALYTICS
@@ -114,6 +125,7 @@ questions:
     Among the 50 most liquid US stocks, which five beat their declared industry peers by the most, and which five
     trailed them by the most, over the 20 trading sessions ending March 12, 2026?
   sources: [market_data]
+  tools: [cudf]
 - id: second-half-2025
   label: Second Half of 2025
   tag: ANALYTICS
@@ -122,6 +134,7 @@ questions:
     Among the 500 most liquid US stocks, which 10 had the strongest and which 10 the weakest returns from July 1
     through December 31, 2025, and how volatile was each one's daily trading?
   sources: [market_data]
+  tools: [cudf]
 - id: intraday-drawdowns
   label: Intraday Drawdowns
   tag: INTRADAY
@@ -130,6 +143,7 @@ questions:
     Among the 50 most liquid US stocks, which 10 sessions from February 2 through February 27, 2026 had the deepest
     drawdowns from the session's running high, and how did each one close relative to its open?
   sources: [market_data]
+  tools: [cudf]
 - id: heaviest-sessions
   label: Heaviest Sessions
   tag: INTRADAY
@@ -138,6 +152,7 @@ questions:
     Among the 50 most liquid US stocks, which 10 sessions from March 9 through March 12, 2026 traded the most
     shares, and how much of each session's volume came in its first and last 30 minutes?
   sources: [market_data]
+  tools: [cudf]
 - id: april-2025-anomalies
   label: April 2025 Anomalies
   tag: ANOMALY
@@ -147,6 +162,7 @@ questions:
     among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
     forecasts nor explanations.
   sources: [market_data]
+  tools: [cudf, cuml]
 - id: fourth-quarter-anomalies
   label: Q4 2025 Anomalies
   tag: ANOMALY
@@ -156,6 +172,7 @@ questions:
     were the most unusual among the 500 most liquid US stocks, and which features made each one unusual? Anomaly
     scores are neither forecasts nor explanations.
   sources: [market_data]
+  tools: [cudf, cuml]
 - id: central-industries
   label: Central Industries
   tag: GRAPH
@@ -164,6 +181,7 @@ questions:
     Which 10 stocks were the most central in the declared-peer return-correlation network from December 2025
     through March 12, 2026, and which SEC industries are they in?
   sources: [market_data]
+  tools: [cudf, cugraph]
 - id: downside-outlook
   label: Downside Outlook
   tag: PREDICTION
@@ -172,6 +190,7 @@ questions:
     As of the March 5, 2026 market close, which of the 50 most liquid US stocks are most likely to fall more than
     5% over the next five sessions?
   sources: [market_data]
+  tools: [kumo]
 - id: named-stock-outlook
   label: Named-Stock Outlook
   tag: PREDICTION
@@ -181,6 +200,7 @@ questions:
     (TSLA) and JPMorgan Chase (JPM) to post a positive five-session return, and how likely is each to fall more
     than 5%?
   sources: [market_data]
+  tools: [kumo]
 - id: exchange-listings
   label: Exchange Listings
   tag: SQL
@@ -189,6 +209,7 @@ questions:
     How many stocks in the pack are listed on each exchange, and how many of the 500 and of the 50 most liquid are
     on each?
   sources: [market_data]
+  tools: [ontology]
 - id: big-move-days
   label: Big-Move Days
   tag: SQL
@@ -197,6 +218,7 @@ questions:
     Among the 500 most liquid US stocks, which 10 had the most sessions in 2025 with a close-to-close move of more
     than 10% in either direction, and what were their largest rise and fall?
   sources: [market_data]
+  tools: [ontology]
 - id: executive-changes
   label: Executive Changes
   tag: RETRIEVAL
@@ -205,6 +227,7 @@ questions:
     Which companies filed 8-Ks under Item 5.02 about executive or director changes in January and February 2026?
     Summarize three of them, and cite the filings.
   sources: [sec_filings]
+  tools: [retrieval]
 - id: material-agreements
   label: Material Agreements
   tag: RETRIEVAL
@@ -213,6 +236,7 @@ questions:
     Which 8-K filings from February and March 2026 report entering into or terminating a material definitive
     agreement under Item 1.01 or 1.02? Summarize three of the agreements, and cite the filings.
   sources: [sec_filings]
+  tools: [retrieval]
 - id: restructuring-costs
   label: Restructuring Costs
   tag: RETRIEVAL
@@ -221,6 +245,7 @@ questions:
     Which companies disclosed exit or restructuring costs under 8-K Item 2.05, and what charges did each expect?
     Cite the filings.
   sources: [sec_filings]
+  tools: [retrieval]
 - id: beneficial-ownership
   label: Beneficial Ownership
   tag: RETRIEVAL
@@ -229,6 +254,7 @@ questions:
     Under Title 17, when must a person who acquires more than five percent of a class of registered equity
     securities file a Schedule 13D, and when may they file a Schedule 13G instead? Cite the sections.
   sources: [market_regulations]
+  tools: [retrieval]
 - id: shareholder-proposals
   label: Shareholder Proposals
   tag: RETRIEVAL
@@ -237,6 +263,7 @@ questions:
     Under Rule 14a-8 in Title 17, what ownership and holding-period requirements must a shareholder meet to have a
     proposal included in a company's proxy statement? Cite the section.
   sources: [market_regulations]
+  tools: [retrieval]
 - id: world-news-cyber
   label: Cyber Headlines
   tag: RETRIEVAL
@@ -245,6 +272,7 @@ questions:
     Which world news headlines in the corpus are about cyber attacks? List their outlets and dates, and cite the
     headlines.
   sources: [world_news]
+  tools: [retrieval]
 - id: nvidia-results-and-prices
   label: NVIDIA Prices & Filings
   tag: HYBRID
@@ -253,6 +281,7 @@ questions:
     How did NVIDIA (NVDA) trade from February 2 through March 12, 2026? Separately, what did its 8-K filings in
     that period disclose? Report the prices and the filings apart, and do not claim that a filing caused a move.
   sources: [market_data, sec_filings]
+  tools: [cudf, retrieval]
 - id: bank-results
   label: Bank Results
   tag: HYBRID
@@ -262,6 +291,7 @@ questions:
     Separately, what did their January 2026 results 8-Ks report? Report the moves and the filings apart, and do
     not claim that a filing caused a move.
   sources: [market_data, sec_filings]
+  tools: [cudf, retrieval]
 # Multi-turn conversations, each recorded as one replay session with --all: a later turn refers to an earlier answer.
 conversations:
 - id: price-context-follow-up

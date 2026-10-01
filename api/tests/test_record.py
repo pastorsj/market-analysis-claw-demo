@@ -90,6 +90,7 @@ def test_record_writes_index_pack_snapshot_and_one_session_per_question_and_conv
     assert code == 0
     index = json.loads((tmp_path / "rec" / "index.json").read_text())
     assert (index["schemaVersion"], index["pack"]) == (2, {"id": "market-analysis", "version": "1.0.0"})
+    assert all(session["tools"] == [] for session in index["sessions"])  # the fake runs called no tool
     assert [(s["id"], s["title"], s["featured"], len(s["turns"])) for s in index["sessions"]] == [
         ("market-leaders", "Market Leaders", True, 1),
         ("filings", "Filings", False, 1),

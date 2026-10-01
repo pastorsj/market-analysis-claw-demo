@@ -11,6 +11,7 @@ import yaml
 from conftest import PACKS
 from conftest import edit_yaml
 
+from demo_data.pack import DATA_ROOT
 from demo_data.pack import PackError
 from demo_data.pack import declared_contract_errors
 from demo_data.pack import find_contracts
@@ -236,3 +237,12 @@ def test_benchmark_queries_must_search_corpora_of_the_pack(pack_copy):
         load_pack(pack_dir)
 
     assert raised.value.errors == ["benchmark query 16: ['market_data'] have no corpus"]
+
+
+def test_question_tools_are_the_tool_registry_pills():
+    """questions.yaml `tools` and the UI's pills are one vocabulary: Pill in contracts/tool-registry.schema.json."""
+    contract = json.loads((DATA_ROOT.parent / "contracts" / "tool-registry.schema.json").read_text())
+    schema = json.loads((DATA_ROOT / "schemas" / "questions.schema.json").read_text())
+    question = schema["properties"]["questions"]["items"]["properties"]
+
+    assert question["tools"]["items"]["enum"] == contract["$defs"]["Pill"]["enum"]

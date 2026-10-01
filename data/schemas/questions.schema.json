@@ -14,12 +14,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "label", "tag", "question", "sources"],
+        "required": ["id", "label", "tag", "question", "sources", "tools"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
           "label": { "type": "string", "minLength": 1, "maxLength": 60 },
           "tag": {
-            "description": "The capability badge the UI shows.",
+            "description": "The kind of question, which the docs group questions by.",
             "enum": ["ANALYTICS", "ANOMALY", "GRAPH", "HYBRID", "INTRADAY", "PQL", "PREDICTION", "RAG", "RETRIEVAL", "ROUTER", "SQL"]
           },
           "description": { "type": "string", "maxLength": 300 },
@@ -29,6 +29,13 @@
             "minItems": 1,
             "uniqueItems": true,
             "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$" }
+          },
+          "tools": {
+            "description": "The tools the question is expected to use, as the pills the demo scenario picker shows (Pill in contracts/tool-registry.schema.json): cudf for any market tool, also cuml for market_anomaly_scan and cugraph for analyze_market_relationships; kumo, retrieval, ontology. A recorded answer must use every one.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "enum": ["cudf", "cuml", "cugraph", "kumo", "retrieval", "ontology"] }
           },
           "profiles": {
             "description": "Offer the question only in these generator profiles.",
@@ -60,7 +67,7 @@
           },
           "label": { "type": "string", "minLength": 1, "maxLength": 60 },
           "tag": {
-            "description": "The capability badge of the conversation.",
+            "description": "The kind of conversation, which the docs group them by.",
             "enum": ["ANALYTICS", "ANOMALY", "GRAPH", "HYBRID", "INTRADAY", "PQL", "PREDICTION", "RAG", "RETRIEVAL", "ROUTER", "SQL"]
           },
           "description": { "type": "string", "maxLength": 300 },

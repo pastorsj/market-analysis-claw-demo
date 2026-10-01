@@ -38,6 +38,7 @@ One entry per MCP tool. Adding a tool starts here.
 | `label`, `description` | Display text for the UI |
 | `explorer` | UI explorer: `retrieval`, `market`, `sql`, `pql`, `ontology` |
 | `receipt_kind` | The `artifactKind` of the tool's receipts |
+| `pills` | The technology pills the UI shows for a run that used the tool (`Pill`: `cudf`, `cuml`, `cugraph`, `kumo`, `retrieval`, `ontology`, in display order). Every market tool has `cudf`; `market_anomaly_scan` adds `cuml` and `analyze_market_relationships` `cugraph`. A pack's `questions.yaml` `tools` uses the same names |
 | `profile` | Compose profile that provides the tool |
 
 ## Execution events (`execution.v2`)

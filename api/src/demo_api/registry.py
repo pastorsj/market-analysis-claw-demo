@@ -23,21 +23,31 @@ class Tool:
     label: str
     receipt_kind: str
     profile: str
+    pills: tuple[str, ...] = ()  # the technology pills the UI shows for a run that uses the tool
 
 
 class ToolRegistry:
     def __init__(self, tools: list[Tool]) -> None:
         self.tools = tools
         self._by_hermes_name = {tool.hermes_name: tool for tool in tools}
+        self._by_id = {tool.id: tool for tool in tools}
 
     @classmethod
     def load(cls, path: Path) -> ToolRegistry:
         document = json.loads(path.read_text(encoding="utf-8"))
         fields = Tool.__dataclass_fields__
-        return cls([Tool(**{key: value for key, value in tool.items() if key in fields}) for tool in document["tools"]])
+        return cls(
+            [
+                Tool(**{key: tuple(value) if key == "pills" else value for key, value in tool.items() if key in fields})
+                for tool in document["tools"]
+            ]
+        )
 
     def by_hermes_name(self, name: str) -> Tool | None:
         return self._by_hermes_name.get(name)
+
+    def by_id(self, tool_id: str | None) -> Tool | None:
+        return self._by_id.get(tool_id or "")
 
     def available(self, features: frozenset[str]) -> list[Tool]:
         """The tools baked into an agent image built with these features."""

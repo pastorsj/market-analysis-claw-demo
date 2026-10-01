@@ -7,4 +7,5 @@ questions:
     tag: RETRIEVAL
     question: What do the notes say happened?
     sources: [notes]
+    tools: [retrieval]
     featured: true

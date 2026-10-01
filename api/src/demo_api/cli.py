@@ -6,7 +6,8 @@
 The v2 bundle, which the UI replays from ``data/packs/<pack>/recordings/``::
 
     index.json             {schemaVersion: 2, pack: {id, version}, recordedAt,
-                            sessions: [{id, title, featured, turns: [{jobId, question}]}]}
+                            sessions: [{id, title, featured, turns: [{jobId, question}], tools}]}
+                           tools: the pills of the tools its runs used (pills.py), for the replays list
     pack.json              a copy of /data/active/pack.json, so replay needs no API
     sessions/<id>.json     {schemaVersion: 2, id, title, turns: [<GET .../job/{id}/export>]}
     database.json          {schemaVersion: 1, sources: [{id, name, databaseName, schema, previews, queries}]}:
@@ -42,6 +43,8 @@ from typing import Any
 
 import httpx
 
+from .pills import session_pills
+from .registry import ToolRegistry
 from .settings import Settings
 
 POLL_SECONDS = 2.0
@@ -108,6 +111,11 @@ def record(
             path.unlink()
     shutil.copyfile(data_dir / "pack.json", out_dir / "pack.json")
     snapshot_database(client, out_dir)
+    # The tools each session's runs used, as the replays list shows them (pills.py)
+    registry = ToolRegistry.load(Settings().tool_registry_file)
+    for session_id, session in sessions.items():
+        turns = json.loads((sessions_dir / f"{session_id}.json").read_text(encoding="utf-8"))["turns"]
+        session["tools"] = session_pills(turns, registry)
     index = {
         "schemaVersion": 2,
         "pack": {"id": pack["id"], "version": pack["version"]},
