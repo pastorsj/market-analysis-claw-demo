@@ -277,9 +277,10 @@ def _row_count(client: MilvusClient, collection: str) -> int:
 def _wait_indexed(client: MilvusClient, collection: str, rows: int) -> None:
     """Flush, then wait until the vector index covers every row (Milvus builds it in the background)."""
     client.flush(collection)
+    [index_name] = client.list_indexes(collection, field_name=store.VECTOR_FIELD)  # the one vector index
     deadline = time.monotonic() + INDEX_TIMEOUT_SECONDS
     while True:
-        described = client.describe_index(collection, index_name=store.VECTOR_FIELD)
+        described = client.describe_index(collection, index_name=index_name)
         indexed = described.get("indexed_rows")
         if indexed is None or (int(indexed) >= rows and not int(described.get("pending_index_rows", 0))):
             return
