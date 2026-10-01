@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import type { SourceKind, SourceRef } from './types'
+import type { SourceKind } from './types'
 
 /**
  * Infer the {@link SourceKind} from a source reference (a URL or a file ref).
@@ -33,27 +33,4 @@ export function prettyDomain(ref: string | undefined): string {
 export function sourceLabel(ref: string | undefined, kind: SourceKind): string {
   if (kind === 'web') return prettyDomain(ref)
   return prettyDomain(ref) || 'Document'
-}
-
-/**
- * Map a backend {@link CitationSource}-like record into a UI {@link SourceRef}.
- * The first non-empty line of `content` becomes the title; the full content is
- * kept as the hover snippet.
- */
-export function mapCitationSource(
-  cs: { id: string; url: string; content?: string },
-  index: number,
-): SourceRef {
-  const kind = inferSourceKind(cs.url)
-  const firstLine = (cs.content ?? '').split('\n').map((l) => l.trim()).find(Boolean)
-  const label = sourceLabel(cs.url, kind)
-  return {
-    id: cs.id || `src-${index}`,
-    index: index + 1,
-    title: firstLine || label || cs.url || `Source ${index + 1}`,
-    url: kind === 'web' ? cs.url : undefined,
-    snippet: cs.content || undefined,
-    kind,
-    label: label || `Source ${index + 1}`,
-  }
 }
