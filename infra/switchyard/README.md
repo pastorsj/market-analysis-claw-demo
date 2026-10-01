@@ -156,8 +156,7 @@ AGENT_JUDGE_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
 
 ```sh
 ./scripts/demo.sh logs routing
-docker compose exec switchyard tail -f /var/lib/switchyard/routing.jsonl \
-  | jq -c 'select(.tier == "") | {session_id, route_id, model}'
+./scripts/demo.sh logs routing -f | jq -c 'select(.tier == "") | {session_id, route_id, model}'
 curl -s "127.0.0.1:4000/v1/routing/session-stats?session_id=<job id>"   # calls and tokens per model, overhead included
 curl -s 127.0.0.1:4000/v1/stats                                          # per-model usage and routing overhead
 ```

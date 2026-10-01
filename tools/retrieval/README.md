@@ -148,12 +148,16 @@ storage, no MinIO. They come from the official `standalone_embed.sh` recipe.
 
 ## Run
 
-`scripts/demo.sh` runs both commands as part of the stack. By hand, from the repository root:
+`scripts/demo.sh` runs both as part of the stack. By hand, from the repository root:
 
 ```bash
-docker compose --profile retrieval run --rm retrieval-index   # build or refresh the index
-docker compose --profile retrieval up -d retrieval            # serve at 127.0.0.1:8120/mcp
+./scripts/demo.sh data reindex   # build or refresh the index
+./scripts/demo.sh up             # serve at 127.0.0.1:8120/mcp, with the rest of the stack
 ```
+
+Raw Compose needs the OpenShell pins, `.env` and the `core` profile, which `retrieval-index` depends on:
+`docker compose --env-file infra/openshell/versions.env --env-file .env --profile core --profile retrieval
+run --rm retrieval-index`.
 
 The image runs as uid 1000. `ingest` writes the manifest into `/data/active`, so `retrieval-index` mounts the
 `demo-data` volume read-write; `retrieval` mounts it read-only.

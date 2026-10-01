@@ -134,7 +134,7 @@ most of it embedding the corpus).
 | `doctor` reports a problem | Each message names the variable or host requirement; fix it and run `doctor --keys` again |
 | `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations` (skips the SEC download). `us-equities` also needs it for its SEC company data |
 | Milvus restarts or is unhealthy | Docker has less than 8 GiB of memory. Give it more, or drop the retrieval profile |
-| `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `docker compose logs openshell-preflight openshell` |
+| `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `./scripts/demo.sh logs openshell-preflight openshell` |
 | `hermes-gateway` never turns healthy | The sandbox is not Ready, or `HERMES_API_SERVER_KEY` is shorter than 16 characters (run `init`) |
 | A tool call fails while the sandbox is Ready | `./scripts/demo.sh check`, then `./scripts/demo.sh logs agent`: `DENIED` lines name the binary, host and reason |
 | Model calls fail with 403 | The key's access group does not include a configured model. `doctor --keys` checks only that the endpoint lists it. See `./scripts/demo.sh logs switchyard` |
