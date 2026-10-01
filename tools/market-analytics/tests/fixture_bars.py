@@ -4,7 +4,8 @@
 
 Bars run from 04:00 to 19:59 New York time, one row group per symbol and day. `per_symbol` writes one file per
 symbol (no symbol column); `month_partitions` writes the canonical layout (month=YYYY-MM/part-NNN, each part
-holding whole symbols). The days cross a month boundary.
+holding whole symbols). The days cross a month boundary. With `utc=True` the same bars carry tz-aware UTC times,
+as a TIMESTAMP WITH TIME ZONE column, instead of naive New York times.
 """
 
 from pathlib import Path
@@ -16,11 +17,13 @@ import pandas as pd
 SYMBOLS = ["AAA", "BBB", "CCC"]
 DAYS = ["2026-06-29", "2026-06-30", "2026-07-01"]
 BARS_PER_DAY = 16 * 60
+TIMEZONE = "America/New_York"
 COLUMNS = {"time": "ts", "open": "open", "high": "high", "low": "low", "close": "close", "volume": "volume"}
 
 
-def minute_bars(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
-    """symbol, ts (naive New York time), float32 prices and float64 volume, sorted by symbol and time."""
+def minute_bars(symbols: list[str] = SYMBOLS, *, utc: bool = False) -> pd.DataFrame:
+    """symbol, ts (naive New York time, or tz-aware UTC), float32 prices and float64 volume, sorted by symbol and
+    time."""
     rng = np.random.default_rng(11)
     times = pd.DatetimeIndex(
         [t for day in DAYS for t in pd.date_range(f"{day} 04:00", periods=BARS_PER_DAY, freq="min")]
@@ -42,13 +45,16 @@ def minute_bars(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
                 }
             )
         )
-    return pd.concat(frames, ignore_index=True)
+    bars = pd.concat(frames, ignore_index=True)
+    if utc:
+        bars["ts"] = bars["ts"].dt.tz_localize(TIMEZONE).dt.tz_convert("UTC")
+    return bars
 
 
-def per_symbol(root: Path, symbols: list[str] = SYMBOLS) -> dict[str, Any]:
+def per_symbol(root: Path, symbols: list[str] = SYMBOLS, *, utc: bool = False) -> dict[str, Any]:
     """One file per symbol; returns pack.json's `market.bars` for it."""
     (root / "stocks_1min").mkdir(parents=True)
-    for symbol, bars in minute_bars(symbols).groupby("symbol"):
+    for symbol, bars in minute_bars(symbols, utc=utc).groupby("symbol"):
         path = root / "stocks_1min" / f"{symbol}_full_1min_adjsplit.parquet"
         bars.drop(columns="symbol").to_parquet(path, index=False, row_group_size=BARS_PER_DAY)
     return _spec(
@@ -56,10 +62,10 @@ def per_symbol(root: Path, symbols: list[str] = SYMBOLS) -> dict[str, Any]:
     )
 
 
-def month_partitions(root: Path) -> dict[str, Any]:
-    """The canonical layout; returns pack.json's `market.bars` for it."""
-    bars = minute_bars()
-    for month, rows in bars.groupby(bars["ts"].dt.strftime("%Y-%m")):
+def month_partitions(root: Path, *, utc: bool = False) -> dict[str, Any]:
+    """The canonical layout, partitioned by New York month; returns pack.json's `market.bars` for it."""
+    bars = minute_bars(utc=utc)
+    for month, rows in bars.groupby(minute_bars()["ts"].dt.strftime("%Y-%m")):
         directory = root / "bars" / f"month={month}"
         directory.mkdir(parents=True)
         for number, symbols in enumerate([SYMBOLS[:2], SYMBOLS[2:]]):
@@ -73,7 +79,7 @@ def _spec(root: Path, **layout: str) -> dict[str, Any]:
         "root": str(root),
         "columns": COLUMNS,
         "frequency": "1min",
-        "timezone": "America/New_York",
+        "timezone": TIMEZONE,
         "regular_session": ["09:30", "16:00"],
         **layout,
     }

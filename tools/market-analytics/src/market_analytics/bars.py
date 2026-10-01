@@ -27,8 +27,10 @@ the canonical one suits long windows over many symbols.
 A reduction must be complete within one file's bars for a symbol and session: in one-symbol files a symbol never
 spans two files, and in month partitions each part holds whole symbols, so grouping by symbol and session is safe.
 
-Times stay the dataset's wall-clock times in its zone (`timezone`): bars are exchange-local, and so is the regular
-session. Only the window, naive UTC like every other timestamp in the worker, is converted.
+Times become the dataset's wall-clock times in its zone (`timezone`): bars are exchange-local, and so is the
+regular session. The window, naive UTC like every other timestamp in the worker, is converted to them. A tz-aware
+time column (TIMESTAMP WITH TIME ZONE) is converted on read; its footer statistics and the reader's filter take the
+column's own zone.
 """
 
 from __future__ import annotations
@@ -118,8 +120,7 @@ class MinuteBars:
         budget: int | None = None,
     ) -> Scan:
         """Read the symbols' bars in the window (naive UTC, inclusive) batch by batch, and reduce each batch."""
-        start, end = self.local(start), self.local(end)
-        parts = self.plan(symbols, start, end)
+        parts = self.plan(symbols, self.local(start), self.local(end))
         results, rows = [], 0
         for batch in _batches(parts, budget or batch_bytes()):
             frame = self._read(batch, symbols, start, end)
@@ -142,6 +143,10 @@ class MinuteBars:
     def local(self, moment: datetime) -> datetime:
         """A naive UTC moment as the dataset's naive wall-clock time."""
         return moment.replace(tzinfo=moment.tzinfo or UTC).astimezone(self.timezone).replace(tzinfo=None)
+
+    def _wall_clock(self, value: Any) -> Any:
+        """A time column's value (a footer statistic) as naive wall-clock time: tz-aware values are converted."""
+        return value if value.tzinfo is None else value.astimezone(self.timezone).replace(tzinfo=None)
 
     @cached_property
     def _symbol_files(self) -> dict[str, Path]:
@@ -173,7 +178,7 @@ class MinuteBars:
     def _may_match(self, chunks: dict[str, Any], symbols: list[str], start: datetime, end: datetime) -> bool:
         """Whether a row group's statistics allow a bar in the window (and, with a symbol column, of the symbols)."""
         low, high = _bounds(chunks[self.columns["time"]])
-        if low is not None and (high < start or low > end):
+        if low is not None and (self._wall_clock(high) < start or self._wall_clock(low) > end):
             return False
         if self.symbol_column:
             low, high = _bounds(chunks[self.symbol_column])
@@ -182,21 +187,27 @@ class MinuteBars:
         return True
 
     def _read(self, batch: list[Part], symbols: list[str], start: datetime, end: datetime) -> pd.DataFrame:
-        """The batch's bars in the window and the regular session, as symbol, time, open, high, low, close, volume."""
+        """The batch's bars in the window (naive UTC) and the regular session, as symbol, time (wall-clock), open,
+        high, low, close, volume."""
         paths = [str(part.path) for part in batch]
         names = {source: field for field, source in self.columns.items()}
+        time_column = self.columns["time"]
+        # The reader compares a tz-aware column only with bounds in the column's own zone.
+        zone = getattr(pq.read_schema(paths[0]).field(time_column).type, "tz", None)
         if self.symbol_column:
-            time_column = self.columns["time"]
-            filters = [(time_column, ">=", start), (time_column, "<=", end), (self.symbol_column, "in", symbols)]
+            low, high = (_in_zone(moment, zone) if zone else self.local(moment) for moment in (start, end))
+            filters = [(time_column, ">=", low), (time_column, "<=", high), (self.symbol_column, "in", symbols)]
             frame = pd.read_parquet(paths, columns=self._read_columns(), filters=filters)
             frame = frame.rename(columns={**names, self.symbol_column: "symbol"})
-            keep = None
         else:
             frame = pd.read_parquet(paths, columns=self._read_columns()).rename(columns=names)
             # Row i came from file files[i]; a gather turns that into the file's symbol.
             files = np.repeat(np.arange(len(batch)), [part.rows for part in batch])
             frame["symbol"] = pd.Series([part.symbol for part in batch]).iloc[files].reset_index(drop=True)
-            keep = frame["time"].between(start, end)
+        if zone:
+            frame["time"] = frame["time"].dt.tz_convert(self.timezone.key).dt.tz_localize(None)
+        # The reader applied the window to month partitions; one-symbol files were read whole.
+        keep = None if self.symbol_column else frame["time"].between(self.local(start), self.local(end))
         if self.regular_session:
             opens, closes = (moment.hour * 60 + moment.minute for moment in self.regular_session)
             in_session = (frame["time"].dt.hour * 60 + frame["time"].dt.minute).between(opens, closes)
@@ -217,6 +228,11 @@ def _batches(parts: list[Part], budget: int) -> Iterator[list[Part]]:
         size += part.bytes
     if batch:
         yield batch
+
+
+def _in_zone(moment: datetime, zone: str) -> pd.Timestamp:
+    """A naive UTC moment as a tz-aware timestamp in `zone`."""
+    return pd.Timestamp(moment.replace(tzinfo=moment.tzinfo or UTC)).tz_convert(zone)
 
 
 def _bounds(chunk: pq.ColumnChunkMetaData) -> tuple[Any, Any]:

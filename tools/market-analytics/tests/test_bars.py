@@ -113,6 +113,24 @@ def test_the_window_is_converted_to_the_datasets_wall_clock(bars: MinuteBars) ->
     assert set(scan.result["symbol"]) == {"BBB"}
 
 
+@pytest.mark.parametrize("layout", [per_symbol, month_partitions])
+def test_tz_aware_times_scan_like_wall_clock_times(tmp_path: Path, layout) -> None:
+    """A TIMESTAMP WITH TIME ZONE time column (UTC here) reads as the same New York wall-clock bars."""
+    aware = MinuteBars.from_pack({"market": {"bars": layout(tmp_path / "aware", utc=True)}})
+    naive = MinuteBars.from_pack({"market": {"bars": layout(tmp_path / "naive")}})
+
+    for window in (JUNE_30, EVERYTHING, (datetime(2026, 6, 30, 13, 30), datetime(2026, 6, 30, 13, 34))):
+        expected = naive.scan(["CCC", "AAA"], *window, session_bars)
+        scan = aware.scan(["CCC", "AAA"], *window, session_bars)
+        assert (scan.files, scan.rows) == (expected.files, expected.rows)
+        pd.testing.assert_frame_equal(scan.result, expected.result, check_exact=True)
+    # Row groups are still pruned by their statistics, in wall-clock time: bars run 04:00 to 19:59, so nothing
+    # lies between 20:00 and 03:59 (a statistic read in the wrong zone would overlap it).
+    for bars in (aware, naive):
+        assert bars.plan(["AAA"], datetime(2026, 6, 30, 20, 0), datetime(2026, 7, 1, 3, 59)) == []
+        assert len(bars.plan(["AAA"], datetime(2026, 6, 30, 19, 59), datetime(2026, 7, 1, 3, 59))) == 1
+
+
 def test_a_scan_that_matches_nothing_is_empty(bars: MinuteBars) -> None:
     scan = bars.scan(["AAA"], datetime(2026, 6, 30, 1, 0), datetime(2026, 6, 30, 2, 0), session_bars)  # overnight
 
