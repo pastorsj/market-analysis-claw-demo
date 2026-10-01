@@ -205,7 +205,9 @@ check_inference() {
     for key in $(template_models); do
       [ "$key" = AGENT_CAPABLE_MODEL ] && ! on_build_nvidia "$CAPABLE_BASE_URL" && continue
       case ${!key} in
-        */*/*) problem "$key is not a build.nvidia.com model id (publisher/model)" ;;
+        */*/* | /* | */) problem "$key is not a build.nvidia.com model id (publisher/model)" ;;
+        */*) ;;
+        *) problem "$key is not a build.nvidia.com model id (publisher/model)" ;;
       esac
     done
   fi
