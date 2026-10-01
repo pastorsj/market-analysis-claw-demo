@@ -105,8 +105,9 @@ needs only Docker and curl, and the host's `~/.config/openshell` is never read o
 
 It runs a script in the sandbox as Hermes' interpreter and passes only if:
 the receipt key is a placeholder; egress to a host outside the policy is blocked; Switchyard's model list is
-allowed but `POST /v1/responses` is denied; the API's public routes are denied; and the plugin's three
-internal routes reach the API.
+allowed but `POST /v1/responses` is denied; the API's public routes are denied; market analytics'
+`POST /benchmark`, which only the API calls, is denied (the policy allows its `/mcp` only); and the plugin's
+three internal routes reach the API.
 
 `./scripts/demo.sh logs agent [-f]` shows Hermes' log, including `DENIED` lines with the binary, host and
 reason of any refused connection.

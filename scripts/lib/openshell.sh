@@ -232,10 +232,10 @@ HOST = "http://host.openshell.internal"
 failures = 0
 
 
-def request(url, method="GET"):
+def request(url, method="GET", body=b"{}", headers=None):
     """(status, body) of one request; (None, reason) when the connection itself is refused."""
-    body = b"{}" if method == "POST" else None
-    req = urllib.request.Request(url, data=body, method=method, headers={"content-type": "application/json"})
+    headers = {"content-type": "application/json", **(headers or {})}
+    req = urllib.request.Request(url, data=body if method == "POST" else None, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=10) as response:
             return response.status, response.read(2000).decode(errors="replace")
@@ -251,9 +251,14 @@ def check(ok, claim):
     print(("PASS  " if ok else "FAIL  ") + claim)
 
 
-def denied(url, method="GET"):
-    status, body = request(url, method)
+def denied(url, method="GET", body=b"{}", headers=None):
+    status, body = request(url, method, body, headers)
     return status is None or (status == 403 and "policy_denied" in body)
+
+
+# A well-formed MCP request, so a denial is the path rule's and not the protocol check's
+MCP = {"MCP-Protocol-Version": "2025-11-25", "accept": "application/json, text/event-stream"}
+TOOLS_LIST = b'{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 
 
 key = os.environ.get("HERMES_RECEIPT_API_KEY", "")
@@ -262,6 +267,10 @@ check(denied("https://example.com/"), "egress to a host outside the policy is bl
 check(request(f"{HOST}:4000/v1/models")[0] == 200, "Switchyard GET /v1/models is allowed")
 check(denied(f"{HOST}:4000/v1/responses", "POST"), "Switchyard POST /v1/responses is denied by policy")
 check(denied(f"{HOST}:8000/v1/pack"), "the job API's public routes are denied by policy")
+check(
+    denied(f"{HOST}:3010/benchmark", "POST", TOOLS_LIST, MCP),
+    "market analytics' POST /benchmark (the API's) is denied by policy",
+)
 for method, route in (("GET", "execution-scope"), ("POST", "tool-receipts"), ("POST", "llm-calls")):
     url = f"{HOST}:8000/internal/hermes/jobs/check/{route}"
     check(not denied(url, method), f"the plugin's {method} .../{route} reaches the job API")
