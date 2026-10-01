@@ -48,7 +48,7 @@ after its content for that: Data Designer's resume fingerprint covers a seed fil
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATA_DESIGNER_API_KEY` | `INFERENCE_API_KEY` | the endpoint's key; Data Designer reads it from the environment at request time |
+| `DATA_DESIGNER_API_KEY` | `INFERENCE_API_KEY`, only when `DATA_DESIGNER_BASE_URL` is `INFERENCE_BASE_URL` or for an nvapi- key on build.nvidia.com | the endpoint's key; Data Designer reads it from the environment at request time. With another endpoint, set it: the run stops rather than send the inference key to another host |
 | `DATA_DESIGNER_BASE_URL` | `https://integrate.api.nvidia.com/v1` | any OpenAI-compatible endpoint |
 | `DATA_DESIGNER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | sent with thinking off |
 | `DATA_DESIGNER_PARALLEL` | 8 | concurrent requests; build.nvidia.com rate-limits above that, and Data Designer backs off |

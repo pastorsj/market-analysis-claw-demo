@@ -14,10 +14,16 @@ from data_generate import cli
 pytestmark = pytest.mark.live
 
 
+def designer_key_set() -> bool:
+    try:
+        return bool(cli.designer_key(os.environ))
+    except SystemExit:
+        return False
+
+
 @pytest.mark.skipif(
-    not (os.environ.get("DATA_DESIGNER_API_KEY") or os.environ.get("INFERENCE_API_KEY"))
-    or not os.environ.get("SEC_USER_AGENT"),
-    reason="needs DATA_DESIGNER_API_KEY (or INFERENCE_API_KEY) and SEC_USER_AGENT",
+    not designer_key_set() or not os.environ.get("SEC_USER_AGENT"),
+    reason="needs a key for the Data Designer endpoint (cli.designer_key) and SEC_USER_AGENT",
 )
 def test_the_ci_profile_generates(tmp_path):
     assert cli.main(["--profile", "ci", "--out", str(tmp_path), "--fresh"]) == 0

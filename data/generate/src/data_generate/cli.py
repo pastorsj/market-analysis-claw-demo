@@ -9,7 +9,9 @@ Rows already in --out (or, for a new --out, in the pack's text/) are kept while 
 run extends the text to a larger profile, resumes an interrupted run, and regenerates only what fails.
 
 Environment:
-  DATA_DESIGNER_API_KEY   key for DATA_DESIGNER_BASE_URL (default: INFERENCE_API_KEY)
+  DATA_DESIGNER_API_KEY   key for DATA_DESIGNER_BASE_URL (default: INFERENCE_API_KEY, only when
+                          INFERENCE_BASE_URL is the same endpoint, or it is an nvapi- key and the
+                          endpoint is build.nvidia.com)
   DATA_DESIGNER_BASE_URL  OpenAI-compatible endpoint (default: https://integrate.api.nvidia.com/v1)
   DATA_DESIGNER_MODEL     default nvidia/nemotron-3-super-120b-a12b, with thinking off
   DATA_DESIGNER_PARALLEL  concurrent requests (default 8)
@@ -26,6 +28,7 @@ import os
 import shutil
 import sys
 import time
+from collections.abc import Mapping
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
@@ -52,10 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     profile = args.profile or pack["generator"]["default_profile"]
     if profile not in profiles:
         raise SystemExit(f"unknown profile {profile!r}; choose one of {sorted(profiles)}")
-    if not os.environ.get("DATA_DESIGNER_API_KEY") and os.environ.get("INFERENCE_API_KEY"):
-        os.environ["DATA_DESIGNER_API_KEY"] = os.environ["INFERENCE_API_KEY"]
-    if not os.environ.get("DATA_DESIGNER_API_KEY"):
-        raise SystemExit("set DATA_DESIGNER_API_KEY (or INFERENCE_API_KEY) for the Data Designer model")
+    os.environ["DATA_DESIGNER_API_KEY"] = designer_key(os.environ)
 
     out = args.out or args.pack_dir / "text"
     existing = {} if args.fresh else read_text(out) or read_text(args.pack_dir / "text")
@@ -72,6 +72,26 @@ def main(argv: list[str] | None = None) -> int:
         f"{usage['output_tokens']:,} output tokens, {checks['seconds']} s"
     )
     return 0
+
+
+def designer_key(environment: Mapping[str, str]) -> str:
+    """DATA_DESIGNER_API_KEY, or the inference key where it belongs: never sent to another host.
+
+    INFERENCE_API_KEY stands in only when DATA_DESIGNER_BASE_URL (default build.nvidia.com) is INFERENCE_BASE_URL,
+    or when it is an nvapi- key, which build.nvidia.com issued, and the endpoint is build.nvidia.com.
+    """
+    if key := environment.get("DATA_DESIGNER_API_KEY"):
+        return key
+    endpoint = (environment.get("DATA_DESIGNER_BASE_URL") or jobs.DEFAULT_BASE_URL).rstrip("/")
+    inference = environment.get("INFERENCE_API_KEY", "")
+    same_endpoint = endpoint == (environment.get("INFERENCE_BASE_URL") or "").rstrip("/")
+    issued_there = inference.startswith("nvapi-") and endpoint == jobs.DEFAULT_BASE_URL
+    if inference and (same_endpoint or issued_there):
+        return inference
+    raise SystemExit(
+        f"set DATA_DESIGNER_API_KEY to the key for {endpoint}: INFERENCE_API_KEY is used only when "
+        "INFERENCE_BASE_URL is that endpoint, or for an nvapi- key on build.nvidia.com"
+    )
 
 
 def parser() -> argparse.ArgumentParser:

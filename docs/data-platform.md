@@ -451,7 +451,7 @@ a request covers more than a handful of stocks ([measurements](../tools/market-a
 |---|---|---|
 | Runs | Rarely: to change the text, or for a profile larger than the committed text | Every build |
 | Code | `data/generate/`: its own uv project, with `data-designer==0.9.3`, run with uv on the host | `data/packs/synthetic-market/generator/build.py` in the data image (numpy and pyarrow) |
-| Needs | `DATA_DESIGNER_API_KEY` (defaults to `INFERENCE_API_KEY`), `SEC_USER_AGENT` | Nothing: no key, no network |
+| Needs | `DATA_DESIGNER_API_KEY` (defaults to `INFERENCE_API_KEY` for the same endpoint, or an nvapi- key on build.nvidia.com), `SEC_USER_AGENT` | Nothing: no key, no network |
 | Writes | The **text**: `companies.jsonl`, `headlines.jsonl`, `stories.jsonl` (one row per line, so a review sees each) and `checks.json` | The raw dataset in the canonical layout, in `/data/cache/generated/<key16>/`, then the normal import |
 | Deterministic | No: LLM output. It is reviewed and committed; the pack digest covers it. | Yes: identical bytes for identical seed, parameters, text and code |
 
@@ -463,8 +463,9 @@ otherwise `prepare` stops and says so. Rosters are prefix-stable, so every small
 of the text, and the pack digest covers the text, so a build never reuses stale text.
 
 `DATA_DESIGNER_BASE_URL` defaults to `https://integrate.api.nvidia.com/v1`, and `DATA_DESIGNER_MODEL` to
-`nvidia/nemotron-3-super-120b-a12b` (thinking off, temperature 0.7, timeout 120 s). `demo.sh` passes the key
-in the environment of the one `uv run` only.
+`nvidia/nemotron-3-super-120b-a12b` (thinking off, temperature 0.7, timeout 120 s). `demo.sh` passes the keys
+in the environment of the one `uv run` only, and the inference key stands in only for its own endpoint (or, as
+an nvapi- key, for build.nvidia.com): a gateway key is never sent to build.nvidia.com.
 
 ### The scale knob
 

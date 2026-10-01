@@ -144,3 +144,36 @@ def test_malformed_names_are_retried_then_fail():
 )
 def test_headline_templates(template, ok):
     assert cli.template_ok(template) is ok
+
+
+GATEWAY = "https://gateway.example.com/v1"
+BUILD = "https://integrate.api.nvidia.com/v1"
+
+
+@pytest.mark.parametrize(
+    ("environment", "key"),
+    [
+        ({"DATA_DESIGNER_API_KEY": "own", "INFERENCE_API_KEY": "nvapi-x"}, "own"),
+        # The inference key goes only to its own endpoint, or (an nvapi- key) to build.nvidia.com.
+        ({"INFERENCE_API_KEY": "sk-x", "INFERENCE_BASE_URL": GATEWAY, "DATA_DESIGNER_BASE_URL": f"{GATEWAY}/"}, "sk-x"),
+        ({"INFERENCE_API_KEY": "nvapi-x", "INFERENCE_BASE_URL": BUILD}, "nvapi-x"),
+        ({"INFERENCE_API_KEY": "nvapi-x"}, "nvapi-x"),
+        ({"INFERENCE_API_KEY": "nvapi-x", "INFERENCE_BASE_URL": GATEWAY}, "nvapi-x"),
+    ],
+)
+def test_the_designer_key(environment, key):
+    assert cli.designer_key(environment) == key
+
+
+@pytest.mark.parametrize(
+    "environment",
+    [
+        {},
+        # A gateway key never goes to build.nvidia.com (the default endpoint), nor any key to another host.
+        {"INFERENCE_API_KEY": "sk-x", "INFERENCE_BASE_URL": GATEWAY},
+        {"INFERENCE_API_KEY": "nvapi-x", "INFERENCE_BASE_URL": BUILD, "DATA_DESIGNER_BASE_URL": GATEWAY},
+    ],
+)
+def test_no_designer_key_for_another_host(environment):
+    with pytest.raises(SystemExit, match="set DATA_DESIGNER_API_KEY"):
+        cli.designer_key(environment)

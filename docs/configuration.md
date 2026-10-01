@@ -137,7 +137,7 @@ Changing either Hermes key recreates the sandbox on the next `up`.
 | `SPEECH_API_KEY` | empty | An nvapi- key for the ASR; empty uses `RETRIEVER_API_KEY` when the retriever is build.nvidia.com |
 | `SPEECH_CLEANUP_MODEL` | empty | A public model on build.nvidia.com that deletes fillers and false starts from a transcript, e.g. `nvidia/nemotron-3-super-120b-a12b`; empty means no cleanup |
 | `SPEECH_INPUT_MAX_SECONDS` | `60` | The longest recording, 1 to 90 seconds |
-| `DATA_DESIGNER_API_KEY` | `INFERENCE_API_KEY` | The key for `demo.sh data generate`, which writes the `synthetic-market` pack's text with NeMo Data Designer ([`data/generate/README.md`](../data/generate/README.md)). Building a pack never needs it |
+| `DATA_DESIGNER_API_KEY` | `INFERENCE_API_KEY`, only when `DATA_DESIGNER_BASE_URL` is `INFERENCE_BASE_URL` or for an nvapi- key on build.nvidia.com | The key for `demo.sh data generate`, which writes the `synthetic-market` pack's text with NeMo Data Designer ([`data/generate/README.md`](../data/generate/README.md)). Set it for any other endpoint: the inference key never goes to another host. Building a pack never needs it |
 | `DATA_DESIGNER_BASE_URL` | `https://integrate.api.nvidia.com/v1` | The OpenAI-compatible endpoint `data generate` calls |
 | `DATA_DESIGNER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | The model `data generate` calls, with thinking off |
 | `DATA_DESIGNER_PARALLEL` | `8` | Concurrent requests during `data generate` |
