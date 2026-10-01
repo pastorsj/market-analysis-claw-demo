@@ -39,13 +39,13 @@ def test_lenticular_tokens_and_bracketed_receipt_ids_are_citations(tool_registry
     scan, retrieval = evidence[0].evidence_id, evidence[1].evidence_id
     draft = (
         f"Anomalies spiked【evidence:{scan}】 and filings agree 【evidence:{DIGEST}】. "
-        f"Both again 【{scan}】 [{retrieval}], but not hermes-receipt:{DIGEST} unbracketed."
+        f"Both again 【{scan}】 [{retrieval}], and unbracketed hermes-receipt:{DIGEST}."
     )
 
     report = publish_report(draft, evidence)
 
     assert report.markdown.splitlines()[0] == (
-        f"Anomalies spiked[1] and filings agree [2]. Both again [1] [2], but not hermes-receipt:{DIGEST} unbracketed."
+        "Anomalies spiked [1] and filings agree [2]. Both again [1] [2], and unbracketed [2]."
     )
     assert [c["evidenceId"] for c in report.citations] == [scan, retrieval]
     assert report.invalid_evidence_ids == []
@@ -58,9 +58,65 @@ def test_a_receipt_id_in_code_or_bold_is_a_citation(tool_registry):
 
     report = publish_report(draft, evidence)
 
-    assert report.markdown.splitlines()[0] == "PEAX led (evidence [1]), again ([1]); is not this run's."
+    assert report.markdown.splitlines()[0] == "PEAX led [1], again [1]; is not this run's."
     assert [c["evidenceId"] for c in report.citations] == [scan]
     assert report.invalid_evidence_ids == [f"hermes-receipt:{'0' * 64}"]
+
+
+def test_raw_receipt_ids_written_any_way_become_numbered_markers(tool_registry):
+    """The ways models have written receipt ids in recorded answers, follow-up turns above all."""
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    scan, retrieval = evidence[0].evidence_id, evidence[1].evidence_id
+    draft = "\n".join(
+        [
+            f"Plans need a cooling-off period [evidence:{retrieval}, rank 4]; at most 120 days [{DIGEST}, ranks 9–10].",
+            f"- Top 20: `evidence:{scan}`",
+            f"**Source**: the anomaly scan (evidence `{scan}`).",
+            f"Centrality from the tool `[evidence:{scan}]`, returns[evidence:{retrieval}].",
+            f"Both [evidence:{scan}; evidence:{retrieval}], twice [evidence:{scan}, rank 1] [evidence:{scan}, rank 6].",
+            f"Evidence ID: **{scan}**, and a checksum {'a' * 64} the filing quotes.",
+        ]
+    )
+
+    report = publish_report(draft, evidence)
+
+    assert report.markdown.split("\n\n## Sources")[0].splitlines() == [
+        "Plans need a cooling-off period [1]; at most 120 days [1].",
+        "- Top 20: [2]",
+        "**Source**: the anomaly scan [2].",
+        "Centrality from the tool [2], returns [1].",
+        "Both [2][1], twice [2].",
+        f"[2], and a checksum {'a' * 64} the filing quotes.",
+    ]
+    assert [c["evidenceId"] for c in report.citations] == [retrieval, scan]
+    assert report.invalid_evidence_ids == []
+
+
+def test_a_receipt_id_cut_short_still_names_its_receipt(tool_registry):
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    scan = evidence[0].evidence_id
+    report = publish_report(
+        f"Sector medians (evidence\u202f`{scan[:-1]}`), not `hermes-receipt:{scan[15:31]}`.", evidence
+    )
+
+    assert report.markdown.split("\n\n## ")[0] == "Sector medians [1], not."
+    assert [c["evidenceId"] for c in report.citations] == [scan]
+    assert report.invalid_evidence_ids == [f"hermes-receipt:{scan[15:31]}"]
+
+
+def test_an_earlier_turns_receipt_id_is_removed_in_any_form(tool_registry):
+    """A follow-up must cite this turn's evidence; an id from an earlier turn never reaches the reader."""
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    earlier = f"hermes-receipt:{'b' * 64}"
+    draft = f"Cooling-off applies [evidence:{earlier}, rank 4] and (evidence `{earlier}`); see {earlier} too."
+
+    report = publish_report(draft, evidence)
+
+    body = report.markdown.split("\n\n## Evidence limitation")[0]
+    assert body == "Cooling-off applies and; see too."
+    assert "b" * 64 not in report.markdown
+    assert report.invalid_evidence_ids == [earlier]
+    assert report.status == "partial"
 
 
 def test_unknown_evidence_is_removed_and_flagged(tool_registry):

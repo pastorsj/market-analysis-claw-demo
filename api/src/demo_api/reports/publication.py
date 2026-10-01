@@ -29,8 +29,33 @@ _EVIDENCE_TOKEN = re.compile(
     r"\s*(?:\]?\]|】)|(?:`|\*\*)(?P<code>hermes-receipt:[0-9a-f]{64})(?:`|\*\*))",
     re.IGNORECASE,
 )
+# A receipt id the model wrote any other way: with a rank or note inside the brackets ("[evidence:<id>, rank 4]"),
+# in parentheses, as its bare digest, or loose in the prose ("evidence ID `<id>`"). Each becomes a numbered
+# marker too, so no raw id reaches the reader (or the next turn, which sees this answer).
+_RECEIPT = r"(?:(?:evidence|source)\s*:\s*)?(?:hermes-receipt:[0-9a-f]{16,64}|[0-9a-f]{64})(?![0-9a-z])"
+_CITATION_GROUP = re.compile(r"(?P<lead>[ \t]*)(?:\[\[?|【|\()(?P<body>[^\[\]【】()\n]{1,600}?)(?:\]?\]|】|\))")
+_GROUP_REFERENCE = re.compile(rf"(?:`|\*\*)?(?P<ref>{_RECEIPT})(?:`|\*\*)?", re.IGNORECASE)
+# What may sit beside the ids in a citation group: separators, the words a citation uses, and hit ranks or pages.
+_GROUP_FILLER = re.compile(
+    r"^(?:[\s,;:&/*`'\"-]|\u2013|\u2014|\b(?:and|see|evidence|ids?|receipts?|sources?|ranks?|hits?|passages?"
+    r"|chunks?|pp?\.?|page|nos?\.?)\b|\d)*$",
+    re.IGNORECASE,
+)
+_LOOSE_RECEIPT = re.compile(
+    r"(?P<lead>[ \t]*)(?:\b(?:evidence|receipt)(?:[^\S\n]+id)?[^\S\n]*:?[^\S\n]*)?(?:`|\*\*)?"
+    r"(?P<ref>(?:(?:evidence|source)\s*:\s*)?hermes-receipt:[0-9a-f]{16,64})(?![0-9a-z])(?:`|\*\*)?",
+    re.IGNORECASE,
+)
+_BARE_DIGEST = re.compile(r"(?P<lead>[ \t]*)(?:`|\*\*)?(?P<ref>\b[0-9a-f]{64}\b)(?:`|\*\*)?", re.IGNORECASE)
+# Resolved citations are marked with control characters (the draft has none left) until the end, so code or bold
+# around them can be unwrapped and each becomes a [n] the UI renders as a citation: not after a letter or digit.
+_MARK = "\x00{}\x01"
+_MARKS = re.compile(r"\x00(\d+)\x01")
+_WRAPPED_MARKS = re.compile(r"(`|\*\*)(?P<marks>(?:\x00\d+\x01[ \t,;]*)+)\1")
+_REPEATED_MARK = re.compile(r"(\x00(\d+)\x01)(?:[ \t]*\x00\2\x01)+")
 _NUMBERED_REFERENCE = re.compile(r"[ \t]*\[[1-9][0-9]{0,3}\]")
-_BARE_SHA256 = re.compile(r"[0-9a-fA-F]{64}")
+_RECEIPT_DIGEST = re.compile(r"(?i)(?:hermes-receipt:)?(?P<digest>[0-9a-f]{16,64})")
+_UNIQUE_PREFIX = 32  # hex digits of a cut-short receipt digest that still name one receipt
 _RECEIPT_SHA256 = re.compile(r"hermes-receipt:(?P<digest>[0-9a-fA-F]{64})")
 _SOURCE_SECTION = re.compile(
     r"(?ims)^(?:#{1,6}\s+(?:sources|references)\s*:?\s*|\*{1,2}(?:sources|references)\s*:?\s*\*{1,2})$"
@@ -128,27 +153,58 @@ def publish_report(draft: str, evidence: list[Citation]) -> PublishedReport:
     markdown = _SOURCE_SECTION.sub("", markdown).strip()
     markdown = _NUMBERED_REFERENCE.sub("", markdown)
 
-    by_id = {item.evidence_id: item for item in evidence}
+    by_id = {item.evidence_id.casefold(): item for item in evidence}
     by_digest = {
         m["digest"].casefold(): item for item in evidence if (m := _RECEIPT_SHA256.fullmatch(item.evidence_id))
     }
     cited: list[Citation] = []
     invalid: list[str] = []
 
-    def resolve(match: re.Match[str]) -> str:
-        evidence_id = match["id"] or match["receipt"] or match["code"]
-        item = by_id.get(evidence_id)
-        if item is None and _BARE_SHA256.fullmatch(evidence_id):
-            item = by_digest.get(evidence_id.casefold())  # the model dropped the "hermes-receipt:" prefix
+    def mark(reference: str) -> str:
+        """The marker of the evidence ``reference`` names, or "" (and an invalid id) when this job has none."""
+        evidence_id = re.sub(r"(?i)^(?:evidence|source)\s*:\s*", "", reference.strip())
+        item = by_id.get(evidence_id.casefold())
+        if item is None and (receipt := _RECEIPT_DIGEST.fullmatch(evidence_id)):
+            # A bare digest, the id in another case, or a digest the model cut short but still unique to one receipt
+            digest = receipt["digest"].casefold()
+            matches = [found for key, found in by_digest.items() if key.startswith(digest)]
+            item = matches[0] if len(matches) == 1 and len(digest) >= _UNIQUE_PREFIX else by_digest.get(digest)
         if item is None:
             if evidence_id not in invalid:
                 invalid.append(evidence_id)
             return ""
         if item not in cited:
             cited.append(item)
-        return f"{match['lead']}[{cited.index(item) + 1}]"
+        return _MARK.format(cited.index(item))
 
-    markdown = _EVIDENCE_TOKEN.sub(resolve, markdown)
+    def group(match: re.Match[str]) -> str:
+        references = [found["ref"] for found in _GROUP_REFERENCE.finditer(match["body"])]
+        if not references or not _GROUP_FILLER.match(_GROUP_REFERENCE.sub(" ", match["body"])):
+            return match[0]
+        marks = "".join(mark(reference) for reference in references)
+        return f"{match['lead']}{marks}" if marks else ""
+
+    def token(match: re.Match[str]) -> str:
+        marked = mark(match["id"] or match["receipt"] or match["code"])
+        return f"{match['lead']}{marked}" if marked else ""
+
+    def loose(match: re.Match[str]) -> str:
+        marked = mark(match["ref"])
+        return f"{match['lead']}{marked}" if marked else ""
+
+    def digest(match: re.Match[str]) -> str:
+        if match["ref"].casefold() not in by_digest:
+            return match[0]  # a hash the answer quotes, not a citation
+        return f"{match['lead']}{mark(match['ref'])}"
+
+    markdown = _CITATION_GROUP.sub(group, markdown)
+    markdown = _LOOSE_RECEIPT.sub(loose, markdown)
+    markdown = _EVIDENCE_TOKEN.sub(token, markdown)
+    markdown = _BARE_DIGEST.sub(digest, markdown)
+    markdown = _WRAPPED_MARKS.sub(lambda match: match["marks"].rstrip(" \t,;"), markdown)
+    markdown = _REPEATED_MARK.sub(r"\1", markdown)
+    markdown = re.sub(r"(?<=\w)\x00", " \x00", markdown)
+    markdown = _MARKS.sub(lambda match: f"[{int(match[1]) + 1}]", markdown)
     markdown = re.sub(r"[ \t]+(?=\n)", "", markdown).strip()
     # The limitation goes before the Sources list: the UI and the next turn's history drop everything from
     # the Sources heading on.
