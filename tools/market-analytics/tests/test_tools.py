@@ -29,10 +29,17 @@ def run(data: MarketData, tool: str, **arguments: Any) -> dict[str, Any]:
     return tools.run(data, tool, arguments)
 
 
+def closes(data: MarketData, asset_id: str) -> pd.Series:
+    """The asset's adjusted closes by naive UTC session timestamp, as the frames hold them."""
+    prices = data.prices[data.prices["asset_id"] == asset_id]
+    return pd.Series(prices["adjusted_close"].to_numpy(), index=prices["timestamp"].to_numpy())
+
+
 def june_return(data: MarketData, asset_id: str) -> float:
-    start, end = (JUNE[key].replace(tzinfo=None) for key in ("start", "end"))  # the frames hold naive UTC
-    bars = data.prices[(data.prices["asset_id"] == asset_id) & data.prices["timestamp"].between(start, end)]
-    return bars["adjusted_close"].iloc[-1] / bars["adjusted_close"].iloc[0] - 1
+    """From the last close before June to the last in June, so every June session's return counts."""
+    start, end = (JUNE[key].replace(tzinfo=None) for key in ("start", "end"))
+    close = closes(data, asset_id)
+    return close[close.index <= end].iloc[-1] / close[close.index < start].iloc[-1] - 1
 
 
 def test_market_scan_ranks_both_ends_of_a_universe(data: MarketData) -> None:
@@ -49,6 +56,28 @@ def test_market_scan_ranks_both_ends_of_a_universe(data: MarketData) -> None:
     assert payload["observations"][0]["values"]["return"] == pytest.approx(max(returns.values()))
     assert set(payload["observations"][0]["values"]) == {"return", "volume"}
     assert laggard["payload"]["observations"][0]["asset_id"] == min(returns, key=returns.get)
+
+
+def test_a_return_runs_from_the_close_before_the_window(data: MarketData) -> None:
+    """The 5 sessions ending June 30 are 5 daily returns, as the volatility beside them is; an asset with no
+    earlier session starts from its first close."""
+    result = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], sessions=5, end=JUNE["end"])
+    for row in result["payload"]["observations"]:
+        close = closes(data, row["asset_id"])
+        close = close[close.index <= JUNE["end"].replace(tzinfo=None)]
+        assert row["values"]["return"] == pytest.approx(close.iloc[-1] / close.iloc[-6] - 1)
+        assert row["observation_count"] == 5
+
+    first = {"start": datetime(2026, 5, 1, tzinfo=UTC), "end": datetime(2026, 5, 8, 23, 59, tzinfo=UTC)}
+    result = run(data, "market_scan", universe_id="reviewed_assets", metrics=["return"], **first)
+    for row in result["payload"]["observations"]:
+        close = closes(data, row["asset_id"])
+        assert row["values"]["return"] == pytest.approx(close.iloc[5] / close.iloc[0] - 1)  # May 1 to May 8
+
+    summary = run(data, "price_context", asset_ids=["ALPH"], include_series=False, **JUNE)["payload"]["summaries"][0]
+    alpha = closes(data, "asset-alpha")
+    assert summary["start_price"] == pytest.approx(alpha[alpha.index < JUNE["start"].replace(tzinfo=None)].iloc[-1])
+    assert summary["total_return"] == pytest.approx(june_return(data, "asset-alpha"))
 
 
 def test_market_scan_zscore_centers_the_scores(data: MarketData) -> None:

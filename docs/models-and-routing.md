@@ -87,7 +87,7 @@ A100 VM, before and after tuning: 14 runs before (one failed), 30 after, unjudge
 |---|---|---|---|
 | A job failed after 5 minutes of "Service temporarily overloaded" | build.nvidia.com sends the error inside an HTTP 200 stream, and Switchyard 0.3.0 passes it through | Hermes falls back to `market-research-fallback` (Super) after two failed tries ([how](../infra/switchyard/README.md#routes)) | A simulated overload finished on Super in 15 s |
 | Universes the pack does not have (`top_50` on `synthetic-market`), or `all_assets` and Auto Ontology detours on `us-equities` | Hermes lists the tools once, when the sandbox starts, and a `DATA_PACK` switch kept the sandbox, so the model saw the previous pack's universes | A pack switch recreates the sandbox ([OpenShell](openshell.md)) | No invalid universe on a fresh sandbox |
-| "The 20 sessions ending August 31" scanned from August 3: 21 sessions, +24.74% instead of +22.11% | The model does not count trading days, even with a worked example | `market_scan` takes `sessions=20` with `end` | Both packs' Market Leaders match their oracles |
+| "The 20 sessions ending August 31" scanned from August 3: 21 sessions instead of 20 | The model does not count trading days, even with a worked example | `market_scan` takes `sessions=20` with `end` | Both packs' Market Leaders match their oracles |
 | Anomaly deviations shown as percentages | Nothing said they are robust z-scores | The tool description and the result's limitation say so | No later run showed them as percentages |
 | A ranking sent to Auto Ontology, which returned dollar price changes as "returns" | The routing table did not say where leaders and laggards go | `SOUL.md` sends rankings over any window to the market tools | Moves and Filings matches its oracle |
 | Receipts named in prose ("evidence `hermes-receipt:<id>`") instead of cited | Ultra rarely writes the `[evidence:<id>]` token as instructed | The API counts a receipt id in code or bold as a citation | 20 of 30 answers were cited before this change; 27 of 30 would have been |
@@ -160,7 +160,12 @@ A0, A1, A2, A4 and pass 2 in reverse, so a busy hour on an endpoint does not lan
 
 **Deterministic checks.** The reference values come from each pack's `eval/oracles/`, computed read-only
 against the active DuckDB. Every check also needs the job to succeed, the question's tool to be called, and
-at least one citation.
+at least one citation. These runs predate the change that measures a window's return from the close before
+it: then `market_scan`, `price_context` and the oracles all started from the window's first close, so the
+checks compared like with like. With the change, the oracles' strongest and weakest stay the same for
+`synthetic-market`'s Market Leaders and both packs' Large-Universe Scan; on `us-equities`, Market Leaders'
+weakest is BABA instead of CRWV, and February's weakest three are BMNR, IBM and CRWD instead of IBM, AMD
+and BMNR.
 
 | Question | Check |
 |---|---|

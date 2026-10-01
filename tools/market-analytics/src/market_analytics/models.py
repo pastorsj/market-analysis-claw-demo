@@ -132,11 +132,13 @@ class MarketAnomalyPayload(BaseModel):
 
 class AssetPriceSummary(BaseModel):
     asset_id: str
-    start_timestamp: UtcDatetime
-    end_timestamp: UtcDatetime
-    start_price: float
-    end_price: float
-    total_return: float
+    start_timestamp: UtcDatetime = Field(description="The window's first session")
+    end_timestamp: UtcDatetime = Field(description="The window's last session")
+    start_price: float = Field(
+        description="The close before the window's first session (its own close for an asset with no earlier one)"
+    )
+    end_price: float = Field(description="The window's last close")
+    total_return: float = Field(description="end_price / start_price - 1, a fraction")
     minimum_price: float
     maximum_price: float
     average_volume: float

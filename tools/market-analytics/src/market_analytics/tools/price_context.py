@@ -46,11 +46,12 @@ def run(
         payload = PriceContextPayload(frequency=frequency, summaries=[], series=[], series_truncated=False)
         return Output(payload, rows_scanned=0, empty=True, warnings=("No prices matched the assets and window.",))
 
-    # The summary always comes from the daily bars; frequency shapes only the series.
-    summary = daily.groupby("asset_id").agg(
+    # The summary always comes from the daily bars; frequency shapes only the series. Its return runs from the close
+    # before the window's first session (data.py's return_base), as market_scan's does.
+    summary = bars.groupby("asset_id").agg(
         start_timestamp=("timestamp", "first"),
         end_timestamp=("timestamp", "last"),
-        start_price=("adjusted_close", "first"),
+        start_price=("return_base", "first"),
         end_price=("adjusted_close", "last"),
         minimum_price=("adjusted_close", "min"),
         maximum_price=("adjusted_close", "max"),

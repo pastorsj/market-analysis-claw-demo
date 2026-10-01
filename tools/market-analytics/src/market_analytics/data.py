@@ -37,9 +37,10 @@ CONTRACT_PATH = Path(__file__).resolve().parents[2] / "contract" / "market-analy
 
 FEATURES = ("adjusted_return_1d", "adjusted_return_5d", "realized_volatility_20d", "log_volume_deviation_20d")
 SENTIMENT_SCORES = {"negative": -1, "neutral": 0, "positive": 1}
-# Bytes the loaded frames take per table row, measured on a 1.36-million-row pack: a daily price row counts its
-# prices and anomaly-feature rows. cudf keeps strings in Arrow columns, so the GPU needs less than pandas.
-BYTES_PER_ROW = {"cpu": {"price": 225, "news": 310}, "gpu": {"price": 135, "news": 130}}
+# Bytes the loaded frames take per table row, measured on a 1.36-million-row pack, plus 8 for the price frame's
+# return base: a daily price row counts its prices and anomaly-feature rows. cudf keeps strings in Arrow columns,
+# so the GPU needs less than pandas.
+BYTES_PER_ROW = {"cpu": {"price": 233, "news": 310}, "gpu": {"price": 143, "news": 130}}
 
 
 class ContractError(Exception):
@@ -226,6 +227,9 @@ def _prices(pack: Pack) -> pd.DataFrame:
     # asset has enough earlier sessions. `.where(session > n)` blanks the rows where it would not.
     previous_close = prices["adjusted_close"].shift(1).where(prices["session"] > 1)
     prices["adjusted_return_1d"] = prices["adjusted_close"] / previous_close - 1
+    # The close a return over a window starting at this session is measured from, so "the N sessions ending D"
+    # are N daily returns: the previous session's close, or this session's own for an asset's first session.
+    prices["return_base"] = previous_close.fillna(prices["adjusted_close"])
     # A copy consolidates the columns added one by one: pandas selects rows from it about 3x faster.
     return prices.copy()
 

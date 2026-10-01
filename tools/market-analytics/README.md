@@ -42,6 +42,10 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   tables once at load, the dispatcher converts timezone-aware arguments to UTC, and the result models put the
   UTC offset back, so results still read `2026-08-24T21:00:00Z`. cudf.pandas cannot keep a tz-aware column on
   the GPU; with one, every operation on the frame fell back to pandas.
+- **Returns.** A return over a window runs from the close before the window's first session to its last close,
+  so "the 20 sessions ending D" are 20 daily returns, the same ones the volatility beside it uses. An asset with
+  no earlier session starts from its first close. `market_scan` and `price_context` agree, and so do the packs'
+  `eval/oracles/`.
 - **Benchmark.** `POST /benchmark` `{tool, arguments, pairs, budget_seconds}` runs one tool call on both
   engines for the UI's Benchmark tab; the API calls it with the arguments a receipt recorded
   (`api/README.md`). Only the GPU service compares: its GPU worker runs the call, and a CPU worker

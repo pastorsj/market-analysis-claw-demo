@@ -65,8 +65,9 @@ def run(
         )
         return Output(payload, rows_scanned=0, empty=True, warnings=("No prices matched the universe and window.",))
 
+    # A return runs from the close before the window's first session (data.py's return_base) to its last close.
     summary = bars.groupby("asset_id").agg(
-        start_price=("adjusted_close", "first"),
+        start_price=("return_base", "first"),
         end_price=("adjusted_close", "last"),
         total_volume=("volume", "sum"),
         volatility=("adjusted_return_1d", "std"),

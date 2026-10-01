@@ -16,12 +16,12 @@ cyber-disclosure-rules:
     - 0001649739:0001649739-25-000246 # BAFN, 2025-10-30
     - 0001834584:0001834584-25-000196 # CPNG, 2025-12-16
 moves-and-filings:
-  # February 2026 (eval/oracles/february_moves.sql): strongest CRCL, NFLX, AMAT; weakest IBM, AMD, BMNR. Their
+  # February 2026 (eval/oracles/february_moves.sql): strongest CRCL, AMAT, NFLX; weakest BMNR, IBM, CRWD. Their
   # 8-Ks filed January through March 2026 include these results releases and updates.
   filings:
     - 0001876042:0001876042-26-000032 # CRCL, 2026-02-25, results (Item 2.02)
-    - 0001065280:0001065280-26-000033 # NFLX, 2026-01-20, results (Item 2.02)
     - 0000006951:0001628280-26-007661 # AMAT, 2026-02-12, results (Item 2.02)
-    - 0000051143:0000051143-26-000004 # IBM, 2026-01-28, results (Item 2.02)
-    - 0000002488:0000002488-26-000014 # AMD, 2026-02-03, results (Item 2.02)
+    - 0001065280:0001065280-26-000033 # NFLX, 2026-01-20, results (Item 2.02)
     - 0001829311:0001493152-26-006953 # BMNR, 2026-02-17, Regulation FD update (Item 7.01)
+    - 0000051143:0000051143-26-000004 # IBM, 2026-01-28, results (Item 2.02)
+    - 0001535527:0001535527-26-000007 # CRWD, 2026-03-03, results (Item 2.02)
