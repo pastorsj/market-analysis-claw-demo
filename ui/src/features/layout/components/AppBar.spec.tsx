@@ -57,6 +57,19 @@ describe('AppBar', () => {
     )
   })
 
+  test('shows Phoenix disabled in replay, where there are no traces', async () => {
+    render(<AppBar />, { config: { mode: 'replay', phoenixUrl: 'http://127.0.0.1:6006' } })
+    const link = screen.getByTestId('phoenix-observability-link')
+
+    expect(link).not.toHaveAttribute('href')
+    expect(link).toHaveAttribute('aria-disabled', 'true')
+    expect(link).toHaveTextContent('Phoenix')
+    await userEvent.hover(link)
+    expect(
+      (await screen.findAllByText('Traces are only available in live mode.')).length
+    ).toBeGreaterThan(0)
+  })
+
   test('switches between light and dark themes', async () => {
     useLayoutStore.setState({ theme: 'light' })
     render(<AppBar />)

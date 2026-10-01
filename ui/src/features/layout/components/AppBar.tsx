@@ -5,14 +5,15 @@
  * AppBar Component
  *
  * Top navigation bar with the logo (new session), session title, and actions:
- * data sources, the Phoenix trace viewer (when configured), theme, and the
- * Default User avatar (the demo has no sign-in).
+ * data sources, the Phoenix trace viewer (when configured; shown disabled in
+ * replay, which has no traces), theme, and the Default User avatar (the demo
+ * has no sign-in).
  */
 
 'use client'
 
 import { type FC, memo, useCallback, useEffect, useState } from 'react'
-import { Flex, Text, Button, Logo, Avatar, Popover, Divider } from '@/adapters/ui'
+import { Flex, Text, Button, Logo, Avatar, Popover, Divider, Tooltip } from '@/adapters/ui'
 import { Globe, Info, Moon, OpenExternal, Sun } from '@/adapters/ui/icons'
 import { useAppConfig } from '@/shared/context'
 import { useLayoutStore } from '../store'
@@ -42,7 +43,7 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
   isNewSessionDisabled = false,
   isDataSourceSelectionDisabled = false,
 }) {
-  const { phoenixUrl } = useAppConfig()
+  const { mode, phoenixUrl } = useAppConfig()
   const rightPanel = useLayoutStore((s) => s.rightPanel)
   const isDataSourcesOpen = rightPanel === 'data-sources'
   const theme = useLayoutStore((s) => s.theme)
@@ -130,19 +131,39 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
             </Flex>
           </Button>
 
-          {phoenixUrl && (
-            <a
-              href={phoenixUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Open Phoenix observability"
-              title="Open Phoenix observability"
-              data-testid="phoenix-observability-link"
-              className="text-primary hover:bg-raised focus-visible:ring-brand inline-flex h-8 cursor-pointer items-center gap-1 rounded px-2 no-underline transition-colors focus-visible:outline-none focus-visible:ring-2"
+          {mode === 'replay' ? (
+            <Tooltip
+              side="bottom"
+              openDelayDuration={200}
+              slotContent="Traces are only available in live mode."
             >
-              <OpenExternal className="h-4 w-4" width={16} height={16} />
-              <Text kind="label/regular/md">Phoenix</Text>
-            </a>
+              <span
+                role="link"
+                aria-disabled="true"
+                tabIndex={0}
+                aria-label="Phoenix traces are only available in live mode"
+                data-testid="phoenix-observability-link"
+                className="text-primary focus-visible:ring-brand inline-flex h-8 cursor-not-allowed items-center gap-1 rounded px-2 focus-visible:outline-none focus-visible:ring-2"
+              >
+                <OpenExternal className="h-4 w-4" width={16} height={16} />
+                <Text kind="label/regular/md">Phoenix</Text>
+              </span>
+            </Tooltip>
+          ) : (
+            phoenixUrl && (
+              <a
+                href={phoenixUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open Phoenix observability"
+                title="Open Phoenix observability"
+                data-testid="phoenix-observability-link"
+                className="text-primary hover:bg-raised focus-visible:ring-brand inline-flex h-8 cursor-pointer items-center gap-1 rounded px-2 no-underline transition-colors focus-visible:outline-none focus-visible:ring-2"
+              >
+                <OpenExternal className="h-4 w-4" width={16} height={16} />
+                <Text kind="label/regular/md">Phoenix</Text>
+              </a>
+            )
           )}
 
           {/* Theme toggle: quick dark/light switch */}
