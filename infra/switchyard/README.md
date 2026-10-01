@@ -207,7 +207,7 @@ recommendation. In short: on build.nvidia.com, which serves no frontier model, t
 `passthrough.nemotron` (Nemotron 3 Ultra alone). With a provider that serves a frontier model,
 `escalation.nemotron-gpt` (Ultra escalating to GPT-6.1 Sol, judged by GPT-6.1 Sol) was the best arm of the
 2026-10-01 bake-off on `us-equities`: 10 and 14 of 16 runs with its two graders, against 7 and 9 for GPT-6.1 Sol
-pinned and 8 and 12 for Claude Opus 5.5 pinned, with 10% of the agent turns on Sol. Each arm is an `.env` change
+pinned and 9 and 13 for Claude Opus 5.5 pinned, with 10% of the agent turns on Sol. Each arm is an `.env` change
 plus `./scripts/demo.sh restart switchyard`, which also resets latches and `/v1/stats`.
 
 ## Run and test
