@@ -71,6 +71,12 @@ describe('useHermesChat', () => {
       )
     )
     expect(chat().isStreaming).toBe(false)
+    // As in the original demo UI, the error card alone reports it: no job, so no run banner.
+    expect(chat().currentConversation?.messages.map((m) => m.messageType)).toEqual([
+      'user',
+      'agent_response',
+      'error',
+    ])
   })
 
   test('recovers through the job status when the API was unreachable', async () => {

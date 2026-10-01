@@ -111,7 +111,9 @@ export const useHermesChat = (): UseHermesChatReturn => {
           deepResearchJobStatus: 'failure',
           isDeepResearchActive: false,
         })
-        current.addDeepResearchBanner('failure', jobId, conversationId)
+        // No job was created, so it has no banner: as in the original demo
+        // UI, the error card alone reports the refusal.
+        current.addDeepResearchBanner(null, jobId, conversationId)
         current.addErrorCard(
           'agent.response_failed',
           error instanceof Error ? error.message : 'Research could not be started.'
