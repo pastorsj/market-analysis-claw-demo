@@ -3,7 +3,7 @@
   "$defs": {
     "AnalyticsEngine": {
       "additionalProperties": false,
-      "description": "The device and library that computed a market analytics result.",
+      "description": "The device and library that computed a market analytics result.\n\n`engine_id` names the engine by method and device (`cudf-gpu.v1`, its CPU twin `pandas-cpu.v1`); results\nrecorded before it was added have none.",
       "properties": {
         "device": {
           "enum": [
@@ -21,12 +21,27 @@
           "maxLength": 64,
           "minLength": 1,
           "type": "string"
+        },
+        "engineId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "device",
         "library",
-        "version"
+        "version",
+        "engineId"
       ],
       "title": "AnalyticsEngine",
       "type": "object"
@@ -55,7 +70,7 @@
     },
     "AnalyticsResult": {
       "additionalProperties": false,
-      "description": "One market analytics result; `payload` is operation-specific JSON.\n\nThe tool does not echo its arguments, so the plugin adds them, without the\nsource ids, as the public parameters. `engine` is null when the operation\nfailed before it ran.",
+      "description": "One market analytics result; `payload` is operation-specific JSON.\n\nThe tool does not echo its arguments, so the plugin adds them, without the\nsource ids, as the public parameters. `engine` is null when the operation\nfailed before it ran. `asset_count` is the number of distinct assets in the\nrows scanned; results recorded before it was added have none.",
       "properties": {
         "operationId": {
           "enum": [
@@ -139,6 +154,18 @@
           "minimum": 0,
           "type": "integer"
         },
+        "assetCount": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "warnings": {
           "default": [],
           "items": {
@@ -167,6 +194,7 @@
         "engine",
         "timing",
         "rowsScanned",
+        "assetCount",
         "warnings",
         "limitations"
       ],
@@ -323,11 +351,35 @@
     },
     "AnalyticsTiming": {
       "additionalProperties": false,
-      "description": "Milliseconds spent computing, and end to end including the wait for the worker.",
+      "description": "Milliseconds, to the microsecond: the worker's calculation (`compute_ms`), its other work on the call\n(`setup_ms`: the arguments before, the result after), the two together (`engine_ms`), and the call end to end\nin the tool service, including the wait for the worker (`total_ms`). Results recorded before setup and engine\ntimes were added have neither.",
       "properties": {
         "computeMs": {
           "minimum": 0,
           "type": "number"
+        },
+        "setupMs": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "engineMs": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "totalMs": {
           "minimum": 0,
@@ -336,6 +388,8 @@
       },
       "required": [
         "computeMs",
+        "setupMs",
+        "engineMs",
         "totalMs"
       ],
       "title": "AnalyticsTiming",

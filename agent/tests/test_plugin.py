@@ -100,9 +100,15 @@ PRICE_CONTEXT = {
         "series_truncated": True,
     },
     "error": None,
-    "engine": {"device": "cpu", "library": "pandas", "version": "2.3.3"},
-    "timing": {"compute_ms": 8.152874994266313, "total_ms": 8.152874994266313},
+    "engine": {"device": "cpu", "library": "pandas", "version": "2.3.3", "engine_id": "pandas-cpu.v1"},
+    "timing": {
+        "compute_ms": 8.152874994266313,
+        "setup_ms": 0.6416250066831708,
+        "engine_ms": 8.794500000949484,
+        "total_ms": 9.425041987560689,
+    },
     "rows_scanned": 22,
+    "asset_count": 1,
     "warnings": ["The series is cut to the first 3 points."],
     "limitations": ["Prices are adjusted historical observations and are not investment advice."],
 }
@@ -114,8 +120,14 @@ REJECTED_PRICE_CONTEXT = {
     "payload": None,
     "error": {"code": "invalid_request", "message": "unknown asset 'NOPE'"},
     "engine": None,
-    "timing": {"compute_ms": 0.01049999991664663, "total_ms": 0.01049999991664663},
+    "timing": {
+        "compute_ms": 0.01049999991664663,
+        "setup_ms": 0.0899169989861548,
+        "engine_ms": 0.10041699890280142,
+        "total_ms": 0.6247919914312661,
+    },
     "rows_scanned": 0,
+    "asset_count": None,
     "warnings": [],
     "limitations": [],
 }
@@ -246,6 +258,21 @@ def test_market_results_record_the_public_parameters(hooks, api):
     assert receipt["content"]["publicParameters"] == {"asset_ids": ["ALPH"], "frequency": "weekly", "point_limit": 3}
     assert receipt["content"]["payload"] == PRICE_CONTEXT["payload"]  # payload keys are kept as sent
     assert json.loads(output)["evidence_id"] == receipt["receiptId"]
+
+
+def test_market_results_keep_what_the_receipt_card_shows(hooks, api):
+    """The engine id, the asset count and the timing, to the microsecond, reach the receipt as the tool sent them."""
+    run_tool(hooks, "price_context", {"asset_ids": ["ALPH"]}, PRICE_CONTEXT)
+
+    content = posted_receipt(api)["content"]
+    assert content["engine"]["engineId"] == "pandas-cpu.v1"
+    assert content["assetCount"] == 1
+    assert content["timing"] == {
+        "computeMs": 8.152874994266313,
+        "setupMs": 0.6416250066831708,
+        "engineMs": 8.794500000949484,
+        "totalMs": 9.425041987560689,
+    }
 
 
 def test_a_failed_market_result_gives_a_failed_receipt_without_evidence_id(hooks, api):

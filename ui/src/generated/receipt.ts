@@ -112,7 +112,8 @@ export interface AnalyticsResultReceipt {
  *
  * The tool does not echo its arguments, so the plugin adds them, without the
  * source ids, as the public parameters. `engine` is null when the operation
- * failed before it ran.
+ * failed before it ran. `asset_count` is the number of distinct assets in the
+ * rows scanned; results recorded before it was added have none.
  */
 export interface AnalyticsResult {
   operationId:
@@ -136,6 +137,7 @@ export interface AnalyticsResult {
   engine: AnalyticsEngine | null
   timing: AnalyticsTiming
   rowsScanned: number
+  assetCount: number | null
   /**
    * @maxItems 20
    */
@@ -151,17 +153,26 @@ export interface AnalyticsError {
 }
 /**
  * The device and library that computed a market analytics result.
+ *
+ * `engine_id` names the engine by method and device (`cudf-gpu.v1`, its CPU twin `pandas-cpu.v1`); results
+ * recorded before it was added have none.
  */
 export interface AnalyticsEngine {
   device: 'cpu' | 'gpu'
   library: string
   version: string
+  engineId: string | null
 }
 /**
- * Milliseconds spent computing, and end to end including the wait for the worker.
+ * Milliseconds, to the microsecond: the worker's calculation (`compute_ms`), its other work on the call
+ * (`setup_ms`: the arguments before, the result after), the two together (`engine_ms`), and the call end to end
+ * in the tool service, including the wait for the worker (`total_ms`). Results recorded before setup and engine
+ * times were added have neither.
  */
 export interface AnalyticsTiming {
   computeMs: number
+  setupMs: number | null
+  engineMs: number | null
   totalMs: number
 }
 export interface StructuredQueryReceipt {
