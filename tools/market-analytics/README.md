@@ -140,7 +140,7 @@ docker build -t market-demo/market-analytics:local tools/market-analytics
 
 # GPU image: RAPIDS 26.06 for CUDA 12 (driver 535 or newer) on Linux; run it with gpus: all and
 # MARKET_ANALYTICS_ENGINE=gpu
-docker build --build-arg ANALYTICS_EXTRAS=gpu-cu12,kumo -t market-demo/market-analytics-gpu:local tools/market-analytics
+docker build --build-arg ANALYTICS_EXTRAS=gpu-cu12,kumo -t market-demo/market-analytics:gpu tools/market-analytics
 ```
 
 The console script is `market_analytics.bootstrap:main`. Start the server through it: the worker installs the
