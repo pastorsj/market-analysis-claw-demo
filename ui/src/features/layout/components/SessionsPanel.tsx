@@ -270,22 +270,6 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
     () => filteredRecordedSessions.reduce((total, session) => total + session.questions.length, 0),
     [filteredRecordedSessions]
   )
-  // In replay mode the collapsed rail holds the recordings, since there are no other sessions
-  const railRecorded = readOnly && recorded !== undefined
-  const railItems: Session[] = useMemo(
-    () =>
-      railRecorded
-        ? (recordedSessions ?? []).slice(0, RAIL_SESSION_LIMIT).map((session) => ({
-            id: session.id,
-            title: session.title,
-            date: new Date(session.recordedAt),
-            hasCompletedReport: true,
-          }))
-        : railSessions,
-    [railRecorded, recordedSessions, railSessions]
-  )
-  const railSelectedId = railRecorded ? recordedSelectedId : selectedSessionId
-  const handleRailClick = railRecorded ? recorded.onSelect : handleSessionClick
 
   return (
     <div
@@ -441,13 +425,13 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
             gap="1"
             className="scrollbar-hide mt-1 w-full flex-1 overflow-y-auto"
           >
-            {railItems.map((session) => {
-              const isSelected = railSelectedId === session.id
+            {railSessions.map((session) => {
+              const isSelected = selectedSessionId === session.id
               return (
                 <button
                   key={session.id}
                   type="button"
-                  onClick={() => handleRailClick(session.id)}
+                  onClick={() => handleSessionClick(session.id)}
                   disabled={isNavigationBlocked}
                   title={session.title}
                   aria-label={`Session: ${session.title}`}

@@ -666,6 +666,14 @@ describe('SessionsPanel - Delete Button States', () => {
       expect(failed.onRetry).toHaveBeenCalled()
     })
 
+    test('the collapsed rail holds saved sessions only, as the original demo UI did', () => {
+      setupLayoutStoreMock(true)
+      render(<SessionsPanel sessions={[]} recorded={collection()} readOnly />)
+
+      expect(screen.getByRole('button', { name: /expand sessions sidebar/i })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Session: / })).not.toBeInTheDocument()
+    })
+
     test('without recordings there are no collection tabs', () => {
       render(<SessionsPanel sessions={mockSessions} />)
       expect(screen.queryByRole('tablist', { name: 'Session collections' })).not.toBeInTheDocument()
