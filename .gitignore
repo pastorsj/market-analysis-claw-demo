@@ -9,6 +9,9 @@
 # scripts/demo.sh lifecycle state
 .demo/
 
+# demo.sh eval run directories: a deployment's answers and evidence, real market data included
+/eval/runs/
+
 # Data pack build outputs
 /data/builds/
 /data/active

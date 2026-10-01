@@ -83,6 +83,19 @@ def test_an_unchanged_build_is_not_measured_again(gpu_settings, with_queries, nv
     assert nvidia_api.calls == []
 
 
+def test_again_measures_an_unchanged_build_once_more_on_its_gpu_copy(gpu_settings, with_queries, nvidia_api):
+    """`demo-retrieval benchmark --again`, which the GPU guard runs: new timings, the same copy."""
+    first = benchmark.run(gpu_settings, with_queries, gpu_index=FLAT, gpu_search_params=FLAT_SEARCH)
+    nvidia_api.calls.clear()
+
+    again = benchmark.run(gpu_settings, with_queries, gpu_index=FLAT, gpu_search_params=FLAT_SEARCH, again=True)
+
+    assert nvidia_api.calls  # measured again: the queries were embedded
+    assert again["measuredAt"] >= first["measuredAt"]
+    assert again == json.loads((with_queries / "retrieval-benchmark.json").read_text())
+    assert [p["profileId"] for p in again["profiles"]] == [p["profileId"] for p in first["profiles"]]
+
+
 def test_a_copy_under_another_index_is_rebuilt_and_measured_again(gpu_settings, with_queries, manifest, nvidia_api):
     """After a change of the GPU index, an unchanged build's copy and its result are stale."""
     benchmark.run(gpu_settings, with_queries, gpu_index=FLAT, gpu_search_params=FLAT_SEARCH)
