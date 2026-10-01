@@ -100,7 +100,7 @@ export const fitObservedExecutionNodes = ({
     : []
   // A completed market run can span the entire static manifest from intake to
   // answer. Fitting every observed node makes the operation labels unreadable
-  // on a booth display. Focus the observed market cluster and its return point;
+  // on a demo display. Focus the observed market cluster and its return point;
   // the complete static topology remains available through pan and zoom.
   const targets = observedMarketNodes.length
     ? [...observedMarketNodes, ...observedMarketReturn]
