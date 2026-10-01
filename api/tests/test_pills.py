@@ -65,20 +65,32 @@ def test_a_run_on_the_cpu_keeps_its_engine():
     ]
 
 
-def _declared() -> list[tuple[str, str, list[str]]]:
+def _declared() -> list[tuple[str, str, list[str], list[str] | None]]:
     return [
-        (pack.name, question["id"], question["tools"])
+        (pack.name, question["id"], question["tools"], question.get("profiles"))
         for pack in sorted(PACKS.iterdir())
         for question in yaml.safe_load((pack / "questions.yaml").read_text())["questions"]
     ]
 
 
-@pytest.mark.parametrize(("pack", "question", "tools"), _declared(), ids=str)
-def test_a_recorded_question_used_every_tool_it_declares(pack: str, question: str, tools: list[str]):
-    """questions.yaml `tools` (the picker's pills) against the committed recording; unrecorded questions are skipped."""
-    session = PACKS / pack / "recordings" / "sessions" / f"{question}.json"
+@pytest.mark.parametrize(("pack", "question", "tools", "profiles"), _declared(), ids=str)
+def test_a_recorded_question_used_every_tool_it_declares(
+    pack: str, question: str, tools: list[str], profiles: list[str] | None
+):
+    """questions.yaml `tools` (the picker's pills) against the committed recording, for every question.
+
+    A pack with a bundle must hold every question its profile offers: only a question for another profile (e.g. a
+    minute-bar one) may be missing. A pack without a bundle is skipped whole.
+    """
+    recordings = PACKS / pack / "recordings"
+    if not (recordings / "index.json").is_file():
+        pytest.skip(f"{pack} has no recordings")
+    session = recordings / "sessions" / f"{question}.json"
     if not session.is_file():
-        pytest.skip(f"{pack}/{question} has no recording")
+        profile = json.loads((recordings / "pack.json").read_text()).get("profile")
+        if profiles and profile not in profiles:
+            pytest.skip(f"{pack}/{question} needs the {', '.join(profiles)} profile; the bundle is {profile}")
+        pytest.fail(f"{pack}/{question} has no recording")
     used = {pill["pill"] for pill in session_pills(json.loads(session.read_text())["turns"], REGISTRY)}
 
     assert set(tools) <= used, f"{pack}/{question} declares {tools}, but its recording used {sorted(used)}"

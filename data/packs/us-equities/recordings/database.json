@@ -543,7 +543,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 699
+          "duration_ms": 716
         },
         "assets": {
           "table": "assets",
@@ -710,7 +710,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 713
+          "duration_ms": 693
         },
         "daily_prices": {
           "table": "daily_prices",
@@ -857,7 +857,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 726
+          "duration_ms": 699
         },
         "ticker_history": {
           "table": "ticker_history",
@@ -934,7 +934,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 693
+          "duration_ms": 708
         },
         "trading_sessions": {
           "table": "trading_sessions",
@@ -1001,7 +1001,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 728
+          "duration_ms": 720
         },
         "prediction.asset_entities": {
           "table": "prediction.asset_entities",
@@ -1078,7 +1078,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 682
+          "duration_ms": 703
         },
         "prediction.price_events": {
           "table": "prediction.price_events",
@@ -1165,7 +1165,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 730
+          "duration_ms": 716
         },
         "prediction.return_outcomes": {
           "table": "prediction.return_outcomes",
@@ -1252,7 +1252,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 761
+          "duration_ms": 732
         },
         "prediction.top_50_population": {
           "table": "prediction.top_50_population",
@@ -1289,10 +1289,418 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 695
+          "duration_ms": 705
         }
       },
       "queries": [
+        {
+          "sql": "SELECT a.company_name FROM us_equities.main.assets AS a WHERE a.cik > '9999999999' AND a.first_session BETWEEN DATE '2025-01-01' AND DATE '2026-03-31';",
+          "result": {
+            "columns": [
+              "company_name"
+            ],
+            "types": [
+              "VARCHAR"
+            ],
+            "rows": [],
+            "truncated": false,
+            "duration_ms": 686
+          }
+        },
+        {
+          "sql": "SELECT a.exchange, COUNT(*) AS total_stocks, SUM(CASE WHEN a.liquidity_rank <= 500 THEN 1 ELSE 0 END) AS top_500_count, SUM(CASE WHEN a.liquidity_rank <= 50 THEN 1 ELSE 0 END) AS top_50_count FROM us_equities.main.assets AS a GROUP BY a.exchange ORDER BY a.exchange;",
+          "result": {
+            "columns": [
+              "exchange",
+              "total_stocks",
+              "top_500_count",
+              "top_50_count"
+            ],
+            "types": [
+              "VARCHAR",
+              "BIGINT",
+              "HUGEINT",
+              "HUGEINT"
+            ],
+            "rows": [
+              [
+                "CBOE",
+                1,
+                1,
+                0
+              ],
+              [
+                "NYSE",
+                715,
+                327,
+                26
+              ],
+              [
+                "Nasdaq",
+                862,
+                172,
+                24
+              ],
+              [
+                "OTC",
+                23,
+                0,
+                0
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 684
+          }
+        },
+        {
+          "sql": "SELECT a.industry, COUNT(DISTINCT a.asset_id) AS stock_count FROM us_equities.main.assets AS a WHERE a.sector = 'Manufacturing' AND a.liquidity_rank <= 500 GROUP BY a.industry ORDER BY stock_count DESC LIMIT 5;",
+          "result": {
+            "columns": [
+              "industry",
+              "stock_count"
+            ],
+            "types": [
+              "VARCHAR",
+              "BIGINT"
+            ],
+            "rows": [
+              [
+                "Pharmaceutical Preparations",
+                21
+              ],
+              [
+                "Semiconductors & Related Devices",
+                18
+              ],
+              [
+                "Biological Products, (No Diagnostic Substances)",
+                9
+              ],
+              [
+                "Petroleum Refining",
+                9
+              ],
+              [
+                "Motor Vehicle Parts & Accessories",
+                6
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 699
+          }
+        },
+        {
+          "sql": "SELECT a.sector, COUNT(*) AS total_stocks, SUM(CASE WHEN a.liquidity_rank <= 500 THEN 1 ELSE 0 END) AS top_500_stocks FROM us_equities.main.assets a GROUP BY a.sector ORDER BY total_stocks DESC;",
+          "result": {
+            "columns": [
+              "sector",
+              "total_stocks",
+              "top_500_stocks"
+            ],
+            "types": [
+              "VARCHAR",
+              "BIGINT",
+              "HUGEINT"
+            ],
+            "rows": [
+              [
+                "Manufacturing",
+                579,
+                181
+              ],
+              [
+                "Finance, Insurance and Real Estate",
+                363,
+                110
+              ],
+              [
+                "Services",
+                264,
+                86
+              ],
+              [
+                "Transportation, Communications and Utilities",
+                99,
+                38
+              ],
+              [
+                "Nonclassifiable",
+                89,
+                2
+              ],
+              [
+                "Retail Trade",
+                83,
+                42
+              ],
+              [
+                "Mining",
+                64,
+                29
+              ],
+              [
+                "Wholesale Trade",
+                40,
+                8
+              ],
+              [
+                "Agriculture, Forestry and Fishing",
+                10,
+                2
+              ],
+              [
+                "Construction",
+                10,
+                2
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 698
+          }
+        },
+        {
+          "sql": "SELECT asset_id AS ticker, sic_code, industry FROM us_equities.main.assets WHERE asset_id IN ('BMY','ABBV','PFE','LLY','MRK','JNJ','AZN','ABT','COLB','CRWD') ORDER BY CASE asset_id WHEN 'BMY' THEN 1 WHEN 'ABBV' THEN 2 WHEN 'PFE' THEN 3 WHEN 'LLY' THEN 4 WHEN 'MRK' THEN 5 WHEN 'JNJ' THEN 6 WHEN 'AZN' THEN 7 WHEN 'ABT' THEN 8 WHEN 'COLB' THEN 9 WHEN 'CRWD' THEN 10 ELSE 11 END;",
+          "result": {
+            "columns": [
+              "ticker",
+              "sic_code",
+              "industry"
+            ],
+            "types": [
+              "VARCHAR",
+              "VARCHAR",
+              "VARCHAR"
+            ],
+            "rows": [
+              [
+                "BMY",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "ABBV",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "PFE",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "LLY",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "MRK",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "JNJ",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "AZN",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "ABT",
+                "2834",
+                "Pharmaceutical Preparations"
+              ],
+              [
+                "COLB",
+                "6022",
+                "State Commercial Banks"
+              ],
+              [
+                "CRWD",
+                "7372",
+                "Services-Prepackaged Software"
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 679
+          }
+        },
+        {
+          "sql": "WITH filtered AS ( SELECT a.asset_id, p.total_return_1d, p.trading_date FROM us_equities.main.assets AS a JOIN us_equities.main.daily_prices AS p ON a.asset_id = p.asset_id WHERE a.liquidity_rank <= 500 AND p.trading_date >= DATE '2025-01-01' AND p.trading_date < DATE '2026-01-01' ) SELECT asset_id, COUNT(CASE WHEN ABS(total_return_1d) > 0.10 THEN 1 END) AS sessions_over_10pct, MAX(total_return_1d) AS largest_rise, MIN(total_return_1d) AS largest_fall FROM filtered GROUP BY asset_id ORDER BY sessions_over_10pct DESC, asset_id LIMIT 10;",
+          "result": {
+            "columns": [
+              "asset_id",
+              "sessions_over_10pct",
+              "largest_rise",
+              "largest_fall"
+            ],
+            "types": [
+              "VARCHAR",
+              "BIGINT",
+              "DOUBLE",
+              "DOUBLE"
+            ],
+            "rows": [
+              [
+                "ASST",
+                72,
+                4.268261150614093,
+                -0.3184713375796179
+              ],
+              [
+                "CRML",
+                66,
+                0.5583109919571045,
+                -0.3405963302752294
+              ],
+              [
+                "AAOI",
+                38,
+                0.39886578449905485,
+                -0.20927012056044325
+              ],
+              [
+                "ASPI",
+                38,
+                0.31490621915103656,
+                -0.23235294117647065
+              ],
+              [
+                "AEVA",
+                37,
+                0.3536977491961415,
+                -0.24159830643027258
+              ],
+              [
+                "BBAI",
+                36,
+                0.45194274028629855,
+                -0.20584272849748286
+              ],
+              [
+                "AMPX",
+                32,
+                0.35064935064935066,
+                -0.15826318859904998
+              ],
+              [
+                "APLD",
+                32,
+                0.47291361639824303,
+                -0.3772893772893773
+              ],
+              [
+                "CIFR",
+                32,
+                0.22918238993710682,
+                -0.23168654173764913
+              ],
+              [
+                "CAN",
+                31,
+                0.4036697247706422,
+                -0.1724137931034483
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 731
+          }
+        },
+        {
+          "sql": "WITH filtered AS (SELECT th.ticker, dp.trading_date, dp.adjusted_close, LAG(dp.adjusted_close) OVER (ORDER BY dp.trading_date) AS prev_adj_close FROM us_equities.main.daily_prices dp JOIN us_equities.main.ticker_history th ON dp.asset_id = th.asset_id AND dp.trading_date >= th.effective_from AND (th.effective_to IS NULL OR dp.trading_date <= th.effective_to) WHERE th.ticker = 'ABBV'), returns AS (SELECT ticker, trading_date, (adjusted_close / prev_adj_close) - 1 AS daily_return FROM filtered WHERE prev_adj_close IS NOT NULL AND trading_date BETWEEN DATE '2025-12-01' AND DATE '2026-03-12') SELECT ticker, stddev_samp(daily_return) AS daily_volatility, COUNT(*) AS daily_return_observations FROM returns GROUP BY ticker;",
+          "result": {
+            "columns": [
+              "ticker",
+              "daily_volatility",
+              "daily_return_observations"
+            ],
+            "types": [
+              "VARCHAR",
+              "DOUBLE",
+              "BIGINT"
+            ],
+            "rows": [
+              [
+                "ABBV",
+                0.01539786146647154,
+                70
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 725
+          }
+        },
+        {
+          "sql": "WITH price_range AS (SELECT asset_id, MIN(trading_date) AS start_date, MAX(trading_date) AS end_date FROM daily_prices WHERE trading_date BETWEEN DATE '2026-01-02' AND DATE '2026-03-12' GROUP BY asset_id), returns AS (SELECT a.asset_id, a.sector, (end_close.close - start_close.close) / NULLIF(start_close.close, 0) AS ret FROM price_range pr JOIN assets a ON a.asset_id = pr.asset_id JOIN daily_prices start_close ON start_close.asset_id = pr.asset_id AND start_close.trading_date = pr.start_date JOIN daily_prices end_close ON end_close.asset_id = pr.asset_id AND end_close.trading_date = pr.end_date) SELECT sector, COUNT(DISTINCT asset_id) AS stock_count, percentile_cont(0.5) WITHIN GROUP (ORDER BY ret) AS median_return FROM returns GROUP BY sector ORDER BY sector;",
+          "result": {
+            "columns": [
+              "sector",
+              "stock_count",
+              "median_return"
+            ],
+            "types": [
+              "VARCHAR",
+              "BIGINT",
+              "DOUBLE"
+            ],
+            "rows": [
+              [
+                "Agriculture, Forestry and Fishing",
+                10,
+                0.09385922572022168
+              ],
+              [
+                "Construction",
+                10,
+                -0.033015681654140344
+              ],
+              [
+                "Finance, Insurance and Real Estate",
+                361,
+                -0.014925373134328334
+              ],
+              [
+                "Manufacturing",
+                579,
+                -0.02105652013298856
+              ],
+              [
+                "Mining",
+                64,
+                0.1744179234645336
+              ],
+              [
+                "Nonclassifiable",
+                89,
+                -0.033955857385398865
+              ],
+              [
+                "Retail Trade",
+                83,
+                -0.05066766504430304
+              ],
+              [
+                "Services",
+                264,
+                -0.13412223575298704
+              ],
+              [
+                "Transportation, Communications and Utilities",
+                99,
+                0.0357142857142857
+              ],
+              [
+                "Wholesale Trade",
+                40,
+                0.02090937259124174
+              ]
+            ],
+            "truncated": false,
+            "duration_ms": 731
+          }
+        },
         {
           "sql": "SELECT * FROM \"main\".\"asset_relationships\" LIMIT 25",
           "result": {
@@ -1488,7 +1896,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 686
+            "duration_ms": 681
           }
         },
         {
@@ -1929,7 +2337,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 685
+            "duration_ms": 692
           }
         },
         {
@@ -2316,7 +2724,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 683
+            "duration_ms": 740
           }
         },
         {
@@ -2514,7 +2922,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 680
+            "duration_ms": 688
           }
         },
         {
@@ -2685,7 +3093,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 706
+            "duration_ms": 716
           }
         },
         {
@@ -2883,7 +3291,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 691
+            "duration_ms": 701
           }
         },
         {
@@ -3108,7 +3516,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 725
+            "duration_ms": 720
           }
         },
         {
@@ -3333,7 +3741,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 728
+            "duration_ms": 730
           }
         },
         {
@@ -3423,7 +3831,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 673
+            "duration_ms": 697
           }
         }
       ]

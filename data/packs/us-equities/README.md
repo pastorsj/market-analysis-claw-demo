@@ -91,6 +91,25 @@ profile, all 45 sessions can be recorded (`demo.sh record --all`). `eval/oracles
 from a build and `eval/retrieval.yaml` names the documents a retrieval answer should cite; CI runs the oracles on
 the fixture's schema only, since the data is never in CI.
 
+### Recorded answers
+
+`recordings/` holds all 45 sessions, recorded on 2026-10-01 as the hosted demo runs (every profile,
+`DATA_CORPORA=sec_filings,market_regulations,world_news`, Nemotron 3 Ultra escalating to GPT-6.1 Sol) and
+reviewed against `eval/oracles/` and the evidence. Eleven wrong answers were asked again, twice at most, and one
+question that failed outright (it ran out of Hermes' tool-call budget) succeeded the second time. What remains:
+
+- `large-universe-scan` keeps its first recording: the returns match the oracle, but it answers "how unusual was
+  their volume" with total volumes, saying that `market_scan` gives a z-score only for the metric it ranks by. Both
+  later attempts dropped their citations.
+- `cyber-disclosure-rules` (featured) names all six Item 1.05 filings and says the corpus holds neither Item 1.05's
+  text nor its deadline, which is true, rather than giving the four-business-day deadline.
+- `sector-sql` measures each division's median return from each stock's first close in the window (Auto Ontology's
+  SQL, which says so), where the oracle starts from the close before it, and counts the stocks with prices.
+- Smaller slips, a figure or label a viewer is unlikely to notice: an open-to-close move called close-to-close
+  (`intraday-ranges`), "9 of 10" for 8 of 10 (`second-half-2025`), a start price called the prior close
+  (`nvidia-results-and-prices`), a few in-window filings left out of a "which filings" list (`material-agreements`,
+  `executive-changes`, `filings-to-regulations`).
+
 ## Known issues
 
 - `session_close_utc` is 21:00, the eastern-standard-time close, so bar timestamps are an hour late while daylight
@@ -123,4 +142,4 @@ the fixture's schema only, since the data is never in CI.
 | `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
 | `corpus/select_filings.py` | selects the filings from the issuers' EDGAR submissions and writes their manifest |
 | `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
-| `recordings/` | the replay bundle of the featured questions (`demo.sh record`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars |
+| `recordings/` | the replay bundle of all 45 sessions, 30 questions and 15 conversations (`demo.sh record --all`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars. Private: the public repository ships `synthetic-market`'s recordings only |

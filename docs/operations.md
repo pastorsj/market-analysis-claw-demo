@@ -283,7 +283,9 @@ profile and the default corpora. `up` needed nothing else installed.
    `kumo-relational` and `market-analytics-gpu` both request `gpus: all` and share the GPU, and neither
    preallocates a memory pool. (These figures predate `milvus-gpu`, which also requests `gpus: all` and
    preallocates a 1 GiB pool that may grow to 4 GiB, set in `tools/retrieval/milvus/gpu.yaml`;
-   [retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu).) At idle the Kumo NIM held 0.85 GiB and the RAPIDS worker 0.5 GiB. After its
+   [retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu). On 2026-10-01, with `us-equities` and its
+   `GPU_IVF_FLAT` copy of 32,676 chunks measured, the whole stack held 9.1 GiB of the A100's 40 GiB: `milvus-gpu`
+   4.7 GiB, the Kumo NIM 3.5 GiB after its predictions, the RAPIDS worker 0.5 GiB.) At idle the Kumo NIM held 0.85 GiB and the RAPIDS worker 0.5 GiB. After its
    first predictions the NIM kept about 3 GiB (PyTorch's cache). A single 40 GB GPU runs both with room to
    spare; smaller GPUs were not tried.
 

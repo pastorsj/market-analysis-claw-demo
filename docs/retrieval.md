@@ -106,7 +106,10 @@ on every host, and the GPU index exists only for this comparison.
   Inner product on normalized vectors ranks as cosine does on the CPU. Older builds' copies are dropped, so the
   GPU holds one, and a copy under another index is rebuilt. `GPU_CAGRA` was tried first and returned wrong
   neighbors on these 2,048-dimension vectors in Milvus 2.6.25 on an A100 (recall 0, with IVF-PQ or NN-descent
-  graph builds and with either metric), while `GPU_IVF_FLAT` and `GPU_BRUTE_FORCE` matched the exact neighbors. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
+  graph builds and with either metric), while `GPU_IVF_FLAT` and `GPU_BRUTE_FORCE` matched the exact neighbors.
+  Measured on 2026-10-01 on the A100 with `us-equities` (32,676 chunks, its 15 held-out queries): recall@10 0.98
+  on both indexes and a CPU/GPU overlap of 1.0 in every profile, and the GPU searched 1.13x faster one query at
+  a time, 1.11x in batches of five and 1.76x with five concurrent requests. The GPU Milvus then held 4.7 GiB. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
   memory pool (1 GiB at start, 4 GiB at most).
 - **The workload.** The pack's held-out queries (`documents.benchmark_queries` in `pack.yaml`, 15 per pack,
   never the demo questions), each embedded once with Nemotron Embed. Three profiles: one query per request,
