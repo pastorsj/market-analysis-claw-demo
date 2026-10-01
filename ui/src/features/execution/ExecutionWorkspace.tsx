@@ -13,7 +13,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useLayoutStore } from '@/features/layout/store'
+import { selectPackDatabaseName, useLayoutStore } from '@/features/layout/store'
 import { useAppConfig, type ExecutionFocus, type ExecutionWorkspaceProps } from '@/shared/context'
 import type {
   AnalyticsResultReceipt,
@@ -431,6 +431,7 @@ export const ExecutionWorkspace = ({
   // A recorded run (every run in replay mode) has no live job behind it
   const liveMode = mode === 'live' && !stored?.recorded
   const availableDataSources = useLayoutStore((state) => state.availableDataSources)
+  const packDatabaseName = useLayoutStore(selectPackDatabaseName)
   const replaySources = useReplaySources(!liveMode)
   const events = stored?.events ?? NO_EVENTS
   const receipts = stored?.receipts ?? NO_RECEIPTS
@@ -692,6 +693,7 @@ export const ExecutionWorkspace = ({
         cursor={activeCursor}
         question={question}
         receipts={inspectorReceipts}
+        databaseName={packDatabaseName}
         loading={receiptsLoading}
         onClose={closeInspector}
       />

@@ -50,24 +50,42 @@ describe('summarizeReceipt', () => {
     })
   })
 
-  it('describes a Kumo prediction: its PQL, template and scored assets', () => {
-    const summary = summarizeReceipt(receiptOf('structured_prediction'))
+  it('describes a Kumo prediction in Kumo’s columns, under the database it read', () => {
+    const summary = summarizeReceipt(receiptOf('structured_prediction'), {
+      databaseName: 'market_analysis',
+    })
 
     expect(summary.summary).toMatch(/^\d+ predictions returned\.$/)
-    expect(summary.details).toEqual(
-      expect.arrayContaining(['Template: news_event', 'Horizon: 5 days'])
-    )
+    expect(summary.details).toEqual(['Database: market_analysis'])
     expect(summary.statement).toMatchObject({ label: 'Generated PQL', language: 'pql' })
-    expect(summary.output).toMatchObject({ columns: ['asset_id', 'probability'] })
+    expect(summary.output).toMatchObject({
+      label: 'Prediction result',
+      columns: ['ANCHOR_TIMESTAMP', 'ENTITY', 'FALSE_PROB', 'PREDICTION', 'TRUE_PROB'],
+    })
+    if (summary.output?.kind !== 'table') return
+    // FALSE_PROB is TRUE_PROB's complement; PREDICTION is the likelier class
+    expect(summary.output.rows[0]).toEqual([
+      '2026-08-24T21:00:00Z',
+      'asset-delta',
+      String(1 - 0.8469578623771667),
+      'true',
+      '0.8469578623771667',
+    ])
+    expect(summary.output.rows.at(-1)?.[3]).toBe('false')
   })
 
   it('reports a failed call without its content', () => {
-    const summary = summarizeReceipt(receiptOf('structured_prediction', 'failed'))
+    const summary = summarizeReceipt(receiptOf('structured_prediction', 'failed'), {
+      databaseName: 'market_analysis',
+    })
     expect(summary).toMatchObject({
       title: 'Tool result',
       summary: 'The tool call ended with a failure.',
+      details: ['Database: market_analysis'],
     })
     expect(summary.output).toBeUndefined()
+    const failedQuery = { ...receiptOf('structured_query'), status: 'failed' as const }
+    expect(summarizeReceipt(failedQuery, { databaseName: 'market_analysis' }).details).toEqual([])
   })
 
   it('describes each market operation by its own rows and facts', () => {

@@ -24,6 +24,8 @@ export interface EvidenceInspectorProps {
   cursor: string
   question?: string | null
   receipts: readonly ReceiptV2[]
+  /** The pack's database, which a Kumo prediction reads but its receipt does not name */
+  databaseName?: string
   loading?: boolean
   onClose: () => void
 }
@@ -44,7 +46,7 @@ const callLabel = (receipt: ReceiptV2): string => {
 }
 
 /** The logical sources a receipt read: the retrieval sources, or the database it queried. */
-const receiptSources = (receipt: ReceiptV2): string[] => {
+const receiptSources = (receipt: ReceiptV2, databaseName: string | undefined): string[] => {
   switch (receipt.artifactKind) {
     case 'retrieval_evidence':
       return receipt.content?.sourceIds ?? []
@@ -52,7 +54,7 @@ const receiptSources = (receipt: ReceiptV2): string[] => {
     case 'structured_query':
       return receipt.content ? [receipt.content.databaseName] : []
     case 'structured_prediction':
-      return []
+      return databaseName ? [databaseName] : []
   }
 }
 
@@ -61,17 +63,28 @@ export const EvidenceInspector = ({
   cursor,
   question,
   receipts,
+  databaseName,
   loading = false,
   onClose,
 }: EvidenceInspectorProps): ReactNode => {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const summaries = useMemo(
-    () => receipts.map((receipt) => ({ receipt, summary: summarizeReceipt(receipt) })),
-    [receipts]
+    () =>
+      receipts.map((receipt) => ({
+        receipt,
+        summary: summarizeReceipt(receipt, { databaseName }),
+      })),
+    [databaseName, receipts]
   )
   const sourceNames = useMemo(
-    () => [...new Set(receipts.flatMap(receiptSources).filter((name) => name.trim()))],
-    [receipts]
+    () => [
+      ...new Set(
+        receipts
+          .flatMap((receipt) => receiptSources(receipt, databaseName))
+          .filter((name) => name.trim())
+      ),
+    ],
+    [databaseName, receipts]
   )
 
   useEffect(() => {
