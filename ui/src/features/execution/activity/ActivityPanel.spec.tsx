@@ -64,6 +64,20 @@ describe('ActivityPanel', () => {
     })
   })
 
+  test('after a streamed live run ends, loads the receipts its timeline shows', async () => {
+    // The stream carried the events only
+    useExecutionStore.getState().addRecord({ ...turn, receipts: [], benchmark: null })
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => Response.json(turn))
+    render(<ActivityPanel jobId={turn.jobId} streaming={false} open />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Timeline' }))
+
+    expect(await screen.findByText('Market Anomaly Scan result')).toBeVisible()
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
   test('says so when a live answer’s activity cannot be restored', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }))
     render(<ActivityPanel jobId="gone" streaming={false} open />)

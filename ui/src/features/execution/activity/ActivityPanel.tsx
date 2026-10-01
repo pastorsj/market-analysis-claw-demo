@@ -4,9 +4,8 @@
 /**
  * The Agent Activity panel's tabs: Thinking (the run as it happens), Timeline
  * (the finished run's timing) and Benchmark (its market calls on the CPU and
- * the NVIDIA GPU). A job the store does not hold yet, e.g. the last answer of
- * a reopened live session, loads from its export; recorded runs are already
- * in the store.
+ * the NVIDIA GPU). In live mode what the store lacks loads from the job's
+ * export (`useJobHistory`); recorded runs are already in the store.
  */
 
 'use client'
@@ -19,7 +18,7 @@ import type { ExecutionEventV2 } from '../contract'
 import { BenchmarkTab } from '../benchmark/BenchmarkTab'
 import { projectRun, runEnded } from '../projection'
 import { loadJobExport } from '../replay/sources'
-import { useExecutionRun } from '../store'
+import { useExecutionRun, type ExecutionRun } from '../store'
 import { phoenixSpanUrl, useTraceUrl } from '../trace-link'
 import { ActionTimeline } from './ActionTimeline'
 import { buildActionTimeline, buildThinkingActivity, type ThinkingStatus } from './activity-model'
@@ -61,34 +60,51 @@ const TimelineEmptyState: FC<{ loading?: boolean; title: string; description: st
   </Flex>
 )
 
-/** Load a live job's export once when the store does not hold its run. */
-const useRunHistory = (jobId: string | null, streaming: boolean, enabled: boolean) => {
-  const { mode } = useAppConfig()
-  const run = useExecutionRun(jobId)
-  const known = run !== undefined
-  const [state, setState] = useState<{ jobId: string | null; load: ActivityLoadState }>({
-    jobId: null,
-    load: 'idle',
+/**
+ * Live mode loads a job's export (`loadJobExport`) when the store lacks what the panel shows: the
+ * whole run of an answer this page did not stream (a reopened session), or, once a streamed run has
+ * ended, the receipts its events point at (the SSE stream carries events only). Each need loads once.
+ */
+const useJobHistory = (
+  jobId: string | null,
+  run: ExecutionRun | undefined,
+  finished: boolean,
+  wanted: boolean
+): { runLoad: ActivityLoadState; receiptsLoading: boolean } => {
+  const missingReceipts = useMemo(
+    () => Boolean(run?.events.some((event) => event.artifactRefs.some((id) => !run.receipts[id]))),
+    [run]
+  )
+  const need =
+    !wanted || !jobId ? null : !run ? 'run' : finished && missingReceipts ? 'receipts' : null
+  const key = need && jobId ? `${jobId}:${need}` : null
+  const [load, setLoad] = useState<{ key: string | null; state: ActivityLoadState }>({
+    key: null,
+    state: 'idle',
   })
   useEffect(() => {
-    if (!enabled || mode !== 'live' || !jobId || known || streaming) return
+    if (!key || !jobId) return
     let active = true
-    setState({ jobId, load: 'loading' })
+    setLoad({ key, state: 'loading' })
     loadJobExport(jobId).then(
-      () => active && setState({ jobId, load: 'idle' }),
-      () => active && setState({ jobId, load: 'error' })
+      () => active && setLoad({ key, state: 'idle' }),
+      () => active && setLoad({ key, state: 'error' })
     )
     return () => {
       active = false
     }
-  }, [enabled, jobId, known, mode, streaming])
-  return { run, loadState: state.jobId === jobId && !known ? state.load : 'idle', mode }
+  }, [jobId, key])
+  const current = key !== null && load.key === key ? load.state : 'idle'
+  return {
+    runLoad: need === 'run' ? current : 'idle',
+    receiptsLoading: need === 'receipts' && current === 'loading',
+  }
 }
 
 export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }) => {
   const [activeTab, setActiveTab] = useState<ActivityTab>('thinking')
-  const { phoenixUrl } = useAppConfig()
-  const { run, loadState, mode } = useRunHistory(jobId, streaming, open)
+  const { mode, phoenixUrl } = useAppConfig()
+  const run = useExecutionRun(jobId)
   const events = run?.events ?? NO_EVENTS
   const jobStatus = run?.jobStatus ?? null
   const receipts = run?.receipts
@@ -99,6 +115,12 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
 
   const projection = useMemo(() => projectRun(events, jobStatus), [events, jobStatus])
   const finished = runEnded(projection.status)
+  const { runLoad: loadState, receiptsLoading } = useJobHistory(
+    jobId,
+    run,
+    finished,
+    open && mode === 'live' && !streaming
+  )
   const spanIds = useMemo(
     () =>
       new Map(
@@ -179,7 +201,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
       <ActionTimeline
         model={timeline}
         receipts={receipts ?? {}}
-        receiptsLoading={mode === 'live' && loadState !== 'idle'}
+        receiptsLoading={receiptsLoading}
         spanUrl={links.spanUrl}
       />
     )
