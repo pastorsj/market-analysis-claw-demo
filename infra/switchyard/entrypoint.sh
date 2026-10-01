@@ -59,8 +59,11 @@ required=$(sed -n 's/^# requires://p' "$template")
 # shellcheck disable=SC2086 # the "# requires:" header is a space-separated list of names
 require INFERENCE_API_KEY $required
 
-# --dry-run accepts equal ids, but Switchyard then silently keeps only one of the targets. Only
-# the models the template uses must differ.
+# Switchyard keeps one target per model id: on one client it drops the second target (or rejects it
+# when its settings differ), and within a route it rejects one id on two clients. So the efficient,
+# capable and judge models a template uses must all differ, and the aux model (on the efficient
+# model's client) must differ from the efficient model. The aux model may be the judge or the capable
+# model: those sit on other clients and other routes.
 models=""
 for name in AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL; do
   case " $required " in
@@ -74,6 +77,11 @@ for a in $models; do
     fi
   done
 done
+case " $required " in
+  *" AGENT_AUX_MODEL "*)
+    [ "$AGENT_AUX_MODEL" != "$AGENT_EFFICIENT_MODEL" ] || fail "AGENT_AUX_MODEL must differ from AGENT_EFFICIENT_MODEL"
+    ;;
+esac
 
 case ${SWITCHYARD_CONFIRMATIONS:-1} in
   1 | 2) ;;
@@ -87,18 +95,22 @@ export JUDGE_PROMPT
 # Only these names are substituted; any other "$" in a template stays as written.
 # shellcheck disable=SC2016
 envsubst '${INFERENCE_BASE_URL} ${CAPABLE_BASE_URL} ${AGENT_EFFICIENT_MODEL} ${AGENT_CAPABLE_MODEL}
-  ${AGENT_JUDGE_MODEL} ${SWITCHYARD_CONFIRMATIONS} ${JUDGE_PROMPT}' <"$template" >"$config"
+  ${AGENT_JUDGE_MODEL} ${AGENT_AUX_MODEL} ${SWITCHYARD_CONFIRMATIONS} ${JUDGE_PROMPT}' <"$template" >"$config"
 
 case " $required " in
   *" AGENT_CAPABLE_MODEL "*)
     [ -n "$CAPABLE_API_KEY" ] ||
       fail "CAPABLE_BASE_URL is another endpoint than INFERENCE_BASE_URL: set CAPABLE_API_KEY to its key"
-    capable="capable ${AGENT_CAPABLE_MODEL:-} on $capable_endpoint with $capable_key, "
+    capable=" capable ${AGENT_CAPABLE_MODEL:-} on $capable_endpoint with $capable_key,"
     ;;
   *) capable="" ;;
 esac
-echo "switchyard: $SWITCHYARD_ROUTES on $INFERENCE_BASE_URL (efficient ${AGENT_EFFICIENT_MODEL:-}," \
-  "${capable}judge ${AGENT_JUDGE_MODEL:-})" >&2
+judge=""
+case " $required " in
+  *" AGENT_JUDGE_MODEL "*) judge=" judge ${AGENT_JUDGE_MODEL:-}," ;;
+esac
+echo "switchyard: $SWITCHYARD_ROUTES on $INFERENCE_BASE_URL (efficient ${AGENT_EFFICIENT_MODEL:-},${capable}${judge}" \
+  "aux ${AGENT_AUX_MODEL:-})" >&2
 switchyard-server --config "$config" --dry-run
 exec switchyard-server --config "$config" --host 0.0.0.0 --port 4000 \
   --routing-log-file "$state_dir/routing.jsonl" "$@"

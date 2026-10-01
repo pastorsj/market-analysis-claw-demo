@@ -117,9 +117,12 @@ backend_services() {
 }
 
 summary() {
-  local capable=""
+  local capable="" judge=""
   if uses_capable_model; then
     capable="capable $AGENT_CAPABLE_MODEL on $(endpoint_host "$CAPABLE_BASE_URL"), "
+  fi
+  if template_models | grep -qx AGENT_JUDGE_MODEL; then
+    judge="judge $AGENT_JUDGE_MODEL, "
   fi
   cat >&2 <<EOF
 
@@ -127,7 +130,7 @@ The demo is up.
   UI        http://127.0.0.1:$UI_PORT
   Phoenix   http://127.0.0.1:6006   (on a remote host, use an SSH tunnel)
   Models    $SWITCHYARD_ROUTES on $(endpoint_host "$INFERENCE_BASE_URL"): efficient $AGENT_EFFICIENT_MODEL,
-            ${capable}judge $AGENT_JUDGE_MODEL
+            ${capable}${judge}aux $AGENT_AUX_MODEL
   Data      $DATA_PACK
 Next: ./scripts/demo.sh check
 EOF

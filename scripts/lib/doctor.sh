@@ -188,13 +188,19 @@ check_inference() {
     1 | 2) ;;
     *) problem "SWITCHYARD_CONFIRMATIONS must be 1 or 2" ;;
   esac
-  # Only the models the template uses are required, and they must all differ.
+  # Only the models the template uses are required. As in Switchyard's entrypoint, the efficient,
+  # capable and judge models must all differ, and the aux model must differ from the efficient one.
   for key in $(template_models); do
     [ -n "${!key}" ] || problem "$key is empty (.env section 1; $SWITCHYARD_ROUTES uses it)"
-    models="$models ${!key}"
+    [ "$key" = AGENT_AUX_MODEL ] || models="$models ${!key}"
   done
   if [ -n "$(echo "$models" | tr ' ' '\n' | sed '/^$/d' | sort | uniq -d)" ]; then
-    problem "$SWITCHYARD_ROUTES needs different models in: $(template_models | tr '\n' ' ' | sed 's/ $//')"
+    problem "$SWITCHYARD_ROUTES needs different models in:" \
+      "$(template_models | grep -vx AGENT_AUX_MODEL | tr '\n' ' ' | sed 's/ $//')"
+  fi
+  if template_models | grep -qx AGENT_AUX_MODEL && [ -n "$AGENT_AUX_MODEL" ] &&
+    [ "$AGENT_AUX_MODEL" = "$AGENT_EFFICIENT_MODEL" ]; then
+    problem "AGENT_AUX_MODEL must differ from AGENT_EFFICIENT_MODEL"
   fi
   # build.nvidia.com takes nvapi- keys and publisher/model ids, and serves no GPT-6 Sol.
   if on_build_nvidia "$INFERENCE_BASE_URL"; then
@@ -203,7 +209,7 @@ check_inference() {
       *) problem "INFERENCE_API_KEY must be an nvapi- key for build.nvidia.com" ;;
     esac
     for key in $(template_models); do
-      [ "$key" = AGENT_CAPABLE_MODEL ] && ! on_build_nvidia "$CAPABLE_BASE_URL" && continue
+      on_capable_endpoint "$key" && ! on_build_nvidia "$CAPABLE_BASE_URL" && continue
       case ${!key} in
         */*/* | /* | */) problem "$key is not a build.nvidia.com model id (publisher/model)" ;;
         */*) ;;
@@ -224,6 +230,8 @@ check_inference() {
     case $SWITCHYARD_ROUTES in
       *-gpt) problem "SWITCHYARD_ROUTES=$SWITCHYARD_ROUTES needs a GPT model: set CAPABLE_BASE_URL and" \
         "CAPABLE_API_KEY to an OpenAI-compatible endpoint that serves it (build.nvidia.com does not)" ;;
+      *-claude) problem "SWITCHYARD_ROUTES=$SWITCHYARD_ROUTES needs a Claude model: set CAPABLE_BASE_URL and" \
+        "CAPABLE_API_KEY to an endpoint that serves it over the Anthropic Messages API (build.nvidia.com does not)" ;;
     esac
   fi
 }
@@ -240,6 +248,23 @@ template_models() {
 
 uses_capable_model() {
   template_models | grep -qx AGENT_CAPABLE_MODEL
+}
+
+# The AGENT_*_MODEL settings whose target's llm client reads CAPABLE_BASE_URL: the capable model, and
+# the judge in the frontier escalation templates.
+capable_endpoint_models() {
+  [ -n "$SWITCHYARD_ROUTES" ] && [ -f "$(route_template)" ] || return 0
+  awk '/^\[llm_clients\./ { kind = "client"; name = $1; gsub(/^\[llm_clients\.|\].*$/, "", name); next }
+    /^\[targets\./ { kind = "target"; name = $1; gsub(/^\[targets\.|\].*$/, "", name); next }
+    /^\[/ { kind = ""; next }
+    kind == "client" && /^base_url *= *"\$\{CAPABLE_BASE_URL\}"/ { capable[name] = 1 }
+    kind == "target" && /^id *= *"\$\{AGENT_[A-Z]*_MODEL\}"/ { model = $0; gsub(/^[^{]*\{|\}.*$/, "", model); id[name] = model }
+    kind == "target" && /^llm_client *= / { client = $0; gsub(/^[^"]*"|".*$/, "", client); uses[name] = client }
+    END { for (t in id) if (uses[t] in capable) print id[t] }' "$(route_template)" | sort -u
+}
+
+on_capable_endpoint() {
+  capable_endpoint_models | grep -qx "$1"
 }
 
 on_build_nvidia() {
@@ -276,9 +301,13 @@ check_speech() {
 # the template uses. A listed id can still be refused: some gateways list models outside a key's
 # access group. The hosted rerankers are not listed at all; the first ingest checks the reranker.
 check_keys() {
-  local models="" key
+  local models="" capable_models="" key
   for key in $(template_models); do
-    [ "$key" = AGENT_CAPABLE_MODEL ] || models="$models ${!key}"
+    if on_capable_endpoint "$key"; then
+      capable_models="$capable_models ${!key}"
+    else
+      models="$models ${!key}"
+    fi
   done
   if has_profile ontology; then
     models="$models $AUTO_ONTOLOGY_REASONING_MODEL $AUTO_ONTOLOGY_NON_REASONING_MODEL"
@@ -286,7 +315,12 @@ check_keys() {
   # shellcheck disable=SC2086 # model ids have no spaces
   models_listed inference "$INFERENCE_BASE_URL" "$INFERENCE_API_KEY" $models
   if uses_capable_model; then
-    models_listed capable "$CAPABLE_BASE_URL" "$CAPABLE_API_KEY" "$AGENT_CAPABLE_MODEL"
+    # shellcheck disable=SC2086 # model ids have no spaces
+    case $SWITCHYARD_ROUTES in
+      # The Anthropic Messages API lists models for an x-api-key, as Switchyard authenticates there.
+      *-claude) MODELS_AUTH=anthropic models_listed capable "$CAPABLE_BASE_URL" "$CAPABLE_API_KEY" $capable_models ;;
+      *) models_listed capable "$CAPABLE_BASE_URL" "$CAPABLE_API_KEY" $capable_models ;;
+    esac
   fi
   if has_profile retrieval || has_profile ontology; then
     models_listed retriever "${RETRIEVER_BASE_URL:-https://$BUILD_NVIDIA_HOST/v1}" "$RETRIEVER_API_KEY" \
@@ -294,13 +328,17 @@ check_keys() {
   fi
 }
 
-# models_listed NAME BASE_URL KEY MODEL...
+# [MODELS_AUTH=anthropic] models_listed NAME BASE_URL KEY MODEL...
 models_listed() {
-  local name=$1 url=$2 key=$3 listed model
+  local name=$1 url=$2 key=$3 listed model header='header = "Authorization: Bearer %s"\n'
   shift 3
   [ -n "$url" ] && [ -n "$key" ] || return 0 # already reported as empty
+  if [ "${MODELS_AUTH:-}" = anthropic ]; then
+    header='header = "x-api-key: %s"\nheader = "anthropic-version: 2023-06-01"\n'
+  fi
   # curl reads the header from stdin, so the key never appears in a process listing.
-  if ! listed=$(printf 'header = "Authorization: Bearer %s"\n' "$key" |
+  # shellcheck disable=SC2059 # the format is one of the two constant strings above
+  if ! listed=$(printf "$header" "$key" |
     curl -fsS --max-time 30 --config - "$url/models" | tr -d ' \t\n'); then
     problem "$name: GET $url/models failed with the configured key"
     return 0

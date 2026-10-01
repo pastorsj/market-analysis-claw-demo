@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Escalation where every model speaks Chat Completions, for example all-Nemotron on
-# build.nvidia.com. The efficient model answers, a judge model rates every completed turn, and
-# once it escalates the capable model serves the rest of the session. The capable model can come
-# from its own endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to the inference
-# endpoint and key (the key only on that same endpoint).
+# A Nemotron model answers over Chat Completions. A Claude model judges every completed turn; once it
+# escalates, the capable Claude model (Anthropic Messages API) serves the rest of the session. A
+# Nemotron model serves Hermes' auxiliary and fallback calls. The Claude models come from the capable
+# endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to the inference endpoint and key (the
+# key only on that same endpoint). Switchyard keys a route's targets by model id, so the judge needs
+# another id than the capable model: another id the provider lists for the same model, or another
+# strong model.
 # requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL AGENT_AUX_MODEL SWITCHYARD_CONFIRMATIONS
 schema_version = 1
 
@@ -16,18 +18,18 @@ api_key_env = "INFERENCE_API_KEY"
 timeout_ms = 900000                   # whole call, stream included
 max_retries = 0                       # Hermes retries 429 and 5xx itself
 
-[llm_clients.capable]
-format = "openai_chat"
+[llm_clients.messages]                # Claude's own API; sends x-api-key and anthropic-version
+format = "anthropic_messages"
 base_url = "${CAPABLE_BASE_URL}"
 api_key_env = "CAPABLE_API_KEY"
 timeout_ms = 900000
 max_retries = 0
 
-[llm_clients.judge]                   # own client: a short deadline that bounds each verdict
-format = "openai_chat"
-base_url = "${INFERENCE_BASE_URL}"
-api_key_env = "INFERENCE_API_KEY"
-timeout_ms = 60000
+[llm_clients.judge]                   # own client: a deadline that bounds each verdict
+format = "anthropic_messages"
+base_url = "${CAPABLE_BASE_URL}"
+api_key_env = "CAPABLE_API_KEY"
+timeout_ms = 120000                   # every attempt of one verdict
 max_retries = 2                       # a verdict that still fails fails the agent's turn
 
 [targets.efficient]
@@ -35,17 +37,16 @@ id = "${AGENT_EFFICIENT_MODEL}"
 llm_client = "chat"
 extra_body = { max_tokens = 16384 }   # only when the caller sets none
 
-[targets.capable]
+[targets.capable]                     # Messages has no reasoning_effort: effort goes in output_config
 id = "${AGENT_CAPABLE_MODEL}"
-llm_client = "capable"
-extra_body = { max_tokens = 16384 }
+llm_client = "messages"
+extra_body = { output_config = { effort = "medium" } }
 
-[targets.judge]
-id = "${AGENT_JUDGE_MODEL}"
-llm_client = "judge"
-extra_body = { chat_template_kwargs = { enable_thinking = false } }
+[targets.judge]                       # JSON-schema verdicts (output_config.format)
+id = "${AGENT_JUDGE_MODEL}"           # the verdict's output_config leaves no room for an effort default:
+llm_client = "judge"                  # the model's own default effort applies
 
-[targets.aux]                         # auxiliary and fallback calls, never judged
+[targets.aux]                         # a Nemotron model: auxiliary and fallback calls, never judged
 id = "${AGENT_AUX_MODEL}"
 llm_client = "chat"
 extra_body = { chat_template_kwargs = { enable_thinking = false } }
