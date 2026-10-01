@@ -8,8 +8,10 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 from support import PACK
 
+from demo_api.cli import public_model_ids
 from demo_api.cli import record
 
 PUBLIC_PACK = {
@@ -28,6 +30,11 @@ SCHEMA = {
     "database_name": "market_analysis",
     "tables": [{"name": "assets", "schema": "main", "kind": "table", "columns": []}],
     "relationships": [],
+}
+# A model call served through a gateway that prefixes model ids with their provider
+GATEWAY_LLM_CALL = {
+    "eventKind": "llm.call",
+    "display": {"attributes": {"served_model": "openai/openai/gpt-6.1-sol", "tier": "capable"}},
 }
 ROWS = {"columns": ["asset_id"], "types": ["VARCHAR"], "rows": [["A1"]], "truncated": False, "duration_ms": 3}
 
@@ -70,7 +77,7 @@ def fake_api(
         if path.endswith("/export"):
             report = {"markdown": "Answer [1]", "citations": []}
             turn = {"jobId": job_id, "question": job["question"], "status": job["status"], "report": report}
-            return httpx.Response(200, json=turn | {"events": [], "receipts": [SQL_RECEIPT]})
+            return httpx.Response(200, json=turn | {"events": [GATEWAY_LLM_CALL], "receipts": [SQL_RECEIPT]})
         return httpx.Response(200, json={"job_id": job_id, "status": job["status"], "error": None})
 
     return httpx.MockTransport(handle)
@@ -175,3 +182,32 @@ def test_recording_named_sessions_keeps_the_rest_of_the_bundle(tmp_path, data_di
         "leaders-follow-up",
         "market-leaders",
     ]
+
+
+def test_served_model_ids_are_recorded_under_their_public_names(tmp_path, data_dir):
+    with httpx.Client(transport=fake_api({}), base_url="http://api.test") as client:
+        record(
+            client, data_dir=data_dir, out_dir=tmp_path, question_ids=["market-leaders"], featured_only=True, timeout=5
+        )
+
+    turn = json.loads((tmp_path / "sessions" / "market-leaders.json").read_text())["turns"][0]
+    assert turn["events"][0]["display"]["attributes"] == {"served_model": "gpt-6.1-sol", "tier": "capable"}
+
+
+@pytest.mark.parametrize(
+    ("served", "public"),
+    [
+        ("openai/openai/gpt-6.1-sol", "gpt-6.1-sol"),
+        ("azure/openai/gpt-6.1-sol", "gpt-6.1-sol"),
+        ("nvidia/nvidia/nemotron-3-ultra", "nemotron-3-ultra"),
+        ("nvidia/nvidia/nemotron-3-super-v3", "nemotron-3-super-v3"),
+        ("nvidia/nvidia/nemotron-3.5-lightning", "nemotron-3.5-lightning"),
+        ("Escalated to openai/openai/gpt-6.1-sol.", "Escalated to gpt-6.1-sol."),
+        # Public ids and other paths stay as they are
+        ("nvidia/nemotron-3-ultra-550b-a55b", "nvidia/nemotron-3-ultra-550b-a55b"),
+        ("nvidia/llama-nemotron-rerank-vl-1b-v2", "nvidia/llama-nemotron-rerank-vl-1b-v2"),
+        ("/v1/jobs/async/job/x/export", "/v1/jobs/async/job/x/export"),
+    ],
+)
+def test_public_model_ids(served, public):
+    assert public_model_ids({"a": [served], "b": 3}) == {"a": [public], "b": 3}
