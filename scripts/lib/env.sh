@@ -30,9 +30,11 @@ readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_PACK_PRO
 #   SPEECH_API_KEY      RETRIEVER_API_KEY when empty and the retriever is build.nvidia.com: the
 #                       ASR is on build.nvidia.com too, so no key goes to another host
 #   DATA_SOURCE_DIR     $HOME/market-demo-data when empty: external datasets, outside the repository
-# CAPABLE_BASE_URL also falls back to INFERENCE_BASE_URL, and CAPABLE_API_KEY to INFERENCE_API_KEY
-# when the two endpoints are the same (never for another host), here for doctor and in
-# Switchyard's entrypoint for the stack.
+#   CAPABLE_API_KEY     INFERENCE_API_KEY when empty and CAPABLE_BASE_URL is INFERENCE_BASE_URL (or empty),
+#                       never for another host; always exported, if empty, because Compose needs every
+#                       secret's variable set and .env.example leaves it commented out
+# CAPABLE_BASE_URL also falls back to INFERENCE_BASE_URL, here for doctor and in Switchyard's
+# entrypoint for the stack.
 load_env() {
   local key
   COMPOSE_ENVIRONMENT=$(dc config --environment) ||
@@ -63,7 +65,7 @@ load_env() {
     CAPABLE_API_KEY=${CAPABLE_API_KEY:-$INFERENCE_API_KEY}
   fi
   export COMPOSE_PROFILES DATA_DATABASE_NAME DATA_SOURCE_DIR KUMO_RELATIONAL_URL AUTO_ONTOLOGY_URL AGENT_FEATURES
-  export RETRIEVER_API_KEY SPEECH_API_KEY
+  export RETRIEVER_API_KEY SPEECH_API_KEY CAPABLE_API_KEY
 }
 
 # env_value NAME: NAME as Compose sees it (shell, then .env), after load_env; empty when unset.
