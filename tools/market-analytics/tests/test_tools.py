@@ -3,12 +3,15 @@
 """The market tools, called through the same dispatcher the worker uses."""
 
 import math
+import shutil
 from dataclasses import replace
 from datetime import UTC
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 from fixture_bars import minute_bars
 from fixture_pack import GAMMA_SPIKE
@@ -16,6 +19,7 @@ from fixture_pack import at
 
 from market_analytics import tools
 from market_analytics.data import MarketData
+from market_analytics.data import Pack
 from market_analytics.tools import market_scan
 
 JUNE = {"start": datetime(2026, 6, 1, tzinfo=UTC), "end": datetime(2026, 6, 30, 23, 59, 59, tzinfo=UTC)}
@@ -148,6 +152,32 @@ def test_anomaly_scan_fails_on_non_finite_features(data: MarketData) -> None:
 
     assert result["status"] == "failed"
     assert result["error"]["code"] == "execution_failed"
+
+
+def test_anomaly_scan_leaves_out_a_session_with_no_volume(pack_root: Path, tmp_path: Path) -> None:
+    """log(0) is -inf: the session has no volume deviation, so it and the 20 sessions it is a baseline for drop out."""
+    root = tmp_path / "active"
+    shutil.copytree(pack_root, root)
+    path = root / "tables" / "daily_prices.parquet"
+    prices = pd.read_parquet(path)
+    prices.loc[prices.index[prices["asset_id"] == "asset-alpha"][55], "volume"] = 0
+    prices.to_parquet(path)
+    data = MarketData.load(Pack.load(root))
+
+    result = run(
+        data,
+        "market_anomaly_scan",
+        universe_id="reviewed_assets",
+        training_start=at(20, 0),
+        training_end=at(49, 23),
+        scoring_start=at(50, 0),
+        scoring_end=at(69, 23),
+    )
+
+    assert result["status"] == "succeeded"
+    assert result["payload"]["scoring_observations"] == 60 - 15  # alpha's sessions 55 to 69
+    alpha = data.features[data.features["asset_id"] == "asset-alpha"]
+    assert at(55, 21).replace(tzinfo=None) not in set(alpha["timestamp"])
 
 
 def test_anomaly_scan_filters_by_percentile_and_rejects_overlapping_windows(data: MarketData) -> None:

@@ -233,7 +233,9 @@ def _prices(pack: Pack) -> pd.DataFrame:
 def _features(prices: pd.DataFrame) -> pd.DataFrame:
     """Point-in-time price/volume features for the anomaly detector (price_volume_v1)."""
     session = prices["session"]
-    log_volume = np.log(prices["volume"].astype("float64"))
+    # A session with no volume has no log volume (not -inf): it, and the 20 sessions it is a baseline for, drop out.
+    volume = prices["volume"].astype("float64")
+    log_volume = np.log(volume.where(volume > 0))
     prior_volume = log_volume.shift(1).rolling(20)  # the 20 sessions before this one
     prior_std = prior_volume.std().where(session > 20)
     features = pd.DataFrame(
