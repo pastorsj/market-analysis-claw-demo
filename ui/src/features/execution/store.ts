@@ -8,7 +8,14 @@
  */
 
 import { create } from 'zustand'
-import { toExecutionEvent, toReceipt, type ExecutionEventV2, type ReceiptV2 } from './contract'
+import {
+  toBenchmark,
+  toExecutionEvent,
+  toReceipt,
+  type Benchmark,
+  type ExecutionEventV2,
+  type ReceiptV2,
+} from './contract'
 
 /** Events kept per run. The stream replays from the start, so it can only repeat, not grow. */
 const MAX_EVENTS = 5000
@@ -23,6 +30,8 @@ export interface ExecutionRun {
   jobStatus: string | null
   /** Evidence (receipt) ids the answer cites; null until its report is known */
   citedEvidenceIds: string[] | null
+  /** The CPU/GPU comparison of its market calls, once one has run (the Benchmark tab) */
+  benchmark: Benchmark | null
 }
 
 /** A job's execution record as the API exports it and a recording stores it. */
@@ -32,6 +41,7 @@ export interface ExecutionRecord {
   receipts: unknown[]
   status?: string
   report?: { citations: unknown[] } | null
+  benchmark?: unknown
 }
 
 interface ExecutionState {
@@ -41,6 +51,7 @@ interface ExecutionState {
   addEvent: (jobId: string, value: unknown, cursor?: string | null) => void
   addRecord: (record: ExecutionRecord) => void
   setJobStatus: (jobId: string, status: string) => void
+  setBenchmark: (jobId: string, benchmark: Benchmark) => void
 }
 
 const emptyRun = (jobId: string): ExecutionRun => ({
@@ -49,6 +60,7 @@ const emptyRun = (jobId: string): ExecutionRun => ({
   receipts: {},
   jobStatus: null,
   citedEvidenceIds: null,
+  benchmark: null,
 })
 
 /** The evidence ids of a report's citations (`{evidenceId, …}`), each once. */
@@ -107,7 +119,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     )
   },
 
-  addRecord: ({ jobId, events, receipts, status, report }) => {
+  addRecord: ({ jobId, events, receipts, status, report, benchmark }) => {
     const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
     const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
     const dropped = events.length + receipts.length - validEvents.length - validReceipts.length
@@ -120,12 +132,21 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
             ...run,
             jobStatus: status ?? run.jobStatus,
             citedEvidenceIds: citedEvidence(report) ?? run.citedEvidenceIds,
+            benchmark: toBenchmark(benchmark) ?? run.benchmark,
           },
         },
         dropped: state.dropped + dropped,
       }
     })
   },
+
+  setBenchmark: (jobId, benchmark) =>
+    set((state) => ({
+      runs: {
+        ...state.runs,
+        [jobId]: { ...(state.runs[jobId] ?? emptyRun(jobId)), benchmark },
+      },
+    })),
 
   setJobStatus: (jobId, status) =>
     set((state) => ({

@@ -16,6 +16,7 @@ readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_PACK_PRO
   AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL
   AUTO_ONTOLOGY_REASONING_MODEL AUTO_ONTOLOGY_NON_REASONING_MODEL
   RETRIEVER_BASE_URL RETRIEVER_API_KEY RETRIEVER_EMBED_MODEL KUMO_RELATIONAL_URL
+  SPEECH_INPUT_ENABLED SPEECH_API_KEY
   $GENERATED_SECRETS OPENSHELL_SUPERVISOR_IMAGE OPENSHELL_SANDBOX_IMAGE"
 
 # Read ENV_KEYS from Compose's own view of the environment (shell, versions.env, .env), then
@@ -26,6 +27,8 @@ readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_PACK_PRO
 #   AUTO_ONTOLOGY_URL   the Auto Ontology web app under the ontology profile, for the API
 #   AGENT_FEATURES      the optional tools baked into the agent image
 #   RETRIEVER_API_KEY   INFERENCE_API_KEY when empty: one build.nvidia.com key serves both
+#   SPEECH_API_KEY      RETRIEVER_API_KEY when empty and the retriever is build.nvidia.com: the
+#                       ASR is on build.nvidia.com too, so no key goes to another host
 #   DATA_SOURCE_DIR     $HOME/market-demo-data when empty: external datasets, outside the repository
 # CAPABLE_BASE_URL and CAPABLE_API_KEY also fall back to the inference ones, here for doctor and
 # in Switchyard's entrypoint for the stack.
@@ -51,10 +54,13 @@ load_env() {
   fi
   AGENT_FEATURES=$(agent_features)
   RETRIEVER_API_KEY=${RETRIEVER_API_KEY:-$INFERENCE_API_KEY}
+  if [ -z "$SPEECH_API_KEY" ] && [ "${RETRIEVER_BASE_URL:-https://$BUILD_NVIDIA_HOST/v1}" = "https://$BUILD_NVIDIA_HOST/v1" ]; then
+    SPEECH_API_KEY=$RETRIEVER_API_KEY
+  fi
   CAPABLE_BASE_URL=${CAPABLE_BASE_URL:-$INFERENCE_BASE_URL}
   CAPABLE_API_KEY=${CAPABLE_API_KEY:-$INFERENCE_API_KEY}
   export COMPOSE_PROFILES DATA_DATABASE_NAME DATA_SOURCE_DIR KUMO_RELATIONAL_URL AUTO_ONTOLOGY_URL AGENT_FEATURES
-  export RETRIEVER_API_KEY
+  export RETRIEVER_API_KEY SPEECH_API_KEY
 }
 
 # env_value NAME: NAME as Compose sees it (shell, then .env), after load_env; empty when unset.

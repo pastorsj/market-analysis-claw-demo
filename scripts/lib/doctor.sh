@@ -106,6 +106,7 @@ check_config() {
   if has_profile retrieval || has_profile ontology; then
     check_retriever
   fi
+  check_speech
   # The default corpora (DATA_CORPORA empty) include the SEC EDGAR filings (sec_filings).
   case ,${DATA_CORPORA:-sec_filings}, in
     *,sec_filings,*)
@@ -249,6 +250,19 @@ check_retriever() {
       *) problem "RETRIEVER_API_KEY (or INFERENCE_API_KEY) must be an nvapi- key for build.nvidia.com" ;;
     esac
   fi
+}
+
+# Voice input (.env section 6) needs an nvapi- key for Nemotron ASR on build.nvidia.com.
+check_speech() {
+  case $SPEECH_INPUT_ENABLED in
+    [Tt]rue | 1 | [Yy]es | [Oo]n) ;;
+    *) return 0 ;;
+  esac
+  case $SPEECH_API_KEY in
+    nvapi-*) ;;
+    "") problem "SPEECH_INPUT_ENABLED is on but SPEECH_API_KEY is empty, and the retriever is not build.nvidia.com" ;;
+    *) problem "SPEECH_API_KEY must be an nvapi- key for build.nvidia.com" ;;
+  esac
 }
 
 # Ask each endpoint for its model list with the configured key and look for every configured id

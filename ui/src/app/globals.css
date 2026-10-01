@@ -350,6 +350,73 @@ body {
   width: 100%;
 }
 
+.activity-panel-resizer {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline-offset: -2px;
+}
+
+.activity-panel-resizer::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 1px;
+  background: var(--border-color-base);
+  content: '';
+  transition:
+    width 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.activity-panel-resizer::after {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 3px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--border-color-base);
+  content: '';
+  opacity: 0.55;
+  transform: translateY(-50%);
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease;
+}
+
+.activity-panel-resizer:hover::before,
+.activity-panel-resizer:focus-visible::before,
+.activity-panel-resizer[data-resizing='true']::before {
+  width: 2px;
+  background: var(--border-color-brand);
+  box-shadow: 0 0 12px rgb(118 185 0 / 30%);
+}
+
+.activity-panel-resizer:hover::after,
+.activity-panel-resizer:focus-visible::after,
+.activity-panel-resizer[data-resizing='true']::after {
+  background: var(--border-color-brand);
+  opacity: 0.95;
+}
+
+body.activity-panel-resizing,
+body.activity-panel-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 /* Global scrollbar styles */
 *::-webkit-scrollbar {
   width: 8px;
@@ -842,6 +909,16 @@ body {
 .composer-textarea textarea,
 .composer-textarea [contenteditable='true'] {
   background: transparent;
+}
+
+/* Align the microphone with the composer's first line instead of centering it
+   against the full three-line textarea. The `lh` unit follows the active
+   composer typography without coupling this slot to a fixed pixel offset. */
+.composer-textarea .speech-input-button-slot {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  height: 1lh;
 }
 
 @media (prefers-reduced-motion: reduce) {

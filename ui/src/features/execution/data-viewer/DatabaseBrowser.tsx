@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * The structured database behind a run (live mode): its tables, each table's
+ * The structured database behind a run: its tables, each table's
  * columns, keys, relationships and first rows, and read-only SQL, e.g. an
  * Auto Ontology query opened from its explorer. Loaded structures and
  * previews are cached for as long as the browser is open.
@@ -19,6 +19,7 @@ import type { ExecutionNodeDetail } from '../graph'
 import {
   getPreview,
   getSnapshot,
+  runQuery,
   type DatabaseSnapshot,
   type DatabaseTable,
   type QueryResult,
@@ -44,6 +45,7 @@ export interface DatabaseBrowserProps {
   initialReceipt?: StructuredQueryReceipt | null
   snapshotLoader?: (sourceId: string, signal?: AbortSignal) => Promise<DatabaseSnapshot>
   previewLoader?: (sourceId: string, table: string, signal?: AbortSignal) => Promise<QueryResult>
+  queryRunner?: (sourceId: string, sql: string, signal?: AbortSignal) => Promise<QueryResult>
   onClose: () => void
 }
 
@@ -59,6 +61,7 @@ export const DatabaseBrowser = ({
   initialReceipt = null,
   snapshotLoader = getSnapshot,
   previewLoader = getPreview,
+  queryRunner = runQuery,
   onClose,
 }: DatabaseBrowserProps): ReactNode => {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -303,6 +306,7 @@ export const DatabaseBrowser = ({
                   <DatabaseQueryPanel
                     key={`${selectedSourceId}:${cursor}`}
                     sourceId={selectedSourceId}
+                    queryRunner={queryRunner}
                     receipts={receipts.filter(
                       (receipt) => receipt.content?.databaseName === snapshot.databaseName
                     )}

@@ -46,6 +46,10 @@ export interface ExecutionWorkspaceProps {
 export interface ActivityPanelProps {
   /** The running job, or the latest job of the current conversation; null when there is none. */
   jobId: string | null
+  /** Whether that job is running now */
+  streaming: boolean
+  /** Whether the panel is open; a closed panel keeps its tabs but renders no content */
+  open: boolean
 }
 
 /** One question and its recorded answer. */
@@ -78,7 +82,7 @@ export interface ExecutionFeature {
   onJobEvent: (event: JobStreamEvent) => void
   /** Full view opened from an answer's "View Execution" action. */
   Workspace: ComponentType<ExecutionWorkspaceProps> | null
-  /** Content of the Agent Activity side panel. */
+  /** Content of the Agent Activity side panel: its tabs and their views. */
   ActivityPanel: ComponentType<ActivityPanelProps> | null
   /** Recorded sessions listed in replay mode. */
   recordings: RecordingsSource | null

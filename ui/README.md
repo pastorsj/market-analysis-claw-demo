@@ -24,11 +24,11 @@ browser ──► ui (this) ──/api/v1/*──► api:8000 ──► Hermes (
 
 The browser only talks to this origin. The server routes are:
 
-| Route                        | Purpose                                                                                                                                                                                                                                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/health`            | UI liveness, for the container healthcheck. Never calls the API.                                                                                                                                                                                                                                |
-| `GET, POST /api/v1/<path>`   | Proxy to `$API_URL/v1/<path>`, limited to `pack`, `data_sources/**` (and `POST data_sources/{id}/query`), `POST jobs/async/submit`, `GET jobs/async/job/{id}/**` and `POST jobs/async/job/{id}/cancel`. Anything else, including `/internal/**`, is a 404. SSE streams pass through unbuffered. |
-| `GET /api/recordings/<path>` | Files of the active pack's replay bundle (`.json`, `.jsonl` only).                                                                                                                                                                                                                              |
+| Route                        | Purpose                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/health`            | UI liveness, for the container healthcheck. Never calls the API.                                                                                                                                                                                                                                                                                                          |
+| `GET, POST /api/v1/<path>`   | Proxy to `$API_URL/v1/<path>`, limited to `pack`, `data_sources/**` (and `POST data_sources/{id}/query`), `POST jobs/async/submit`, `GET jobs/async/job/{id}/**`, `POST jobs/async/job/{id}/cancel` and `…/benchmark`, and `POST speech/transcriptions` (a WAV of at most 3 MiB). Anything else, including `/internal/**`, is a 404. SSE streams pass through unbuffered. |
+| `GET /api/recordings/<path>` | Files of the active pack's replay bundle (`.json`, `.jsonl` only).                                                                                                                                                                                                                                                                                                        |
 
 ## Modes
 
@@ -46,7 +46,7 @@ The execution view (graph, capability explorers, timeline, replay) lives in
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `onJobEvent(event)` | Every SSE record of a live job, in order (the event names in `JOB_STREAM_EVENTS`, `adapters/api/deep-research-client.ts`) |
 | `Workspace`         | The view opened by "View Execution" or a cited evidence source                                                            |
-| `ActivityPanel`     | The "Agent Activity" side panel                                                                                           |
+| `ActivityPanel`     | The "Agent Activity" side panel's tabs: Thinking, Timeline and Benchmark                                                  |
 | `recordings`        | `list()` and `load(id)` of recorded sessions in replay mode                                                               |
 
 `src/app/providers.tsx` wires the implementation. Until it exists, the UI runs
@@ -60,14 +60,15 @@ no graph library.
 
 Runtime environment, read per request (see [.env.example](.env.example)):
 
-| Variable           | Default            | Meaning                                                                                           |
-| ------------------ | ------------------ | ------------------------------------------------------------------------------------------------- |
-| `UI_MODE`          | `live`             | `live` or `replay`                                                                                |
-| `API_URL`          | `http://api:8000`  | Demo API, server-side only                                                                        |
-| `PACKS_DIR`        | `/packs`           | Directory of data packs                                                                           |
-| `DATA_PACK`        | `synthetic-market` | Active pack; recordings come from `$PACKS_DIR/$DATA_PACK/recordings`                              |
-| `PHOENIX_URL`      | unset              | Browser-reachable Phoenix UI; unset hides the Phoenix link                                        |
-| `PORT`, `HOSTNAME` | `3000`, `0.0.0.0`  | Listen address of the container's server (`npm start` and `npm run dev` listen on 127.0.0.1 only) |
+| Variable                                           | Default            | Meaning                                                                                           |
+| -------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------- |
+| `UI_MODE`                                          | `live`             | `live` or `replay`                                                                                |
+| `API_URL`                                          | `http://api:8000`  | Demo API, server-side only                                                                        |
+| `PACKS_DIR`                                        | `/packs`           | Directory of data packs                                                                           |
+| `DATA_PACK`                                        | `synthetic-market` | Active pack; recordings come from `$PACKS_DIR/$DATA_PACK/recordings`                              |
+| `PHOENIX_URL`                                      | unset              | Browser-reachable Phoenix UI; unset hides the Phoenix link                                        |
+| `SPEECH_INPUT_ENABLED`, `SPEECH_INPUT_MAX_SECONDS` | `false`, `60`      | The composer's microphone (live mode only; the API transcribes), and the longest recording        |
+| `PORT`, `HOSTNAME`                                 | `3000`, `0.0.0.0`  | Listen address of the container's server (`npm start` and `npm run dev` listen on 127.0.0.1 only) |
 
 Icons load from NVIDIA's brand-asset CDN, so the browser needs internet access.
 

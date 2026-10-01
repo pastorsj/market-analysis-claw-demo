@@ -34,7 +34,19 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'off',
   },
-  projects: [{ name: 'smoke', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'smoke',
+      use: {
+        ...devices['Desktop Chrome'],
+        // A fake microphone (a tone), granted without a prompt, for the voice input test
+        permissions: ['microphone'],
+        launchOptions: {
+          args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+        },
+      },
+    },
+  ],
   webServer: [
     {
       command: 'node e2e/fake-api.mjs',
@@ -42,7 +54,7 @@ export default defineConfig({
       env: { FAKE_API_PORT: new URL(FAKE_API).port },
       reuseExistingServer: !process.env.CI,
     },
-    uiServer(LIVE_URL, { UI_MODE: 'live', API_URL: FAKE_API }),
+    uiServer(LIVE_URL, { UI_MODE: 'live', API_URL: FAKE_API, SPEECH_INPUT_ENABLED: 'true' }),
     uiServer(REPLAY_URL, {
       UI_MODE: 'replay',
       PACKS_DIR: `${process.cwd()}/e2e/fixtures/packs`,

@@ -9,7 +9,8 @@
  *
  * Only the public surface of the demo API is reachable (see ROUTES); anything
  * else, including the sandbox-only `/internal/**` routes, is a 404. Responses,
- * including Server-Sent Event streams, are passed through unbuffered.
+ * including Server-Sent Event streams, are passed through unbuffered. A voice
+ * recording (`speech/transcriptions`) is forwarded as bytes, up to 3 MiB.
  */
 
 import { readApiUrl, readUiMode } from '@/shared/config/env'
@@ -24,7 +25,13 @@ const ROUTES: ReadonlyArray<readonly [Method, RegExp]> = [
   ['POST', /^jobs\/async\/submit$/],
   ['GET', /^jobs\/async\/job\/[^/]+(\/.+)?$/],
   ['POST', /^jobs\/async\/job\/[^/]+\/cancel$/],
+  ['POST', /^jobs\/async\/job\/[^/]+\/benchmark$/],
+  ['POST', /^speech\/transcriptions$/],
 ]
+
+/** A voice recording: 16 kHz mono PCM16 WAV, at most 90 s (about 2.9 MB). */
+const SPEECH_PATH = 'speech/transcriptions'
+const MAX_SPEECH_BYTES = 3 * 1024 * 1024
 
 /** One URL path segment: no traversal, no encoded separators. */
 const SEGMENT = /^[A-Za-z0-9_][A-Za-z0-9._:-]*$/
@@ -46,6 +53,21 @@ const resolveTarget = (method: Method, segments: string[], search: string): stri
   return `${readApiUrl()}/v1/${path}${search}`
 }
 
+/** The request body to forward: text, or a bounded voice recording as bytes. */
+const readBody = async (request: Request, speech: boolean): Promise<BodyInit | Response> => {
+  if (!speech) return request.text()
+  if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'audio/wav') {
+    return errorResponse(415, 'UNSUPPORTED_AUDIO', 'Voice input requires a WAV recording')
+  }
+  if (Number(request.headers.get('content-length') ?? 0) > MAX_SPEECH_BYTES) {
+    return errorResponse(413, 'AUDIO_TOO_LARGE', 'The recording is too large')
+  }
+  const body = await request.arrayBuffer()
+  return body.byteLength > MAX_SPEECH_BYTES
+    ? errorResponse(413, 'AUDIO_TOO_LARGE', 'The recording is too large')
+    : body
+}
+
 const proxy = async (
   request: Request,
   method: Method,
@@ -55,8 +77,12 @@ const proxy = async (
     return errorResponse(404, 'REPLAY_MODE', 'The API is not available in replay mode')
   }
 
-  const target = resolveTarget(method, (await params).path, new URL(request.url).search)
+  const segments = (await params).path
+  const target = resolveTarget(method, segments, new URL(request.url).search)
   if (!target) return errorResponse(404, 'NOT_FOUND', 'Not found')
+  const body =
+    method === 'POST' ? await readBody(request, segments.join('/') === SPEECH_PATH) : undefined
+  if (body instanceof Response) return body
 
   const headers = new Headers()
   for (const name of FORWARDED_REQUEST_HEADERS) {
@@ -69,7 +95,7 @@ const proxy = async (
     upstream = await fetch(target, {
       method,
       headers,
-      body: method === 'POST' ? await request.text() : undefined,
+      body,
       cache: 'no-store',
       // Closing the browser stream closes the upstream SSE connection.
       signal: request.signal,

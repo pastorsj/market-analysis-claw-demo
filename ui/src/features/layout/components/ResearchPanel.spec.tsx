@@ -12,7 +12,9 @@ import { ResearchPanel } from './ResearchPanel'
 const initialLayout = useLayoutStore.getState()
 const initialChat = useChatStore.getState()
 
-const ActivityPanel = ({ jobId }: ActivityPanelProps) => <p>Activity for {jobId}</p>
+const ActivityPanel = ({ jobId, open }: ActivityPanelProps) => (
+  <p>{open ? `Activity for ${jobId}` : 'closed'}</p>
+)
 
 describe('ResearchPanel', () => {
   beforeEach(() => {
@@ -34,6 +36,54 @@ describe('ResearchPanel', () => {
 
     expect(screen.getByText('Agent Activity')).toBeInTheDocument()
     expect(screen.getByText('Activity for job-1')).toBeInTheDocument()
+  })
+
+  test('a reopened session with no running job follows its last answer', async () => {
+    useChatStore.setState({
+      deepResearchJobId: null,
+      currentConversation: {
+        id: 'recorded',
+        userId: 'local',
+        title: 'Recorded',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        messages: [
+          { id: 'q', role: 'user', content: 'Which?', timestamp: new Date() },
+          {
+            id: 'a1',
+            role: 'assistant',
+            content: 'First',
+            timestamp: new Date(),
+            deepResearchJobId: 'job-first',
+          },
+          {
+            id: 'a2',
+            role: 'assistant',
+            content: 'Second',
+            timestamp: new Date(),
+            deepResearchJobId: 'job-last',
+          },
+        ],
+      },
+    })
+    render(<ResearchPanel />, { feature: { ActivityPanel } })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open agent activity panel' }))
+
+    expect(screen.getByText('Activity for job-last')).toBeInTheDocument()
+  })
+
+  test('resizes from the keyboard and resets to the default width', async () => {
+    useLayoutStore.setState({ rightPanel: 'research' })
+    render(<ResearchPanel />, { feature: { ActivityPanel } })
+    const resizer = screen.getByRole('separator', { name: 'Resize agent activity panel' })
+    const before = Number(resizer.getAttribute('aria-valuenow'))
+
+    resizer.focus()
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(Number(resizer.getAttribute('aria-valuenow'))).toBe(before + 16)
+    await userEvent.keyboard('{Enter}')
+    expect(Number(resizer.getAttribute('aria-valuenow'))).toBe(before)
   })
 
   test('stops the running job', async () => {

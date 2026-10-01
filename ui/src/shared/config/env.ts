@@ -14,6 +14,8 @@
  * | `PACKS_DIR`  | `/packs`              | Directory holding the data packs                 |
  * | `DATA_PACK`  | `synthetic-market`    | Active pack; recordings are read from its folder |
  * | `PHOENIX_URL`| unset                 | Browser-reachable Phoenix UI; unset hides links  |
+ * | `SPEECH_INPUT_ENABLED` | `false`     | Show the microphone (live mode; the API transcribes) |
+ * | `SPEECH_INPUT_MAX_SECONDS` | `60`    | Longest recording, 1 to 90 seconds               |
  */
 
 import path from 'node:path'
@@ -39,12 +41,26 @@ const readHttpUrl = (name: string, value: string): string => {
   return value.replace(/\/+$/, '')
 }
 
+const readMaxSeconds = (env: Env): number => {
+  const raw = env.SPEECH_INPUT_MAX_SECONDS?.trim()
+  if (!raw || !/^\d+$/.test(raw)) return 60
+  return Math.min(90, Math.max(1, Number(raw)))
+}
+
 /** Configuration the browser needs, passed through `AppConfigProvider`. */
 export const readAppConfig = (env: Env = process.env): AppConfig => {
   const phoenixUrl = env.PHOENIX_URL?.trim()
+  const mode = readMode(env)
   return {
-    mode: readMode(env),
+    mode,
     phoenixUrl: phoenixUrl ? readHttpUrl('PHOENIX_URL', phoenixUrl) : null,
+    speechInput: {
+      // Replay never calls the API, so it has no transcription
+      enabled:
+        mode === 'live' &&
+        ['true', '1', 'yes', 'on'].includes(env.SPEECH_INPUT_ENABLED?.trim().toLowerCase() ?? ''),
+      maxSeconds: readMaxSeconds(env),
+    },
   }
 }
 

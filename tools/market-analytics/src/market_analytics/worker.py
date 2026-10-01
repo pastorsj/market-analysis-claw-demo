@@ -37,9 +37,10 @@ class WorkerError(RuntimeError):
 
 
 class Worker:
-    def __init__(self, root: Path, *, timeout: float) -> None:
+    def __init__(self, root: Path, *, timeout: float, engine: str | None = None) -> None:
         self.root = root
         self.timeout = timeout  # seconds one call may run before the worker is replaced
+        self.engine = engine  # "cpu" or "gpu"; None follows MARKET_ANALYTICS_ENGINE
         self._lock = threading.Lock()
         self._process: multiprocessing.process.BaseProcess | None = None
         self._connection: Connection | None = None
@@ -81,7 +82,10 @@ class Worker:
         context = multiprocessing.get_context("spawn")
         self._connection, child = context.Pipe()
         self._process = context.Process(
-            target=bootstrap.worker_main, args=(child, self.root), name="market-analytics-worker", daemon=True
+            target=bootstrap.worker_main,
+            args=(child, self.root, self.engine),
+            name=f"market-analytics-{self.engine}-worker" if self.engine else "market-analytics-worker",
+            daemon=True,
         )
         self._process.start()
         child.close()

@@ -21,6 +21,14 @@ import { createContext, useContext, type ReactNode } from 'react'
  */
 export type UiMode = 'live' | 'replay'
 
+/** Voice input: the composer's microphone, transcribed by the API with NVIDIA Nemotron ASR. */
+export interface SpeechInputConfig {
+  /** SPEECH_INPUT_ENABLED; live mode only */
+  enabled: boolean
+  /** The longest recording, in seconds (SPEECH_INPUT_MAX_SECONDS, 1 to 90) */
+  maxSeconds: number
+}
+
 /**
  * Runtime configuration passed from server to client
  */
@@ -29,6 +37,7 @@ export interface AppConfig {
   mode: UiMode
   /** Browser-reachable Phoenix UI (PHOENIX_URL); null hides the Phoenix link */
   phoenixUrl: string | null
+  speechInput: SpeechInputConfig
 }
 
 const AppConfigContext = createContext<AppConfig | null>(null)

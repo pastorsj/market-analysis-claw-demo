@@ -9,9 +9,18 @@ The v2 bundle, which the UI replays from ``data/packs/<pack>/recordings/``::
                             sessions: [{id, title, featured, turns: [{jobId, question}]}]}
     pack.json              a copy of /data/active/pack.json, so replay needs no API
     sessions/<id>.json     {schemaVersion: 2, id, title, turns: [<GET .../job/{id}/export>]}
+    database.json          {schemaVersion: 1, sources: [{id, name, databaseName, schema, previews, queries}]}:
+                           each structured source's schema (GET .../schema), the first rows of each table
+                           (GET .../preview), and the result (POST .../query) of each SQL query the recorded
+                           answers ran and of the data viewer's starting query for each table, so the data
+                           viewer works in replay
 
-Each pack question becomes one single-turn session, asked one at a time. A question that does
-not succeed is left out of the bundle and makes the command exit 1.
+Each pack question becomes one single-turn session, asked one at a time. After an answer that
+called market analytics tools, the recorder asks for its CPU/GPU comparison
+(POST .../benchmark), which the export then carries; on a CPU-only stack there is none. A
+question that does not succeed is left out of the bundle and makes the command exit 1.
+
+``demo-api snapshot-database --out <recordings>`` rewrites only ``database.json`` of a bundle.
 """
 
 from __future__ import annotations
@@ -32,6 +41,10 @@ import httpx
 from .settings import Settings
 
 POLL_SECONDS = 2.0
+PREVIEW_ROWS = 8  # the rows the data viewer previews (ui/src/features/execution/data-viewer)
+# The query the data viewer's SQL tab starts from for a table (DatabaseBrowser.tsx), so replay can run it too
+DEFAULT_TABLE_SQL = 'SELECT * FROM "{schema}"."{table}" LIMIT 25'
+BENCHMARK_TIMEOUT_SECONDS = 900.0
 
 
 def record(
@@ -69,6 +82,7 @@ def record(
             }
         )
     shutil.copyfile(data_dir / "pack.json", out_dir / "pack.json")
+    snapshot_database(client, out_dir)
     index = {
         "schemaVersion": 2,
         "pack": {"id": pack["id"], "version": pack["version"]},
@@ -101,7 +115,66 @@ def _ask(client: httpx.Client, question: dict[str, Any], *, timeout: float) -> d
         time.sleep(POLL_SECONDS)
     if status.get("error"):
         print(f"  error: {status['error']}", file=sys.stderr)
+    if status["status"] == "success":
+        _benchmark(client, job_id)
     return client.get(f"/v1/jobs/async/job/{job_id}/export").raise_for_status().json()
+
+
+def _benchmark(client: httpx.Client, job_id: str) -> None:
+    """Compare the answer's market calls on the CPU and the GPU; a run without any, or a CPU-only stack, has none."""
+    response = client.post(f"/v1/jobs/async/job/{job_id}/benchmark", timeout=BENCHMARK_TIMEOUT_SECONDS)
+    if response.status_code == 422:
+        return
+    body = response.json() if response.status_code == 200 else {}
+    print(f"  benchmark: {body.get('status', response.status_code)}", file=sys.stderr)
+
+
+def snapshot_database(client: httpx.Client, out_dir: Path) -> None:
+    """Write ``database.json``: what the data viewer shows of each structured source, from the running API."""
+    queries: set[tuple[str, str]] = set()
+    for path in sorted((out_dir / "sessions").glob("*.json")):
+        for turn in json.loads(path.read_text(encoding="utf-8"))["turns"]:
+            for receipt in turn["receipts"]:
+                content = receipt.get("content") or {}
+                if receipt.get("artifactKind") == "structured_query" and content.get("sql"):
+                    queries.add((content["databaseName"], content["sql"]))
+    sources = []
+    for source in client.get("/v1/data_sources").raise_for_status().json():
+        if not source.get("database_name"):
+            continue
+        base = f"/v1/data_sources/{source['id']}"
+        schema = client.get(f"{base}/schema").raise_for_status().json()
+        previews = {
+            table["name"]: client.get(f"{base}/preview", params={"table": table["name"], "limit": PREVIEW_ROWS})
+            .raise_for_status()
+            .json()
+            for table in schema["tables"]
+        }
+        results = []
+        defaults = [
+            DEFAULT_TABLE_SQL.format(schema=table["schema"], table=table["name"].rsplit(".", 1)[-1])
+            for table in schema["tables"]
+        ]
+        recorded = sorted(sql for database, sql in queries if database == source["database_name"])
+        for sql in dict.fromkeys([*recorded, *defaults]):
+            response = client.post(f"{base}/query", json={"sql": sql})
+            if response.status_code == 200:
+                results.append({"sql": sql, "result": response.json()})
+            else:
+                print(
+                    f"  a recorded query did not run ({response.status_code}); replay cannot rerun it", file=sys.stderr
+                )
+        sources.append(
+            {
+                "id": source["id"],
+                "name": source["name"],
+                "databaseName": source["database_name"],
+                "schema": schema,
+                "previews": previews,
+                "queries": results,
+            }
+        )
+    _write_json(out_dir / "database.json", {"schemaVersion": 1, "sources": sources})
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -118,9 +191,15 @@ def main(argv: list[str] | None = None) -> int:
     record_parser.add_argument("--question", action="append", default=[], help="a question id (repeatable)")
     record_parser.add_argument("--all", action="store_true", help="every question, not only the featured ones")
     record_parser.add_argument("--timeout", type=float, default=1_500, help="seconds to wait for one answer")
+    snapshot_parser = commands.add_parser("snapshot-database", help="rewrite a bundle's database.json")
+    snapshot_parser.add_argument("--api-url", default="http://api:8000", help="the running API (default: on the stack)")
+    snapshot_parser.add_argument("--out", type=Path, required=True, help="the pack's recordings directory")
     args = parser.parse_args(argv)
 
     with httpx.Client(base_url=args.api_url, timeout=30.0) as client:
+        if args.command == "snapshot-database":
+            snapshot_database(client, args.out)
+            return 0
         return record(
             client,
             data_dir=args.data_dir or Settings().data_active_dir,

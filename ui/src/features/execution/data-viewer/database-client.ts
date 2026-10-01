@@ -10,6 +10,12 @@
  *
  * The API bounds every result; errors come back as `{detail}`. Every pack's
  * structured source is one DuckDB database.
+ *
+ * Replay mode has no API. The recordings bundle's `database.json`, which
+ * `demo-api record` writes from those same routes, holds each structured
+ * source's schema, the first rows of each table and the result of each query
+ * the recorded runs made; the replay loaders below serve those, and a query
+ * that was not recorded fails with a note to use the live demo.
  */
 
 export type Value = string | number | boolean | null
@@ -180,3 +186,72 @@ export const runQuery = async (
       signal,
     })
   )
+
+// ---------------------------------------------------------------- replay
+
+/** A structured source of the replay bundle's `database.json`. */
+interface ReplaySource {
+  id: string
+  name: string
+  databaseName: string
+  schema: SchemaResponse
+  previews: Record<string, QueryResponse>
+  queries: Array<{ sql: string; result: QueryResponse }>
+}
+
+export interface ReplayDatabase {
+  schemaVersion: 1
+  sources: ReplaySource[]
+}
+
+export const REPLAY_QUERY_ONLY =
+  'Replay can rerun only the queries its recorded answers ran. Start the live demo to run your own SQL.'
+
+let replayDatabase: Promise<ReplayDatabase | null> | null = null
+
+/** The bundle's `database.json`, fetched once; null when the bundle has none. */
+export const loadReplayDatabase = (): Promise<ReplayDatabase | null> => {
+  replayDatabase ??= fetch('/api/recordings/database.json', { cache: 'no-store' })
+    .then(async (response) => {
+      if (!response.ok) return null
+      const body = (await response.json()) as ReplayDatabase
+      return body?.schemaVersion === 1 && Array.isArray(body.sources) ? body : null
+    })
+    .catch(() => {
+      replayDatabase = null
+      return null
+    })
+  return replayDatabase
+}
+
+/** For tests: forget the fetched bundle. */
+export const resetReplayDatabase = (): void => {
+  replayDatabase = null
+}
+
+const replaySource = async (sourceId: string): Promise<ReplaySource> => {
+  const source = (await loadReplayDatabase())?.sources.find((item) => item.id === sourceId)
+  if (!source) throw new Error('This recording has no copy of that database.')
+  return source
+}
+
+/** Whitespace-insensitive, so a recorded query matches however it was reformatted. */
+const normalizedSql = (sql: string): string => sql.replace(/;\s*$/, '').replace(/\s+/g, ' ').trim()
+
+export const replaySnapshot = async (sourceId: string): Promise<DatabaseSnapshot> =>
+  toSnapshot((await replaySource(sourceId)).schema)
+
+export const replayPreview = async (sourceId: string, table: string): Promise<QueryResult> => {
+  const preview = (await replaySource(sourceId)).previews[table]
+  if (!preview) throw new Error('This recording has no preview of that table.')
+  return toResult(preview)
+}
+
+export const replayQuery = async (sourceId: string, sql: string): Promise<QueryResult> => {
+  const wanted = normalizedSql(sql)
+  const recorded = (await replaySource(sourceId)).queries.find(
+    (query) => normalizedSql(query.sql) === wanted
+  )
+  if (!recorded) throw new Error(REPLAY_QUERY_ONLY)
+  return toResult(recorded.result)
+}

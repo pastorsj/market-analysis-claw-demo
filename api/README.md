@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 A FastAPI service (`demo_api`) between the UI and the agent. It turns each question into a job, runs
 the job on Hermes through the Hermes Runs API, stores what happens as `execution.v2` events, and
-serves the answer, its evidence and a read-only view of the pack's database.
+serves the answer, its evidence and a read-only view of the pack's database. It also replays a
+finished job's market calls on the CPU and the GPU (the Benchmark tab), and transcribes voice input.
 
 ```text
 UI ──/api/v1 proxy──▶ API ──Runs API──▶ hermes-gateway ──▶ Hermes (OpenShell sandbox)
@@ -64,6 +65,9 @@ Hermes to stop their runs, waiting up to 10 s. The container therefore needs a s
 | `GET /v1/jobs/async/job/{id}/stream[/{cursor}]` | Server-Sent Events (below) |
 | `GET /v1/jobs/async/job/{id}/trace` | `{trace_id, path}`: the job's trace in Phoenix |
 | `GET /v1/jobs/async/job/{id}/export` | The job as one turn of the recordings bundle |
+| `POST /v1/jobs/async/job/{id}/benchmark` | Compare the finished job's market calls on the CPU and the GPU ([below](#benchmark)); a stored comparison is returned as is |
+| `GET /v1/jobs/async/job/{id}/benchmark` | The stored comparison; 404 until one has run |
+| `POST /v1/speech/transcriptions` | One 16 kHz mono PCM16 WAV (`audio/wav`, at most 3 MiB) → `{text}` ([below](#voice-input)) |
 | `GET /internal/hermes/jobs/{id}/execution-scope` | Plugin: the job's sources, database, collection and model tiers |
 | `POST /internal/hermes/jobs/{id}/tool-receipts` | Plugin: one `ReceiptV2` |
 | `POST /internal/hermes/jobs/{id}/llm-calls` | Plugin: one model call, with the served model and its tier |
@@ -81,6 +85,37 @@ Stored events are sent with their store cursor as the SSE `id:`; frames the stre
 events are `execution.v2` (`contracts/README.md`); the answer is an `artifact.update` with
 `output_category: final_report`.
 
+## Benchmark
+
+The Benchmark tab compares a finished job's market analytics calls on the CPU and the NVIDIA GPU
+(`src/demo_api/benchmark/`, contract `contracts/schemas/benchmark.schema.json`). For each call that
+returned a result, in order, the API sends the arguments its receipt recorded to the market-analytics
+service's `POST /benchmark` (`tools/market-analytics/README.md`). There the GPU worker and a CPU worker
+run the same MCP tool: once each untimed, then in matched pairs that alternate which engine goes
+first, until `BENCHMARK_PAIRS` pairs or `BENCHMARK_BUDGET_SECONDS` per call. A trial's time is the
+tool's own compute timer, the one receipts show; the agent is not rerun. The service compares the
+two payloads (floats within 1e-4).
+
+A stage claims a speedup (`qualified`, `speedup` = median CPU / median GPU, and the range of the pair
+ratios) only when the payloads matched, at least 5 pairs ran, and the GPU was faster in every pair;
+otherwise the medians are shown with no claim. One comparison runs at a time (429 otherwise); a
+running job is 409, and a job without market calls 422. On the CPU-only `analytics` profile, or with
+no analytics service, the answer is `status: "unavailable"` with the reason, and nothing is stored;
+a completed or failed comparison is stored with the job, which `export` then carries.
+
+## Voice input
+
+`POST /v1/speech/transcriptions` (`src/demo_api/speech/`) checks the WAV (16 kHz, mono, 16-bit, at most
+`SPEECH_INPUT_MAX_SECONDS`), streams the PCM in 100 ms chunks to NVIDIA Nemotron ASR on
+build.nvidia.com (`grpc.nvcf.nvidia.com:443`, the hosted `nemotron-speech-streaming-en-0.6b`
+function) with the `nvidia-riva-client` gRPC client, and returns only the final transcript. Two
+transcriptions run at a time; a third waits at most a second, then gets 429. Provider errors become
+short, fixed messages (503 not authorized or not configured, 504 timeout, 422 no speech, 502
+otherwise). With `SPEECH_CLEANUP_MODEL` set, one chat completion with that public model on
+build.nvidia.com, with the same key, deletes fillers and false starts; its answer is kept only if
+every word of it appears, in order, in the transcript, and any failure keeps the transcript as is.
+Voice input is off unless `SPEECH_INPUT_ENABLED` is true and `SPEECH_API_KEY` is set (503).
+
 ## Recordings
 
 `demo-api record` asks the pack's featured questions (`--all` for every one, `--question ID` for
@@ -91,10 +126,17 @@ data/packs/<pack>/recordings/
   index.json          {schemaVersion: 2, pack: {id, version}, recordedAt, sessions: [{id, title, featured, turns: [{jobId, question}]}]}
   pack.json           copy of /data/active/pack.json
   sessions/<id>.json  {schemaVersion: 2, id, title, turns: [<export>]}
+  database.json       {schemaVersion: 1, sources: [{id, name, databaseName, schema, previews, queries: [{sql, result}]}]}
 ```
 
 An export turn is `{jobId, question, submittedAt, completedAt, status, report: {markdown, citations[]} | null,
-events: [execution.v2], receipts: [ReceiptV2], sourceIds}`. `scripts/demo.sh record` runs the command in
+events: [execution.v2], receipts: [ReceiptV2], sourceIds, benchmark}`. After each answer the
+recorder asks for its CPU/GPU comparison, so a bundle recorded on the GPU profile replays the
+Benchmark tab (`benchmark` stays null on the CPU profile). `database.json` lets the data viewer work
+in replay: each structured source's `GET .../schema`, the first 8 rows of each table
+(`GET .../preview`), and the `POST .../query` results of the SQL the recorded answers ran and of the
+viewer's starting query for each table. `demo-api snapshot-database --out <recordings>` rewrites only
+`database.json`. `scripts/demo.sh record` runs the command in
 the api image on the stack's network, where the defaults (`--api-url http://api:8000`,
 `DATA_ACTIVE_DIR=/data/active`) are right. A question that does not succeed is left out, and the
 command exits 1.
@@ -124,6 +166,13 @@ Secrets can also be files in `/run/secrets` named after the setting (Compose sec
 | `AIQ_PHOENIX_INTERNAL_URL`, `PHOENIX_PROJECT` | `http://phoenix:6006`, `market-analysis-agent` | Trace lookup |
 | `AUTO_ONTOLOGY_URL`, `AUTO_ONTOLOGY_EMAIL`, `AUTO_ONTOLOGY_PASSWORD` | empty | Ontology view; an empty URL turns it off |
 | `AUTO_ONTOLOGY_ORIGIN` | `AUTO_ONTOLOGY_URL` | The `Origin` Auto Ontology's sign-in trusts |
+| `MARKET_ANALYTICS_URL` | `http://market-analytics:3010` | The market-analytics service, for the Benchmark tab |
+| `BENCHMARK_PAIRS`, `BENCHMARK_BUDGET_SECONDS` | `5`, `20` | Matched pairs asked of each call, and the time after which no new pair starts |
+| `SPEECH_INPUT_ENABLED` | `false` | Voice input |
+| `SPEECH_API_KEY` | – (secret) | An nvapi- key for build.nvidia.com; `demo.sh` uses `RETRIEVER_API_KEY` when this is empty and the retriever is build.nvidia.com |
+| `SPEECH_INPUT_MAX_SECONDS`, `SPEECH_MAX_CONCURRENT` | `60` (1 to 90), `2` | The longest recording, and transcriptions at once |
+| `SPEECH_ASR_SERVER`, `SPEECH_ASR_FUNCTION_ID`, `SPEECH_ASR_LANGUAGE`, `SPEECH_ASR_TIMEOUT_SECONDS` | `grpc.nvcf.nvidia.com:443`, the hosted Nemotron ASR function, `en-US`, `60` | The ASR endpoint |
+| `SPEECH_CLEANUP_MODEL` | empty | A public model on build.nvidia.com for the deletion-only cleanup, e.g. `nvidia/nemotron-3-super-120b-a12b`; empty means none |
 | `TOOL_REGISTRY_FILE` | `contracts/tool-registry.json` | Set by the image |
 
 ## Run and test
@@ -136,5 +185,5 @@ scripts/demo.sh record                            # record the featured question
 
 `tests/jobs/test_runner.py` pins the job semantics the prototype got from Dask and NAT: order, the
 queue cap, cancelling queued and running jobs, the deadline, progress budgets, restart recovery,
-shutdown and retention. The contract models in `src/demo_api/events/` and `receipts/` feed
-`scripts/gen-contracts.sh`.
+shutdown and retention. The contract models in `src/demo_api/events/`, `receipts/` and `benchmark/`
+feed `scripts/gen-contracts.sh`.

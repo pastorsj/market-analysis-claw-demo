@@ -55,6 +55,22 @@ test.describe('live mode', () => {
     await expect(composer).toBeEnabled()
   })
 
+  test('voice input records a question and puts its transcript in the composer', async ({
+    page,
+  }) => {
+    await page.goto('/research')
+    const composer = page.getByRole('textbox', { name: 'Chat message input' })
+
+    await page.getByRole('button', { name: 'Start voice input' }).click()
+    await expect(page.getByRole('button', { name: 'Stop voice recording' })).toBeVisible()
+    await page.waitForTimeout(800)
+    await page.getByRole('button', { name: 'Stop voice recording' }).click()
+
+    // The fake API transcribes any valid WAV recording to the same question
+    await expect(composer).toHaveValue('Which assets led the market?')
+    await expect(page.getByRole('button', { name: 'Start voice input' })).toBeEnabled()
+  })
+
   test('the landing page fits a 1280x800, 1440x900 or 1920x1080 screen without scrolling, and its logos load', async ({
     page,
   }) => {

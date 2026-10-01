@@ -16,7 +16,7 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 | Service | Profile | Host port (127.0.0.1) | Role | Code |
 |---|---|---|---|---|
 | `ui` | core, replay | 3100 (`UI_PORT`) | Next.js web app; proxies an allowlisted `/api/v1/*` to the API; serves the replay bundle | [`ui/`](../ui/README.md) |
-| `api` | core | 8000 | FastAPI job service: queue, Hermes runs, `execution.v2` events, receipts, reports, data viewer | [`api/`](../api/README.md) |
+| `api` | core | 8000 | FastAPI job service: queue, Hermes runs, `execution.v2` events, receipts, reports, data viewer, CPU/GPU benchmark, voice transcription | [`api/`](../api/README.md) |
 | `openshell` | core | 18080 (gRPC/mTLS), 18081 (health) | OpenShell gateway with the Docker compute driver; creates the Hermes sandbox | [`infra/openshell/`](../infra/openshell/README.md) |
 | `hermes-gateway` | core | – | `openshell forward service`: the API's way in to Hermes on `127.0.0.1:8642` inside the sandbox | [`infra/openshell/`](../infra/openshell/README.md) |
 | Hermes sandbox | – | – | Hermes Agent 0.21.5 with its profile, skills and receipts plugin; created by `demo.sh`, not by Compose | [`agent/`](../agent/README.md) |
@@ -25,7 +25,7 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 | `data` (one-shot) | core | – | Builds the active data pack into the `demo-data` volume at `/data/active` | [`data/`](../data/README.md) |
 | `data-fetch` (one-shot) | tools | – | `demo.sh data fetch`: copies or downloads a pack's external datasets into `DATA_SOURCE_DIR`, the only writable mount of it, and verifies them against the pinned manifest | [`data/`](../data/README.md) |
 | `milvus`, `data-corpus`, `retrieval-index`, `retrieval` | retrieval | 8120 (`retrieval`) | Document corpus, vector index and the `retrieve_evidence` MCP server | [`tools/retrieval/`](../tools/retrieval/README.md) |
-| `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
+| `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured; the GPU service also runs the API's matched CPU/GPU comparisons (`POST /benchmark`) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `kumo-relational` | kumo | – | Kumo Relational NIM (x86_64 and an NVIDIA GPU) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `auto-ontology-*` | ontology | 3003 (`auto-ontology-mcp`) | NVIDIA Auto Ontology: `ask_question` answers structured questions with SQL | [`tools/auto-ontology/`](../tools/auto-ontology/README.md) |
 
@@ -101,10 +101,10 @@ Services share JSON contracts only; no service imports another's Python code.
 | Contract | Defined in | Shared by |
 |---|---|---|
 | Tool registry: one entry per MCP tool (server, family, label, explorer, receipt kind) | `contracts/tool-registry.json` | API, agent plugin, UI, wiring tests |
-| `execution.v2` events and the `ReceiptV2` union (by `artifactKind`) | Pydantic models in `api/src/demo_api/events/` and `receipts/`, exported to `contracts/schemas/` and `ui/src/generated/` by `scripts/gen-contracts.sh` | API, plugin tests, UI |
+| `execution.v2` events, the `ReceiptV2` union (by `artifactKind`) and the Benchmark tab's `Benchmark` | Pydantic models in `api/src/demo_api/events/`, `receipts/` and `benchmark/`, exported to `contracts/schemas/` and `ui/src/generated/` by `scripts/gen-contracts.sh` | API, plugin tests, UI |
 | Data pack layout (`/data/active/pack.json` and friends) | [`data/README.md`](../data/README.md) | every service |
 | Market analytics table contract | `tools/market-analytics/contract/market-analytics.v1.json` | the tool and `demo-data validate` |
-| Recordings bundle v2 (`index.json`, `pack.json`, `sessions/<id>.json`) | [`api/README.md`](../api/README.md#recordings) | `demo-api record`, the UI's replay mode |
+| Recordings bundle v2 (`index.json`, `pack.json`, `sessions/<id>.json`, `database.json`) | [`api/README.md`](../api/README.md#recordings) | `demo-api record`, the UI's replay mode |
 
 [`contracts/README.md`](../contracts/README.md) describes the events, the receipts and the limits the API
 enforces on them.

@@ -4,63 +4,242 @@
 /**
  * ResearchPanel Component
  *
- * Right-side "Agent Activity" panel. Its content comes from the execution
- * feature; without one the panel is not rendered.
+ * The right-side "Agent Activity" panel: its rail, a resizable width, the
+ * header with Stop and Close, and the execution feature's tabs (Thinking,
+ * Timeline, Benchmark). Without an execution feature the panel is not rendered.
  *
- * This panel PUSHES the chat area (takes 60% width) rather than overlaying it.
+ * This panel PUSHES the chat area (60% of the width by default) rather than overlaying it.
  */
 
 'use client'
 
-import { type FC, memo, useCallback } from 'react'
-import { Flex, Button, Spinner, Text } from '@/adapters/ui'
-import { Close, Generate, StopCircle } from '@/adapters/ui/icons'
-import { useChatStore } from '@/features/chat'
+import {
+  type FC,
+  type KeyboardEvent as ReactKeyboardEvent,
+  memo,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { Button, Flex, Spinner, Text } from '@/adapters/ui'
+import { Close, Generate, StopCircle, ThinkingReasoning } from '@/adapters/ui/icons'
+import { selectActivityJobId, useChatStore } from '@/features/chat'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { useExecutionFeature } from '@/shared/context'
 import { useLayoutStore } from '../store'
+import {
+  ACTIVITY_PANEL_COLLAPSED_WIDTH,
+  ACTIVITY_PANEL_DEFAULT_OFFSET,
+  ACTIVITY_PANEL_DEFAULT_RATIO,
+  ACTIVITY_PANEL_FALLBACK_CONTAINER_WIDTH,
+  ACTIVITY_PANEL_KEYBOARD_STEP,
+  ACTIVITY_PANEL_MIN_WIDTH,
+  ACTIVITY_PANEL_REMAINDER_MIN,
+  activityPanelWidthBounds,
+  clampActivityPanelWidth,
+  defaultActivityPanelWidth,
+} from './activity-panel-resize'
+
+type ResizeDrag = {
+  pointerId: number
+  startX: number
+  startWidth: number
+}
+
+/** The default width before the first measurement: 60% of the row plus the rail. */
+const DEFAULT_WIDTH = `clamp(${ACTIVITY_PANEL_MIN_WIDTH}px, calc(${ACTIVITY_PANEL_DEFAULT_RATIO * 100}% + ${ACTIVITY_PANEL_DEFAULT_OFFSET}px), calc(100% - ${ACTIVITY_PANEL_REMAINDER_MIN}px))`
 
 export const ResearchPanel: FC = memo(function ResearchPanel() {
   const { ActivityPanel } = useExecutionFeature()
-  const isOpen = useLayoutStore((s) => s.rightPanel === 'research')
-  const closeRightPanel = useLayoutStore((s) => s.closeRightPanel)
-  const openRightPanel = useLayoutStore((s) => s.openRightPanel)
+  const isOpen = useLayoutStore((state) => state.rightPanel === 'research')
+  const closeRightPanel = useLayoutStore((state) => state.closeRightPanel)
+  const openRightPanel = useLayoutStore((state) => state.openRightPanel)
   const isDeepResearchStreaming = useChatStore((state) => state.isDeepResearchStreaming)
-  const jobId = useChatStore((state) => state.deepResearchJobId)
+  const jobId = useChatStore(selectActivityJobId)
   const prefersReducedMotion = useReducedMotion()
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
+  const [desiredWidth, setDesiredWidth] = useState<number | null>(null)
+  const [isResizing, setIsResizing] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const resizeDragRef = useRef<ResizeDrag | null>(null)
 
-  const handleToggle = useCallback(() => {
-    if (isOpen) {
-      closeRightPanel()
-    } else {
-      openRightPanel('research')
+  const resolvedContainerWidth = containerWidth ?? ACTIVITY_PANEL_FALLBACK_CONTAINER_WIDTH
+  const widthBounds = useMemo(
+    () => activityPanelWidthBounds(resolvedContainerWidth),
+    [resolvedContainerWidth]
+  )
+  const openWidth =
+    desiredWidth === null
+      ? defaultActivityPanelWidth(resolvedContainerWidth)
+      : clampActivityPanelWidth(desiredWidth, widthBounds)
+  const panelWidth = isOpen ? openWidth : ACTIVITY_PANEL_COLLAPSED_WIDTH
+  const unmeasured = isOpen && containerWidth === null && desiredWidth === null
+
+  const currentContainerWidth = useCallback(
+    () => panelRef.current?.parentElement?.clientWidth || resolvedContainerWidth,
+    [resolvedContainerWidth]
+  )
+
+  const currentPanelWidth = useCallback(
+    () => panelRef.current?.getBoundingClientRect().width || openWidth,
+    [openWidth]
+  )
+
+  const applyWidth = useCallback(
+    (width: number) => {
+      setDesiredWidth(
+        clampActivityPanelWidth(width, activityPanelWidthBounds(currentContainerWidth()))
+      )
+    },
+    [currentContainerWidth]
+  )
+
+  useEffect(() => {
+    const container = panelRef.current?.parentElement
+    if (!container) return
+    const updateWidth = () => {
+      if (container.clientWidth > 0) setContainerWidth(container.clientWidth)
     }
-  }, [isOpen, closeRightPanel, openRightPanel])
+    updateWidth()
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [ActivityPanel])
+
+  useEffect(() => {
+    if (!isResizing) return
+    document.body.classList.add('activity-panel-resizing')
+    return () => document.body.classList.remove('activity-panel-resizing')
+  }, [isResizing])
+
+  useEffect(() => {
+    if (isOpen) return
+    resizeDragRef.current = null
+    setIsResizing(false)
+  }, [isOpen])
 
   const handleStop = useCallback(() => {
     useChatStore
       .getState()
       .cancelActiveDeepResearchJob()
-      .catch((error: unknown) => console.error('Failed to cancel job:', error))
+      .catch((error: unknown) => console.error('Failed to stop run:', error))
   }, [])
+
+  const handleToggle = useCallback(() => {
+    if (isOpen) closeRightPanel()
+    else openRightPanel('research')
+  }, [closeRightPanel, isOpen, openRightPanel])
+
+  const handleResizeStart = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return
+      resizeDragRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: currentPanelWidth(),
+      }
+      event.currentTarget.setPointerCapture?.(event.pointerId)
+      setIsResizing(true)
+      event.preventDefault()
+    },
+    [currentPanelWidth]
+  )
+
+  const handleResizeMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = resizeDragRef.current
+      if (!drag || drag.pointerId !== event.pointerId) return
+      applyWidth(drag.startWidth + drag.startX - event.clientX)
+    },
+    [applyWidth]
+  )
+
+  const finishResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = resizeDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    resizeDragRef.current = null
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId)
+    }
+    setIsResizing(false)
+  }, [])
+
+  const handleResizeKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      const bounds = activityPanelWidthBounds(currentContainerWidth())
+      const current = currentPanelWidth()
+      const step = event.shiftKey ? ACTIVITY_PANEL_KEYBOARD_STEP * 2 : ACTIVITY_PANEL_KEYBOARD_STEP
+      let next: number | null = null
+      if (event.key === 'ArrowLeft') next = current + step
+      else if (event.key === 'ArrowRight') next = current - step
+      else if (event.key === 'Home') next = bounds.min
+      else if (event.key === 'End') next = bounds.max
+      else if (event.key === 'Enter' || event.key === '0') {
+        event.preventDefault()
+        setDesiredWidth(null)
+        return
+      }
+      if (next === null) return
+      event.preventDefault()
+      applyWidth(next)
+    },
+    [applyWidth, currentContainerWidth, currentPanelWidth]
+  )
 
   if (!ActivityPanel) return null
 
   return (
     <div
+      ref={panelRef}
+      data-testid="research-panel-shell"
+      data-resizing={isResizing ? 'true' : 'false'}
       className="relative flex h-full"
       style={{
-        width: isOpen ? 'calc(60% + 40px)' : '40px',
-        minWidth: isOpen ? 'calc(60% + 40px)' : '40px',
-        transition: prefersReducedMotion
-          ? 'none'
-          : 'width 600ms ease-in-out, min-width 600ms ease-in-out',
+        width: unmeasured ? DEFAULT_WIDTH : `${panelWidth}px`,
+        minWidth: unmeasured ? DEFAULT_WIDTH : `${panelWidth}px`,
+        transition:
+          prefersReducedMotion || isResizing
+            ? 'none'
+            : 'width 600ms ease-in-out, min-width 600ms ease-in-out',
       }}
     >
+      {isOpen ? (
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-label="Resize agent activity panel"
+          aria-orientation="vertical"
+          aria-controls="agent-activity-panel"
+          aria-valuemin={widthBounds.min}
+          aria-valuemax={widthBounds.max}
+          aria-valuenow={Math.round(openWidth)}
+          aria-valuetext={`${Math.round(openWidth)} pixels wide`}
+          title="Drag to resize Agent Activity · Double-click to reset"
+          className="activity-panel-resizer"
+          data-testid="research-panel-resizer"
+          data-resizing={isResizing ? 'true' : 'false'}
+          onPointerDown={handleResizeStart}
+          onPointerMove={handleResizeMove}
+          onPointerUp={finishResize}
+          onPointerCancel={finishResize}
+          onLostPointerCapture={() => {
+            resizeDragRef.current = null
+            setIsResizing(false)
+          }}
+          onDoubleClick={() => setDesiredWidth(null)}
+          onKeyDown={handleResizeKeyDown}
+        />
+      ) : null}
       <button
         onClick={handleToggle}
         className="research-panel-toggle border-base bg-surface-base relative z-10 flex w-10 shrink-0 cursor-pointer items-center justify-center self-start overflow-hidden rounded-bl-lg border-b border-l border-r border-t transition-colors hover:border-[#76B900]"
-        style={{ height: 'calc(var(--spacing) * 38)' }}
+        style={{
+          height: 'calc(var(--spacing) * 38)',
+          backgroundColor: 'var(--background-color-surface-base)',
+        }}
         aria-label={isOpen ? 'Close agent activity panel' : 'Open agent activity panel'}
         aria-expanded={isOpen}
         title={isOpen ? 'Close agent activity panel' : 'Open agent activity panel'}
@@ -90,6 +269,7 @@ export const ResearchPanel: FC = memo(function ResearchPanel() {
       </button>
 
       <div
+        id="agent-activity-panel"
         className={`border-base bg-surface-base -ml-px h-full flex-1 overflow-hidden rounded-bl-xl ${
           isOpen ? 'border-l' : ''
         }`}
@@ -113,14 +293,18 @@ export const ResearchPanel: FC = memo(function ResearchPanel() {
             justify="between"
             className="border-base shrink-0 border-b py-4 pl-6 pr-8"
           >
-            <Flex direction="col" gap="0.5">
-              <Text kind="label/semibold/lg" className="text-primary">
-                Agent Activity
-              </Text>
-              <Text kind="body/regular/xs" className="text-secondary">
-                Live narrative and completed timing
-              </Text>
+            <Flex align="center" gap="3">
+              <ThinkingReasoning className="h-6 w-6 text-[#76b900]" />
+              <Flex direction="col" gap="0.5">
+                <Text kind="label/semibold/lg" className="text-primary">
+                  Agent Activity
+                </Text>
+                <Text kind="body/regular/xs" className="text-secondary">
+                  Live narrative and completed timing
+                </Text>
+              </Flex>
             </Flex>
+
             <Flex align="center" gap="2">
               {isDeepResearchStreaming ? (
                 <Button
@@ -148,9 +332,7 @@ export const ResearchPanel: FC = memo(function ResearchPanel() {
             </Flex>
           </Flex>
 
-          <Flex direction="col" className="min-h-0 flex-1 overflow-hidden py-4 pl-6 pr-8">
-            {isOpen ? <ActivityPanel jobId={jobId} /> : null}
-          </Flex>
+          <ActivityPanel jobId={jobId} streaming={isDeepResearchStreaming} open={isOpen} />
         </Flex>
       </div>
     </div>

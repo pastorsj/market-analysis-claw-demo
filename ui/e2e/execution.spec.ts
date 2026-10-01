@@ -65,6 +65,44 @@ test('a recorded session replays its run as a graph and opens an explorer', asyn
   expect(apiCalls).toEqual([])
 })
 
+test('the Agent Activity panel shows a recorded run: thinking, timeline and its benchmark', async ({
+  page,
+}) => {
+  await openSession(page, 'Unusual moves and filings')
+  await page.getByRole('button', { name: 'Open agent activity panel' }).click()
+
+  const thinking = page.getByRole('list', { name: 'Hermes thinking activity' })
+  await expect(thinking.getByText('Request accepted')).toBeVisible()
+  await expect(thinking.getByText('Market Anomaly Scan', { exact: true })).toBeVisible()
+  await expect(thinking.getByText('Answer ready')).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Timeline' }).click()
+  const timeline = page.getByRole('region', { name: 'Execution action timeline' })
+  await expect(timeline.getByLabel('Timeline summary')).toContainText('106,217')
+  await expect(
+    timeline.getByRole('list', { name: 'Observed execution actions' }).getByRole('listitem')
+  ).toHaveCount(3)
+
+  await page.getByRole('tab', { name: 'Benchmark' }).click()
+  await expect(page.getByText('Recorded benchmark')).toBeVisible()
+  await expect(page.getByTestId('benchmark-tool-time-ratio')).toHaveText('1.86× faster')
+  await expect(page.getByText('1.9× · Qualified speedup')).toBeVisible()
+})
+
+test('the data viewer replays the bundle’s copy of the database', async ({ page }) => {
+  await openSession(page, 'Dividends and news likelihood')
+  await page.getByRole('button', { name: 'View execution for this response' }).first().click()
+  const workspace = page.getByRole('region', { name: 'Execution workspace' })
+  await workspace.getByRole('button', { name: 'Inspect Structured Database' }).click()
+
+  const browser = workspace.getByRole('dialog', { name: 'Structured Database browser' })
+  await browser.getByRole('button', { name: /corporate_actions/ }).click()
+  await expect(browser.getByText('ca-001')).toBeVisible()
+  await browser.getByRole('button', { name: 'SQL Query' }).click()
+  await browser.getByRole('button', { name: 'Run query' }).click()
+  await expect(browser.getByRole('region', { name: 'SQL results' })).toContainText('asset-meridian')
+})
+
 test('a cited source opens its evidence in the execution view', async ({ page }) => {
   await openSession(page, 'Dividends and news likelihood')
   const sources = page.getByRole('region', { name: 'Sources' }).first()

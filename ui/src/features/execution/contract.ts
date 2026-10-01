@@ -9,9 +9,11 @@
  * so the UI only checks the shape it relies on and drops anything else.
  */
 
+import type { Benchmark } from '@/generated/benchmark'
 import type { ExecutionEventV2 } from '@/generated/execution-event'
 import type { ReceiptV2 } from '@/generated/receipt'
 
+export type { Benchmark, BenchmarkStage, EngineTrials } from '@/generated/benchmark'
 export type { ExecutionEventV2 } from '@/generated/execution-event'
 export type {
   AnalyticsResult,
@@ -91,4 +93,32 @@ export const toReceipt = (value: unknown): ReceiptV2 | null => {
     (value.status === 'completed' || value.status === 'failed') &&
     (value.content === null || isRecord(value.content))
   return valid ? (value as unknown as ReceiptV2) : null
+}
+
+const isEngineTrials = (value: unknown): boolean =>
+  value === null ||
+  (isRecord(value) &&
+    (value.device === 'cpu' || value.device === 'gpu') &&
+    typeof value.library === 'string' &&
+    Array.isArray(value.trialsMs) &&
+    value.trialsMs.every((ms) => typeof ms === 'number' && Number.isFinite(ms)))
+
+/** Returns the comparison when `value` is a `Benchmark`, else null. */
+export const toBenchmark = (value: unknown): Benchmark | null => {
+  if (!isRecord(value) || value.schemaVersion !== '1') return null
+  const valid =
+    isString(value.jobId) &&
+    (value.status === 'completed' || value.status === 'unavailable' || value.status === 'failed') &&
+    Array.isArray(value.stages) &&
+    value.stages.every(
+      (stage) =>
+        isRecord(stage) &&
+        isString(stage.invocationId) &&
+        isString(stage.toolName) &&
+        isString(stage.outcome) &&
+        typeof stage.qualified === 'boolean' &&
+        isEngineTrials(stage.cpu) &&
+        isEngineTrials(stage.gpu)
+    )
+  return valid ? (value as unknown as Benchmark) : null
 }

@@ -121,7 +121,9 @@ async def test_a_question_runs_on_hermes_and_publishes_a_cited_answer(app, api, 
         "events",
         "receipts",
         "sourceIds",
+        "benchmark",
     }
+    assert turn["benchmark"] is None
     assert turn["sourceIds"] == ["market_news", "market_analysis_structured"]
     assert turn["status"] == "success"
     assert turn["report"]["citations"][0]["evidenceId"] == receipt["receiptId"]

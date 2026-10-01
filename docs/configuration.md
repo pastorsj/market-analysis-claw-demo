@@ -131,6 +131,10 @@ Changing either Hermes key recreates the sandbox on the next `up`.
 | `JOB_RETENTION_SECONDS` | `86400` | How long finished jobs stay available |
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one market tool call may run before its worker is replaced |
 | `PHOENIX_URL` | `http://127.0.0.1:6006` | The Phoenix address the browser links to; empty hides the link |
+| `SPEECH_INPUT_ENABLED` | `false` | Voice input: a microphone in the composer; the API transcribes with NVIDIA Nemotron ASR on build.nvidia.com ([`api/README.md`](../api/README.md#voice-input)) |
+| `SPEECH_API_KEY` | empty | An nvapi- key for the ASR; empty uses `RETRIEVER_API_KEY` when the retriever is build.nvidia.com |
+| `SPEECH_CLEANUP_MODEL` | empty | A public model on build.nvidia.com that deletes fillers and false starts from a transcript, e.g. `nvidia/nemotron-3-super-120b-a12b`; empty means no cleanup |
+| `SPEECH_INPUT_MAX_SECONDS` | `60` | The longest recording, 1 to 90 seconds |
 
 ### Derived by `demo.sh`
 
@@ -143,6 +147,7 @@ Compose cannot compute these, so `demo.sh` exports them before every Compose cal
 | `KUMO_RELATIONAL_URL` | `http://kumo-relational:8000` under the kumo profile |
 | `AUTO_ONTOLOGY_URL` | `http://auto-ontology-frontend:3000` under the ontology profile, for the API's ontology view |
 | `DATA_DATABASE_NAME` | The pack id in snake case (`synthetic-market` → `synthetic_market`) |
+| `SPEECH_API_KEY` | `RETRIEVER_API_KEY` when empty and `RETRIEVER_BASE_URL` is build.nvidia.com (the ASR's host) |
 
 The services' own settings (queue sizes, Hermes run budgets, timeouts) have working defaults and are
 documented in each component's README, for example [`api/README.md`](../api/README.md#environment).

@@ -30,6 +30,8 @@ export interface RecordedTurn {
   receipts: unknown[]
   /** The job's data sources, when the recording has them */
   sourceIds?: string[]
+  /** The CPU/GPU comparison of its market calls (`Benchmark`), when one ran */
+  benchmark?: unknown
 }
 
 export interface RecordingIndex {

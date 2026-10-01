@@ -1,17 +1,23 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""MCP server (streamable HTTP at :3010/mcp) exposing the market tools, plus GET /health.
+"""MCP server (streamable HTTP at :3010/mcp) exposing the market tools, plus GET /health and POST /benchmark.
 
 The tools are async and hand each call to the worker process on a thread, so a long calculation never blocks
 the event loop: `tools/list` and other requests stay responsive while calls queue for the worker.
+
+POST /benchmark (benchmark.py) runs one tool call on the GPU service's two engines for the API's Benchmark tab.
+The agent's sandbox can reach only /mcp.
 
 No `from __future__ import annotations` here: the tool signatures use a type built from the pack at runtime
 (UniverseId), which the MCP SDK must be able to resolve when it reads them.
 """
 
+import asyncio
 import logging
 import os
 import time
+from collections.abc import Callable
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Annotated
 from typing import Any
@@ -23,9 +29,11 @@ from mcp.types import ToolAnnotations
 from pydantic import AwareDatetime
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from . import benchmark
 from .data import ContractError
 from .data import Pack
 from .data import validate
@@ -66,8 +74,12 @@ SourceIds = Annotated[
 NO_NEWS = "Unavailable in the active data pack, which has no ticker-linked news table. "
 NO_MINUTE_BARS = "Unavailable in the active data pack, which has no minute bars. "
 
+# The worker a tool call runs in when not the service's own: /benchmark runs the same MCP tool on each engine.
+_TARGET: ContextVar[Worker | None] = ContextVar("market_analytics_target", default=None)
 
-def create_server(pack: Pack, worker: Worker) -> MCPServer:
+
+def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker] | None = None) -> MCPServer:
+    """`cpu_worker`, on the GPU service only, returns a started CPU worker for /benchmark (see benchmark.py)."""
     server = MCPServer(
         "market_analytics",
         instructions="Read-only market analytics over the active data pack. Results are descriptive, not advice.",
@@ -100,8 +112,9 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
             result = failed("source_not_selected", f"{pack.source_id} is not one of the selected sources")
         else:
             try:
+                target = _TARGET.get() or worker
                 result = MarketResult[payload].model_validate(
-                    await anyio.to_thread.run_sync(worker.call, tool, arguments)
+                    await anyio.to_thread.run_sync(target.call, tool, arguments)
                 )
             except TimeoutError as error:
                 result = failed("deadline_exceeded", str(error))
@@ -328,6 +341,45 @@ def create_server(pack: Pack, worker: Worker) -> MCPServer:
             limit=limit,
         )
 
+    benchmark_lock = asyncio.Lock()
+
+    @server.custom_route("/benchmark", methods=["POST"])
+    async def compare_engines(request: Request) -> JSONResponse:
+        """Matched CPU and GPU runs of one tool call (benchmark.py). Not reachable from the agent's sandbox."""
+        if cpu_worker is None:
+            return JSONResponse({"available": False, "reason": benchmark.CPU_ONLY})
+        try:
+            body = benchmark.BenchmarkRequest.model_validate(await request.json())
+        except (ValueError, ValidationError) as error:
+            return JSONResponse({"detail": f"invalid benchmark request: {error}"[:500]}, status_code=422)
+        if body.tool not in {tool.name for tool in await server.list_tools()} - {"predict_asset_outcomes"}:
+            return JSONResponse({"detail": f"{body.tool} is not a market analytics tool"}, status_code=422)
+
+        async with benchmark_lock:
+            try:
+                cpu = await anyio.to_thread.run_sync(cpu_worker)
+            except WorkerError as error:
+                return JSONResponse({"available": False, "reason": f"The CPU worker did not start: {error}"[:500]})
+            targets = {"cpu": cpu, "gpu": worker}
+
+            async def call(target: benchmark.Target) -> dict[str, Any]:
+                token = _TARGET.set(targets[target])
+                try:
+                    result = await server.call_tool(body.tool, dict(body.arguments))
+                finally:
+                    _TARGET.reset(token)
+                if result.is_error:  # the arguments failed the tool's own validation
+                    text = result.content[0].text if result.content else "invalid arguments"
+                    return {"status": "failed", "error": {"message": text}}
+                return result.structured_content
+
+            try:
+                outcome = await benchmark.compare(call, pairs=body.pairs, budget_seconds=body.budget_seconds)
+            except Exception as error:  # noqa: BLE001 - e.g. a ToolError for unknown arguments
+                outcome = {"available": True, "status": "failed", "parity": None, "cpu": None, "gpu": None}
+                outcome["reason"] = f"{type(error).__name__}: {error}"[:500]
+        return JSONResponse(outcome)
+
     @server.custom_route("/health", methods=["GET"])
     async def health(_: Request) -> JSONResponse:
         """Healthy while the worker process is up; a dead worker is replaced by the next call."""
@@ -346,9 +398,19 @@ def main() -> None:
         validate(pack)
     except ContractError as error:
         raise SystemExit(str(error)) from None
-    worker = Worker(root, timeout=float(os.environ.get("MARKET_ANALYTICS_TIMEOUT_SECONDS", "120")))
+    timeout = float(os.environ.get("MARKET_ANALYTICS_TIMEOUT_SECONDS", "120"))
+    worker = Worker(root, timeout=timeout)
     worker.start()
-    server = create_server(pack, worker)
+    cpu_worker = None
+    if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu":
+        benchmark_cpu = Worker(root, timeout=timeout, engine="cpu")
+
+        def cpu_worker() -> Worker:
+            if not benchmark_cpu.alive:
+                benchmark_cpu.start()
+            return benchmark_cpu
+
+    server = create_server(pack, worker, cpu_worker=cpu_worker)
     if url := os.environ.get("KUMO_RELATIONAL_URL"):
         from .prediction import register  # only with the optional kumo extra
 
@@ -358,3 +420,5 @@ def main() -> None:
         server.run("streamable-http", host="0.0.0.0", port=PORT, json_response=True)
     finally:
         worker.close()
+        if cpu_worker is not None:
+            benchmark_cpu.close()

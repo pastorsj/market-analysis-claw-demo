@@ -32,6 +32,8 @@ describe('/api/v1 proxy', () => {
     ['GET', 'jobs/async/job/job-1'],
     ['GET', 'jobs/async/job/job-1/stream/42'],
     ['POST', 'jobs/async/job/job-1/cancel'],
+    ['POST', 'jobs/async/job/job-1/benchmark'],
+    ['GET', 'jobs/async/job/job-1/benchmark'],
   ])('forwards %s /v1/%s', async (method, path) => {
     const response = await call(method === 'GET' ? GET : POST, path, {
       method,
@@ -71,6 +73,25 @@ describe('/api/v1 proxy', () => {
     expect(headers.get('conversation-id')).toBe('s_1')
     expect(headers.get('cookie')).toBeNull()
     expect(init.body).toBe('{"input":"q"}')
+  })
+
+  test('forwards a voice recording as bytes and refuses anything but a bounded WAV', async () => {
+    const wav = new Uint8Array([82, 73, 70, 70, 0, 255, 128])
+    const audio = { method: 'POST', headers: { 'content-type': 'audio/wav' } }
+
+    const response = await call(POST, 'speech/transcriptions', { ...audio, body: wav })
+    const text = await call(POST, 'speech/transcriptions', { method: 'POST', body: 'hello' })
+    const large = await call(POST, 'speech/transcriptions', {
+      ...audio,
+      body: new Uint8Array(3 * 1024 * 1024 + 1),
+    })
+
+    expect(response.status).toBe(200)
+    const init = upstream.mock.calls[0][1] as RequestInit
+    expect(new Uint8Array(init.body as ArrayBuffer)).toEqual(wav)
+    expect((init.headers as Headers).get('content-type')).toBe('audio/wav')
+    expect([text.status, large.status]).toEqual([415, 413])
+    expect(upstream).toHaveBeenCalledOnce()
   })
 
   test('passes event streams through unbuffered', async () => {

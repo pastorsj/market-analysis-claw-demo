@@ -7,9 +7,10 @@
 into ``sessions/<id>.json``. Its shape::
 
     {jobId, question, submittedAt, completedAt, status, report: {markdown, citations[]} | null,
-     events: [execution.v2, in stream order], receipts: [ReceiptV2], sourceIds}
+     events: [execution.v2, in stream order], receipts: [ReceiptV2], sourceIds, benchmark}
 
 ``report`` is null until the job has an answer. ``sourceIds`` are the sources the question used.
+``benchmark`` is the job's CPU/GPU comparison (``demo_api.benchmark.Benchmark``), or null.
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ async def export_turn(store: JobStore, job: Job) -> dict[str, Any]:
         "events": events,
         "receipts": await store.receipts(job.job_id),
         "sourceIds": job.request.get("source_ids", []),
+        "benchmark": await store.benchmark(job.job_id),
     }
 
 

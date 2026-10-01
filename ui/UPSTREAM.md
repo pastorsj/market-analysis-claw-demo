@@ -51,8 +51,11 @@ chat, panel, HITL and upload code used. Three were added: `finishDeepResearch`,
   statuses refresh from `app/providers.tsx` in live mode only, not on store
   rehydration, so replay mode never calls the API.
 - `features/layout`: `MainLayout` hosts the execution slots and replay mode;
-  `ResearchPanel` becomes the "Agent Activity" host; `ChatArea` adds "View
-  Execution"; `InputArea` submits jobs and stops them; `DataSourcesPanel` loses
+  `ResearchPanel` becomes the "Agent Activity" host, resizable as in the
+  prototype (`activity-panel-resize.ts`), following the running job or else the
+  conversation's last answer; `ChatArea` adds "View Execution"; `InputArea`
+  submits jobs and stops them, and gains the prototype's microphone when
+  `SPEECH_INPUT_ENABLED` is set; `DataSourcesPanel` loses
   its Files tab; `AppBar` loses sign-in and gains the Phoenix link;
   `SessionsPanel` gains a read-only mode for recordings.
 - `adapters/api`: the job client and data sources client call the same-origin
@@ -77,18 +80,19 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
 
 ### Added
 
-| File                                          | Purpose                                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `app/api/v1/[...path]/route.ts`               | Allowlisted API proxy (replaces the open upstream proxy)                             |
-| `app/api/recordings/[...path]/route.ts`       | Read-only replay bundle of the active data pack                                      |
-| `app/api/health/route.ts`                     | UI liveness (upstream proxied the backend's health)                                  |
-| `shared/config/env.ts`                        | Runtime configuration: `UI_MODE`, `API_URL`, `PACKS_DIR`, `DATA_PACK`, `PHOENIX_URL` |
-| `shared/context/ExecutionFeatureContext.tsx`  | The typed slot where `features/execution` plugs in                                   |
-| `features/chat/hooks/use-hermes-chat.ts`      | Submits a question as a job                                                          |
-| `features/landing/*`                          | Landing page with the pack's featured questions                                      |
-| `public/ecosystem-logos/*`                    | Technology logos on the landing page and the execution graph                         |
-| `features/layout/use-recorded-sessions.ts`    | Recorded sessions in replay mode                                                     |
-| `Dockerfile`, `playwright.config.ts`, `e2e/*` | Standalone image and the smoke test                                                  |
+| File                                                       | Purpose                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `app/api/v1/[...path]/route.ts`                            | Allowlisted API proxy (replaces the open upstream proxy)                             |
+| `app/api/recordings/[...path]/route.ts`                    | Read-only replay bundle of the active data pack                                      |
+| `app/api/health/route.ts`                                  | UI liveness (upstream proxied the backend's health)                                  |
+| `shared/config/env.ts`                                     | Runtime configuration: `UI_MODE`, `API_URL`, `PACKS_DIR`, `DATA_PACK`, `PHOENIX_URL` |
+| `shared/context/ExecutionFeatureContext.tsx`               | The typed slot where `features/execution` plugs in                                   |
+| `features/chat/hooks/use-hermes-chat.ts`                   | Submits a question as a job                                                          |
+| `features/landing/*`                                       | Landing page with the pack's featured questions                                      |
+| `public/ecosystem-logos/*`                                 | Technology logos on the landing page and the execution graph                         |
+| `features/layout/use-recorded-sessions.ts`                 | Recorded sessions in replay mode                                                     |
+| `features/speech-input/*`, `adapters/api/speech-client.ts` | The prototype's voice input: record in the browser, transcribe with the API          |
+| `Dockerfile`, `playwright.config.ts`, `e2e/*`              | Standalone image and the smoke test                                                  |
 
 ### Dependencies
 

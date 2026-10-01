@@ -5,8 +5,9 @@
  * The execution view of one run: its header, replay controls over its
  * events, the run summary once it ends, and the execution graph. Choosing a
  * node opens its explorer over the graph; the structured database opens the
- * data viewer in live mode. Live runs load their receipts from the job
- * export; recorded runs are already in the store.
+ * data viewer (in replay, over the bundle's copy of the database). Live runs
+ * load their receipts from the job export; recorded runs are already in the
+ * store.
  */
 
 'use client'
@@ -21,6 +22,12 @@ import type {
   StructuredQueryReceipt,
 } from './contract'
 import { DatabaseBrowser, type StructuredSource } from './data-viewer/DatabaseBrowser'
+import {
+  loadReplayDatabase,
+  replayPreview,
+  replayQuery,
+  replaySnapshot,
+} from './data-viewer/database-client'
 import styles from './execution-workspace.module.css'
 import { EvidenceInspector } from './explorers/EvidenceInspector'
 import { MarketToolExplorer } from './explorers/MarketToolExplorer'
@@ -386,6 +393,32 @@ const ReplayScopedInspectorNotice = ({
   )
 }
 
+type AvailableSource = { id: string; name: string; database_name?: string | null }
+const NO_SOURCES: AvailableSource[] = []
+
+/** Replay: the structured sources the recordings bundle copied into `database.json`. */
+const useReplaySources = (enabled: boolean): AvailableSource[] => {
+  const [sources, setSources] = useState<AvailableSource[]>(NO_SOURCES)
+  useEffect(() => {
+    if (!enabled) return
+    let active = true
+    void loadReplayDatabase().then((database) => {
+      if (!active || !database) return
+      setSources(
+        database.sources.map((source) => ({
+          id: source.id,
+          name: source.name,
+          database_name: source.databaseName,
+        }))
+      )
+    })
+    return () => {
+      active = false
+    }
+  }, [enabled])
+  return sources
+}
+
 export const ExecutionWorkspace = ({
   jobId,
   focus,
@@ -396,6 +429,7 @@ export const ExecutionWorkspace = ({
   const { mode } = useAppConfig()
   const liveMode = mode === 'live'
   const availableDataSources = useLayoutStore((state) => state.availableDataSources)
+  const replaySources = useReplaySources(!liveMode)
   const stored = useExecutionRun(jobId)
   const events = stored?.events ?? NO_EVENTS
   const receipts = stored?.receipts ?? NO_RECEIPTS
@@ -554,10 +588,12 @@ export const ExecutionWorkspace = ({
   }, [currentEvent?.invocationId, receipts, selectedDetail, shown, terminalInspection])
   const browsable = useMemo(
     () =>
-      liveMode
-        ? browsableSources(availableDataSources ?? [], sourceIds, Object.values(receipts))
-        : [],
-    [availableDataSources, liveMode, receipts, sourceIds]
+      browsableSources(
+        liveMode ? (availableDataSources ?? NO_SOURCES) : replaySources,
+        sourceIds,
+        Object.values(receipts)
+      ),
+    [availableDataSources, liveMode, receipts, replaySources, sourceIds]
   )
   // Receipts load from the job export in live mode
   const receiptsLoading =
@@ -602,6 +638,13 @@ export const ExecutionWorkspace = ({
         sources={browsable}
         receipts={Object.values(receipts).filter(isStructuredQuery)}
         initialReceipt={queryReceipt}
+        {...(liveMode
+          ? {}
+          : {
+              snapshotLoader: replaySnapshot,
+              previewLoader: replayPreview,
+              queryRunner: replayQuery,
+            })}
         onClose={queryReceipt ? closeQuery : closeInspector}
       />
     )

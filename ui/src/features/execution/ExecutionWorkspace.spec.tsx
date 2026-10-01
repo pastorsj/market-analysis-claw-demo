@@ -3,6 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@/test-utils'
+import { resetReplayDatabase } from './data-viewer/database-client'
 import { ExecutionWorkspace } from './ExecutionWorkspace'
 import { useExecutionStore } from './store'
 import { fixtureEvents, readRecording, receiptOf } from './test-utils/fixtures'
@@ -31,11 +32,23 @@ const renderWorkspace = (
   return { ...view, onClose }
 }
 
+/** Replay reads the bundle's copy of the database; these runs have none unless a test says so. */
+const serveDatabase = (database: unknown = null) =>
+  vi
+    .spyOn(globalThis, 'fetch')
+    .mockImplementation(async () =>
+      database ? Response.json(database) : new Response(null, { status: 404 })
+    )
+
 describe('ExecutionWorkspace', () => {
-  beforeEach(() => useExecutionStore.setState({ runs: {}, dropped: 0 }))
+  beforeEach(() => {
+    useExecutionStore.setState({ runs: {}, dropped: 0 })
+    resetReplayDatabase()
+  })
   afterEach(() => vi.restoreAllMocks())
 
   it('replays a recorded run: header, replay bar, run summary, graph and an explorer', () => {
+    serveDatabase()
     useExecutionStore.getState().addRecord(turn)
     const { onClose } = renderWorkspace('replay')
 
@@ -66,6 +79,7 @@ describe('ExecutionWorkspace', () => {
   })
 
   it('steps through the run: a node opens only while its call is at the cursor', () => {
+    serveDatabase()
     useExecutionStore.getState().addRecord(turn)
     renderWorkspace('replay')
     const position = screen.getByRole('slider', { name: 'Replay position' })
@@ -89,6 +103,7 @@ describe('ExecutionWorkspace', () => {
   })
 
   it('opens on the evidence a citation points at, and again for the next citation', () => {
+    serveDatabase()
     useExecutionStore.getState().addRecord(turn)
     const { rerender } = renderWorkspace('replay', {
       referenceId: receiptOf('retrieval_evidence').receiptId,
@@ -116,6 +131,7 @@ describe('ExecutionWorkspace', () => {
   })
 
   it('opens each node’s own explorer: agent, ontology lineage, Kumo and database', () => {
+    serveDatabase()
     const [sqlTurn, predictionTurn] = (
       readRecording('sessions/structured-evidence.json') as { turns: ExecutionRecord[] }
     ).turns
@@ -134,7 +150,7 @@ describe('ExecutionWorkspace', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Inspect Auto Ontology' }))
     expect(screen.getByRole('dialog', { name: 'Auto Ontology text-to-SQL details' })).toBeVisible()
-    // Replay has no API: no query to open, and no database to browse
+    // A bundle without a copy of the database: no query to open, and no database to browse
     expect(screen.queryByRole('button', { name: 'Open in Data Viewer' })).toBeNull()
     fireEvent.keyDown(window, { key: 'Escape' })
     fireEvent.click(screen.getByRole('button', { name: 'Inspect Structured Database' }))
@@ -150,6 +166,32 @@ describe('ExecutionWorkspace', () => {
     const kumo = screen.getByRole('dialog', { name: 'NVIDIA Kumo execution details' })
     expect(within(kumo).getByRole('heading', { name: 'NVIDIA Kumo Prediction' })).toBeVisible()
     expect(within(kumo).getByText('Generated PQL')).toBeVisible()
+  })
+
+  it('opens the data viewer in replay on the bundle’s copy of the database', async () => {
+    const fetchMock = serveDatabase(readRecording('database.json'))
+    const [sqlTurn] = (
+      readRecording('sessions/structured-evidence.json') as { turns: ExecutionRecord[] }
+    ).turns
+    useExecutionStore.getState().addRecord(sqlTurn)
+    render(<ExecutionWorkspace jobId={sqlTurn.jobId} focus={null} onClose={vi.fn()} />, {
+      config: { mode: 'replay' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Auto Ontology' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open in Data Viewer' }))
+    const browser = screen.getByRole('dialog', { name: 'Structured Database browser' })
+    fireEvent.click(await within(browser).findByRole('button', { name: 'Run query' }))
+    const results = await within(browser).findByRole('region', { name: 'SQL results' })
+    expect(results).toHaveTextContent('asset-meridian')
+
+    // A query the recording did not run cannot run without the API
+    fireEvent.change(within(browser).getByLabelText('SQL'), { target: { value: 'SELECT 42' } })
+    fireEvent.click(within(browser).getByRole('button', { name: 'Run query' }))
+    expect(
+      await within(browser).findByText(/Replay can rerun only the queries its recorded answers ran/)
+    ).toBeVisible()
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/recordings/database.json'])
   })
 
   it('loads a live run from the job export', async () => {

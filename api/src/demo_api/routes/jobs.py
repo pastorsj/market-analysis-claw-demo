@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""``/v1/jobs/async``: submit a question, follow it, read its answer, cancel it, export it.
+"""``/v1/jobs/async``: submit a question, follow it, read its answer, cancel it, export it, benchmark it.
 
 Unknown jobs, including ones deleted by retention, answer 404; the UI shows them as unavailable.
 """
@@ -23,6 +23,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
 
+from demo_api.benchmark import market_calls
+from demo_api.benchmark import run_benchmark
 from demo_api.jobs.export import export_turn
 from demo_api.jobs.runner import QueueFullError
 from demo_api.jobs.runner import RunnerUnavailableError
@@ -161,6 +163,48 @@ async def trace(job_id: str, services: ServicesDep) -> dict[str, str]:
 async def export(job_id: str, services: ServicesDep) -> dict[str, Any]:
     """The job as one turn of the v2 recordings bundle (see ``jobs/export.py``)."""
     return await export_turn(services.store, await _job(services, job_id))
+
+
+@router.get("/job/{job_id}/benchmark")
+async def benchmark(job_id: str, services: ServicesDep) -> dict[str, Any]:
+    """The job's CPU/GPU comparison (``demo_api.benchmark``), once one has run."""
+    await _job(services, job_id)
+    if (stored := await services.store.benchmark(job_id)) is None:
+        raise HTTPException(404, "No comparison has run for this job.")
+    return stored
+
+
+@router.post("/job/{job_id}/benchmark")
+async def run_comparison(job_id: str, services: ServicesDep) -> dict[str, Any]:
+    """Replay the finished job's market analytics calls on the CPU and GPU engines, or return the stored result.
+
+    An ``unavailable`` result (no GPU service, or none reachable) is returned but not stored.
+    """
+    job = await _job(services, job_id)
+    if job.is_active:
+        raise HTTPException(409, "The run is still going; compare its calls once it has finished.")
+    if (stored := await services.store.benchmark(job_id)) is not None:
+        return stored
+    receipts = await services.store.receipts(job_id)
+    if not market_calls(receipts):
+        raise HTTPException(422, "This run did not call a market analytics tool, so there is nothing to compare.")
+    if services.benchmark_lock.locked():
+        message = "Another comparison is running. Try again shortly."
+        raise HTTPException(429, message, headers={"Retry-After": str(RETRY_AFTER_SECONDS)})
+    settings = services.settings
+    async with services.benchmark_lock:
+        result = await run_benchmark(
+            services.http,
+            job_id=job_id,
+            receipts=receipts,
+            url=settings.market_analytics_url,
+            pairs=settings.benchmark_pairs,
+            budget_seconds=settings.benchmark_budget_seconds,
+        )
+    body = result.model_dump(mode="json")
+    if result.status != "unavailable":
+        await services.store.save_benchmark(job_id, body)
+    return body
 
 
 async def _job(services: Services, job_id: str) -> Job:

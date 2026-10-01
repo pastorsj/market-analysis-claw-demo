@@ -1,0 +1,72 @@
+/* SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* The Benchmark tab's frame, as the original demo UI drew it; the chart is in
+   benchmark-journey-timeline.module.css. */
+
+.workspace {
+  container-type: inline-size;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 1px 4px 20px 1px;
+  scrollbar-color: color-mix(in srgb, var(--text-color-secondary) 28%, transparent) transparent;
+}
+
+.empty {
+  min-height: 330px;
+  flex: 1;
+  padding: 48px 32px;
+}
+
+.retrievalStatus {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-top: 1px solid var(--border-color-base);
+  border-bottom: 1px solid var(--border-color-base);
+  color: var(--text-color-secondary);
+  padding: 12px 14px;
+  font-size: 11px;
+}
+
+.retrievalStatus[data-status='warning'] {
+  color: var(--text-color-feedback-warning);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--border-color-base);
+  padding: 10px 2px 14px;
+}
+
+.toolbar > div:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toolbar small {
+  color: var(--text-color-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.toolbar strong {
+  color: var(--text-color-primary);
+  font-size: 15px;
+}
+
+.toolbar span {
+  color: var(--text-color-secondary);
+  font-size: 12px;
+}

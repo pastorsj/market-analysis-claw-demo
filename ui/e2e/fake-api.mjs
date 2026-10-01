@@ -3,7 +3,8 @@
 
 /**
  * A stand-in for the demo API, just enough for the live-mode smoke test:
- * the pack, its data sources, and a job whose stream answers immediately.
+ * the pack, its data sources, a job whose stream answers immediately, and a
+ * transcription of any WAV recording.
  * Usage: FAKE_API_PORT=3990 node e2e/fake-api.mjs
  */
 
@@ -88,6 +89,9 @@ const json = (res, body) => {
   res.end(JSON.stringify(body))
 }
 
+/** What the fake transcribes every recording to. */
+const TRANSCRIPT = 'Which assets led the market?'
+
 const readJson = async (req) => {
   let body = ''
   for await (const chunk of req) body += chunk
@@ -101,6 +105,14 @@ createServer(async (req, res) => {
   if (req.method === 'POST' && pathname === '/v1/jobs/async/submit') {
     const { job_id: jobId } = await readJson(req)
     return json(res, { job_id: jobId, status: 'submitted' })
+  }
+  if (req.method === 'POST' && pathname === '/v1/speech/transcriptions') {
+    const chunks = []
+    for await (const chunk of req) chunks.push(chunk)
+    const audio = Buffer.concat(chunks)
+    const wav = audio.length > 44 && audio.subarray(0, 4).toString() === 'RIFF'
+    if (!wav || req.headers['content-type'] !== 'audio/wav') return res.writeHead(422).end()
+    return json(res, { text: TRANSCRIPT })
   }
   if (req.method === 'GET' && pathname.endsWith('/stream')) {
     res.writeHead(200, { 'content-type': 'text/event-stream' })

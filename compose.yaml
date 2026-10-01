@@ -88,6 +88,7 @@ secrets:
   hermes_api_server_key: { environment: HERMES_API_SERVER_KEY }
   hermes_receipt_api_key: { environment: HERMES_RECEIPT_API_KEY }
   auto_ontology_password: { environment: AUTO_ONTOLOGY_ADMIN_PASSWORD }
+  speech_api_key: { environment: SPEECH_API_KEY } # voice input; demo.sh fills an empty one (env.sh)
 
 networks:
   default: {}
@@ -243,9 +244,15 @@ services:
     stop_grace_period: 30s
     ports: ["127.0.0.1:8000:8000"] # the sandbox may call only /internal/hermes/** (receipts provider)
     # Settings: api/src/demo_api/settings.py. Keys arrive as files in /run/secrets.
-    secrets: [hermes_api_server_key, hermes_receipt_api_key, auto_ontology_password]
+    secrets: [hermes_api_server_key, hermes_receipt_api_key, auto_ontology_password, speech_api_key]
     environment:
       HERMES_URL: http://hermes-gateway:8642
+      # The Benchmark tab's matched CPU/GPU runs (POST /benchmark on the GPU service; analytics-gpu profile)
+      MARKET_ANALYTICS_URL: http://market-analytics:3010
+      # Voice input (.env section 6): Nemotron ASR on build.nvidia.com; off unless enabled and keyed
+      SPEECH_INPUT_ENABLED: ${SPEECH_INPUT_ENABLED:-false}
+      SPEECH_INPUT_MAX_SECONDS: ${SPEECH_INPUT_MAX_SECONDS:-60}
+      SPEECH_CLEANUP_MODEL: ${SPEECH_CLEANUP_MODEL:-}
       AIQ_PHOENIX_INTERNAL_URL: http://phoenix:6006
       AGENT_FEATURES: ${AGENT_FEATURES-retrieval,analytics}
       # Switchyard's model ids, which name each model call's tier (`demo.sh restart switchyard` refreshes them)
@@ -277,6 +284,8 @@ services:
       API_URL: http://api:8000
       DATA_PACK: ${DATA_PACK:-synthetic-market}
       PHOENIX_URL: ${PHOENIX_URL-http://127.0.0.1:6006} # empty hides the Phoenix link
+      SPEECH_INPUT_ENABLED: ${SPEECH_INPUT_ENABLED:-false} # the microphone (live mode only)
+      SPEECH_INPUT_MAX_SECONDS: ${SPEECH_INPUT_MAX_SECONDS:-60}
     volumes: [./data/packs:/packs:ro]
     depends_on:
       api: { condition: service_healthy, required: false } # not in the replay profile

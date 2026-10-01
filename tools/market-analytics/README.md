@@ -42,6 +42,18 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
   tables once at load, the dispatcher converts timezone-aware arguments to UTC, and the result models put the
   UTC offset back, so results still read `2026-08-24T21:00:00Z`. cudf.pandas cannot keep a tz-aware column on
   the GPU; with one, every operation on the frame fell back to pandas.
+- **Benchmark.** `POST /benchmark` `{tool, arguments, pairs, budget_seconds}` runs one tool call on both
+  engines for the UI's Benchmark tab; the API calls it with the arguments a receipt recorded
+  (`api/README.md`). Only the GPU service compares: its GPU worker runs the call, and a CPU worker
+  (`MARKET_ANALYTICS_ENGINE=cpu` in that process only), started on the first request and kept, runs the
+  same MCP tool on pandas, scikit-learn and NetworkX. Each engine runs the call once untimed, then the two
+  run it in pairs, alternating which goes first, until `pairs` pairs or the budget is spent (at least
+  one pair). A trial's time is the tool's compute timer. The last payloads are compared like the GPU
+  parity tests compare them (floats within 1e-4), and the answer is
+  `{available, status: completed | mismatch | failed, parity, reason, cpu, gpu}` with the device,
+  library, version and `trials_ms` of each engine. One comparison runs at a time; agent calls wait for
+  the GPU worker as usual. The CPU service answers `{available: false, reason}`. The agent's sandbox may
+  reach only `/mcp` (`agent/sandbox-policy.yaml`), so the route is the API's alone.
 - **Data a pack may lack.** The news tools need a ticker-linked news table (`analytics.news_table`) and
   `intraday_scan` needs minute bars (`market.bars` with `frequency: 1min` in `pack.json`). A pack without them
   keeps every tool registered, so the registry, the sandbox policy and the UI do not change: those tools' MCP

@@ -4,15 +4,22 @@
 /**
  * InputArea Component
  *
- * Chat input area at the bottom of the chat view: the question, the data
- * source indicator, and send (or stop while a run is in progress).
+ * Chat input area at the bottom of the chat view: the question, the
+ * microphone when voice input is on, the data source indicator, and send (or
+ * stop while a run is in progress).
  */
 
 'use client'
 
-import { type FC, memo, useState, useCallback, useEffect, type KeyboardEvent } from 'react'
-import { Flex, Text, Button, TextArea } from '@/adapters/ui'
+import { type FC, memo, useState, useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
+import { Banner, Flex, Text, Button, TextArea } from '@/adapters/ui'
 import { useHermesChat, useChatStore, useIsCurrentSessionBusy } from '@/features/chat'
+import {
+  getSpeechInputStatusMessage,
+  SpeechInputButton,
+  useSpeechInput,
+} from '@/features/speech-input'
+import { useAppConfig } from '@/shared/context'
 import { useLayoutStore } from '../store'
 import { Globe, Paperplane, StopCircle } from '@/adapters/ui/icons'
 
@@ -29,7 +36,12 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   placeholder = 'Check data sources and ask a research question...',
 }) {
   const [message, setMessage] = useState('')
+  // The latest draft, for a transcript that arrives after the user typed more
+  const messageRef = useRef('')
+  const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const speechInsertionRef = useRef({ start: 0, end: 0 })
   const { sendMessage, stop } = useHermesChat()
+  const { speechInput: speechInputConfig } = useAppConfig()
 
   // A running job in this session pauses the composer; it can be stopped.
   const isBusy = useIsCurrentSessionBusy()
@@ -45,6 +57,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   // Prefill the composer from a staged prompt (e.g. a featured question)
   useEffect(() => {
     if (promptDraft) {
+      messageRef.current = promptDraft
       setMessage(promptDraft)
       setPromptDraft(null)
     }
@@ -54,6 +67,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
     if (!message.trim() || isBusy) return
     // Session creation needs the user ID, which is set at startup.
     if (!ensureSession()) return
+    messageRef.current = ''
     setMessage('')
     sendMessage(message)
   }, [message, isBusy, ensureSession, sendMessage])
@@ -75,10 +89,67 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
       if (!currentConversation && value.trim().length > 0) {
         ensureSession()
       }
+      messageRef.current = value
       setMessage(value)
     },
     [currentConversation, ensureSession]
   )
+
+  const rememberSpeechInsertionPoint = useCallback(() => {
+    const textArea = textAreaRef.current
+    if (!textArea) {
+      speechInsertionRef.current = { start: message.length, end: message.length }
+      return
+    }
+    speechInsertionRef.current = {
+      start: textArea.selectionStart ?? message.length,
+      end: textArea.selectionEnd ?? message.length,
+    }
+  }, [message.length])
+
+  const insertSpeechTranscript = useCallback(
+    (transcript: string) => {
+      const spokenText = transcript.trim()
+      if (!spokenText) return
+      if (!currentConversation) ensureSession()
+
+      // Transcription is asynchronous and the composer stays editable while it
+      // runs: insert into the latest draft so a late result never overwrites
+      // text typed meanwhile.
+      const currentMessage = messageRef.current
+      const start = Math.min(currentMessage.length, Math.max(0, speechInsertionRef.current.start))
+      const end = Math.min(currentMessage.length, Math.max(start, speechInsertionRef.current.end))
+      const before = currentMessage.slice(0, start)
+      const after = currentMessage.slice(end)
+      const leadingSpace = before.length > 0 && !/\s$/.test(before) ? ' ' : ''
+      const trailingSpace = after.length > 0 && !/^\s/.test(after) ? ' ' : ''
+      const nextMessage = `${before}${leadingSpace}${spokenText}${trailingSpace}${after}`
+      const nextCursor = before.length + leadingSpace.length + spokenText.length
+
+      messageRef.current = nextMessage
+      setMessage(nextMessage)
+      speechInsertionRef.current = { start: nextCursor, end: nextCursor }
+      window.requestAnimationFrame(() => {
+        textAreaRef.current?.focus()
+        textAreaRef.current?.setSelectionRange(nextCursor, nextCursor)
+      })
+    },
+    [currentConversation, ensureSession]
+  )
+
+  const speechInput = useSpeechInput({
+    enabled: speechInputConfig.enabled && !isBusy,
+    maxSeconds: speechInputConfig.maxSeconds,
+    onTranscript: insertSpeechTranscript,
+  })
+
+  const handleSpeechToggle = useCallback(() => {
+    if (speechInput.state === 'recording') {
+      void speechInput.stop()
+      return
+    }
+    void speechInput.start()
+  }, [speechInput])
 
   const toggleDataSources = useCallback(() => {
     const { rightPanel, closeRightPanel, openRightPanel } = useLayoutStore.getState()
@@ -98,16 +169,40 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
         {/* Text Input */}
         <div onKeyDown={handleKeyDown}>
           <TextArea
+            ref={textAreaRef}
             className="composer-textarea border-0 bg-transparent"
             value={message}
             onValueChange={handleValueChange}
+            onSelect={rememberSpeechInsertionPoint}
             placeholder={isBusy ? 'Please wait...' : placeholder}
             disabled={isBusy}
             resizeable="auto"
             size="medium"
             aria-label="Chat message input"
+            slotRight={
+              speechInputConfig.enabled ? (
+                <SpeechInputButton
+                  state={speechInput.state}
+                  disabled={isBusy}
+                  onBeforeToggle={rememberSpeechInsertionPoint}
+                  onToggle={handleSpeechToggle}
+                />
+              ) : undefined
+            }
           />
         </div>
+
+        {speechInputConfig.enabled && (
+          <span className="sr-only" role="status" aria-live="polite">
+            {getSpeechInputStatusMessage(speechInput.state)}
+          </span>
+        )}
+
+        {speechInput.error && (
+          <Banner kind="inline" status="error" onClose={speechInput.clearError} className="mt-2">
+            {speechInput.error}
+          </Banner>
+        )}
 
         {/* Bottom Actions Bar */}
         <Flex align="center" justify="end" gap="1.5" className="border-base mt-3 border-t pt-3">
