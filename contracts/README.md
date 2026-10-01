@@ -9,6 +9,7 @@ The JSON that services share. Services never import each other's code; they agre
 | `schemas/execution-event.schema.json` | Generated from `api/src/demo_api/events/` | UI types, replay bundles |
 | `schemas/receipt.schema.json` | Generated from `api/src/demo_api/receipts/` | UI types, agent plugin tests |
 | `schemas/benchmark.schema.json` | Generated from `api/src/demo_api/benchmark/` | UI types (the Benchmark tab), replay bundles |
+| `schemas/retrieval-benchmark.schema.json` | Generated from `api/src/demo_api/benchmark/retrieval.py` | `retrieval-benchmark` (`tools/retrieval`), UI types (the Benchmark tab's Milvus comparison), replay bundles |
 | `fixtures/*.json` | Hand-curated, canonicalized by the generator | api and UI tests |
 
 TypeScript for the schemas and the registry is generated into `ui/src/generated/`.
@@ -37,6 +38,7 @@ One entry per MCP tool. Adding a tool starts here.
 | `label`, `description` | Display text for the UI |
 | `explorer` | UI explorer: `retrieval`, `market`, `sql`, `pql`, `ontology` |
 | `receipt_kind` | The `artifactKind` of the tool's receipts |
+| `pills` | The technology pills the UI shows for a run that used the tool (`Pill`: `cudf`, `cuml`, `cugraph`, `kumo`, `retrieval`, `ontology`, in display order). Every market tool has `cudf`; `market_anomaly_scan` adds `cuml` and `analyze_market_relationships` `cugraph`. A pack's `questions.yaml` `tools` uses the same names |
 | `profile` | Compose profile that provides the tool |
 
 ## Execution events (`execution.v2`)
@@ -62,6 +64,15 @@ attributes carry `served_model` (the model Switchyard served) and `tier` (`effic
 `capable`), so the UI can show when a run escalates. Token counts are `input_tokens` and
 `output_tokens`; `prompt_tokens` and `completion_tokens` are rejected (see
 [the limits](#display-safe-json-limits)).
+
+When a run succeeds, the API records its publication as three last events, in this order, as the original demo
+did:
+
+| `eventKind` | Label | `display.attributes` |
+| --- | --- | --- |
+| `report.completed` | Response formatted | – |
+| `report.reference_resolution` | Citations resolved | `status` (`reference_ids_resolved`, `partial`, `evidence_uncited` or `no_evidence`), `total_citations`, `uncited_evidence_count`, `invalid_evidence_count` |
+| `report.metrics` | Run metrics available | `runtime_profile` (the model the run asked Hermes for), `wall_duration_ms`, `tool_call_count`, `known_tool_duration_ms`, token counts |
 
 ## Receipts (`ReceiptV2`)
 

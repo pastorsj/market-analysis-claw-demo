@@ -19,6 +19,24 @@ const openSession = async (page: Page, title: string) => {
     .click()
 }
 
+test('the replays list shows the tools each recorded run used', async ({ page }) => {
+  await page.goto('/research')
+  const pills = (title: string) =>
+    page
+      .getByRole('button', { name: `Recorded session: ${title}; Completed` })
+      .locator('.tool-pill')
+
+  // Listed in the bundle's index, as `demo-api record` writes them
+  await expect(pills('Unusual moves and filings')).toHaveText(['cuDF', 'cuML', 'Retrieval'])
+  // Derived from the recorded events, for an index that predates them
+  await expect(pills('Dividends and news likelihood')).toHaveText(['Kumo', 'Ontology'])
+  await expect(pills('Unusual moves and filings').first()).toHaveAttribute('data-family', 'rapids')
+  await expect(pills('Dividends and news likelihood').first()).toHaveAttribute(
+    'data-family',
+    'nvidia'
+  )
+})
+
 test('a recorded session replays its run as a graph and opens an explorer', async ({ page }) => {
   const apiCalls: string[] = []
   page.on('request', (request) => {
@@ -87,6 +105,17 @@ test('the Agent Activity panel shows a recorded run: thinking, timeline and its 
   await expect(page.getByText('Recorded benchmark')).toBeVisible()
   await expect(page.getByTestId('benchmark-tool-time-ratio')).toHaveText('1.86× faster')
   await expect(page.getByText('1.9× · Qualified speedup')).toBeVisible()
+
+  // The recording also carries the Milvus comparison of a GPU stack: the CPU index against its GPU copy
+  const milvus = page.getByTestId('retrieval-benchmark-panel')
+  await expect(milvus).toContainText('Milvus Vector Search')
+  await expect(milvus).toContainText('1.2× faster vector search') // concurrent requests first
+  await expect(milvus.getByTestId('retrieval-benchmark-gpu')).toContainText(
+    'GPU_CAGRA · NVIDIA cuVS'
+  )
+  await expect(milvus.getByTestId('retrieval-benchmark-cpu')).toContainText('HNSW')
+  await milvus.getByRole('button', { name: 'Single query' }).click()
+  await expect(milvus).toContainText('CPU faster or equal for this workload')
 })
 
 test('the data viewer replays the bundle’s copy of the database', async ({ page }) => {

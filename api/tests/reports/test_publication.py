@@ -81,6 +81,23 @@ def test_the_evidence_limitation_comes_before_the_sources_list(tool_registry):
     assert report.invalid_evidence_ids == ["hermes-receipt:unknown"]
 
 
+def test_the_resolution_counts_cited_uncited_and_unresolved_evidence(tool_registry):
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    scan = evidence[0].evidence_id
+    cited = publish_report(f"Spiked [evidence:{scan}].", evidence)
+    partial = publish_report(f"Spiked [evidence:{scan}] [evidence:hermes-receipt:unknown].", evidence)
+
+    assert cited.resolution() == {
+        "status": "reference_ids_resolved",
+        "total_citations": 1,
+        "uncited_evidence_count": len(evidence) - 1,
+        "invalid_evidence_count": 0,
+    }
+    assert partial.resolution()["status"] == "partial"
+    assert publish_report("No citations.", evidence).status == "evidence_uncited"
+    assert publish_report("No evidence at all.", []).status == "no_evidence"
+
+
 def test_failed_receipts_cannot_be_cited(tool_registry):
     failed = [r for r in load_contract("receipts.json") if r["status"] == "failed"]
     assert citations_from_receipts(failed, tool_registry) == []

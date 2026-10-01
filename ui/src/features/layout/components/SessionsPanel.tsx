@@ -46,6 +46,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { checkStorageHealth } from '@/features/chat/lib/storage-manager'
 import { cn } from '@/shared/lib/cn'
 import type { RecordedSessionSummary } from '@/shared/context'
+import { ToolPills } from '@/shared/components/ToolPills'
 import { DeleteSessionConfirmationModal } from './DeleteSessionConfirmationModal'
 import { DeleteAllSessionsConfirmationModal } from './DeleteAllSessionsConfirmationModal'
 
@@ -737,6 +738,7 @@ const RecordedSessionsList: FC<RecordedSessionsListProps> = ({
                     Completed
                   </Text>
                 </span>
+                <ToolPills pills={session.tools} className="mt-1.5" />
               </span>
             </button>
           )

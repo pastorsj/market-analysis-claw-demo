@@ -7,7 +7,8 @@
  * Chat input area at the bottom of the chat view: the demo scenario picker
  * (the active data pack's questions), the question, the microphone when voice
  * input is on, the data source indicator, and send (or stop while a run is in
- * progress). A recorded session shows it read only, as the original demo UI did.
+ * progress). A recorded session shows it read only, as the original demo UI did;
+ * in replay mode that includes the original's microphone, disabled.
  */
 
 'use client'
@@ -31,6 +32,7 @@ import {
 } from '@/features/speech-input'
 import { useAppConfig } from '@/shared/context'
 import { useLayoutStore } from '../store'
+import { ToolPills } from '@/shared/components/ToolPills'
 import { getActiveDemoScenario, getAvailableDemoScenarios, type DemoScenario } from '../scenarios'
 import { ChartFlow, Globe, Paperplane, StopCircle } from '@/adapters/ui/icons'
 
@@ -210,6 +212,18 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
     void speechInput.start()
   }, [speechInput])
 
+  // The counter counts database connections, as the original UI's did (its one registered
+  // connection was the market database): each pack has one, its structured source. The document
+  // collections beside it are listed in the Data Sources panel.
+  const databaseIds = new Set(
+    (availableDataSources ?? [])
+      .filter((source) => source.kind === 'structured')
+      .map((source) => source.id)
+  )
+  const enabledDatabaseCount = enabledDataSourceIds.filter((id) => databaseIds.has(id)).length
+  // Replay keeps the original's microphone in the read-only composer; it never records there.
+  const showMicrophone = speechInputConfig.enabled || mode === 'replay'
+
   const toggleDataSources = useCallback(() => {
     const { rightPanel, closeRightPanel, openRightPanel } = useLayoutStore.getState()
     if (rightPanel === 'data-sources') {
@@ -253,9 +267,10 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
                   value: scenario.id,
                   children: scenario.label,
                   slotRight: (
-                    <Text kind="label/semibold/xs" className="text-secondary font-mono">
-                      {scenario.path}
-                    </Text>
+                    <ToolPills
+                      pills={scenario.tools.map((pill) => ({ pill }))}
+                      className="justify-end"
+                    />
                   ),
                   attributes: {
                     SelectItem: {
@@ -298,7 +313,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
             size="medium"
             aria-label="Chat message input"
             slotRight={
-              speechInputConfig.enabled ? (
+              showMicrophone ? (
                 <SpeechInputButton
                   state={speechInput.state}
                   disabled={disabled}
@@ -337,7 +352,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
             <Flex align="center" gap="1">
               <Globe className="h-3 w-3" />
               <Text kind="label/bold/sm">
-                {enabledDataSourceIds.length}/{availableDataSources?.length ?? 0}
+                {enabledDatabaseCount}/{databaseIds.size}
               </Text>
             </Flex>
           </Button>

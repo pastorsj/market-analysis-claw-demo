@@ -31,7 +31,7 @@ describe('MarketToolInspector', () => {
     ).toBeVisible()
     expect(within(card).getByText('cuML 26.6.0')).toBeVisible()
     expect(within(card).getByText('cuml.accel')).toBeVisible()
-    expect(within(card).getByText('GPU reported')).toBeVisible()
+    expect(within(card).getByText('GPU observed')).toBeVisible()
     expect(within(card).getByText('173 ms')).toBeVisible()
     expect(within(card).getByText('market_analysis')).toBeVisible()
     expect(screen.getByTestId('market-tool-inspector')).toHaveAttribute('data-accelerated', 'true')
@@ -182,7 +182,7 @@ describe('MarketToolInspector', () => {
     expect(screen.getByTestId('market-relationship-network')).toBeVisible()
     expect(screen.getByText('12 nodes · 40 edges in source graph')).toBeVisible()
     expect(screen.getByLabelText('Ranked relationship assets')).toHaveTextContent('asset-a')
-    expect(screen.getByText('Return Correlation · 2026-06-01 → 2026-08-31 · Top 2')).toBeVisible()
+    expect(screen.getByText('Return Correlation · Top 2')).toBeVisible()
   })
 
   it('shows why a call failed, and says when there is no receipt yet', () => {

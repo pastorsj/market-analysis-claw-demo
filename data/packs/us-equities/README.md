@@ -64,7 +64,8 @@ to the anchor only; the build writes their ids into `pack.json`.
 `questions.yaml` holds 30 questions; six are featured: market leaders among the 50 most liquid stocks, the
 widest intraday swings from the minute bars (`intraday_scan`), unusual sessions among the 50 most liquid, the
 peer network, the Form 8-K Item 1.05 rule with the filings that report an incident, and February's biggest movers
-beside their own 8-Ks. The others cover every tool and source:
+beside their own 8-Ks. Each declares the `tools` it is expected to use, as the demo scenario picker's pills
+([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)). The others cover every tool and source:
 
 | Kind | Questions |
 |---|---|

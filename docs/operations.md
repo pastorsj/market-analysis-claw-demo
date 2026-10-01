@@ -134,6 +134,7 @@ most of it embedding the corpus).
 | `doctor` reports a problem | Each message names the variable or host requirement; fix it and run `doctor --keys` again |
 | `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations` (skips the SEC download). `us-equities` also needs it for its SEC company data |
 | Milvus restarts or is unhealthy | Docker has less than 8 GiB of memory. Give it more, or drop the retrieval profile |
+| The Benchmark tab says Milvus runs its CPU index only, on a GPU host | The profiles lack `analytics-gpu` or `retrieval`, or `retrieval-benchmark` could not measure: `./scripts/demo.sh logs retrieval-benchmark milvus-gpu`. `./scripts/demo.sh data reindex` measures again. If GPU memory is tight, lower the pool in `tools/retrieval/milvus/gpu.yaml`, or stop `milvus-gpu` once it has measured: the comparison stays, and answers never use it |
 | `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `./scripts/demo.sh logs openshell-preflight openshell` |
 | `hermes-gateway` never turns healthy | The sandbox is not Ready, or `HERMES_API_SERVER_KEY` is shorter than 16 characters (run `init`) |
 | A tool call fails while the sandbox is Ready | `./scripts/demo.sh check`, then `./scripts/demo.sh logs agent`: `DENIED` lines name the binary, host and reason |
@@ -280,7 +281,9 @@ profile and the default corpora. `up` needed nothing else installed.
    | GPU memory | 2.2 GiB before the first prediction, 4.3 GiB after | 5.6 GiB, with the benchmark's extra RAPIDS worker (step 7) running beside the stack |
 
    `kumo-relational` and `market-analytics-gpu` both request `gpus: all` and share the GPU, and neither
-   preallocates a memory pool. At idle the Kumo NIM held 0.85 GiB and the RAPIDS worker 0.5 GiB. After its
+   preallocates a memory pool. (These figures predate `milvus-gpu`, which also requests `gpus: all` and
+   preallocates a 1 GiB pool that may grow to 4 GiB, set in `tools/retrieval/milvus/gpu.yaml`;
+   [retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu).) At idle the Kumo NIM held 0.85 GiB and the RAPIDS worker 0.5 GiB. After its
    first predictions the NIM kept about 3 GiB (PyTorch's cache). A single 40 GB GPU runs both with room to
    spare; smaller GPUs were not tried.
 

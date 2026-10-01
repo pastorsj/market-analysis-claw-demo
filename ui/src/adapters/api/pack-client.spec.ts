@@ -16,6 +16,7 @@ const PACK = {
       tag: 'ANALYTICS',
       question: 'Which assets had the strongest returns?',
       sources: ['market_analysis_structured'],
+      tools: ['cudf', 'quantum'],
       featured: true,
     },
   ],
@@ -39,7 +40,7 @@ describe('fetchPack', () => {
     expect(fetch).toHaveBeenCalledWith('http://api.test:8000/v1/pack', expect.anything())
     expect(pack?.questions[0]).toMatchObject({
       id: 'market-leaders',
-      tag: 'ANALYTICS',
+      tools: ['cudf'], // only the pills the UI knows
       featured: true,
     })
   })

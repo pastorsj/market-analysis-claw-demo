@@ -100,7 +100,6 @@ const dateRange = (start: unknown, end: unknown): string =>
 /** The call's arguments in one line, e.g. "Return, Volatility · reviewed_assets · 2026-08-04 → 2026-08-31 · Top 5". */
 const requestSummary = (result: AnalyticsResult): string => {
   const parameters = result.publicParameters
-  const payload = result.payload ?? {}
   const assets = stringList(parameters.asset_ids).join(', ')
   const universe = text(parameters.universe_id)
   const top = (value: unknown): string | null =>
@@ -137,11 +136,7 @@ const requestSummary = (result: AnalyticsResult): string => {
         ? null
         : `${integer(parameters.return_horizon_sessions)}-session return horizon`,
     ],
-    analyze_market_relationships: [
-      'Return Correlation',
-      dateRange(payload.window_start, payload.window_end),
-      top(parameters.top_k),
-    ],
+    analyze_market_relationships: ['Return Correlation', top(parameters.top_k)],
     intraday_scan: [
       humanize(text(parameters.rank_by) ?? 'intraday_range'),
       assets || universe,
@@ -161,7 +156,8 @@ const outputRows = (result: AnalyticsResult): number => {
     case 'sentiment_timeline':
       return records(payload.points).length
     case 'analyze_news_price_relationship':
-      return records(payload.events).length
+      // Every aligned event, though the receipt keeps only the first ones
+      return integer(payload.aligned_event_count) ?? records(payload.events).length
     case 'analyze_market_relationships':
       return records(payload.central_assets).length
     default:
@@ -804,7 +800,8 @@ export const MarketToolInspector = ({
           </div>
           <div>
             <dt>Execution</dt>
-            <dd>{engine ? `${device} reported` : 'Not run'}</dd>
+            {/* As the original: GPU acceleration shows in the receipt; a fallback check is not recorded */}
+            <dd>{acceleration ? 'GPU observed' : engine ? `${device} reported` : 'Not run'}</dd>
             <small>No fallback reported</small>
           </div>
           <div>

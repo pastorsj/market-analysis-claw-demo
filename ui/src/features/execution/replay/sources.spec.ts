@@ -45,6 +45,11 @@ describe('recordings bundle (v2)', () => {
         questions: [
           'Which reviewed assets moved unusually this summer, and what did the filings say?',
         ],
+        tools: [
+          { pill: 'cudf', device: 'gpu', tools: ['market_anomaly_scan'] },
+          { pill: 'cuml', device: 'gpu', tools: ['market_anomaly_scan'] },
+          { pill: 'retrieval', device: null, tools: ['retrieve_evidence'] },
+        ],
       },
       {
         id: 'structured-evidence',
@@ -54,6 +59,8 @@ describe('recordings bundle (v2)', () => {
           'Which cash dividends were paid in 2026, and how did they change total return?',
           'Which assets are most likely to have news in the next five days?',
         ],
+        // Not in this index: the recordings route derives them (app/api/recordings)
+        tools: [],
       },
     ])
 

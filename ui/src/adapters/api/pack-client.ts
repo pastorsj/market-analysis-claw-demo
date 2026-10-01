@@ -10,13 +10,17 @@
  */
 
 import { z } from 'zod'
+import { isPill } from '@/shared/components/ToolPills'
 import { readApiUrl } from '@/shared/config/env'
 
 const PackQuestionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  /** The kind of answer, e.g. ANALYTICS or RETRIEVAL (the composer's demo scenario list shows it) */
-  tag: z.string().nullish(),
+  /** The tools it is expected to use, as pills (the composer's demo scenario list shows them) */
+  tools: z
+    .array(z.string())
+    .nullish()
+    .transform((tools) => (tools ?? []).filter(isPill)),
   description: z.string().nullish(),
   question: z.string(),
   sources: z.array(z.string()),

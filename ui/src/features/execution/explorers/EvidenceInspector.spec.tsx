@@ -63,19 +63,37 @@ describe('EvidenceInspector', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('shows a Kumo prediction’s PQL and scores, and numbers several calls', () => {
+  it('shows a Kumo prediction’s PQL and scores under its database, and numbers several calls', () => {
     renderInspector(
       [receiptOf('structured_prediction'), receiptOf('structured_prediction', 'failed')],
-      { detail: detail({ id: 'nvidia-kumo', label: 'NVIDIA Kumo' }) }
+      {
+        detail: detail({ id: 'nvidia-kumo', label: 'NVIDIA Kumo' }),
+        databaseName: 'market_analysis',
+        sourceIds: ['market_data', 'sec_filings'],
+        structuredSources: [{ id: 'market_data', name: 'Market Prices & Events' }],
+      }
     )
+    // The question's structured source by name, then the database the prediction read
+    const sources = screen.getByLabelText('Sources used')
+    expect(within(sources).getByText('Sources used')).toBeVisible()
+    expect([...sources.querySelectorAll('span')].map((chip) => chip.textContent)).toEqual([
+      'Market Prices & Events',
+      'market_analysis',
+    ])
     const calls = screen.getAllByTestId('execution-evidence-call')
     expect(within(calls[0]).getByText('Recorded call 1 of 2')).toBeVisible()
     expect(within(calls[0]).getByRole('heading', { name: 'NVIDIA Kumo Prediction' })).toBeVisible()
+    expect(within(calls[0]).getByText('Database: market_analysis')).toBeVisible()
     expect(within(calls[0]).getByText('Generated PQL')).toBeVisible()
-    expect(within(calls[0]).getByTestId('execution-evidence-output')).toHaveTextContent(
-      'asset-delta'
-    )
+    const output = within(calls[0]).getByTestId('execution-evidence-output')
+    expect(
+      within(output)
+        .getAllByRole('columnheader')
+        .map((th) => th.textContent)
+    ).toEqual(['ANCHOR TIMESTAMP', 'ENTITY', 'FALSE PROB', 'PREDICTION', 'TRUE PROB'])
+    expect(output).toHaveTextContent('asset-delta')
     expect(within(calls[1]).getByText('The tool call ended with a failure.')).toBeVisible()
+    expect(within(calls[1]).getByText('Database: market_analysis')).toBeVisible()
   })
 
   it('shows Auto Ontology’s SQL and rows under the database it queried', () => {

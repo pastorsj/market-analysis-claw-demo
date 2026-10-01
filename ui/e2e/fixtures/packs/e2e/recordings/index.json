@@ -15,6 +15,29 @@
           "jobId": "2e1e9c6d-8c4a-4d2f-9716-1cb1e6659c78",
           "question": "Which reviewed assets moved unusually this summer, and what did the filings say?"
         }
+      ],
+      "tools": [
+        {
+          "pill": "cudf",
+          "device": "gpu",
+          "tools": [
+            "market_anomaly_scan"
+          ]
+        },
+        {
+          "pill": "cuml",
+          "device": "gpu",
+          "tools": [
+            "market_anomaly_scan"
+          ]
+        },
+        {
+          "pill": "retrieval",
+          "device": null,
+          "tools": [
+            "retrieve_evidence"
+          ]
+        }
       ]
     },
     {

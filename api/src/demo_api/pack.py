@@ -117,6 +117,7 @@ class ActivePack:
             **{key: manifest.get(key) for key in ("id", "version", "title", "description", "as_of", "disclaimer")},
             "questions": [
                 {key: question.get(key) for key in ("id", "label", "tag", "description", "question", "sources")}
+                | {"tools": question.get("tools", [])}
                 | {"featured": bool(question.get("featured", False))}
                 for question in manifest.get("questions", [])
                 if set(question.get("sources", [])) <= available

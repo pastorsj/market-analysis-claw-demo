@@ -66,9 +66,9 @@ For example, an eighth market tool on the `market_analytics` server:
 1. Implement it in the server (`tools/market-analytics/src/market_analytics/`) with a typed result and the
    MCP annotation `read_only_hint=True` (Hermes replays read-only calls after a server restart). Add tests.
 2. Add an entry to `contracts/tool-registry.json`: `id` (the MCP tool name), `server`, `hermes_name`
-   (`mcp__<server>__<id>`), `family`, `label` and `description` for the UI, `explorer`, `receipt_kind` and
-   `profile` (the agent feature that ships it). Run `scripts/gen-contracts.sh`, which regenerates the UI's
-   `TOOL_REGISTRY`.
+   (`mcp__<server>__<id>`), `family`, `label` and `description` for the UI, `explorer`, `receipt_kind`,
+   `profile` (the agent feature that ships it) and `pills` (the technology pills of a run that uses it; a market
+   tool has `cudf`). Run `scripts/gen-contracts.sh`, which regenerates the UI's `TOOL_REGISTRY`.
 3. Add the tool to the server's `tools.include` in `agent/profile/config.yaml`.
 4. Add it to the server's `tools/call` allowlist in `agent/sandbox-policy.yaml`.
 5. Teach it in the family's skill.

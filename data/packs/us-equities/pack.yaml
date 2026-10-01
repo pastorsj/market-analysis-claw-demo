@@ -127,6 +127,39 @@ documents:
       format: gdelt-parquet
       files: gdelt/*.parquet
       opt_in: true
+  # Held-out queries for the Benchmark tab's CPU/GPU Milvus index comparison (analytics-gpu profile): never
+  # the demo questions. A build keeps those whose sources it indexed (docs/retrieval.md).
+  benchmark_queries:
+    - query: departure of a chief financial officer and the appointment of a successor
+      sources: [sec_filings]
+    - query: entry into a material definitive credit agreement with a syndicate of lenders
+      sources: [sec_filings]
+    - query: results of the annual meeting of shareholders and the votes on director elections
+      sources: [sec_filings]
+    - query: completion of an acquisition or disposition of a business
+      sources: [sec_filings]
+    - query: press release announcing quarterly financial results furnished as an exhibit
+      sources: [sec_filings]
+    - query: beneficial ownership report after acquiring more than five percent of a class of equity securities
+      sources: [market_regulations]
+    - query: management's assessment of internal control over financial reporting
+      sources: [market_regulations]
+    - query: net capital requirements for brokers and dealers
+      sources: [market_regulations]
+    - query: locating securities to borrow before effecting a short sale
+      sources: [market_regulations]
+    - query: conditions for resales of restricted securities under the safe harbor
+      sources: [market_regulations]
+    - query: central bank interest rate decision and the inflation outlook
+      sources: [world_news]
+    - query: new tariffs announced in a trade dispute between the United States and China
+      sources: [world_news]
+    - query: disclosure of a material cybersecurity incident and the timing of the report
+      sources: [sec_filings, market_regulations]
+    - query: share repurchase program authorizations and the rules for issuer repurchases
+      sources: [sec_filings, market_regulations]
+    - query: changes in a registrant's certifying accountant
+      sources: [sec_filings, market_regulations]
 
 sources:
   - id: market_data

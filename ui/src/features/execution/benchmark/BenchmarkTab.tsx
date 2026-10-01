@@ -7,6 +7,11 @@
  * request (`POST /v1/jobs/async/job/{id}/benchmark`) and keeps it; a recording
  * carries the comparison made when it was recorded, if any. The agent is never
  * rerun.
+ *
+ * A run that searched documents also shows the Milvus comparison that applies
+ * to it (`GET /v1/jobs/async/job/{id}/retrieval-benchmark`): the CPU index
+ * against an NVIDIA GPU index of the same vectors, measured once per index
+ * build on a GPU host. A CPU-only stack has none.
  */
 
 'use client'
@@ -15,12 +20,13 @@ import { type FC, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Button, Flex, Spinner, Text } from '@/adapters/ui'
 import { ChartFlow, Warning } from '@/adapters/ui/icons'
 import type { TimelineModel } from '../activity/activity-model'
-import type { Benchmark, ExecutionEventV2 } from '../contract'
-import { toBenchmark } from '../contract'
+import type { Benchmark, ExecutionEventV2, RetrievalBenchmark } from '../contract'
+import { toBenchmark, toRetrievalBenchmark } from '../contract'
 import { toolFor } from '../registry'
 import { useExecutionStore } from '../store'
 import { BenchmarkChart } from './BenchmarkChart'
 import { benchmarkEligibility, buildBenchmarkView } from './benchmark-model'
+import { RetrievalBenchmarkPanel } from './RetrievalBenchmarkPanel'
 import styles from './benchmark-tab.module.css'
 
 interface BenchmarkTabProps {
@@ -29,6 +35,8 @@ interface BenchmarkTabProps {
   timeline: TimelineModel | null
   /** The comparison already known for this run (a recording's, or one run earlier) */
   benchmark: Benchmark | null
+  /** The Milvus comparison already known for this run (a recording's, or one loaded earlier) */
+  retrievalBenchmark: RetrievalBenchmark | null
   /** Replay: the comparison comes only from the recording */
   recorded: boolean
 }
@@ -40,6 +48,9 @@ const RETRIEVAL_UNAVAILABLE =
 
 const benchmarkUrl = (jobId: string) =>
   `/api/v1/jobs/async/job/${encodeURIComponent(jobId)}/benchmark`
+
+const retrievalBenchmarkUrl = (jobId: string) =>
+  `/api/v1/jobs/async/job/${encodeURIComponent(jobId)}/retrieval-benchmark`
 
 const errorDetail = async (response: Response): Promise<string> => {
   const body = (await response.json().catch(() => null)) as { detail?: unknown } | null
@@ -78,14 +89,76 @@ const EmptyState: FC<{
   </Flex>
 )
 
+type RetrievalPhase = 'idle' | 'loading' | 'ready' | 'unavailable'
+
+/**
+ * The Milvus comparison for a finished run that searched documents: the one
+ * already known, else (live) the API's, else why there is none.
+ */
+const useRetrievalComparison = ({
+  jobId,
+  eligible,
+  recorded,
+  known,
+}: {
+  jobId: string | null
+  eligible: boolean
+  recorded: boolean
+  known: RetrievalBenchmark | null
+}): { phase: RetrievalPhase; message: string } => {
+  const setRetrievalBenchmark = useExecutionStore((state) => state.setRetrievalBenchmark)
+  const [state, setState] = useState<{ phase: RetrievalPhase; message: string }>({
+    phase: 'idle',
+    message: RETRIEVAL_UNAVAILABLE,
+  })
+
+  useEffect(() => {
+    if (known || !eligible) {
+      setState({ phase: 'idle', message: RETRIEVAL_UNAVAILABLE })
+      return
+    }
+    if (recorded || !jobId) {
+      setState({ phase: 'unavailable', message: RETRIEVAL_UNAVAILABLE })
+      return
+    }
+    const controller = new AbortController()
+    setState({ phase: 'loading', message: RETRIEVAL_UNAVAILABLE })
+    fetch(retrievalBenchmarkUrl(jobId), { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          setState({ phase: 'unavailable', message: await errorDetail(response) })
+          return
+        }
+        const result = toRetrievalBenchmark(await response.json())
+        if (result) setRetrievalBenchmark(jobId, result)
+        else setState({ phase: 'unavailable', message: RETRIEVAL_UNAVAILABLE })
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setState({ phase: 'unavailable', message: RETRIEVAL_UNAVAILABLE })
+        }
+      })
+    return () => controller.abort()
+  }, [eligible, jobId, known, recorded, setRetrievalBenchmark])
+
+  return known ? { phase: 'ready', message: '' } : state
+}
+
 export const BenchmarkTab: FC<BenchmarkTabProps> = ({
   jobId,
   events,
   timeline,
   benchmark,
+  retrievalBenchmark,
   recorded,
 }) => {
   const eligibility = useMemo(() => benchmarkEligibility(events), [events])
+  const retrieval = useRetrievalComparison({
+    jobId,
+    eligible: eligibility.retrieval && eligibility.completed,
+    recorded,
+    known: retrievalBenchmark,
+  })
   const setBenchmark = useExecutionStore((state) => state.setBenchmark)
   const [phase, setPhase] = useState<Phase>(benchmark ? 'completed' : 'idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -160,12 +233,24 @@ export const BenchmarkTab: FC<BenchmarkTabProps> = ({
     [benchmark, marketInvocations, running, timeline]
   )
 
-  const retrievalSection = eligibility.retrieval ? (
-    <div className={styles.retrievalStatus} data-status="warning" role="status">
-      <Warning className="h-4 w-4" aria-hidden="true" />
-      {RETRIEVAL_UNAVAILABLE}
-    </div>
-  ) : null
+  let retrievalSection: ReactNode = null
+  if (eligibility.retrieval && retrieval.phase === 'ready' && retrievalBenchmark) {
+    retrievalSection = <RetrievalBenchmarkPanel benchmark={retrievalBenchmark} />
+  } else if (eligibility.retrieval && retrieval.phase === 'loading') {
+    retrievalSection = (
+      <div className={styles.retrievalStatus} role="status">
+        <Spinner size="small" aria-label="Loading retrieval benchmark" />
+        Loading the release-qualified Milvus index comparison…
+      </div>
+    )
+  } else if (eligibility.retrieval) {
+    retrievalSection = (
+      <div className={styles.retrievalStatus} data-status="warning" role="status">
+        <Warning className="h-4 w-4" aria-hidden="true" />
+        {retrieval.message}
+      </div>
+    )
+  }
 
   if (!recorded && !jobId && events.length === 0) {
     return (

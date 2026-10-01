@@ -21,6 +21,7 @@ const PACK = {
       label: 'Market Leaders',
       question: 'Which assets led the market?',
       sources: ['market_data'],
+      tools: ['cudf'],
       featured: true,
     },
     // The default pack's other five featured questions, so the landing page is laid out with a
@@ -31,6 +32,7 @@ const PACK = {
       question:
         "For company news about the 12 most liquid issuers published from August 17 through August 24, 2026, how did the sentiment labels line up with the issuers' returns over the following five sessions? Describe the relationship without claiming causation.",
       sources: ['market_data'],
+      tools: ['cudf'],
       featured: true,
     },
     {
@@ -39,6 +41,7 @@ const PACK = {
       question:
         'Treat January 2 through June 30, 2026 as the baseline for every issuer. Which 10 issuer sessions from July 1 through August 31, 2026 were the most unusual in return, volatility and volume, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations.',
       sources: ['market_data'],
+      tools: ['cudf', 'cuml'],
       featured: true,
     },
     {
@@ -47,6 +50,7 @@ const PACK = {
       question:
         'In the return-correlation network from June through August 2026, which issuers are the most central, and which pairs moved together most closely?',
       sources: ['market_data'],
+      tools: ['cudf', 'cugraph'],
       featured: true,
     },
     {
@@ -55,6 +59,7 @@ const PACK = {
       question:
         'What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any second-quarter 2026 filings in the corpus that report an incident.',
       sources: ['sec_filings', 'market_regulations'],
+      tools: ['retrieval'],
       featured: true,
     },
     {
@@ -63,18 +68,20 @@ const PACK = {
       question:
         'Which of the 12 most liquid issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real second-quarter 2026 SEC filings describe operational disruptions? The issuers are fictional and are not the filers: keep the two apart.',
       sources: ['market_data', 'sec_filings'],
+      tools: ['cudf', 'retrieval'],
       featured: true,
     },
   ],
 }
 
 const DATA_SOURCES = [
-  { id: 'market_data', name: 'Market data', description: 'Prices and volumes' },
+  { id: 'market_data', name: 'Market data', description: 'Prices and volumes', kind: 'structured' },
   {
     id: 'sec_filings',
     name: 'SEC filings',
     description: 'Current reports',
     default_enabled: false,
+    kind: 'documents',
   },
 ]
 

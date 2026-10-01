@@ -14,6 +14,7 @@
  * Either way the turn lands in the execution store.
  */
 
+import { isPill, orderPills, type ToolPillUse } from '@/shared/components/ToolPills'
 import type { RecordedSession, RecordingsSource } from '@/shared/context'
 import { useExecutionStore } from '../store'
 
@@ -33,6 +34,8 @@ export interface RecordedTurn {
   sourceIds?: string[]
   /** The CPU/GPU comparison of its market calls (`Benchmark`), when one ran */
   benchmark?: unknown
+  /** The Milvus CPU/GPU index comparison for its retrieval calls (`RetrievalBenchmark`), on a GPU stack */
+  retrievalBenchmark?: unknown
 }
 
 export interface RecordingIndex {
@@ -44,6 +47,8 @@ export interface RecordingIndex {
     title: string
     featured: boolean
     turns: { jobId: string; question: string }[]
+    /** The tools its runs used (`demo-api record`; the recordings route derives them for older bundles) */
+    tools?: unknown
   }[]
 }
 
@@ -87,6 +92,24 @@ const parseTurn = (value: unknown): RecordedTurn => {
   return value
 }
 
+/** An index session's `tools`: the well-formed pills, in display order. */
+const toToolPills = (value: unknown): ToolPillUse[] =>
+  orderPills(
+    (Array.isArray(value) ? value : []).flatMap((entry): ToolPillUse[] =>
+      isRecord(entry) && isPill(entry.pill)
+        ? [
+            {
+              pill: entry.pill,
+              device: entry.device === 'gpu' || entry.device === 'cpu' ? entry.device : null,
+              tools: Array.isArray(entry.tools)
+                ? entry.tools.filter((tool): tool is string => typeof tool === 'string')
+                : [],
+            },
+          ]
+        : []
+    )
+  )
+
 /** The chat's view of a recorded session. */
 const toRecordedSession = (session: RecordingSession): RecordedSession => ({
   id: session.id,
@@ -110,11 +133,12 @@ const getJson = async (url: string): Promise<unknown> => {
 export const recordings: RecordingsSource = {
   list: async () => {
     const index = parseIndex(await getJson('/api/recordings/index.json'))
-    return index.sessions.map(({ id, title, turns }) => ({
+    return index.sessions.map(({ id, title, turns, tools }) => ({
       id,
       title,
       recordedAt: index.recordedAt,
       questions: turns.map((turn) => turn.question),
+      tools: toToolPills(tools),
     }))
   },
   load: async (sessionId) => {

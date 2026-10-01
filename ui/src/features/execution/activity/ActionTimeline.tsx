@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { selectPackDatabaseName, useLayoutStore } from '@/features/layout/store'
 import type { ReceiptV2 } from '../contract'
 import { ResultOutput } from '../explorers/ResultOutput'
 import { receiptOutputCount, summarizeReceipt, type ReceiptOutput } from '../receipt-summary'
@@ -109,7 +110,11 @@ export const ActionTimeline: FC<ActionTimelineProps> = ({
     : receiptsLoading
       ? 'loading'
       : 'error'
-  const summary = useMemo(() => (receipt ? summarizeReceipt(receipt) : undefined), [receipt])
+  const databaseName = useLayoutStore(selectPackDatabaseName)
+  const summary = useMemo(
+    () => (receipt ? summarizeReceipt(receipt, { databaseName }) : undefined),
+    [databaseName, receipt]
+  )
   const statementExpanded = Boolean(resultKey && expandedStatementKey === resultKey)
   const outputExpanded = Boolean(resultKey && expandedOutputKey === resultKey)
   const inspectorExpanded = Boolean(expandedStatementKey || expandedOutputKey)

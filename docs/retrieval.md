@@ -15,7 +15,7 @@ only agent, and LangChain is used only for its NVIDIA embed and rerank clients.
 | `langchain-nvidia-ai-endpoints` (`NVIDIAEmbeddings`, `NVIDIARerank`) | 1.4.3, exact pin |
 | `langchain-text-splitters` (`RecursiveCharacterTextSplitter`) | 1.x |
 | `pymilvus` | 2.6.17 |
-| Milvus | 2.6.25, CPU standalone: embedded etcd, local storage, no MinIO |
+| Milvus | 2.6.25, CPU standalone: embedded etcd, local storage, no MinIO. The analytics-gpu profile adds a second, GPU standalone (`v2.6.25-gpu`) for the [CPU/GPU index comparison](#cpugpu-index-comparison-analytics-gpu) only |
 | Embed model | `nvidia/nemotron-3-embed-1b` |
 | Rerank model | `nvidia/llama-nemotron-rerank-vl-1b-v2` |
 
@@ -90,6 +90,38 @@ Two related details:
 `title`, `url`, `published_at` and `text` columns; an `embedding` vector; dynamic fields for each source's own
 metadata. The index is HNSW with cosine similarity, `M = 16`, `efConstruction = 200`, and searches use
 `ef = 128`, above the largest per-source candidate count (100).
+
+## CPU/GPU index comparison (analytics-gpu)
+
+On a GPU host the Benchmark tab compares Milvus vector search on the CPU index with an NVIDIA GPU index of the
+same vectors, as the original demo did. Answers never change: `retrieve_evidence` searches the CPU index above
+on every host, and the GPU index exists only for this comparison.
+
+- **Where.** The analytics-gpu profile adds `milvus-gpu`, Milvus on the GPU image (embedded etcd, local
+  storage, its own volume, no host port), and `retrieval-benchmark`, a one-shot that `retrieval` waits for.
+  Without the profile neither runs, and the Benchmark tab says the stack runs the CPU index only.
+- **The GPU index.** The one-shot reads the active build's chunk ids, sources and vectors from `milvus`, and
+  writes them, L2-normalized, to a collection of the same name in `milvus-gpu` under `GPU_CAGRA` (NVIDIA cuVS
+  CAGRA: inner product, `intermediate_graph_degree = 64`, `graph_degree = 32`, built with IVF-PQ; searches use
+  `itopk_size = 128`, `search_width = 4`). Inner product on normalized vectors ranks as cosine does on the CPU.
+  Older builds' copies are dropped, so the GPU holds one. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
+  memory pool (1 GiB at start, 4 GiB at most).
+- **The workload.** The pack's held-out queries (`documents.benchmark_queries` in `pack.yaml`, 15 per pack,
+  never the demo questions), each embedded once with Nemotron Embed. Three profiles: one query per request,
+  batches of five query vectors of one source scope, and five concurrent requests. Each profile warms both
+  indexes up, then sends every request three times, alternating which index goes first. Only the Milvus search
+  call is timed (top 10, filtered to the query's sources); embedding and reranking are left out.
+- **Quality gates.** Recall@10 of each index against the exact inner-product neighbors, computed from the same
+  vectors: at least 0.95 on average and 0.80 for every query. The two indexes' results overlap by at least
+  0.95 on average (Jaccard), and each returns the same neighbors in every repetition. Neighbors compare by
+  their exact score, so chunks with identical vectors (boilerplate repeated across filings) count as one.
+- **Claim.** A profile claims a GPU speedup only when its gates pass and the CPU's total search time is at
+  least 1.1 times the GPU's; otherwise it reports the ratio without a claim.
+- **Result.** `/data/active/retrieval-benchmark.json` (contract `RetrievalBenchmark`,
+  [contracts](../contracts/README.md)). The API serves it as `GET /v1/jobs/async/job/{id}/retrieval-benchmark`
+  for a run whose retrieval calls searched the same build, and a job export, so a recording, carries it. An
+  unchanged build is not measured again; `data reindex` measures a new one. The one-shot never fails the
+  stack: a problem is logged (`demo.sh logs retrieval-benchmark`), and the tab shows no comparison.
 
 ## Result size
 

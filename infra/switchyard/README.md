@@ -45,8 +45,8 @@ overloaded.
 | `SWITCHYARD_ROUTES` | `market-research` | For |
 |---|---|---|
 | `passthrough.nemotron` | efficient, every turn, no judge, no capable model | **default** on build.nvidia.com (Nemotron 3 Ultra) |
-| `pinned-capable.nemotron-gpt` | capable GPT, every turn, no judge | a provider that serves GPT-6 Sol (the bake-off winner) |
-| `escalation.nemotron-gpt` | escalation: efficient → capable GPT (Responses API), judged by a GPT model | efficient model first, GPT-6.1 Sol on escalation |
+| `pinned-capable.nemotron-gpt` | capable GPT, every turn, no judge | a provider that serves GPT-6 Sol; a reference ceiling (the 2026-09-30 bake-off's winner) |
+| `escalation.nemotron-gpt` | escalation: efficient → capable GPT (Responses API), judged by a GPT model | efficient model first, GPT-6.1 Sol on escalation (the 2026-10-01 bake-off's winner) |
 | `pinned-capable.nemotron-claude` | capable Claude, every turn, no judge | a provider that serves Claude, e.g. Claude Opus 5.5 |
 | `escalation.nemotron-claude` | escalation: efficient → capable Claude (Anthropic Messages API), judged by a Claude model | efficient model first, Claude on escalation |
 | `escalation.nemotron` | escalation: efficient → capable model (Chat Completions), judged by a Nemotron model | all-Nemotron, e.g. on build.nvidia.com (it has no frontier model) |

@@ -81,6 +81,12 @@ const records = (value: unknown): Row[] =>
     ? value.filter((item): item is Row => typeof item === 'object' && item !== null)
     : []
 
+const count = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : undefined
+
+const detail = (label: string, value: unknown): string[] =>
+  value === undefined || value === null || value === '' ? [] : [`${label}: ${value}`]
+
 const tableOutput = (
   rows: readonly Row[],
   label: Extract<ReceiptOutput, { kind: 'table' }>['label'],
@@ -123,27 +129,34 @@ const structuredQuery = (content: StructuredQuery): ReceiptSummary => {
   }
 }
 
-const structuredPrediction = (content: StructuredPrediction): ReceiptSummary => {
+/**
+ * A prediction in Kumo's binary-classification columns, as the original UI showed them. The receipt
+ * keeps each entity's TRUE_PROB; ANCHOR_TIMESTAMP is the run's anchor, FALSE_PROB its complement
+ * and PREDICTION whether TRUE_PROB is the larger of the two.
+ */
+const kumoRows = (content: StructuredPrediction): Row[] =>
+  content.rows.map((row) => ({
+    ANCHOR_TIMESTAMP: content.anchor,
+    ENTITY: row.assetId,
+    FALSE_PROB: 1 - row.probability,
+    PREDICTION: row.probability > 0.5,
+    TRUE_PROB: row.probability,
+  }))
+
+const structuredPrediction = (
+  content: StructuredPrediction,
+  databaseName: string | undefined
+): ReceiptSummary => {
   const pql = statementText(content.pql, 8_000)
   return {
     title: 'Prediction result',
     summary: content.available
       ? countSummary(content.rows.length, undefined, 'prediction')
       : (content.reason ?? 'The prediction could not run.'),
-    details: [
-      `Template: ${content.templateId}`,
-      `Anchor: ${content.anchor}`,
-      `Horizon: ${content.horizon.value} ${content.horizon.unit}`,
-      ...(content.model ? [`Model: ${content.model}`] : []),
-    ],
+    details: detail('Database', databaseName),
     statement: pql && { label: 'Generated PQL', language: 'pql', ...pql },
     output: content.available
-      ? tableOutput(
-          content.rows.map((row) => ({ asset_id: row.assetId, probability: row.probability })),
-          'Prediction result',
-          undefined,
-          false
-        )
+      ? tableOutput(kumoRows(content), 'Prediction result', undefined, false)
       : undefined,
   }
 }
@@ -157,12 +170,6 @@ export const OPERATION_LABELS: Readonly<Record<AnalyticsResult['operationId'], s
   analyze_market_relationships: 'Market Relationship Analysis',
   intraday_scan: 'Intraday Scan',
 }
-
-const count = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : undefined
-
-const detail = (label: string, value: unknown): string[] =>
-  value === undefined || value === null || value === '' ? [] : [`${label}: ${value}`]
 
 /** The rows each operation returns, one per ranked asset, session, event or period. */
 const analyticsRows = (content: AnalyticsResult): Row[] => {
@@ -327,7 +334,8 @@ const retrieval = (content: RetrievalEvidence): ReceiptSummary => {
       `Sources: ${content.sourceIds.join(', ')}`,
       `Collection: ${content.collection}`,
       `Collection version: ${content.collectionVersion}`,
-      `Vector index: ${content.index.type}`,
+      // Milvus names its GPU indexes GPU_*; the rest run on the CPU
+      `Vector index: ${content.index.type} (${content.index.type.startsWith('GPU_') ? 'GPU' : 'CPU'})`,
       `Vector metric: ${content.index.metric}`,
       ...(searchParameters.length
         ? [
@@ -351,9 +359,13 @@ const retrieval = (content: RetrievalEvidence): ReceiptSummary => {
           `Source: ${hit.sourceId}`,
           `Document: ${hit.documentId}`,
           `Chunk: ${hit.chunkId}`,
-          `Rerank score: ${hit.score}`,
+          // As the original listed it: a rerank logit only when it is not negative
+          ...(hit.score >= 0 ? [`Rerank score: ${hit.score}`] : []),
           `Vector score: ${hit.vectorScore}`,
           ...(hit.publishedAt ? [`Published: ${hit.publishedAt}`] : []),
+          ...(typeof hit.metadata?.citation === 'string' && hit.metadata.citation.trim()
+            ? [`Citation: ${boundedText(hit.metadata.citation, 400)}`]
+            : []),
           ...(hit.url ? [`Source URL: ${hit.url}`] : []),
         ],
       })),
@@ -364,13 +376,20 @@ const retrieval = (content: RetrievalEvidence): ReceiptSummary => {
   }
 }
 
-/** Summarizes one receipt for the inspectors (and the timeline). */
-export const summarizeReceipt = (receipt: ReceiptV2): ReceiptSummary => {
+/**
+ * Summarizes one receipt for the inspectors (and the timeline). A prediction receipt does not name
+ * its database; `databaseName` is the pack's, which Kumo's graph is read from.
+ */
+export const summarizeReceipt = (
+  receipt: ReceiptV2,
+  { databaseName }: { databaseName?: string } = {}
+): ReceiptSummary => {
   if (receipt.status === 'failed' || !receipt.content) {
     return {
       title: 'Tool result',
       summary: 'The tool call ended with a failure.',
-      details: [],
+      details:
+        receipt.artifactKind === 'structured_prediction' ? detail('Database', databaseName) : [],
       notices: receipt.errorSummary ? [receipt.errorSummary] : [],
     }
   }
@@ -378,7 +397,7 @@ export const summarizeReceipt = (receipt: ReceiptV2): ReceiptSummary => {
     case 'structured_query':
       return structuredQuery(receipt.content)
     case 'structured_prediction':
-      return structuredPrediction(receipt.content)
+      return structuredPrediction(receipt.content, databaseName)
     case 'analytics_result':
       return analytics(receipt.content, receipt.durationMs)
     case 'retrieval_evidence':

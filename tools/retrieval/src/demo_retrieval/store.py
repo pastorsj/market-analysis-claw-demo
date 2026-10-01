@@ -20,6 +20,15 @@ INDEX = {"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efC
 # HNSW needs ef >= the search limit; the tool's per-source limit is at most 4 x 25 = 100.
 SEARCH_PARAMS = {"metric_type": "COSINE", "params": {"ef": 128}}
 
+# The analytics-gpu profile's mirror of the collection, for retrieval-benchmark only: NVIDIA cuVS CAGRA on the GPU, over
+# L2-normalized vectors, so inner product ranks as cosine does on the CPU index. itopk_size >= the benchmark's top-k.
+GPU_INDEX = {
+    "index_type": "GPU_CAGRA",
+    "metric_type": "IP",
+    "params": {"intermediate_graph_degree": 64, "graph_degree": 32, "build_algo": "IVF_PQ"},
+}
+GPU_SEARCH_PARAMS = {"metric_type": "IP", "params": {"itopk_size": 128, "search_width": 4}}
+
 Candidate = tuple[dict[str, Any], float]  # (stored fields including dynamic metadata, cosine similarity)
 
 

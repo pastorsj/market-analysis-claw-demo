@@ -66,7 +66,7 @@ describes the components, the request flow, the contracts and the trust boundari
 | Models (default, build.nvidia.com) | Nemotron 3 Ultra 550B-A55B on every turn; Nemotron 3 Super 120B-A12B for auxiliary calls | hosted |
 | Models (with a frontier-model provider) | Nemotron 3 Ultra escalating to GPT-6.1 Sol, judged by GPT-6.1 Sol (`escalation.nemotron-gpt`); Nemotron 3 Super for auxiliary calls | hosted |
 | Retrieval models | Nemotron 3 Embed 1B, Llama Nemotron Rerank VL 1B v2 | hosted |
-| Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone) | 1.4.3, 2.6.17, 2.6.25 |
+| Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone; with analytics-gpu, a GPU standalone for the Benchmark tab's index comparison) | 1.4.3, 2.6.17, 2.6.25 |
 | Market analytics | pandas, scikit-learn, NetworkX; on GPU, RAPIDS cuDF, cuML and nx-cugraph | 2.3, 1.9, 3.6; 26.06 (CUDA 12) |
 | Prediction | Kumo Relational NIM, `kumo-relational-client` | 1.0.1, 1.0.2 |
 | Synthetic data | NeMo Data Designer (`data-designer`) | 0.9.3 |

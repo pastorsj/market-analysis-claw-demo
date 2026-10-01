@@ -16,6 +16,7 @@
  */
 
 import type { ExecutionEventV2 } from '../contract'
+import { publishedMetrics } from '../projection'
 import { toolFor, type Family } from '../registry'
 
 export type ActivityComponent = Family | 'agent' | 'tool' | 'synthesis'
@@ -38,6 +39,8 @@ const HERMES_TOOL_LABELS: Readonly<Record<string, string>> = {
   tool_search: 'Finding tools',
   tool_describe: 'Inspecting tool definitions',
   tool_call: 'Calling selected tool',
+  // As the original activity named the call (the tool registry's label is the node's, "Auto Ontology")
+  ask_question: 'Auto Ontology Text-to-SQL',
 }
 
 const COMPONENT_LABELS: Record<ActivityComponent, string> = {
@@ -443,6 +446,10 @@ const milestoneFor = (
     label = 'Answer ready'
     description = 'The grounded response became available in the conversation.'
     component = 'synthesis'
+  } else if (event.eventKind === 'report.reference_resolution') {
+    label = 'Citations resolved'
+    description = 'Evidence references were resolved for the published response.'
+    component = 'synthesis'
   } else {
     return null
   }
@@ -478,7 +485,9 @@ export const buildActionTimeline = (
   const lastMs = eventMs(ordered[ordered.length - 1]!)
   const created = ordered.find((event) => event.eventKind === 'run.created')
   const startMs = created ? eventMs(created) : firstMs
-  const endMs = Math.max(startMs, lastMs)
+  const published = publishedMetrics(ordered)
+  const wallEndMs = published?.wallDurationMs == null ? startMs : startMs + published.wallDurationMs
+  const endMs = Math.max(startMs, lastMs, wallEndMs)
   const answers = answerEvents(inStreamOrder(events))
 
   const items: TimelineItem[] = []
@@ -547,11 +556,13 @@ export const buildActionTimeline = (
     status: ordered.some(isRunFailure) ? 'failed' : 'completed',
     items: actions,
     metrics: {
-      wallDurationMs: null,
-      knownToolDurationMs: knownTool.length
-        ? knownTool.reduce((total, item) => total + (item.durationMs ?? 0), 0)
-        : null,
-      toolCallCount: toolItems.length,
+      wallDurationMs: published?.wallDurationMs ?? null,
+      knownToolDurationMs:
+        published?.knownToolDurationMs ??
+        (knownTool.length
+          ? knownTool.reduce((total, item) => total + (item.durationMs ?? 0), 0)
+          : null),
+      toolCallCount: published?.toolCallCount ?? toolItems.length,
       ...tokenMetrics(ordered),
     },
   }

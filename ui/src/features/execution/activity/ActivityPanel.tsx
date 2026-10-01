@@ -297,6 +297,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
             events={events}
             timeline={timeline}
             benchmark={run?.benchmark ?? null}
+            retrievalBenchmark={run?.retrievalBenchmark ?? null}
             recorded={!live}
           />
         ) : null}

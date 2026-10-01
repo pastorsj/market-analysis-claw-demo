@@ -24,6 +24,12 @@ export interface EvidenceInspectorProps {
   cursor: string
   question?: string | null
   receipts: readonly ReceiptV2[]
+  /** The pack's database, which a Kumo prediction reads but its receipt does not name */
+  databaseName?: string
+  /** The data sources the question used */
+  sourceIds?: readonly string[]
+  /** The pack's structured sources, which name the question's database source */
+  structuredSources?: ReadonlyArray<{ id: string; name: string }>
   loading?: boolean
   onClose: () => void
 }
@@ -44,7 +50,7 @@ const callLabel = (receipt: ReceiptV2): string => {
 }
 
 /** The logical sources a receipt read: the retrieval sources, or the database it queried. */
-const receiptSources = (receipt: ReceiptV2): string[] => {
+const receiptSources = (receipt: ReceiptV2, databaseName: string | undefined): string[] => {
   switch (receipt.artifactKind) {
     case 'retrieval_evidence':
       return receipt.content?.sourceIds ?? []
@@ -52,27 +58,52 @@ const receiptSources = (receipt: ReceiptV2): string[] => {
     case 'structured_query':
       return receipt.content ? [receipt.content.databaseName] : []
     case 'structured_prediction':
-      return []
+      return databaseName ? [databaseName] : []
   }
 }
+
+const NO_SOURCE_IDS: readonly string[] = []
+const NO_STRUCTURED_SOURCES: ReadonlyArray<{ id: string; name: string }> = []
 
 export const EvidenceInspector = ({
   detail,
   cursor,
   question,
   receipts,
+  databaseName,
+  sourceIds = NO_SOURCE_IDS,
+  structuredSources = NO_STRUCTURED_SOURCES,
   loading = false,
   onClose,
 }: EvidenceInspectorProps): ReactNode => {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const summaries = useMemo(
-    () => receipts.map((receipt) => ({ receipt, summary: summarizeReceipt(receipt) })),
-    [receipts]
+    () =>
+      receipts.map((receipt) => ({
+        receipt,
+        summary: summarizeReceipt(receipt, { databaseName }),
+      })),
+    [databaseName, receipts]
   )
-  const sourceNames = useMemo(
-    () => [...new Set(receipts.flatMap(receiptSources).filter((name) => name.trim()))],
-    [receipts]
-  )
+  // As the original showed them: the question's structured source by name, then what each receipt read
+  // (a retrieval source by name when it is a structured one, else by id).
+  const sourceNames = useMemo(() => {
+    const nameOf = (id: string) => structuredSources.find((source) => source.id === id)?.name || id
+    return [
+      ...new Set(
+        [
+          ...sourceIds.flatMap((id) =>
+            structuredSources.some((source) => source.id === id) ? [nameOf(id)] : []
+          ),
+          ...receipts.flatMap((receipt) =>
+            receipt.artifactKind === 'retrieval_evidence'
+              ? receiptSources(receipt, databaseName).map(nameOf)
+              : receiptSources(receipt, databaseName)
+          ),
+        ].filter((name) => name.trim())
+      ),
+    ]
+  }, [databaseName, receipts, sourceIds, structuredSources])
 
   useEffect(() => {
     closeButtonRef.current?.focus()

@@ -23,6 +23,7 @@ from pydantic import TypeAdapter
 from pydantic.json_schema import GenerateJsonSchema
 
 from demo_api.benchmark import Benchmark
+from demo_api.benchmark import RetrievalBenchmark
 from demo_api.events import ExecutionEventV2
 from demo_api.receipts import ReceiptV2
 
@@ -33,12 +34,14 @@ SCHEMAS: dict[str, tuple[str, Any]] = {
     "execution-event": ("ExecutionEventV2", ExecutionEventV2),
     "receipt": ("ReceiptV2", ReceiptV2),
     "benchmark": ("Benchmark", Benchmark),
+    "retrieval-benchmark": ("RetrievalBenchmark", RetrievalBenchmark),
 }
 # Fixture file -> the model every record in it must satisfy.
 FIXTURES: dict[str, TypeAdapter[Any]] = {
     "execution-events.json": TypeAdapter(list[ExecutionEventV2]),
     "receipts.json": TypeAdapter(list[ReceiptV2]),
     "benchmarks.json": TypeAdapter(list[Benchmark]),
+    "retrieval-benchmarks.json": TypeAdapter(list[RetrievalBenchmark]),
 }
 
 

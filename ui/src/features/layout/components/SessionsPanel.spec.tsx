@@ -603,12 +603,21 @@ describe('SessionsPanel - Delete Button States', () => {
         title: 'Market Leaders',
         recordedAt: '2026-09-29T06:00:00Z',
         questions: ['Which assets led over the last 20 sessions?'],
+        tools: [{ pill: 'cudf' as const, device: 'gpu' as const, tools: ['market_scan'] }],
       },
       {
         id: 'filings',
         title: 'Moves and Filings',
         recordedAt: '2026-09-29T06:00:00Z',
         questions: ['Which assets moved most?', 'What did their 8-K filings say?'],
+        tools: [
+          { pill: 'retrieval' as const, device: null, tools: ['retrieve_evidence'] },
+          {
+            pill: 'cudf' as const,
+            device: 'cpu' as const,
+            tools: ['market_scan', 'price_context'],
+          },
+        ],
       },
     ]
     const collection = (overrides: Partial<RecordedCollection> = {}): RecordedCollection => ({
@@ -634,6 +643,15 @@ describe('SessionsPanel - Delete Button States', () => {
       expect(screen.getByText('Showing 2 of 2 sessions · 3 of 3 questions')).toBeInTheDocument()
       expect(screen.getByText('1 turn')).toBeInTheDocument()
       expect(screen.getByText('2 turns')).toBeInTheDocument()
+      // The tools each run used, a CPU run named for its CPU library
+      const pills = (title: string) =>
+        [
+          ...screen
+            .getByRole('button', { name: `Recorded session: ${title}; Completed` })
+            .querySelectorAll('.tool-pill'),
+        ].map((pill) => pill.textContent)
+      expect(pills('Market Leaders')).toEqual(['cuDF'])
+      expect(pills('Moves and Filings')).toEqual(['pandas', 'Retrieval'])
       expect(
         screen.getByText(
           'Read-only test runs. Answers load on selection; execution data loads only when requested.'

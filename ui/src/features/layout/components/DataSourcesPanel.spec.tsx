@@ -36,6 +36,9 @@ describe('DataSourcesPanel', () => {
     render(<DataSourcesPanel />)
 
     expect(screen.getByText('Individual Connections (2)')).toBeInTheDocument()
+    expect(
+      screen.getByText(/one market database plus its document collections/)
+    ).toBeInTheDocument()
     expect(screen.getByText('Market news')).toBeInTheDocument()
     expect(screen.getByText(/1 of 2 available connections enabled/)).toBeInTheDocument()
   })

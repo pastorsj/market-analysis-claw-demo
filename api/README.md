@@ -8,7 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 A FastAPI service (`demo_api`) between the UI and the agent. It turns each question into a job, runs
 the job on Hermes through the Hermes Runs API, stores what happens as `execution.v2` events, and
 serves the answer, its evidence and a read-only view of the pack's database. It also replays a
-finished job's market calls on the CPU and the GPU (the Benchmark tab), and transcribes voice input.
+finished job's market calls on the CPU and the GPU (the Benchmark tab, with the Milvus index comparison on a GPU
+host), and transcribes voice input.
 
 ```text
 UI ──/api/v1 proxy──▶ API ──Runs API──▶ hermes-gateway ──▶ Hermes (OpenShell sandbox)
@@ -30,7 +31,9 @@ UI ──/api/v1 proxy──▶ API ──Runs API──▶ hermes-gateway ─�
    `/internal/hermes/jobs/{id}/tool-receipts`; the API stores it once and adds one event that points at it.
 4. When the run completes, the API waits up to `HERMES_RECEIPT_SETTLE_SECONDS` for every tool call's
    receipt, turns the agent's `[evidence:<receipt id>]` tokens into numbered citations with a Sources
-   list (`reports/publication.py`), and stores the report with `success` in one transaction.
+   list (`reports/publication.py`), records the publication as three last events (response formatted, citations
+   resolved, run metrics; [contracts](../contracts/README.md#execution-events-executionv2)), and stores the report
+   with `success` in one transaction.
 
 A job fails with a message the UI can show when Hermes fails, a progress budget runs out (idle,
 no progress, tool calls, repeated events), or the 1,200 s job deadline passes; the Hermes run is
@@ -67,6 +70,7 @@ Hermes to stop their runs, waiting up to 10 s. The container therefore needs a s
 | `GET /v1/jobs/async/job/{id}/export` | The job as one turn of the recordings bundle |
 | `POST /v1/jobs/async/job/{id}/benchmark` | Compare the finished job's market calls on the CPU and the GPU ([below](#benchmark)); a stored comparison is returned as is |
 | `GET /v1/jobs/async/job/{id}/benchmark` | The stored comparison; 404 until one has run |
+| `GET /v1/jobs/async/job/{id}/retrieval-benchmark` | The Milvus CPU/GPU index comparison that applies to the finished job's retrieval calls ([below](#benchmark)); 404 on a CPU-only stack |
 | `POST /v1/speech/transcriptions` | One 16 kHz mono PCM16 WAV (`audio/wav`, at most 3 MiB) → `{text}` ([below](#voice-input)) |
 | `GET /internal/hermes/jobs/{id}/execution-scope` | Plugin: the job's sources, database, collection and model tiers |
 | `POST /internal/hermes/jobs/{id}/tool-receipts` | Plugin: one `ReceiptV2` |
@@ -103,6 +107,15 @@ running job is 409, and a job without market calls 422. On the CPU-only `analyti
 no analytics service, the answer is `status: "unavailable"` with the reason, and nothing is stored;
 a completed or failed comparison is stored with the job, which `export` then carries.
 
+**Milvus.** On a GPU host (analytics-gpu with retrieval) the `retrieval-benchmark` one-shot measures each index
+build once: the pack's held-out queries on the CPU index and on a `GPU_CAGRA` copy in a GPU Milvus
+([retrieval](../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)), into
+`/data/active/retrieval-benchmark.json` (`src/demo_api/benchmark/retrieval.py`, contract
+`contracts/schemas/retrieval-benchmark.schema.json`). `GET .../retrieval-benchmark` returns it for a finished job
+whose retrieval calls searched that build (their receipts' `collectionVersion`): 404 when the stack has none, 409
+while the job runs or once the index was rebuilt, 422 when the job searched no documents. `export` carries it as
+`retrievalBenchmark`, or null.
+
 ## Voice input
 
 `POST /v1/speech/transcriptions` (`src/demo_api/speech/`) checks the WAV (16 kHz, mono, 16-bit, at most
@@ -125,16 +138,20 @@ are asked in order with one `conversation-id`, so each sees the answers before i
 
 ```text
 data/packs/<pack>/recordings/
-  index.json          {schemaVersion: 2, pack: {id, version}, recordedAt, sessions: [{id, title, featured, turns: [{jobId, question}]}]}
+  index.json          {schemaVersion: 2, pack: {id, version}, recordedAt, sessions: [{id, title, featured, turns: [{jobId, question}], tools}]}
   pack.json           copy of /data/active/pack.json
   sessions/<id>.json  {schemaVersion: 2, id, title, turns: [<export>]}
   database.json       {schemaVersion: 1, sources: [{id, name, databaseName, schema, previews, queries: [{sql, result}]}]}
 ```
 
+Each `index.json` session also lists the `tools` its runs used, `[{pill, device, tools}]`
+(`src/demo_api/pills.py`): one per technology pill, with the engine a market tool reported (`gpu` or `cpu`) and
+the tool ids behind it, for the UI's replays list.
+
 An export turn is `{jobId, question, submittedAt, completedAt, status, report: {markdown, citations[]} | null,
-events: [execution.v2], receipts: [ReceiptV2], sourceIds, benchmark}`. After each answer the
+events: [execution.v2], receipts: [ReceiptV2], sourceIds, benchmark, retrievalBenchmark}`. After each answer the
 recorder asks for its CPU/GPU comparison, so a bundle recorded on the GPU profile replays the
-Benchmark tab (`benchmark` stays null on the CPU profile). `database.json` lets the data viewer work
+Benchmark tab (`benchmark` and `retrievalBenchmark` stay null on the CPU profile). `database.json` lets the data viewer work
 in replay: each structured source's `GET .../schema`, the first 8 rows of each table
 (`GET .../preview`), and the `POST .../query` results of the SQL the recorded answers ran and of the
 viewer's starting query for each table. `demo-api snapshot-database --out <recordings>` rewrites only

@@ -182,3 +182,29 @@ export const describeRun = (run: RunProjection): string =>
   ]
     .filter(Boolean)
     .join(' · ')
+
+/** What the API records when it publishes the answer (`report.metrics`), for runs recorded with it. */
+export interface PublishedMetrics {
+  /** The model the run asked Hermes for */
+  runtimeProfile: string | null
+  wallDurationMs: number | null
+  toolCallCount: number | null
+  knownToolDurationMs: number | null
+}
+
+const metricCount = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.round(value) : null
+
+/** The run's published metrics, or null for a run recorded before the API published them. */
+export const publishedMetrics = (events: readonly ExecutionEventV2[]): PublishedMetrics | null => {
+  const attributes = [...events].reverse().find((event) => event.eventKind === 'report.metrics')
+    ?.display.attributes
+  if (!attributes) return null
+  const profile = attributes.runtime_profile
+  return {
+    runtimeProfile: typeof profile === 'string' && profile.trim() ? profile : null,
+    wallDurationMs: metricCount(attributes.wall_duration_ms),
+    toolCallCount: metricCount(attributes.tool_call_count),
+    knownToolDurationMs: metricCount(attributes.known_tool_duration_ms),
+  }
+}

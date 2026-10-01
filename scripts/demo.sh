@@ -55,7 +55,8 @@ Data and recordings
                           DATA_SOURCE_<ID> in .env, and verify them file by file
   data prepare            build the active data pack (and the corpus and index with retrieval);
                           on a running stack, also restart the tools and, if needed, the sandbox
-  data reindex            rebuild the retrieval index, e.g. after changing the embed model
+  data reindex            rebuild the retrieval index, e.g. after changing the embed model (with
+                          analytics-gpu, also its CPU/GPU comparison)
   data generate [ARGS...]  write the synthetic-market text with NeMo Data Designer and Nemotron, with
                           uv on the host (ARGS go to demo-data-generate, e.g. --profile large)
   data validate|verify|list|clean [--all]
@@ -414,6 +415,11 @@ reindex() {
   dc build --quiet retrieval # retrieval-index's image, as the data image above
   dc up -d --wait milvus
   dc run --rm --no-deps retrieval-index
+  # analytics-gpu: measure the new build on the CPU index and on its GPU copy (the Benchmark tab's Milvus row)
+  if has_profile analytics-gpu; then
+    dc up -d --wait milvus-gpu
+    dc run --rm --no-deps retrieval-benchmark
+  fi
 }
 
 # test [SUITE...]
