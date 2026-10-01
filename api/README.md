@@ -31,7 +31,9 @@ UI ──/api/v1 proxy──▶ API ──Runs API──▶ hermes-gateway ─�
    `/internal/hermes/jobs/{id}/tool-receipts`; the API stores it once and adds one event that points at it.
 4. When the run completes, the API waits up to `HERMES_RECEIPT_SETTLE_SECONDS` for every tool call's
    receipt, turns the agent's `[evidence:<receipt id>]` tokens into numbered citations with a Sources
-   list (`reports/publication.py`), and stores the report with `success` in one transaction.
+   list (`reports/publication.py`), records the publication as three last events (response formatted, citations
+   resolved, run metrics; [contracts](../contracts/README.md#execution-events-executionv2)), and stores the report
+   with `success` in one transaction.
 
 A job fails with a message the UI can show when Hermes fails, a progress budget runs out (idle,
 no progress, tool calls, repeated events), or the 1,200 s job deadline passes; the Hermes run is

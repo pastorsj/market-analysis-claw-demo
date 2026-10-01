@@ -98,10 +98,38 @@ async def test_a_question_runs_on_hermes_and_publishes_a_cited_answer(app, api, 
         "tool.started",
         "tool.completed",
         "run.completed",
+        "report.completed",
+        "report.reference_resolution",
+        "report.metrics",
         "artifact.update",
         "stream.mode",
         "job.status",
     ]
+    # Publishing the answer: its citation resolution and the run's metrics, as the original demo showed them
+    publication = {
+        f["data"]["eventKind"]: f["data"] for f in frames if f["data"].get("eventKind", "").startswith("report.")
+    }
+    assert [event["display"]["label"] for event in publication.values()] == [
+        "Response formatted",
+        "Citations resolved",
+        "Run metrics available",
+    ]
+    assert publication["report.reference_resolution"]["display"]["attributes"] == {
+        "status": "partial",  # one citation did not resolve
+        "total_citations": 1,
+        "uncited_evidence_count": 0,
+        "invalid_evidence_count": 1,
+    }
+    metrics = publication["report.metrics"]["display"]["attributes"]
+    assert metrics | {"wall_duration_ms": None} == {
+        "runtime_profile": "enterprise-research",
+        "wall_duration_ms": None,  # Hermes's run times, when the status has them
+        "tool_call_count": 1,
+        "known_tool_duration_ms": 1500,  # the tool call's reported 1.5 s
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "total_tokens": 15,
+    }
     assert all((f["id"] is None) == (f["event"] in {"stream.start", "stream.mode", "job.status"}) for f in frames)
     assert frames[-1]["data"] == {"status": "success"}
     receipt_event = frames[3]["data"]

@@ -8,8 +8,9 @@
 2. Bind the run to the job, then follow its events, storing each as an ``execution.v2`` event,
    while the progress guard and the cancel signal can stop it.
 3. Wait briefly until every registered tool call has its receipt (the plugin posts them to
-   ``/internal/hermes/.../tool-receipts``), resolve the answer's citations against them, and
-   store the report and ``success`` in one transaction.
+   ``/internal/hermes/.../tool-receipts``), resolve the answer's citations against them, record the
+   publication events (response formatted, citations resolved, run metrics), and store the report
+   and ``success`` in one transaction.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from typing import Any
 from demo_api.hermes.client import HermesClient
 from demo_api.hermes.client import HermesError
 from demo_api.hermes.client import RunEvent
+from demo_api.hermes.client import RunStatus
 from demo_api.hermes.lifecycle import HermesRunDeadlineExceeded
 from demo_api.hermes.lifecycle import HermesRunLifecycle
 from demo_api.hermes.lifecycle import RunLimits
@@ -29,6 +31,7 @@ from demo_api.hermes.normalizer import EventNormalizer
 from demo_api.hermes.progress import HermesRunBudgetExceeded
 from demo_api.hermes.progress import ProgressGuard
 from demo_api.hermes.progress import ProgressLimits
+from demo_api.hermes.request import MODEL
 from demo_api.hermes.request import PriorTurn
 from demo_api.hermes.request import build_run_request
 from demo_api.registry import ToolRegistry
@@ -57,6 +60,13 @@ def final_report_event(markdown: str, citations: list[dict[str, Any]]) -> dict[s
         "type": "artifact.update",
         "data": {"type": "output", "output_category": "final_report", "content": markdown, "citations": citations},
     }
+
+
+def _wall_ms(status: RunStatus) -> int | None:
+    """The run's wall time, from Hermes's own creation and completion times."""
+    if status.created_at is None or status.updated_at is None:
+        return None
+    return max(0, round((status.updated_at - status.created_at) * 1000))
 
 
 class HermesJobExecutor:
@@ -146,6 +156,16 @@ class HermesJobExecutor:
 
         receipts = await self._settled_receipts(job.job_id, normalizer.completed_registered_calls)
         report = publish_report(status.output, citations_from_receipts(receipts, self._registry))
+        metrics = {
+            # The model the run asked Hermes for (Switchyard's route), as Hermes reports it
+            "runtime_profile": status.model or MODEL,
+            **({"wall_duration_ms": wall_ms} if (wall_ms := _wall_ms(status)) is not None else {}),
+            "tool_call_count": normalizer.tool_call_count,
+            "known_tool_duration_ms": normalizer.known_tool_duration_ms,
+            **{key: value for key, value in normalizer.usage.items() if key != "reasoning_tokens"},
+        }
+        for event in normalizer.publication(binding.run_id, resolution=report.resolution(), metrics=metrics):
+            await self._store.append_event(job.job_id, event.to_event_store_dict())
         await self._store.transition(
             job.job_id,
             expected={JobStatus.RUNNING},

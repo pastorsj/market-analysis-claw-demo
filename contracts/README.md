@@ -65,6 +65,15 @@ attributes carry `served_model` (the model Switchyard served) and `tier` (`effic
 `output_tokens`; `prompt_tokens` and `completion_tokens` are rejected (see
 [the limits](#display-safe-json-limits)).
 
+When a run succeeds, the API records its publication as three last events, in this order, as the original demo
+did:
+
+| `eventKind` | Label | `display.attributes` |
+| --- | --- | --- |
+| `report.completed` | Response formatted | – |
+| `report.reference_resolution` | Citations resolved | `status` (`reference_ids_resolved`, `partial`, `evidence_uncited` or `no_evidence`), `total_citations`, `uncited_evidence_count`, `invalid_evidence_count` |
+| `report.metrics` | Run metrics available | `runtime_profile` (the model the run asked Hermes for), `wall_duration_ms`, `tool_call_count`, `known_tool_duration_ms`, token counts |
+
 ## Receipts (`ReceiptV2`)
 
 The agent plugin posts one receipt per registered tool call to

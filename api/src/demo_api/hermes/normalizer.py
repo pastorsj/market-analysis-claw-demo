@@ -75,6 +75,13 @@ class EventNormalizer:
         self._open_tools: list[tuple[str, str]] = []  # (Hermes tool name, invocation id)
         self.completed_registered_calls: set[str] = set()  # invocation ids that must have a receipt
         self.terminal_seen = False
+        self.usage: dict[str, int] = {}  # the run's token usage, from its terminal event
+        self.known_tool_duration_ms = 0  # the durations Hermes reported for the run's finished tool calls
+
+    @property
+    def tool_call_count(self) -> int:
+        """Tool calls the run started (Hermes's own tools included)."""
+        return self._tool_count
 
     def normalize(self, event: RunEvent) -> ExecutionEventV2 | None:
         """Project one Hermes event, or return None for events the product does not store."""
@@ -87,6 +94,7 @@ class EventNormalizer:
             self.terminal_seen = True
             state, label = _TERMINAL[event.event]
             summary = _safe_text(event.data.get("error"), 500) if event.event == "run.failed" else None
+            self.usage = {key: value for key, value in _usage(event.data).items() if key in _USAGE_KEYS}
             display = DisplaySafeProjection(label=label, summary=summary, attributes=_usage(event.data))
         elif event.event == "run.created":
             state = "started"
@@ -125,6 +133,48 @@ class EventNormalizer:
             **fields,
         )
 
+    def publication(
+        self,
+        run_id: str,
+        *,
+        resolution: dict[str, Any],
+        metrics: dict[str, Any],
+        published_at: float | None = None,
+    ) -> list[ExecutionEventV2]:
+        """The events of publishing the answer, after the run: the formatted response, its citation resolution
+        (``resolution``: status and counts) and the run's metrics (``metrics``: runtime profile, tool calls,
+        tokens). They are the original demo's last replay steps."""
+        steps = (
+            ("report.completed", "Response formatted", {}),
+            ("report.reference_resolution", "Citations resolved", resolution),
+            ("report.metrics", "Run metrics available", metrics),
+        )
+        events = []
+        for kind, label, attributes in steps:
+            self._ordinal += 1
+            source_event_id = f"publication:{self._job_id}:{kind}"
+            events.append(
+                ExecutionEventV2(
+                    event_id=uuid5(NAMESPACE_URL, f"urn:nvidia:hermes-execution:{source_event_id}"),
+                    job_id=self._job_id,
+                    run_id=run_id,
+                    session_id=self._session_id,
+                    event_kind=kind,
+                    state="completed",
+                    occurred_at=_occurred_at(published_at),
+                    display=DisplaySafeProjection(label=label, attributes=attributes),
+                    provenance=EventProvenance(
+                        source_system="demo-api",
+                        source_event_id=source_event_id,
+                        source_event_kind=kind,
+                        normalization_version=NORMALIZATION_VERSION,
+                    ),
+                    component_id="hermes.agent",
+                    invocation_id=run_invocation_id(run_id),
+                )
+            )
+        return events
+
     def _tool(self, event: RunEvent, root: str) -> tuple[ExecutionState, DisplaySafeProjection, dict[str, Any]]:
         raw_name = event.data.get("tool")
         name = raw_name.strip() if isinstance(raw_name, str) and raw_name.strip() else "unknown"
@@ -161,6 +211,7 @@ class EventNormalizer:
             duration = event.data.get("duration")
             if isinstance(duration, int | float) and not isinstance(duration, bool) and math.isfinite(duration):
                 attributes["duration_seconds"] = max(float(duration), 0.0)
+                self.known_tool_duration_ms += round(attributes["duration_seconds"] * 1000)
 
         label = tool.label if tool is not None else (_safe_text(name, 120) or "Unknown tool")
         fields: dict[str, Any] = {

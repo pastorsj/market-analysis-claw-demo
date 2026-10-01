@@ -79,6 +79,26 @@ class PublishedReport:
     markdown: str
     citations: list[dict[str, Any]]  # Citation.wire(), numbered in order of first use
     invalid_evidence_ids: list[str]
+    uncited_evidence_ids: list[str]  # evidence the answer could have cited but did not
+
+    @property
+    def status(self) -> str:
+        """``reference_ids_resolved``, ``partial`` (some citations did not resolve), ``evidence_uncited`` or
+        ``no_evidence``, as the original demo reported publication."""
+        if self.invalid_evidence_ids:
+            return "partial"
+        if self.citations:
+            return "reference_ids_resolved"
+        return "evidence_uncited" if self.uncited_evidence_ids else "no_evidence"
+
+    def resolution(self) -> dict[str, Any]:
+        """The citation resolution, as the ``report.reference_resolution`` event reports it."""
+        return {
+            "status": self.status,
+            "total_citations": len(self.citations),
+            "uncited_evidence_count": len(self.uncited_evidence_ids),
+            "invalid_evidence_count": len(self.invalid_evidence_ids),
+        }
 
 
 def citations_from_receipts(receipts: list[dict[str, Any]], registry: ToolRegistry) -> list[Citation]:
@@ -141,6 +161,7 @@ def publish_report(draft: str, evidence: list[Citation]) -> PublishedReport:
         markdown=markdown,
         citations=[item.wire(number) for number, item in enumerate(cited, 1)],
         invalid_evidence_ids=invalid,
+        uncited_evidence_ids=[item.evidence_id for item in evidence if item not in cited],
     )
 
 
