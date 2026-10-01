@@ -30,7 +30,8 @@ spans two files, and in month partitions each part holds whole symbols, so group
 Times become the dataset's wall-clock times in its zone (`timezone`): bars are exchange-local, and so is the
 regular session. The window, naive UTC like every other timestamp in the worker, is converted to them. A tz-aware
 time column (TIMESTAMP WITH TIME ZONE) is converted on read; its footer statistics and the reader's filter take the
-column's own zone.
+column's own zone. cudf cannot filter a tz-aware column, so on the GPU such month partitions are read by pandas:
+for GPU speed, store naive wall-clock times.
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
 
 import numpy as np
 import pandas as pd
@@ -58,6 +60,7 @@ FIELDS = ("time", "open", "high", "low", "close", "volume")
 # times on the CPU, where 256 MiB batches keep a whole-market scan near 2 GB and are no slower than larger ones.
 GPU_BATCH_BYTES = 1 << 30
 CPU_BATCH_BYTES = 1 << 28
+UTC_ZONE = ZoneInfo("UTC")
 
 
 def batch_bytes() -> int:
@@ -204,8 +207,12 @@ class MinuteBars:
             # Row i came from file files[i]; a gather turns that into the file's symbol.
             files = np.repeat(np.arange(len(batch)), [part.rows for part in batch])
             frame["symbol"] = pd.Series([part.symbol for part in batch]).iloc[files].reset_index(drop=True)
-        if zone:
-            frame["time"] = frame["time"].dt.tz_convert(self.timezone.key).dt.tz_localize(None)
+        if zone:  # pandas reads the column tz-aware, cudf as naive UTC: both become naive wall-clock time
+            times = frame["time"]
+            if isinstance(times.dtype, pd.DatetimeTZDtype):
+                times = times.dt.tz_convert(None)
+            # ZoneInfo objects, not names: cudf.pandas runs tz_localize and tz_convert on the GPU only with those.
+            frame["time"] = times.dt.tz_localize(UTC_ZONE).dt.tz_convert(self.timezone).dt.tz_localize(None)
         # The reader applied the window to month partitions; one-symbol files were read whole.
         keep = None if self.symbol_column else frame["time"].between(self.local(start), self.local(end))
         if self.regular_session:
@@ -230,9 +237,13 @@ def _batches(parts: list[Part], budget: int) -> Iterator[list[Part]]:
         yield batch
 
 
-def _in_zone(moment: datetime, zone: str) -> pd.Timestamp:
-    """A naive UTC moment as a tz-aware timestamp in `zone`."""
-    return pd.Timestamp(moment.replace(tzinfo=moment.tzinfo or UTC)).tz_convert(zone)
+def _in_zone(moment: datetime, zone: str) -> datetime:
+    """A naive UTC moment as a tz-aware datetime in `zone`, a tz database name or a fixed offset such as +05:30."""
+    aware = moment.replace(tzinfo=moment.tzinfo or UTC)
+    try:
+        return aware.astimezone(ZoneInfo(zone))
+    except (ZoneInfoNotFoundError, ValueError):
+        return pd.Timestamp(aware).tz_convert(zone).to_pydatetime()
 
 
 def _bounds(chunk: pq.ColumnChunkMetaData) -> tuple[Any, Any]:

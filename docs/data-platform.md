@@ -292,7 +292,8 @@ GROUP BY ALL ORDER BY symbol, trading_date
   as regular. This is a known approximation; there is no holiday calendar.
 - Daily bars (`frequency: 1d`) pass through unchanged.
 - A `TIMESTAMP WITH TIME ZONE` time column is converted to wall-clock time in `market.bars.timezone` first.
-  `intraday_scan`, which reads the bars in place, converts it the same way.
+  `intraday_scan`, which reads the bars in place, converts it the same way. On the GPU, cudf cannot filter such a
+  column, so month partitions of it are read by pandas: store naive wall-clock times for GPU speed.
 - Measured on the `us-equities` minute bars: the pass reads all 117,242,458 bars and keeps 106,348,392 regular-session bars. It
   writes 572,995 daily rows (2,200 symbols, 305 dates) to a 12 MB file in 0.9 s on a 14-core laptop, in
   3.3 s in the data image on a 4-CPU colima VM, and in 3.6 s in the image on the 12-vCPU Brev A100 VM. At
