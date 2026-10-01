@@ -118,8 +118,7 @@ tools/auto-ontology/prepare.sh                                # writes .build/au
 Then add `ontology` to `COMPOSE_PROFILES` in `.env` and start the demo with `scripts/demo.sh`. Build the agent
 image with the `ontology` feature, so Hermes gets the `auto_ontology` server.
 
-The images bundle private wheels (`kumorfm`, `nvidia_sdfm`) that upstream lists as a hard dependency. Keep them
-local; do not push or share them.
+The images are built locally from the submodule; do not publish them.
 
 ## Move the pin
 

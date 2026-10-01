@@ -29,7 +29,7 @@ def dataset(root: Path, fingerprint: str = MANIFEST["dataset_fingerprint"]) -> D
     return Dataset("minute-bars", root, "benchmark-bundle-manifest.json", fingerprint, MANIFEST["total_bytes"])
 
 
-def test_the_fingerprint_is_bfds_digest_of_the_file_list():
+def test_the_fingerprint_is_the_digest_of_the_file_list():
     files = [{"path": "a.parquet", "bytes": 3, "sha256": "0" * 64}]
 
     assert external.fingerprint(files) == "0ae5d918d58396d35077613f64e84a1bfc80ba7a51a9b72af77b29cefc7ff0f0"

@@ -16,7 +16,7 @@ from demo_data.pack import load_pack
 
 PACKS = DATA_ROOT / "packs"
 FIXTURES = Path(__file__).parent / "fixtures"
-# Made-up minute bars in BFD's layout and a stub SEC snapshot (fixtures/make_minute_bars_fixture.py); no real data.
+# Made-up per-symbol minute bars and a stub SEC snapshot (fixtures/make_minute_bars_fixture.py); no real data.
 MINUTE_BARS = FIXTURES / "external" / "minute-bars"
 
 

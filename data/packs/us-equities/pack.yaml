@@ -43,7 +43,7 @@ licenses:
 
 external:
   minute-bars:
-    title: US equities, one-minute split-adjusted bars (BFD benchmark subset)
+    title: US equities, one-minute split-adjusted bars
     manifest: benchmark-bundle-manifest.json
     fingerprint: d8b405106b9cda1e691f6204a85219e45ab1b392008e982087e732964f713899
     bytes: 1812697046

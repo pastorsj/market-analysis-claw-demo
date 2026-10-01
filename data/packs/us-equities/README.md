@@ -10,7 +10,7 @@ definition and the dataset's pinned fingerprint. Fetch the data first ([data pla
 
 ```bash
 # in .env: DATA_PACK=us-equities, and where the bars come from, e.g. a local copy or a bucket
-DATA_SOURCE_MINUTE_BARS=/mnt/datasets/bfdmini/benchmark-subset
+DATA_SOURCE_MINUTE_BARS=/mnt/datasets/minute-bars
 ./scripts/demo.sh data fetch      # into $DATA_SOURCE_DIR/minute-bars, verified file by file
 ./scripts/demo.sh up              # builds the pack; on a running stack, also switches everything to it
 ```
@@ -24,8 +24,8 @@ DATA_SOURCE_MINUTE_BARS=/mnt/datasets/bfdmini/benchmark-subset
 | `market_regulations` | downloaded, real | eCFR Title 17 as of 2026-08-17 (3,525 sections) |
 | `world_news` (opt-in) | external dataset `minute-bars`, read in place | 8,192 GDELT headlines, 2025-01-01 to 2026-02-02 |
 
-Built from the BFD benchmark subset (`bfdmini`, fingerprint `d8b40510…`, 1.8 GB, 117 million bars for 2,200
-symbols from 2025-01-02 to 2026-03-12):
+Built from the pinned minute-bar dataset (fingerprint `d8b40510…`, 1.8 GB, 117 million bars for 2,200 symbols
+from 2025-01-02 to 2026-03-12):
 
 | Table | Rows | Built from |
 |---|---|---|

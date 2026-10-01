@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Made-up minute bars in the two layouts bars.py reads, for three symbols over three days.
 
-Bars run from 04:00 to 19:59 New York time, one row group per symbol and day. `per_symbol` writes BFD's layout
-(one file per symbol, no symbol column); `month_partitions` writes the canonical one (month=YYYY-MM/part-NNN,
-each part holding whole symbols). The days cross a month boundary.
+Bars run from 04:00 to 19:59 New York time, one row group per symbol and day. `per_symbol` writes one file per
+symbol (no symbol column); `month_partitions` writes the canonical layout (month=YYYY-MM/part-NNN, each part
+holding whole symbols). The days cross a month boundary.
 """
 
 from pathlib import Path
@@ -46,7 +46,7 @@ def minute_bars(symbols: list[str] = SYMBOLS) -> pd.DataFrame:
 
 
 def per_symbol(root: Path, symbols: list[str] = SYMBOLS) -> dict[str, Any]:
-    """BFD's layout; returns pack.json's `market.bars` for it."""
+    """One file per symbol; returns pack.json's `market.bars` for it."""
     (root / "stocks_1min").mkdir(parents=True)
     for symbol, bars in minute_bars(symbols).groupby("symbol"):
         path = root / "stocks_1min" / f"{symbol}_full_1min_adjsplit.parquet"

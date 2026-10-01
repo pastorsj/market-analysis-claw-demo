@@ -102,7 +102,7 @@ each rebuild, if you change code and rebuild images on the host. The CPU tier bu
 no Kumo NIM. `docker system df` shows the current split.
 
 **External data** (a pack such as `us-equities`, [data platform](data-platform.md)) sits outside Docker, in
-`DATA_SOURCE_DIR` (default `~/market-demo-data`). Plan for the dataset itself (`bfdmini`: 1.8 GB), plus, in the
+`DATA_SOURCE_DIR` (default `~/market-demo-data`). Plan for the dataset itself (`us-equities`' minute bars: 1.8 GB), plus, in the
 `demo-data` volume, its daily rollup (about 1% of the minute data: 12 MB) and each build (72 MB for
 `us-equities`). The daily tables grow with symbols times sessions, not with the minute data: 10,000 symbols
 over 10 years is about 27 million daily rows, a few GB per build. `doctor` checks that each dataset not yet
@@ -205,12 +205,12 @@ profile and the default corpora. `up` needed nothing else installed.
 
    ```bash
    # On your machine
-   rsync -a --partial --exclude '.*' <bfdmini>/benchmark-subset/ <instance>:market-demo-data/minute-bars/
+   rsync -a --partial --exclude '.*' <dataset>/ <instance>:market-demo-data/minute-bars/
    # On the VM
    ./scripts/demo.sh data fetch --verify-only
    ```
 
-   Measured on 2026-09-30 with `bfdmini` (2,206 files, 1.8 GB) on this A100 VM: the push from a laptop took
+   Measured on 2026-09-30 with the `us-equities` minute bars (2,206 files, 1.8 GB) on this A100 VM: the push from a laptop took
    11 minutes (the laptop's uplink); `--verify-only` hashed every file in 1.3 s, and a rerun, which hashes only
    what changed, took 0.2 s. The first `data prepare` of `us-equities` then rolled the 117 million minute bars
    up to daily bars in 3.6 s and built the pack in 8.2 s, plus about 4 minutes to look up SEC company data at

@@ -4,10 +4,10 @@
 
 A source is an fsspec URL, so one loop serves every kind:
 
-    /mnt/datasets/bfdmini or file:///mnt/...   a local directory
-    https://example.com/bfdmini/                a prefix: each file is fetched as <prefix><path>
-    https://.../bfdmini.tar.gz                  one .tar or .tar.gz archive with the dataset at its top level
-    s3://bucket/prefix, gs://bucket/prefix      object stores (credentials from the usual environment variables)
+    /mnt/datasets/minute-bars or file:///mnt/...   a local directory
+    https://example.com/minute-bars/                a prefix: each file is fetched as <prefix><path>
+    https://.../minute-bars.tar.gz                  one .tar or .tar.gz archive with the dataset at its top level
+    s3://bucket/prefix, gs://bucket/prefix         object stores (credentials from the usual environment variables)
     hf://datasets/<owner>/<name>@<revision>/<prefix>    a Hugging Face dataset (HF_TOKEN)
 
 The remote schemes need the `remote` extra, which the image installs. rsync is not a scheme: `demo.sh data fetch`

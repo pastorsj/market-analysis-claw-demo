@@ -5,7 +5,7 @@
 The daily tables fit in memory, so the worker loads them once (data.py). Minute bars are hundreds of times larger
 and are never loaded whole. A scan names symbols and a window, and:
 
-1. picks the files: by symbol when each file holds one symbol (BFD's `<SYMBOL>_full_1min_adjsplit.parquet`), or
+1. picks the files: by symbol when each file holds one symbol (such as `<SYMBOL>_full_1min_adjsplit.parquet`), or
    by window when files sit in month partitions (`month=YYYY-MM/`, the canonical layout), and skips any file
    whose Parquet footer shows no row group in the window (or, in a file of many symbols, none of the symbols);
 2. estimates from the footers what reading each file takes: the columns read, in the row groups read;
@@ -15,7 +15,7 @@ and are never loaded whole. A scan names symbols and a window, and:
 
 Memory holds one batch plus the reduced results, whatever the dataset's size, which is how a GPU scan goes past an
 A100's 40 GB. The reads are plain pandas calls, which cudf.pandas runs on cudf's Parquet reader. As with Polars'
-`scan_parquet` and BFD's own loaders, a batch is one multi-file read: cudf pays about 25 ms per call, so reading
+`scan_parquet`, a batch is one multi-file read: cudf pays about 25 ms per call, so reading
 file by file was 16 to 46 times slower on the GPU.
 
 In month partitions the window and the symbols go into the reader, which skips row groups by their statistics. A

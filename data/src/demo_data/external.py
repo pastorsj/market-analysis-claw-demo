@@ -5,7 +5,7 @@
 pack.yaml declares each one under `external.<id>`: the path of its manifest inside the dataset, the pinned
 `fingerprint` and its size. The dataset itself lives in $DATA_SOURCE_DIR/<id>/ and is never committed.
 
-The manifest is BFD's benchmark bundle manifest; keys other than `files` are informational:
+The manifest lists every file with its size and hash; keys other than `files` are informational:
 
     {"files": [{"path": "market/stocks_1min/AAPL_full_1min_adjsplit.parquet", "bytes": 3865509, "sha256": "..."}]}
 

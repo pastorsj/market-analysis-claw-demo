@@ -16,8 +16,8 @@ reference for the format and the commands.
    a machine through `demo.sh data fetch`, and is pinned by a digest. The repository holds only that digest,
    synthetic data and small synthetic fixtures.
 2. **Scale is a property of the format, not of one dataset.** Nothing loads the raw minute bars whole. The
-   first real input, `bfdmini` (1.7 GB, 117 million minute bars for 2,200 US tickers), is a test case, not a
-   ceiling.
+   first real input, the `us-equities` minute bars (1.7 GB, 117 million bars for 2,200 US tickers), is a test
+   case, not a ceiling.
 3. **Two packs, one format.** `synthetic-market` (NeMo Data Designer) is the public default. `us-equities`
    (real minute bars) is optional and private. Both produce the same tables through the same importer.
 4. **SEC EDGAR filings are a separate document source** in both packs, searched by retrieval. They are
@@ -145,8 +145,8 @@ with external data starts only when every dataset it uses has been verified (nex
 
 ## The manifest
 
-An external dataset carries its manifest at a fixed path inside it. The format is BFD's benchmark bundle
-manifest, so `bfdmini` works as it is:
+An external dataset carries its manifest at a fixed path inside it. The manifest lists every file with its size
+and hash:
 
 ```json
 {
@@ -161,8 +161,8 @@ manifest, so `bfdmini` works as it is:
 ```
 
 - `files` is sorted by `path`, and the paths are relative POSIX paths. The manifest does not list itself.
-- `dataset_fingerprint = sha256(json.dumps(files, sort_keys=True, separators=(",", ":")))`. This is BFD's
-  own algorithm; recomputing it over the `bfdmini` manifest gives the fingerprint its README publishes.
+- `dataset_fingerprint = sha256(json.dumps(files, sort_keys=True, separators=(",", ":")))`. Recomputing it
+  over the `us-equities` dataset's manifest gives the fingerprint its `pack.yaml` pins.
 - Other keys, such as `format`, `proof_scale` or per-symbol row counts, are informational and ignored.
 - The pack commits only the fingerprint. The manifest travels with the data: it lists every file name and
   grows with the dataset, so committing it would not scale.
@@ -190,9 +190,9 @@ it is empty, fetch only verifies what is already in place.
 
 | Source | Example | Credentials (`.env`) | Runs |
 |---|---|---|---|
-| Local directory | `/mnt/datasets/bfdmini` or `file:///mnt/…` | – | rsync on the host, then `--verify-only` in the image |
-| rsync over SSH | `user@host:/srv/bfdmini` | the host's SSH agent and keys | rsync on the host, then `--verify-only` in the image |
-| HTTPS | `https://example.com/bfdmini/` (a prefix; files are fetched as `<prefix><path>`), or one `.tar` or `.tar.gz` archive with the dataset at its top level (a pre-signed URL works) | `DATA_SOURCE_HTTP_TOKEN` (optional, sent as a bearer token) | in the data image |
+| Local directory | `/mnt/datasets/minute-bars` or `file:///mnt/…` | – | rsync on the host, then `--verify-only` in the image |
+| rsync over SSH | `user@host:/srv/minute-bars` | the host's SSH agent and keys | rsync on the host, then `--verify-only` in the image |
+| HTTPS | `https://example.com/minute-bars/` (a prefix; files are fetched as `<prefix><path>`), or one `.tar` or `.tar.gz` archive with the dataset at its top level (a pre-signed URL works) | `DATA_SOURCE_HTTP_TOKEN` (optional, sent as a bearer token) | in the data image |
 | S3 or S3-compatible | `s3://bucket/prefix` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optional `AWS_SESSION_TOKEN`, `AWS_REGION`, `AWS_ENDPOINT_URL` | in the data image |
 | Google Cloud Storage | `gs://bucket/prefix` | `GOOGLE_APPLICATION_CREDENTIALS`: a host path to a service-account JSON, mounted read-only (empty for a public bucket) | in the data image |
 | Hugging Face | `hf://datasets/<owner>/<name>@<revision>/<prefix>` | `HF_TOKEN` | in the data image |
@@ -219,9 +219,9 @@ it is empty, fetch only verifies what is already in place.
 - `doctor` (and so `up`) stops when a pack's dataset has not been fetched, naming the variable to set, and
   checks that `DATA_SOURCE_DIR` has room for it (its `bytes` plus 10%).
 - **Brev and other VMs.** Point `DATA_SOURCE_DIR` at the large disk. At setup, run `data fetch` from a
-  bucket, or push from a laptop with `rsync -a <bfdmini>/benchmark-subset/ <vm>:$DATA_SOURCE_DIR/minute-bars/`
-  and then run `data fetch --verify-only` on the VM ([operations](operations.md#brev-vm-mode)).
-- Measured on `bfdmini` (2,206 files, 1.81 GB) on a 14-core laptop: a fetch from a local directory with
+  bucket, or push from a laptop with `rsync -a --partial --exclude '.*' <dataset>/ <vm>:market-demo-data/minute-bars/`
+  (the default `DATA_SOURCE_DIR`, relative to the VM's home) and then run `data fetch --verify-only` on the VM ([operations](operations.md#brev-vm-mode)).
+- Measured on the `us-equities` minute bars (2,206 files, 1.81 GB) on a 14-core laptop: a fetch from a local directory with
   `demo-data` itself took 2.1 s; `demo.sh data fetch` (rsync on the host, then hashing every file in the
   image on a 4-CPU colima VM) took 15 s; a rerun of `--verify-only` hashed nothing and took 0.1 s. On the
   Brev A100 VM, after an rsync push from the laptop (11 minutes over its uplink), `--verify-only` hashed every
@@ -233,13 +233,12 @@ it is empty, fetch only verifies what is already in place.
 **Raw bars are read in place, in the layout they arrive in.** A layout is readable when it is Parquet, when
 the symbol can be found in a column or in the path, and when the files are ordered by time.
 
-- **`bfdmini`** has one file per symbol (`<SYMBOL>_full_1min_adjsplit.parquet`), sorted by time. Its columns
+- **The `us-equities` minute bars** have one file per symbol (`<SYMBOL>_full_1min_adjsplit.parquet`), sorted by time. Its columns
   are `ts` (naive US/Eastern wall-clock time), `timestamp` (the same wall-clock time in microseconds), `open`,
   `high`, `low` and `close` (float32, split-adjusted), `volume` (float64), `symbol_id` and `asset_class_id`.
   Bars run from 04:00 to 19:59. Reads are partitioned by symbol through the file list. Its files carry no
   min/max statistics for `ts`, so a date window cannot prune row groups: each file (two row groups of about
-  120,000 bars) is read whole. BFD's own Polars-GPU and cuDF loaders expect this layout, so the same bytes
-  serve them unchanged.
+  120,000 bars) is read whole.
 - **The canonical layout** is what `synthetic-market` writes, and what a new real dataset should use:
 
   ```text
@@ -265,7 +264,7 @@ never enter the DuckDB file; only the rollup and the minute-bar tools read them.
 
 The design proposed `storage: parquet`: DuckDB views over the build's Parquet instead of copies. It is not
 built, because the API opens the database with external access disabled (its data viewer runs user SQL), and a
-view over `read_parquet` would fail there. Copying is cheap at this scale. On `bfdmini`, the 452,837 daily rows
+view over `read_parquet` would fail there. Copying is cheap at this scale. On `us-equities`, the 452,837 daily rows
 are 14.9 MB of Parquet and 58 MB of DuckDB, most of it the key indexes (20 MB without them; the load takes 0.65 s
 with them and 0.1 s without). At 27 million rows that is about 3.4 GB and 40 s, so a pack that large should drop
 the `daily_prices` constraints from `schema.sql`.
@@ -287,13 +286,13 @@ WHERE CAST(time AS TIME) BETWEEN TIME '09:30' AND TIME '16:00'
 GROUP BY ALL ORDER BY symbol, trading_date
 ```
 
-- The session ends at 16:00 inclusive. In `bfdmini` the 16:00 bar carries the closing auction: for AAPL
+- The session ends at 16:00 inclusive. In the `us-equities` minute bars the 16:00 bar carries the closing auction: for AAPL
   on 2026-03-11 it holds 5.65 million shares, against 0.58 million at 15:59 and 2,025 at 16:01.
 - On early-close days (for example 2025-11-28 and 2025-12-24), after-hours bars up to 16:00 are counted
   as regular. This is a known approximation; there is no holiday calendar.
 - Daily bars (`frequency: 1d`) pass through unchanged.
 - A `TIMESTAMP WITH TIME ZONE` time column is converted to wall-clock time in `market.bars.timezone` first.
-- Measured on `bfdmini`: the pass reads all 117,242,458 bars and keeps 106,348,392 regular-session bars. It
+- Measured on the `us-equities` minute bars: the pass reads all 117,242,458 bars and keeps 106,348,392 regular-session bars. It
   writes 572,995 daily rows (2,200 symbols, 305 dates) to a 12 MB file in 0.9 s on a 14-core laptop, in
   3.3 s in the data image on a 4-CPU colima VM, and in 3.6 s in the image on the 12-vCPU Brev A100 VM. At
   100 times the size, expect minutes, once.
@@ -309,7 +308,7 @@ that no build references, and `clean --all` removes every rollup.
 
 The importer turns the rollup, the companies and the news into the fixed table set:
 
-| Table | Rows (`us-equities` on `bfdmini`) | Built from |
+| Table | Rows (`us-equities`) | Built from |
 |---|---|---|
 | `trading_sessions` | 298 | Dates on which at least half the symbols trading at the time (between their first and last bar) have a regular-session bar. This drops holidays: on 2025-01-09, 2025-01-20, 2025-05-26, 2025-06-19, 2025-07-04, 2025-11-27 and 2026-01-19 only 2 symbols have bars. The result, 298 sessions, matches the exchange calendar. `close_at` is the exact close in UTC (20:00 or 21:00, with daylight saving time). |
 | `assets` | 1,601 | The symbols left after exclusion, plus company metadata (`cik`, `sic_code`, `sector`, `industry`, `exchange`), `first_session`, `last_session`, `sessions`, `median_dollar_volume` and `liquidity_rank` (over the sessions up to the prediction anchor, so the ranked population leaks nothing), and `is_synthetic` |
@@ -340,13 +339,13 @@ and kept notes and preferreds with five-letter tickers (AGNCL, BHFAN). Nasdaq sh
 from notes by their symbol (CENTA and CMSA look alike), so a class share that is not its issuer's primary
 ticker is dropped as preferred.
 
-On `bfdmini`, of 2,200 symbols, rule 1 drops 110 warrants, 50 units, 27 rights and 64 preferreds and notes,
+In `us-equities`, of 2,200 symbols, rule 1 drops 110 warrants, 50 units, 27 rights and 64 preferreds and notes,
 rule 2 drops 118 dotted preferreds, rule 3 drops 221 and rule 4 drops 9, leaving 1,601 symbols and 452,837 daily
 rows.
 
 **SEC company metadata** (`companies: sec`, `data/src/demo_data/sec.py`) comes from
 `company_tickers_exchange.json` (CIK, name, ticker, exchange; 10,431 tickers) and each kept CIK's
-`submissions/CIK##########.json` (`sic`, `sicDescription`). SEC allows 10 requests a second: on `bfdmini`, 1,574
+`submissions/CIK##########.json` (`sic`, `sicDescription`). SEC allows 10 requests a second: for `us-equities`, 1,574
 CIKs took 230 s the first time, the whole first build 237 s. Both need `SEC_USER_AGENT`. Sector is the SIC
 division (for example 20–39 Manufacturing, 60–67 Finance, and Nonclassifiable when SEC has no code); industry is
 the SIC description in title case. A snapshot is cached in `/data/cache/sec/<date>/`: the ticker file as
@@ -354,7 +353,7 @@ fetched, and `sic.json` with every CIK looked up so far, saved as it goes so an 
 `prepare` reuses the newest snapshot unless run with `--refresh-sec`, and the ticker file's digest is part of
 the build key. This is company metadata only: SEC filings stay a separate document source.
 
-Measured end to end on `bfdmini`: with the rollup and the SEC snapshot cached, a new build of `us-equities`
+Measured end to end: with the rollup and the SEC snapshot cached, a new build of `us-equities`
 (tables, DuckDB, ontology, prediction) takes 1.1 s on the laptop and 5.1 s in the data image on colima; an
 unchanged pack is a no-op in 0.2 s. A build is 72 MB.
 
@@ -404,13 +403,13 @@ table becomes optional, and `pack.json`'s `market.bars` feeds `intraday_scan`.
 | Data | How it is read | Where the memory goes |
 |---|---|---|
 | Daily tables (the six daily market tools) | Loaded once into the worker at startup, as today: only the needed columns, and timestamps normalized to naive UTC. | Measured: about 135 bytes per daily price row on the GPU and 225 on the CPU, prices and anomaly features together, and a few times that at peak while deriving them. 10,000 symbols over 10 years (about 27 million rows) needs about 3.6 GB of an A100's 40 GB. The GPU service sets `CUDF_PANDAS_RMM_MODE=managed_pool` (cudf.pandas' default where the GPU supports managed memory), so a larger pack pages to host memory instead of failing. At startup the worker logs the estimate from the Parquet metadata. In `sparse_declared_peers` mode the correlation graph is computed from the declared pairs only, so it grows with the pairs, not the square of the symbols. |
-| Minute bars (`intraday_scan`; never the six daily tools) | Partition-scoped per request, by `tools/market-analytics/src/market_analytics/bars.py`. The symbols map to files (one per symbol) or to month directories (canonical), and files whose footers show no row group in the window are skipped. The files are read in batches whose estimated uncompressed size stays under `MARKET_ANALYTICS_BATCH_BYTES` (default 1 GiB), one multi-file read per batch (cudf pays about 25 ms per call). In the canonical layout the window and symbols become Parquet row-group filters; one-symbol files are read whole, each row's symbol following from its file's row count. Each batch is reduced to its per-symbol, per-session result before the next is read. `pack.json` carries `market.bars` with `root`, the dataset's directory as the services see it. | One batch at a time, whatever the dataset's size: about 5 to 7 times the batch estimate at peak. Measured on the A100: all of `bfdmini` to session bars in 2.9 s (CPU 46.5 s), and 12 symlinked copies of it (45 GB, read from the page cache) in 30 s (CPU 522 s), peaking at 7.1 GB. Requests are bounded (for example 50 symbols × 30 sessions: 0.2 s). `intraday_scan` on `us-equities`: the 50 most liquid over 9 sessions in 0.29 s (CPU 1.2 s), the 500 most liquid over 48 sessions in 1.0 s (CPU 12.3 s), and every stock over all 298 sessions, 99 million bars, in 7.5 s (CPU 73 s). |
+| Minute bars (`intraday_scan`; never the six daily tools) | Partition-scoped per request, by `tools/market-analytics/src/market_analytics/bars.py`. The symbols map to files (one per symbol) or to month directories (canonical), and files whose footers show no row group in the window are skipped. The files are read in batches whose estimated uncompressed size stays under `MARKET_ANALYTICS_BATCH_BYTES` (default 1 GiB), one multi-file read per batch (cudf pays about 25 ms per call). In the canonical layout the window and symbols become Parquet row-group filters; one-symbol files are read whole, each row's symbol following from its file's row count. Each batch is reduced to its per-symbol, per-session result before the next is read. `pack.json` carries `market.bars` with `root`, the dataset's directory as the services see it. | One batch at a time, whatever the dataset's size: about 5 to 7 times the batch estimate at peak. Measured on the A100: all of the `us-equities` minute bars to session bars in 2.9 s (CPU 46.5 s), and 12 symlinked copies of it (45 GB, read from the page cache) in 30 s (CPU 522 s), peaking at 7.1 GB. Requests are bounded (for example 50 symbols × 30 sessions: 0.2 s). `intraday_scan` on `us-equities`: the 50 most liquid over 9 sessions in 0.29 s (CPU 1.2 s), the 500 most liquid over 48 sessions in 1.0 s (CPU 12.3 s), and every stock over all 298 sessions, 99 million bars, in 7.5 s (CPU 73 s). |
 
 The rollup, which builds the daily tables, runs in DuckDB on the CPU, streams, and is cached. There is no GPU
-rollup: 1.5 s on `bfdmini` does not justify one. The tools stay on pandas code run by cudf.pandas, and Polars
-is not added. Datasets use BFD's layout, so BFD's Polars-GPU benchmarks run on the same files.
+rollup: 1.5 s on the `us-equities` minute bars does not justify one. The tools stay on pandas code run by
+cudf.pandas, and Polars is not added.
 
-At `bfdmini`'s daily size (about 500,000 rows), GPU margins are smaller than the 1.5 to 8.1 times measured at
+At `us-equities`' daily size (about 500,000 rows), GPU margins are smaller than the 1.5 to 8.1 times measured at
 1.36 million rows. `synthetic-market`'s `standard` profile keeps that scale, and the minute tier is where
 `us-equities` shows GPU work: `intraday_scan` runs 4 to 12 times faster on the A100 than on its 12 vCPUs, once
 a request covers more than a handful of stocks ([measurements](../tools/market-analytics/README.md#intraday_scan-on-real-minute-bars)).
@@ -567,7 +566,7 @@ script regenerates it.
 
 | Fixture | Contents | Tests |
 |---|---|---|
-| `data/tests/fixtures/external/minute-bars/` and `data/tests/fixtures/sec/` (made by `make_minute_bars_fixture.py`, 60 KB) | 11 made-up symbols in BFD's per-symbol layout: a base with its warrant, unit, dotted preferred and note, a peer and its class B shares, an unlisted fund, a one-session symbol, and two issuers whose tickers only look related (`XE`, `XEU`). 3 sessions plus 1 holiday, 8 bars a day from 04:00 to 19:59, with absurd prices outside the session and a heavy 16:00 bar. Three made-up headlines in GDELT's columns. A BFD-format manifest and a stub SEC snapshot. | The fingerprint algorithm; fetch from a path, `file://` and a `.tar.gz`, a rerun that copies nothing, and rejection of a different dataset and of a corrupted file; verification that rehashes only changed files; rollup values checked by hand (16:00 included, extended hours excluded); the session rule; each exclusion; `us-equities` imported end to end through the CLI with its contract checked, the population resolved, the rollup reused and its oracles run on the schema; the opt-in `world_news` corpus read in place (a blank headline skipped, an http link dropped); a clear error when a pack's dataset is missing |
+| `data/tests/fixtures/external/minute-bars/` and `data/tests/fixtures/sec/` (made by `make_minute_bars_fixture.py`, 60 KB) | 11 made-up symbols, one file per symbol: a base with its warrant, unit, dotted preferred and note, a peer and its class B shares, an unlisted fund, a one-session symbol, and two issuers whose tickers only look related (`XE`, `XEU`). 3 sessions plus 1 holiday, 8 bars a day from 04:00 to 19:59, with absurd prices outside the session and a heavy 16:00 bar. Three made-up headlines in GDELT's columns. A manifest and a stub SEC snapshot. | The fingerprint algorithm; fetch from a path, `file://` and a `.tar.gz`, a rerun that copies nothing, and rejection of a different dataset and of a corrupted file; verification that rehashes only changed files; rollup values checked by hand (16:00 included, extended hours excluded); the session rule; each exclusion; `us-equities` imported end to end through the CLI with its contract checked, the population resolved, the rollup reused and its oracles run on the schema; the opt-in `world_news` corpus read in place (a blank headline skipped, an http link dropped); a clear error when a pack's dataset is missing |
 | `synthetic-market`, profile `ci` | The committed text plus seeds | An end-to-end `prepare` in seconds with no network, through the minute bars and the rollup (the `slow` marker); rollup exactness; the planted-event oracles |
 | `tools/market-analytics/tests/fixture_pack.py`, `fixture_bars.py` | The fixture pack with minute bars for three assets over three sessions, and a variant with neither news nor minute bars | `intraday_scan` against a hand reduction of the minute bars; the news tools and `intraday_scan` report that they are unavailable in the variant, whose descriptions say so and whose warm-up skips them; with a GPU, CPU/GPU parity for every tool with `CUDF_PANDAS_FAIL_ON_FALLBACK=1` |
 
@@ -625,7 +624,7 @@ question in `us-equities`.
 
 ## Disk
 
-| Item | `bfdmini` | Scales with |
+| Item | `us-equities` | Scales with |
 |---|---|---|
 | `DATA_SOURCE_DIR/minute-bars` | 1.8 GB | the dataset |
 | Rollup cache | 12 MB | about 1% of the minute data |

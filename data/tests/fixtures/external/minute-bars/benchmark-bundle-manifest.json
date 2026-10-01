@@ -1,5 +1,5 @@
 {
-  "format": "bfd-portable-benchmark-bundle",
+  "format": "portable-benchmark-bundle",
   "version": 1,
   "dataset_fingerprint": "465b6196cfdb7962200073872a7877652ecd9651bf712e8664e32a140e75041d",
   "file_count": 12,

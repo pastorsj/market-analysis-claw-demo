@@ -89,8 +89,8 @@ Two tiers, so that a pack larger than the GPU still runs.
   matrix, so keep it for small packs.
 - **Minute bars** are never loaded whole. `intraday_scan` names the assets (or a universe) and a window, and
   [`bars.py`](src/market_analytics/bars.py) scans them in place from the pack's raw dataset
-  (`pack.json` → `market.bars`, whose symbols are the pack's asset ids). It picks the files by symbol (one file per symbol, BFD's
-  layout) or by month (`month=YYYY-MM/` partitions), skips those whose Parquet footers show no row group in the
+  (`pack.json` → `market.bars`, whose symbols are the pack's asset ids). It picks the files by symbol (one file per
+  symbol) or by month (`month=YYYY-MM/` partitions), skips those whose Parquet footers show no row group in the
   window, and reads the rest in batches that stay under `MARKET_ANALYTICS_BATCH_BYTES`, estimated from the
   footers. A batch is one `read_parquet` call over its files, as Polars' `scan_parquet` takes a file list: cudf
   pays about 25 ms per call, so reading file by file was 16 to 46 times slower on the GPU. In month partitions
@@ -102,7 +102,7 @@ Two tiers, so that a pack larger than the GPU still runs.
   bar, VWAP, the sum of squared minute returns, the deepest fall from the running high close, and the volume in
   the first and last 30 minutes. The ranking runs on those rows.
 
-Minute-bar scans measured on the A100 VM, on `bfdmini` (2,200 US symbols, 117 million minute bars, 3.75 GB of
+Minute-bar scans measured on the A100 VM, on the `us-equities` minute bars (2,200 US symbols, 117 million minute bars, 3.75 GB of
 uncompressed columns), reducing each symbol's regular sessions (09:30 to 16:00) to session bars. On both
 engines the 572,995 session bars match a DuckDB rollup of the same files: prices and bar counts exactly, volumes
 to within 1e-14. The last row scans 12 copies of every file under new names, which is more data than the GPU
@@ -203,7 +203,7 @@ tz-aware column fell back to pandas. The CPU results did not change.
 
 ### `intraday_scan` on real minute bars
 
-The same method on `us-equities` built from `bfdmini` (1,601 stocks, 117 million one-minute bars in 2,200
+The same method on `us-equities` built from its minute-bar dataset (1,601 stocks, 117 million one-minute bars in 2,200
 per-symbol files, 1.8 GB), with the bars on the VM's disk and read in place. The default batch budget (1 GiB)
 applied. Bars counts those in the window's regular sessions; a per-symbol file is read whole, so a scan reads
 all 15 months of each stock it names. Median milliseconds of five calls after one:

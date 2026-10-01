@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Write the tiny external dataset the tests use: made-up minute bars and headlines in BFD's layout. No real data.
+"""Write the tiny external dataset the tests use: made-up minute bars and headlines, one file per symbol. No real data.
 
     uv run python tests/fixtures/make_minute_bars_fixture.py
 
 external/minute-bars/
-  benchmark-bundle-manifest.json                        BFD's manifest: files, bytes, sha256
+  benchmark-bundle-manifest.json                        the manifest: files, bytes, sha256
   market/stocks_1min/<SYMBOL>_full_1min_adjsplit.parquet
   gdelt/headlines.parquet                               three made-up headlines in GDELT's columns
 sec/
@@ -138,7 +138,7 @@ def main() -> None:
     ]
     fingerprint = hashlib.sha256(json.dumps(files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     manifest = {
-        "format": "bfd-portable-benchmark-bundle",
+        "format": "portable-benchmark-bundle",
         "version": 1,
         "dataset_fingerprint": fingerprint,
         "file_count": len(files),

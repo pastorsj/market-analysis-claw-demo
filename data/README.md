@@ -107,8 +107,8 @@ demo-data clean [--all]           # remove inactive builds and unused caches (--
 ## External datasets
 
 A pack pins each external dataset in `pack.yaml` by the **fingerprint** of the manifest the dataset carries:
-`sha256` of its `files` list (`path`, `bytes`, `sha256` per file) as compact JSON with sorted keys, which is
-BFD's benchmark bundle format. The repository never holds the data or even its manifest, only that pin.
+`sha256` of its `files` list (`path`, `bytes`, `sha256` per file) as compact JSON with sorted keys. The
+repository never holds the data or even its manifest, only that pin.
 
 `fetch` reads the manifest from the source first and stops if the fingerprint differs. It then streams each
 missing or changed file to a hidden `.part` file while hashing it, and renames it into place only if the hash
