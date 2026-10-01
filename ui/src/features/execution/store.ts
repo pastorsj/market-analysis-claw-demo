@@ -13,9 +13,11 @@ import {
   toBenchmark,
   toExecutionEvent,
   toReceipt,
+  toRetrievalBenchmark,
   type Benchmark,
   type ExecutionEventV2,
   type ReceiptV2,
+  type RetrievalBenchmark,
 } from './contract'
 
 /** Events kept per run. The stream replays from the start, so it can only repeat, not grow. */
@@ -33,6 +35,8 @@ export interface ExecutionRun {
   citedEvidenceIds: string[] | null
   /** The CPU/GPU comparison of its market calls, once one has run (the Benchmark tab) */
   benchmark: Benchmark | null
+  /** The Milvus CPU/GPU index comparison that applies to its retrieval calls, once known */
+  retrievalBenchmark: RetrievalBenchmark | null
   /** From the data pack's recordings: no live job behind it, in either mode */
   recorded: boolean
 }
@@ -45,6 +49,7 @@ export interface ExecutionRecord {
   status?: string
   report?: { citations: unknown[] } | null
   benchmark?: unknown
+  retrievalBenchmark?: unknown
   /** Loaded from the data pack's recordings */
   recorded?: boolean
 }
@@ -57,6 +62,7 @@ interface ExecutionState {
   addRecord: (record: ExecutionRecord) => void
   setJobStatus: (jobId: string, status: string) => void
   setBenchmark: (jobId: string, benchmark: Benchmark) => void
+  setRetrievalBenchmark: (jobId: string, benchmark: RetrievalBenchmark) => void
 }
 
 const emptyRun = (jobId: string): ExecutionRun => ({
@@ -66,6 +72,7 @@ const emptyRun = (jobId: string): ExecutionRun => ({
   jobStatus: null,
   citedEvidenceIds: null,
   benchmark: null,
+  retrievalBenchmark: null,
   recorded: false,
 })
 
@@ -125,7 +132,16 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     )
   },
 
-  addRecord: ({ jobId, events, receipts, status, report, benchmark, recorded }) => {
+  addRecord: ({
+    jobId,
+    events,
+    receipts,
+    status,
+    report,
+    benchmark,
+    retrievalBenchmark,
+    recorded,
+  }) => {
     const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
     const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
     const dropped = events.length + receipts.length - validEvents.length - validReceipts.length
@@ -139,6 +155,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
             jobStatus: status ?? run.jobStatus,
             citedEvidenceIds: citedEvidence(report) ?? run.citedEvidenceIds,
             benchmark: toBenchmark(benchmark) ?? run.benchmark,
+            retrievalBenchmark: toRetrievalBenchmark(retrievalBenchmark) ?? run.retrievalBenchmark,
             recorded: recorded ?? run.recorded,
           },
         },
@@ -152,6 +169,14 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
       runs: {
         ...state.runs,
         [jobId]: { ...(state.runs[jobId] ?? emptyRun(jobId)), benchmark },
+      },
+    })),
+
+  setRetrievalBenchmark: (jobId, retrievalBenchmark) =>
+    set((state) => ({
+      runs: {
+        ...state.runs,
+        [jobId]: { ...(state.runs[jobId] ?? emptyRun(jobId)), retrievalBenchmark },
       },
     })),
 

@@ -33,6 +33,8 @@ export interface RecordedTurn {
   sourceIds?: string[]
   /** The CPU/GPU comparison of its market calls (`Benchmark`), when one ran */
   benchmark?: unknown
+  /** The Milvus CPU/GPU index comparison for its retrieval calls (`RetrievalBenchmark`), on a GPU stack */
+  retrievalBenchmark?: unknown
 }
 
 export interface RecordingIndex {

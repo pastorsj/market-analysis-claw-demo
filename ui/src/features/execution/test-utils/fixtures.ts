@@ -9,7 +9,7 @@
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import type { ArtifactKind, ExecutionEventV2, ReceiptV2 } from '../contract'
+import type { ArtifactKind, ExecutionEventV2, ReceiptV2, RetrievalBenchmark } from '../contract'
 
 const readJson = (...parts: string[]): unknown =>
   JSON.parse(readFileSync(path.resolve(process.cwd(), ...parts), 'utf8'))
@@ -29,6 +29,11 @@ export const receiptOf = <K extends ArtifactKind>(
   fixtureReceipts.find(
     (receipt) => receipt.artifactKind === kind && receipt.status === status
   ) as Extract<ReceiptV2, { artifactKind: K }>
+
+/** A Milvus comparison on a GPU stack: CPU faster for single queries, the GPU for batches and concurrency. */
+export const [fixtureRetrievalBenchmark] = readJson(
+  '../contracts/fixtures/retrieval-benchmarks.json'
+) as RetrievalBenchmark[]
 
 export const readRecording = (file: string): unknown =>
   readJson('e2e/fixtures/packs/e2e/recordings', file)

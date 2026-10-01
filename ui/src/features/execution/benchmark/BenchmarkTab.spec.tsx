@@ -7,7 +7,7 @@ import { render, screen } from '@/test-utils'
 import { buildActionTimeline } from '../activity/activity-model'
 import type { Benchmark } from '../contract'
 import { useExecutionStore, type ExecutionRecord } from '../store'
-import { fixtureEvents, readRecording } from '../test-utils/fixtures'
+import { fixtureEvents, fixtureRetrievalBenchmark, readRecording } from '../test-utils/fixtures'
 import { BenchmarkTab } from './BenchmarkTab'
 import { benchmarkEligibility, stageClaim } from './benchmark-model'
 
@@ -19,12 +19,14 @@ const timeline = buildActionTimeline(fixtureEvents)
 /** The tab as the panel renders it, reading the comparison from the store like the panel does. */
 const LiveTab = () => {
   const stored = useExecutionStore((state) => state.runs[JOB]?.benchmark ?? null)
+  const milvus = useExecutionStore((state) => state.runs[JOB]?.retrievalBenchmark ?? null)
   return (
     <BenchmarkTab
       jobId={JOB}
       events={fixtureEvents}
       timeline={timeline}
       benchmark={stored}
+      retrievalBenchmark={milvus}
       recorded={false}
     />
   )
@@ -90,11 +92,73 @@ describe('BenchmarkTab', () => {
         events={fixtureEvents}
         timeline={timeline}
         benchmark={null}
+        retrievalBenchmark={null}
         recorded
       />
     )
 
     expect(screen.getByText('No recorded benchmark')).toBeVisible()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  test('a live run on a GPU stack shows the Milvus comparison that applies to it', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (url) =>
+        String(url).endsWith('/retrieval-benchmark')
+          ? Response.json(fixtureRetrievalBenchmark)
+          : Response.json({ detail: 'none yet' }, { status: 404 })
+      )
+    render(<LiveTab />)
+
+    const panel = await screen.findByTestId('retrieval-benchmark-panel')
+    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/jobs/async/job/${JOB}/retrieval-benchmark`, {
+      cache: 'no-store',
+      signal: expect.any(AbortSignal),
+    })
+    // The concurrency profile first, as the original showed it
+    expect(panel).toHaveTextContent('1.2× faster vector search')
+    expect(screen.getByTestId('retrieval-benchmark-gpu')).toHaveTextContent(
+      'GPU_CAGRA · NVIDIA cuVS'
+    )
+    expect(screen.getByTestId('retrieval-benchmark-cpu')).toHaveTextContent('HNSW')
+    expect(panel).toHaveTextContent('15 held-out queries')
+    await userEvent.click(screen.getByRole('button', { name: 'Single query' }))
+    expect(panel).toHaveTextContent('CPU faster or equal for this workload')
+    await userEvent.click(screen.getByRole('button', { name: 'Batch ×5' }))
+    expect(panel).toHaveTextContent('2.2× faster vector search')
+    expect(useExecutionStore.getState().runs[JOB].retrievalBenchmark).toEqual(
+      fixtureRetrievalBenchmark
+    )
+  })
+
+  test('a CPU-only stack says its Milvus has no GPU index to compare', async () => {
+    const reason =
+      'Retrieval comparison is unavailable: Milvus runs its CPU index only in this stack, so there is no GPU index to compare.'
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      Response.json({ detail: reason }, { status: 404 })
+    )
+    render(<LiveTab />)
+
+    expect(await screen.findByText(reason)).toBeVisible()
+    expect(screen.queryByTestId('retrieval-benchmark-panel')).toBeNull()
+  })
+
+  test('a recording shows the Milvus comparison it carries', () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const retrievalOnly = fixtureEvents.filter((event) => event.toolName !== 'market_anomaly_scan')
+    render(
+      <BenchmarkTab
+        jobId={JOB}
+        events={retrievalOnly}
+        timeline={timeline}
+        benchmark={null}
+        retrievalBenchmark={fixtureRetrievalBenchmark}
+        recorded
+      />
+    )
+
+    expect(screen.getByTestId('retrieval-benchmark-panel')).toBeVisible()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -107,13 +171,21 @@ describe('BenchmarkTab', () => {
         events={retrievalOnly}
         timeline={timeline}
         benchmark={null}
+        retrievalBenchmark={null}
         recorded
       />
     )
     expect(screen.getByRole('status')).toHaveTextContent('Retrieval comparison is unavailable')
 
     rerender(
-      <BenchmarkTab jobId={JOB} events={noTools} timeline={timeline} benchmark={null} recorded />
+      <BenchmarkTab
+        jobId={JOB}
+        events={noTools}
+        timeline={timeline}
+        benchmark={null}
+        retrievalBenchmark={null}
+        recorded
+      />
     )
     expect(screen.getByText('No GPU analytics to compare')).toBeVisible()
   })

@@ -39,7 +39,10 @@ describe('ActivityPanel', () => {
     expect(screen.getByText('Recorded benchmark')).toBeVisible()
     expect(screen.getByTestId('benchmark-tool-time-ratio')).toHaveTextContent('1.86× faster')
     expect(screen.getByText('1.9× · Qualified speedup')).toBeVisible()
-    expect(screen.getByRole('status')).toHaveTextContent('Retrieval comparison is unavailable')
+    // The recording's Milvus comparison, from the GPU stack it was recorded on
+    expect(screen.getByTestId('retrieval-benchmark-panel')).toHaveTextContent(
+      'Milvus Vector Search'
+    )
   })
 
   test('in live mode, shows a recorded session’s run without asking the API', async () => {
