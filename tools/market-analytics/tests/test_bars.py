@@ -13,7 +13,10 @@ from fixture_bars import month_partitions
 from fixture_bars import per_symbol
 from fixture_bars import session_bars
 
+from market_analytics.bars import CPU_BATCH_BYTES
+from market_analytics.bars import GPU_BATCH_BYTES
 from market_analytics.bars import MinuteBars
+from market_analytics.bars import batch_bytes
 
 # June 30, 2026 in UTC, the worker's timestamp model: 04:00 June 30 to 03:59 July 1 in New York (EDT, UTC-4).
 JUNE_30 = (datetime(2026, 6, 30, 4, 0), datetime(2026, 7, 1, 3, 59))
@@ -89,6 +92,17 @@ def test_the_batch_budget_bounds_each_read_but_not_the_result(bars: MinuteBars) 
         batched.result.sort_values(["symbol", "session"], ignore_index=True), whole.result, check_exact=True
     )
     assert len(whole.result) == 3 * 3  # every symbol and day
+
+
+@pytest.mark.parametrize(("engine", "expected"), [("cpu", CPU_BATCH_BYTES), ("gpu", GPU_BATCH_BYTES)])
+def test_the_batch_budget_defaults_by_engine_and_follows_the_setting(
+    monkeypatch: pytest.MonkeyPatch, engine: str, expected: int
+) -> None:
+    monkeypatch.setenv("MARKET_ANALYTICS_ENGINE", engine)
+    monkeypatch.setenv("MARKET_ANALYTICS_BATCH_BYTES", "")  # Compose passes an unset variable as empty
+    assert batch_bytes() == expected
+    monkeypatch.setenv("MARKET_ANALYTICS_BATCH_BYTES", "1000")
+    assert batch_bytes() == 1000
 
 
 def test_the_window_is_converted_to_the_datasets_wall_clock(bars: MinuteBars) -> None:

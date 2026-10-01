@@ -131,6 +131,7 @@ Changing either Hermes key recreates the sandbox on the next `up`.
 | `KUMO_API_KEY` | empty | Only for a hosted Kumo endpoint (sent as `X-API-Key`) |
 | `JOB_RETENTION_SECONDS` | `86400` | How long finished jobs stay available |
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one market tool call may run before its worker is replaced |
+| `MARKET_ANALYTICS_BATCH_BYTES` | empty | The most an `intraday_scan` reads at once, in bytes; empty means 256 MiB on the CPU and 1 GiB on the GPU. A CPU scan peaks at 8 to 14 times it, so raise it only with memory to spare |
 | `PHOENIX_URL` | `http://127.0.0.1:6006` | The Phoenix address the browser links to; empty hides the link |
 | `SPEECH_INPUT_ENABLED` | `false` | Voice input: a microphone in the composer; the API transcribes with NVIDIA Nemotron ASR on build.nvidia.com ([`api/README.md`](../api/README.md#voice-input)) |
 | `SPEECH_API_KEY` | empty | An nvapi- key for the ASR; empty uses `RETRIEVER_API_KEY` when the retriever is build.nvidia.com |

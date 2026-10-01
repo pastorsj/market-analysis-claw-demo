@@ -97,7 +97,8 @@ Two tiers, so that a pack larger than the GPU still runs.
   the window and the symbols go into the reader, which skips row groups by their statistics. One-symbol files
   have no symbol column, so they are read whole, and each row's symbol follows from its file's row count. Each
   batch is reduced, for example to one row per symbol and session (`session_profile`), before the next is read, so
-  memory holds one batch whatever the dataset's size. Peak GPU memory was 5 to 7 times the batch's estimate.
+  memory holds one batch whatever the dataset's size. Peak GPU memory was 5 to 7 times the batch's estimate, and
+  peak CPU memory 8 to 14 times, which is why the CPU's default batch is a quarter of the GPU's.
   `intraday_scan`'s reduction (`tools/intraday.py`) turns each batch into one row per asset and session: its
   bar, VWAP, the sum of squared minute returns, the deepest fall from the running high close, and the volume in
   the first and last 30 minutes. The ranking runs on those rows.
@@ -114,7 +115,7 @@ time leaves out the disk reads a real dataset of that size would need.
 | All 2,200 symbols, 305 sessions, 2 GiB batches | 2 | 46.5 s | 2.9 s | 9.6 GB |
 | The same with 256 MiB batches | 15 | 43.7 s | 3.8 s | 1.6 GB |
 | The 50 largest symbols, 30 sessions | 1 | 1.14 s | 0.20 s | 0.8 GB |
-| 12 copies: 26,400 files, 45 GB, 1.28 billion bars, 1 GiB batches (the default) | 42 | 522 s | 30.2 s | 7.1 GB |
+| 12 copies: 26,400 files, 45 GB, 1.28 billion bars, 1 GiB batches (the GPU default) | 42 | 522 s | 30.2 s | 7.1 GB |
 
 ## Environment
 
@@ -123,7 +124,7 @@ time leaves out the disk reads a real dataset of that size would need.
 | `DATA_ACTIVE_DIR` | `/data/active` | The active data pack |
 | `MARKET_ANALYTICS_ENGINE` | `cpu` | `gpu` installs cudf.pandas, cuml.accel and nx-cugraph in the worker (GPU image only) |
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one call may run before the worker is replaced |
-| `MARKET_ANALYTICS_BATCH_BYTES` | `1073741824` (1 GiB) | The most a minute-bar scan reads at once, estimated from the Parquet footers ([scale](#scale)) |
+| `MARKET_ANALYTICS_BATCH_BYTES` | 1 GiB on the GPU, 256 MiB on the CPU | The most a minute-bar scan reads at once, estimated from the Parquet footers ([scale](#scale)). A CPU scan peaks at 8 to 14 times it |
 | `CUDF_PANDAS_RMM_MODE` | `managed_pool` | cudf.pandas' memory: managed memory past the GPU's pages to host memory. Compose sets it explicitly |
 | `KUMO_RELATIONAL_URL` | unset | Kumo Relational NIM, e.g. `http://kumo-relational:8000`; enables `predict_asset_outcomes` |
 | `KUMO_API_KEY` | unset | Only for an authenticating gateway in front of the NIM (sent as `X-API-Key`) |

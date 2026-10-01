@@ -52,11 +52,16 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 FIELDS = ("time", "open", "high", "low", "close", "volume")
-BATCH_BYTES = 1 << 30
+# The default batch budget per engine. A batch peaks at about 5 to 7 times its estimate on the GPU and at 8 to 14
+# times on the CPU, where 256 MiB batches keep a whole-market scan near 2 GB and are no slower than larger ones.
+GPU_BATCH_BYTES = 1 << 30
+CPU_BATCH_BYTES = 1 << 28
 
 
 def batch_bytes() -> int:
-    return int(os.environ.get("MARKET_ANALYTICS_BATCH_BYTES") or BATCH_BYTES)
+    """MARKET_ANALYTICS_BATCH_BYTES, or the engine's default."""
+    gpu = os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu"
+    return int(os.environ.get("MARKET_ANALYTICS_BATCH_BYTES") or (GPU_BATCH_BYTES if gpu else CPU_BATCH_BYTES))
 
 
 @dataclass(frozen=True)
