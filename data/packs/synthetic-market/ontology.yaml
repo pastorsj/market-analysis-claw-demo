@@ -35,12 +35,18 @@ tables:
     description: >-
       Synthetic daily bars from a seeded factor model (market, industry and issuer returns with fat tails), in
       USD. There are no splits or dividends. This data is not investment advice.
+      A return over a window is one number per issuer: its last adjusted_close in the window over its adjusted_close
+      on the session before the window's first session, minus 1 (the window's total_return_1d values compounded).
+      It is not measured from the first close in the window, and it is not an average or median of
+      total_return_1d. A group's median return is the median of its issuers' window returns.
     columns:
       adjusted_close: Equal to close; there are no corporate actions.
       volume: Shares traded in the session.
       dollar_volume: Close times volume (summed over minute bars in the 1-minute profiles), in USD.
       bar_count: Bars rolled up into the day; 391 for 1-minute profiles, else 1.
-      total_return_1d: Close over the previous session's close, minus 1; 0 on an issuer's first session.
+      total_return_1d: >-
+        One session's return, close over the previous session's close, minus 1; 0 on an issuer's first session.
+        Compound it over a window's sessions for the window's return.
   asset_relationships:
     description: >-
       Declared peers: for each issuer, the most liquid other issuers with the same four-digit SIC code.

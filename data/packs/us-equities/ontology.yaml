@@ -35,6 +35,10 @@ tables:
     description: >-
       Daily bars rolled up from real one-minute bars of the regular session (09:30 through the 16:00 closing
       auction). Prices are split-adjusted, not dividend-adjusted. This data is not investment advice.
+      A return over a window is one number per stock: its last adjusted_close in the window over its adjusted_close
+      on the session before the window's first session, minus 1 (the window's total_return_1d values compounded).
+      It is not measured from the first close in the window, and it is not an average or median of
+      total_return_1d. A group's median return is the median of its stocks' window returns.
     columns:
       open: The first regular-session minute's open, in USD.
       high: The highest minute high of the regular session.
@@ -44,7 +48,9 @@ tables:
       volume: Shares traded in the regular session.
       dollar_volume: Sum of minute close times minute volume over the regular session, in USD.
       bar_count: Number of one-minute bars in the regular session (at most 391).
-      total_return_1d: Close over the previous session's close, minus 1; 0 on a stock's first session.
+      total_return_1d: >-
+        One session's return, close over the previous session's close, minus 1; 0 on a stock's first session.
+        Compound it over a window's sessions for the window's return.
   asset_relationships:
     description: >-
       Declared peers: for each stock, the most liquid other stocks with the same four-digit SIC code.
