@@ -5,17 +5,19 @@
  * AppBar Component
  *
  * Top navigation bar with the logo (new session), session title, and actions:
- * data sources, the Phoenix trace viewer (when configured), and theme.
+ * data sources, the Phoenix trace viewer (when configured), theme, and the
+ * Default User avatar (the demo has no sign-in).
  */
 
 'use client'
 
 import { type FC, memo, useCallback, useEffect, useState } from 'react'
-import { Flex, Text, Button, Logo, Divider } from '@/adapters/ui'
-import { Globe, Moon, OpenExternal, Sun } from '@/adapters/ui/icons'
+import { Flex, Text, Button, Logo, Avatar, Popover, Divider } from '@/adapters/ui'
+import { Globe, Info, Moon, OpenExternal, Sun } from '@/adapters/ui/icons'
 import { useAppConfig } from '@/shared/context'
 import { useLayoutStore } from '../store'
 import { cn } from '@/shared/lib/cn'
+import type { ThemeMode } from '../types'
 
 interface AppBarProps {
   /** Current session title to display */
@@ -45,6 +47,7 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
   const isDataSourcesOpen = rightPanel === 'data-sources'
   const theme = useLayoutStore((s) => s.theme)
   const setTheme = useLayoutStore((s) => s.setTheme)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [systemPrefersDark, setSystemPrefersDark] = useState(false)
 
   useEffect(() => {
@@ -152,8 +155,134 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
           >
             {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
+
+          {/* User section: the demo has no sign-in, so the Default User notice */}
+          <Popover
+            open={isUserMenuOpen}
+            onOpenChange={setIsUserMenuOpen}
+            side="bottom"
+            align="end"
+            className="bg-surface-base"
+            slotContent={<AuthDisabledContent />}
+          >
+            <Button
+              kind="tertiary"
+              size="small"
+              aria-label="Default User - Authentication Not Configured"
+              title="Default User set. Authentication Not Configured."
+              className="ml-2"
+            >
+              <Avatar size="small" fallback="D" />
+            </Button>
+          </Popover>
         </Flex>
       </Flex>
     </header>
   )
 })
+
+const APPEARANCE_SEGMENTS: { mode: ThemeMode; label: string }[] = [
+  { mode: 'system', label: 'System' },
+  { mode: 'dark', label: 'Dark' },
+  { mode: 'light', label: 'Light' },
+]
+
+const AppearanceThemeControl: FC = () => {
+  const theme = useLayoutStore((s) => s.theme)
+  const setTheme = useLayoutStore((s) => s.setTheme)
+
+  return (
+    <Flex direction="col" gap="2">
+      <Text kind="label/regular/sm" className="text-subtle">
+        Appearance
+      </Text>
+      <Flex
+        align="center"
+        gap="1"
+        className="p-1"
+        role="radiogroup"
+        aria-label="Theme"
+        style={{
+          background: 'var(--color-component-track-background, #FFFFFF33)',
+          borderRadius: 'var(--radius-lg)',
+        }}
+      >
+        {APPEARANCE_SEGMENTS.map(({ mode, label }) => {
+          const selected = theme === mode
+          return (
+            <Button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={`${label} theme`}
+              kind="tertiary"
+              size="small"
+              onClick={() => setTheme(mode)}
+              className={`h-auto min-h-9 flex-1 rounded-[var(--radius-md)] border-0 px-2 py-1.5 shadow-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-border-focus,#76b900)] ${
+                selected
+                  ? '!bg-black !text-white hover:!bg-black'
+                  : 'bg-transparent hover:bg-white/10'
+              }`}
+            >
+              <Flex align="center" justify="center" gap="1" className="w-full">
+                {mode === 'dark' ? (
+                  <Moon
+                    className={`h-4 w-4 shrink-0 ${selected ? '!text-white' : 'text-primary'}`}
+                    width={16}
+                    height={16}
+                  />
+                ) : null}
+                {mode === 'light' ? (
+                  <Sun
+                    className={`h-4 w-4 shrink-0 ${selected ? '!text-white' : 'text-primary'}`}
+                    width={16}
+                    height={16}
+                  />
+                ) : null}
+                <Text
+                  kind={selected ? 'label/semibold/sm' : 'label/regular/sm'}
+                  className={selected ? 'text-white' : 'text-primary'}
+                >
+                  {label}
+                </Text>
+              </Flex>
+            </Button>
+          )
+        })}
+      </Flex>
+    </Flex>
+  )
+}
+
+/**
+ * Content shown when authentication is disabled
+ * Displays info message instead of sign out option
+ */
+const AuthDisabledContent: FC = () => {
+  return (
+    <Flex direction="col" gap="3" className="min-w-[240px] p-4">
+      {/* User info section */}
+      <Flex align="center" gap="3">
+        <Avatar size="medium" fallback="D" />
+        <Flex direction="col" gap="1">
+          <Text kind="label/bold/md" className="text-primary">
+            Default User
+          </Text>
+        </Flex>
+      </Flex>
+
+      {/* Info message */}
+      <Flex align="center" gap="2" className="border-base rounded border p-3">
+        <Info className="h-4 w-4 shrink-0 text-[var(--text-color-subtle)]" />
+        <Text kind="body/regular/sm" className="text-subtle">
+          Authentication Not Configured
+        </Text>
+      </Flex>
+
+      <Divider />
+
+      <AppearanceThemeControl />
+    </Flex>
+  )
+}

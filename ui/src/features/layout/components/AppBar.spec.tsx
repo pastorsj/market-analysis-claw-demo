@@ -64,4 +64,17 @@ describe('AppBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }))
     expect(useLayoutStore.getState().theme).toBe('dark')
   })
+
+  test('shows the Default User, whose menu says sign-in is not configured and sets the theme', async () => {
+    useLayoutStore.setState({ theme: 'light' })
+    render(<AppBar />)
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Default User - Authentication Not Configured' })
+    )
+    expect(await screen.findByText('Default User')).toBeInTheDocument()
+    expect(screen.getByText('Authentication Not Configured')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: 'System theme' }))
+    expect(useLayoutStore.getState().theme).toBe('system')
+  })
 })
