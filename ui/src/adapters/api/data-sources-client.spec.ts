@@ -44,13 +44,28 @@ describe('fetchRecordedDataSources', () => {
     const pack = {
       id: 'synthetic-market',
       sources: [
+        { id: 'market_data', name: 'Market data', description: 'Prices', kind: 'structured' },
         { id: 'market_news', name: 'Market news', description: 'Filings', kind: 'documents' },
       ],
+      structured: { source: 'market_data', database_name: 'synthetic_market' },
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(pack)))
 
     await expect(fetchRecordedDataSources()).resolves.toEqual([
-      { id: 'market_news', name: 'Market news', description: 'Filings' },
+      {
+        id: 'market_data',
+        name: 'Market data',
+        description: 'Prices',
+        kind: 'structured',
+        database_name: 'synthetic_market',
+      },
+      {
+        id: 'market_news',
+        name: 'Market news',
+        description: 'Filings',
+        kind: 'documents',
+        database_name: null,
+      },
     ])
     expect(fetch).toHaveBeenCalledWith('/api/recordings/pack.json', { signal: undefined })
   })

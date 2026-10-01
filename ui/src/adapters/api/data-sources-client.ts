@@ -18,6 +18,8 @@ export interface DataSourceFromAPI {
   description?: string | null
   /** Whether the source starts enabled (defaults to true) */
   default_enabled?: boolean
+  /** `structured` for the pack's market database, `documents` for a document collection */
+  kind?: 'structured' | 'documents'
   /** The structured source's database; null for document sources */
   database_name?: string | null
 }
@@ -37,13 +39,24 @@ export const fetchDataSources = async (signal?: AbortSignal): Promise<DataSource
   return Array.isArray(data) ? data : (data.data_sources ?? [])
 }
 
-/** The data sources in the replay bundle's `pack.json` snapshot (replay mode). */
+/**
+ * The data sources in the replay bundle's `pack.json` snapshot (replay mode). As in the API, the
+ * structured source carries the pack's database name.
+ */
 export const fetchRecordedDataSources = async (
   signal?: AbortSignal
 ): Promise<DataSourceFromAPI[]> => {
   const response = await fetch('/api/recordings/pack.json', { signal })
   if (!response.ok) throw new Error(`Failed to load the recorded data sources: ${response.status}`)
-  const pack: { sources?: { id: string; name: string; description?: string | null }[] } =
-    await response.json()
-  return (pack.sources ?? []).map(({ id, name, description }) => ({ id, name, description }))
+  const pack: {
+    sources?: Pick<DataSourceFromAPI, 'id' | 'name' | 'description' | 'kind'>[]
+    structured?: { source?: string; database_name?: string }
+  } = await response.json()
+  return (pack.sources ?? []).map(({ id, name, description, kind }) => ({
+    id,
+    name,
+    description,
+    kind,
+    database_name: id === pack.structured?.source ? (pack.structured.database_name ?? null) : null,
+  }))
 }

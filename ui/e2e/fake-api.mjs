@@ -69,12 +69,13 @@ const PACK = {
 }
 
 const DATA_SOURCES = [
-  { id: 'market_data', name: 'Market data', description: 'Prices and volumes' },
+  { id: 'market_data', name: 'Market data', description: 'Prices and volumes', kind: 'structured' },
   {
     id: 'sec_filings',
     name: 'SEC filings',
     description: 'Current reports',
     default_enabled: false,
+    kind: 'documents',
   },
 ]
 

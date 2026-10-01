@@ -34,8 +34,8 @@ describe('InputArea', () => {
       {
         ...initialLayout,
         availableDataSources: [
-          { id: 'market_analysis_structured', name: 'Market data' },
-          { id: 'market_news', name: 'Market news' },
+          { id: 'market_analysis_structured', name: 'Market data', kind: 'structured' },
+          { id: 'market_news', name: 'Market news', kind: 'documents' },
         ],
         enabledDataSourceIds: ['market_analysis_structured'],
       },
@@ -79,18 +79,31 @@ describe('InputArea', () => {
     expect(useLayoutStore.getState().promptDraft).toBeNull()
   })
 
-  test('shows how many data sources are enabled', () => {
-    render(<InputArea />)
+  test('counts the enabled database connections, as the original UI did', () => {
+    const { rerender } = render(<InputArea />)
+    const counter = screen.getByRole('button', { name: 'Toggle data sources connections' })
+    expect(counter).toHaveTextContent('1/1')
 
-    expect(
-      screen.getByRole('button', { name: 'Toggle data sources connections' })
-    ).toHaveTextContent('1/2')
+    // A document collection is not a database connection
+    useLayoutStore.setState({ enabledDataSourceIds: ['market_news'] })
+    rerender(<InputArea />)
+    expect(counter).toHaveTextContent('0/1')
   })
 
   test('has no microphone unless voice input is on', () => {
     render(<InputArea />)
 
     expect(screen.queryByRole('button', { name: 'Start voice input' })).toBeNull()
+  })
+
+  test('replay shows the read-only composer with a disabled microphone', () => {
+    render(<InputArea />, { config: { mode: 'replay' } })
+
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toHaveAttribute(
+      'placeholder',
+      'Recorded test sessions are read only'
+    )
+    expect(screen.getByRole('button', { name: 'Start voice input' })).toBeDisabled()
   })
 
   test('records a question and inserts its transcript where the cursor was', async () => {
