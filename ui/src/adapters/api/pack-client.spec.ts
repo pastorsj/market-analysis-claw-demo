@@ -37,7 +37,11 @@ describe('fetchPack', () => {
     const pack = await fetchPack()
 
     expect(fetch).toHaveBeenCalledWith('http://api.test:8000/v1/pack', expect.anything())
-    expect(pack?.questions[0]).toMatchObject({ id: 'market-leaders', featured: true })
+    expect(pack?.questions[0]).toMatchObject({
+      id: 'market-leaders',
+      tag: 'ANALYTICS',
+      featured: true,
+    })
   })
 
   test.each([

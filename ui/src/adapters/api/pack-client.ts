@@ -15,6 +15,9 @@ import { readApiUrl } from '@/shared/config/env'
 const PackQuestionSchema = z.object({
   id: z.string(),
   label: z.string(),
+  /** The kind of answer, e.g. ANALYTICS or RETRIEVAL (the composer's demo scenario list shows it) */
+  tag: z.string().nullish(),
+  description: z.string().nullish(),
   question: z.string(),
   sources: z.array(z.string()),
   featured: z.boolean().default(false),

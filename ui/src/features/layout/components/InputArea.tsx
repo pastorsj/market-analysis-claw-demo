@@ -4,16 +4,25 @@
 /**
  * InputArea Component
  *
- * Chat input area at the bottom of the chat view: the question, the
- * microphone when voice input is on, the data source indicator, and send (or
- * stop while a run is in progress). A recorded session (replay mode) shows it
- * read only, as the original demo UI did.
+ * Chat input area at the bottom of the chat view: the demo scenario picker
+ * (the active data pack's questions), the question, the microphone when voice
+ * input is on, the data source indicator, and send (or stop while a run is in
+ * progress). A recorded session shows it read only, as the original demo UI did.
  */
 
 'use client'
 
-import { type FC, memo, useState, useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
-import { Banner, Flex, Text, Button, TextArea } from '@/adapters/ui'
+import {
+  type FC,
+  memo,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type KeyboardEvent,
+} from 'react'
+import { Banner, Flex, Text, Button, Select, TextArea } from '@/adapters/ui'
 import { useHermesChat, useChatStore, useIsCurrentSessionBusy } from '@/features/chat'
 import {
   getSpeechInputStatusMessage,
@@ -22,11 +31,18 @@ import {
 } from '@/features/speech-input'
 import { useAppConfig } from '@/shared/context'
 import { useLayoutStore } from '../store'
-import { Globe, Paperplane, StopCircle } from '@/adapters/ui/icons'
+import { getActiveDemoScenario, getAvailableDemoScenarios, type DemoScenario } from '../scenarios'
+import { ChartFlow, Globe, Paperplane, StopCircle } from '@/adapters/ui/icons'
+
+const NO_SCENARIOS: DemoScenario[] = []
 
 interface InputAreaProps {
   /** Placeholder text */
   placeholder?: string
+  /** The active data pack's questions, offered as demo scenarios */
+  scenarios?: DemoScenario[]
+  /** Whether the demo scenario picker shows (not beside the execution view) */
+  showDemoScenarios?: boolean
 }
 
 /**
@@ -35,6 +51,8 @@ interface InputAreaProps {
  */
 export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   placeholder = 'Check data sources and ask a research question...',
+  scenarios = NO_SCENARIOS,
+  showDemoScenarios = true,
 }) {
   const [message, setMessage] = useState('')
   // The latest draft, for a transcript that arrives after the user typed more
@@ -51,11 +69,49 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   const isRecordedSession = mode === 'replay' || currentConversation?.readOnly === true
   const disabled = isBusy || isRecordedSession
   const ensureSession = useChatStore((state) => state.ensureSession)
+  const saveDataSourcesToConversation = useChatStore((state) => state.saveDataSourcesToConversation)
 
   const enabledDataSourceIds = useLayoutStore((s) => s.enabledDataSourceIds)
   const availableDataSources = useLayoutStore((s) => s.availableDataSources)
+  const setEnabledDataSources = useLayoutStore((s) => s.setEnabledDataSources)
   const promptDraft = useLayoutStore((s) => s.promptDraft)
   const setPromptDraft = useLayoutStore((s) => s.setPromptDraft)
+
+  const availableDemoScenarios = useMemo(
+    () =>
+      getAvailableDemoScenarios(
+        scenarios,
+        (availableDataSources ?? []).map((source) => source.id)
+      ),
+    [availableDataSources, scenarios]
+  )
+  const activeDemoScenario = getActiveDemoScenario(
+    message,
+    enabledDataSourceIds,
+    availableDemoScenarios
+  )
+
+  const handleScenarioChange = useCallback(
+    (scenarioId: string) => {
+      const scenario = availableDemoScenarios.find((candidate) => candidate.id === scenarioId)
+      if (!scenario || disabled) return
+      // Session creation restores its default source set, so it must happen before
+      // applying and persisting the scenario's exact connections.
+      if (!currentConversation) ensureSession()
+      setEnabledDataSources([...scenario.sourceIds])
+      saveDataSourcesToConversation([...scenario.sourceIds])
+      messageRef.current = scenario.question
+      setMessage(scenario.question)
+    },
+    [
+      availableDemoScenarios,
+      currentConversation,
+      disabled,
+      ensureSession,
+      saveDataSourcesToConversation,
+      setEnabledDataSources,
+    ]
+  )
 
   // Prefill the composer from a staged prompt (e.g. a featured question)
   useEffect(() => {
@@ -169,6 +225,54 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
         direction="col"
         className="composer-surface relative rounded-[var(--radius-composer)] border p-3.5 transition-colors"
       >
+        {showDemoScenarios && !isRecordedSession && availableDemoScenarios.length > 0 && (
+          <div
+            className="border-base mb-2 grid grid-cols-1 gap-1.5 border-b pb-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-2"
+            data-testid="demo-scenario-control"
+          >
+            <Flex align="center" gap="1.5" className="shrink-0">
+              <ChartFlow className="text-brand h-4 w-4" />
+              <Text kind="label/semibold/sm" className="text-secondary">
+                Demo scenario
+              </Text>
+            </Flex>
+            <div className="w-full min-w-0 flex-1 sm:max-w-sm sm:justify-self-end">
+              <Select
+                aria-label="Choose a demo scenario"
+                placeholder="Choose an example"
+                size="small"
+                side="bottom"
+                triggerKind="flat"
+                value={activeDemoScenario?.id ?? ''}
+                onValueChange={handleScenarioChange}
+                disabled={disabled}
+                attributes={{
+                  SelectTrigger: { 'data-testid': 'demo-scenario-select' },
+                }}
+                items={availableDemoScenarios.map((scenario) => ({
+                  value: scenario.id,
+                  children: scenario.label,
+                  slotRight: (
+                    <Text kind="label/semibold/xs" className="text-secondary font-mono">
+                      {scenario.path}
+                    </Text>
+                  ),
+                  attributes: {
+                    SelectItem: {
+                      title: scenario.description,
+                      'data-scenario-id': scenario.id,
+                    },
+                  },
+                }))}
+              />
+            </div>
+            <span className="sr-only" role="status" aria-live="polite">
+              {activeDemoScenario
+                ? `${activeDemoScenario.label} loaded; ${activeDemoScenario.sourceIds.length} connection selected.`
+                : ''}
+            </span>
+          </div>
+        )}
         {isRecordedSession && (
           <Text kind="label/semibold/xs" className="text-subtle mb-2 px-1">
             Recorded test session · read only

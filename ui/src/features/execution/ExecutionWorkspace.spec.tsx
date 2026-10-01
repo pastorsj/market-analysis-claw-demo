@@ -219,6 +219,20 @@ describe('ExecutionWorkspace', () => {
     })
   })
 
+  it('in live mode, replays a recorded session’s run from the recording, not the API', async () => {
+    const fetchMock = serveDatabase()
+    useExecutionStore.getState().addRecord({ ...turn, recorded: true })
+    renderWorkspace('live')
+
+    const workspace = screen.getByRole('region', { name: 'Execution workspace' })
+    expect(within(workspace).getByText('Hermes Recorded')).toBeVisible()
+    expect(within(workspace).getByText('Step 10 of 10')).toBeVisible()
+    // Only the bundle's copy of the database is asked for; there is no live job to export
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/recordings/database.json'])
+    )
+  })
+
   it('says so when a run has no execution record', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }))
     renderWorkspace('live')

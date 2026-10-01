@@ -87,6 +87,68 @@ describe('MainLayout', () => {
     expect(useChatStore.getState().conversations).toEqual([])
   })
 
+  test('live mode lists the recordings beside My sessions, and opens one read-only', async () => {
+    render(<MainLayout />, { feature: { recordings } })
+
+    // As in the original demo UI: My sessions first, the recordings one tab away
+    const recordedTab = await screen.findByRole('tab', { name: /Recorded \(1\)/ })
+    expect(screen.getByRole('tab', { name: 'My sessions' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toBeEnabled()
+
+    await userEvent.click(recordedTab)
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Recorded session: Market leaders; Completed' })
+    )
+
+    expect(await screen.findByText('Asset A led.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toBeDisabled()
+    expect(screen.getByText('Recorded test session · read only')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add data sources' })).toBeDisabled()
+    expect(useChatStore.getState().conversations).toEqual([])
+  })
+
+  test('live mode without recordings shows the sessions alone', async () => {
+    const missing: RecordingsSource = {
+      list: async () => {
+        throw new Error('/api/recordings/index.json returned 404')
+      },
+      load: recordings.load,
+    }
+    render(<MainLayout />, { feature: { recordings: missing } })
+
+    await waitFor(() => expect(screen.getByText('No sessions yet')).toBeInTheDocument())
+    expect(screen.queryByRole('tab', { name: /Recorded/ })).not.toBeInTheDocument()
+  })
+
+  test('the composer offers the pack questions as demo scenarios', async () => {
+    render(
+      <MainLayout
+        demoScenarios={[
+          {
+            id: 'market-leaders',
+            label: 'Market Leaders',
+            path: 'ANALYTICS',
+            description: 'Scan the most liquid issuers.',
+            question: 'Which assets led?',
+            sourceIds: ['market_news'],
+          },
+        ]}
+      />
+    )
+
+    expect(screen.getByTestId('demo-scenario-control')).toHaveTextContent('Demo scenario')
+    await userEvent.click(screen.getByTestId('demo-scenario-select'))
+    await userEvent.click(await screen.findByRole('option', { name: /Market Leaders/ }))
+
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toHaveValue(
+      'Which assets led?'
+    )
+    expect(useLayoutStore.getState().enabledDataSourceIds).toEqual(['market_news'])
+  })
+
   test('places a featured question and its data sources in a new session', async () => {
     render(
       <MainLayout initialQuestion={{ question: 'Which assets led?', sourceIds: ['market_news'] }} />

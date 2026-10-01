@@ -4,11 +4,12 @@
 /**
  * Where a run's events and receipts come from outside the live stream:
  *
- * - replay mode reads the data pack's recordings bundle (v2) through
- *   `/api/recordings/…`: `index.json` lists the sessions and
- *   `sessions/<id>.json` holds each turn with its events and receipts;
- * - live mode reads a job's export, `GET /v1/jobs/async/job/{id}/export`,
- *   which returns one turn in the same shape.
+ * - a recorded session (in either mode) comes from the data pack's
+ *   recordings bundle (v2) through `/api/recordings/…`: `index.json` lists
+ *   the sessions and `sessions/<id>.json` holds each turn with its events and
+ *   receipts;
+ * - a live job reads its export, `GET /v1/jobs/async/job/{id}/export`, which
+ *   returns one turn in the same shape.
  *
  * Either way the turn lands in the execution store.
  */
@@ -105,7 +106,7 @@ const getJson = async (url: string): Promise<unknown> => {
   return response.json()
 }
 
-/** Recorded sessions of the active data pack (replay mode). */
+/** Recorded sessions of the active data pack. */
 export const recordings: RecordingsSource = {
   list: async () => {
     const index = parseIndex(await getJson('/api/recordings/index.json'))
@@ -121,7 +122,7 @@ export const recordings: RecordingsSource = {
       await getJson(`/api/recordings/sessions/${encodeURIComponent(sessionId)}.json`)
     )
     const { addRecord } = useExecutionStore.getState()
-    for (const turn of session.turns) addRecord(turn)
+    for (const turn of session.turns) addRecord({ ...turn, recorded: true })
     return toRecordedSession(session)
   },
 }

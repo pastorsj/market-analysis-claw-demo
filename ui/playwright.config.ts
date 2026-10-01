@@ -4,9 +4,9 @@
 /**
  * Smoke tests against the production build (`npm run build` first).
  *
- * The UI servers run from the same build: live mode against a fake API,
- * replay mode on the fixture data pack, and replay mode on each pack's
- * committed recordings. No screenshots or visual baselines.
+ * The UI servers run from the same build: live mode against a fake API (with
+ * the default pack's committed recordings), replay mode on the fixture data
+ * pack, and replay mode on each pack's committed recordings. No screenshots or visual baselines.
  */
 
 import { defineConfig, devices } from '@playwright/test'
@@ -57,7 +57,14 @@ export default defineConfig({
       env: { FAKE_API_PORT: new URL(FAKE_API).port },
       reuseExistingServer: !process.env.CI,
     },
-    uiServer(LIVE_URL, { UI_MODE: 'live', API_URL: FAKE_API, SPEECH_INPUT_ENABLED: 'true' }),
+    // Live mode also lists the default pack's committed recordings, as the stack's UI does
+    uiServer(LIVE_URL, {
+      UI_MODE: 'live',
+      API_URL: FAKE_API,
+      SPEECH_INPUT_ENABLED: 'true',
+      PACKS_DIR: DATA_PACKS_DIR,
+      DATA_PACK: 'synthetic-market',
+    }),
     uiServer(REPLAY_URL, {
       UI_MODE: 'replay',
       PACKS_DIR: `${process.cwd()}/e2e/fixtures/packs`,

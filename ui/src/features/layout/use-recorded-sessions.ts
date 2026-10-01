@@ -10,7 +10,7 @@ import { useAppConfig, useExecutionFeature, type RecordedSessionSummary } from '
 export type RecordedSessionsStatus = 'loading' | 'ready' | 'error'
 
 interface UseRecordedSessionsReturn {
-  /** Recorded sessions of the active data pack (empty outside replay mode) */
+  /** Recorded sessions of the active data pack */
   sessions: RecordedSessionSummary[]
   /** Whether the list has loaded */
   status: RecordedSessionsStatus
@@ -27,7 +27,11 @@ interface UseRecordedSessionsReturn {
 const messageOf = (error: unknown, fallback: string): string =>
   error instanceof Error && error.message ? error.message : fallback
 
-/** Recorded sessions, provided by the execution feature's recordings source in replay mode. */
+/**
+ * The active data pack's recorded sessions, from the execution feature's
+ * recordings source. Live mode lists them beside the browser's own sessions;
+ * a pack without recordings simply has none there.
+ */
 export const useRecordedSessions = (): UseRecordedSessionsReturn => {
   const { mode } = useAppConfig()
   const { recordings } = useExecutionFeature()
@@ -38,7 +42,7 @@ export const useRecordedSessions = (): UseRecordedSessionsReturn => {
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    if (mode !== 'replay' || !recordings) return
+    if (!recordings) return
     let cancelled = false
     recordings
       .list()
@@ -49,7 +53,8 @@ export const useRecordedSessions = (): UseRecordedSessionsReturn => {
       })
       .catch((reason: unknown) => {
         if (cancelled) return
-        console.error('Failed to list recorded sessions:', reason)
+        // Replay mode serves the recordings only, so a missing bundle is an error there
+        if (mode === 'replay') console.error('Failed to list recorded sessions:', reason)
         setError(messageOf(reason, 'Unable to load recorded sessions.'))
         setStatus('error')
       })

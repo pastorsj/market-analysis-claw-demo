@@ -42,6 +42,17 @@ describe('ActivityPanel', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Retrieval comparison is unavailable')
   })
 
+  test('in live mode, shows a recorded session’s run without asking the API', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    useExecutionStore.getState().addRecord({ ...turn, recorded: true })
+    render(<ActivityPanel jobId={turn.jobId} streaming={false} open />)
+
+    expect(screen.getByText('Request accepted')).toBeVisible()
+    await userEvent.click(screen.getByRole('tab', { name: 'Benchmark' }))
+    expect(screen.getByText('Recorded benchmark')).toBeVisible()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   test('without a job, each tab says what will appear', async () => {
     render(<ActivityPanel jobId={null} streaming={false} open />)
 

@@ -69,6 +69,8 @@ describe('recordings bundle (v2)', () => {
     const runs = useExecutionStore.getState().runs
     expect(runs['0dcd9841-b68a-456b-9dc5-87403c34efcb'].events).toHaveLength(5)
     expect(Object.keys(runs['18d6824d-df8e-4d57-89eb-22a055226124'].receipts)).toHaveLength(1)
+    // Recorded runs have no live job behind them, in either mode
+    expect(runs['0dcd9841-b68a-456b-9dc5-87403c34efcb'].recorded).toBe(true)
     expect(useExecutionStore.getState().dropped).toBe(0)
   })
 

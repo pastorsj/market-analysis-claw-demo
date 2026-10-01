@@ -105,6 +105,8 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
   const [activeTab, setActiveTab] = useState<ActivityTab>('thinking')
   const { mode, phoenixUrl } = useAppConfig()
   const run = useExecutionRun(jobId)
+  // A recorded run (every run in replay mode) has no live job behind it
+  const live = mode === 'live' && !run?.recorded
   const events = run?.events ?? NO_EVENTS
   const jobStatus = run?.jobStatus ?? null
   const receipts = run?.receipts
@@ -119,7 +121,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
     jobId,
     run,
     finished,
-    open && mode === 'live' && !streaming
+    open && live && !streaming
   )
   const spanIds = useMemo(
     () =>
@@ -149,14 +151,14 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
     () => (terminal ? buildActionTimeline(events, spanIds) : null),
     [events, spanIds, terminal]
   )
-  const traceUrl = useTraceUrl(jobId ?? '', mode === 'live' && jobId ? phoenixUrl : null, finished)
+  const traceUrl = useTraceUrl(jobId ?? '', live && jobId ? phoenixUrl : null, finished)
   const links: FailureLinks = useMemo(
     () => ({
       spanUrl: (spanId) => (phoenixUrl && spanId ? phoenixSpanUrl(phoenixUrl, spanId) : null),
       traceUrl,
-      traceLoading: Boolean(phoenixUrl) && mode === 'live' && !finished,
+      traceLoading: Boolean(phoenixUrl) && live && !finished,
     }),
-    [finished, mode, phoenixUrl, traceUrl]
+    [finished, live, phoenixUrl, traceUrl]
   )
 
   let timelineContent
@@ -295,7 +297,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({ jobId, streaming, open }
             events={events}
             timeline={timeline}
             benchmark={run?.benchmark ?? null}
-            recorded={mode === 'replay'}
+            recorded={!live}
           />
         ) : null}
       </div>

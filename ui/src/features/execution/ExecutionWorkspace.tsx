@@ -427,10 +427,11 @@ export const ExecutionWorkspace = ({
   onClose,
 }: ExecutionWorkspaceProps): ReactNode => {
   const { mode } = useAppConfig()
-  const liveMode = mode === 'live'
+  const stored = useExecutionRun(jobId)
+  // A recorded run (every run in replay mode) has no live job behind it
+  const liveMode = mode === 'live' && !stored?.recorded
   const availableDataSources = useLayoutStore((state) => state.availableDataSources)
   const replaySources = useReplaySources(!liveMode)
-  const stored = useExecutionRun(jobId)
   const events = stored?.events ?? NO_EVENTS
   const receipts = stored?.receipts ?? NO_RECEIPTS
   const jobStatus = stored?.jobStatus ?? null

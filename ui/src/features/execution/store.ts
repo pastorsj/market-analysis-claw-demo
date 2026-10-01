@@ -4,7 +4,8 @@
 /**
  * Execution runs by job id: the `execution.v2` events in stream order and the
  * receipts they reference. Live SSE records, job exports and recorded turns
- * all land here. Nothing is persisted; a reload refetches the export.
+ * all land here. Nothing is persisted; a reload refetches the export (or the
+ * recording).
  */
 
 import { create } from 'zustand'
@@ -32,6 +33,8 @@ export interface ExecutionRun {
   citedEvidenceIds: string[] | null
   /** The CPU/GPU comparison of its market calls, once one has run (the Benchmark tab) */
   benchmark: Benchmark | null
+  /** From the data pack's recordings: no live job behind it, in either mode */
+  recorded: boolean
 }
 
 /** A job's execution record as the API exports it and a recording stores it. */
@@ -42,6 +45,8 @@ export interface ExecutionRecord {
   status?: string
   report?: { citations: unknown[] } | null
   benchmark?: unknown
+  /** Loaded from the data pack's recordings */
+  recorded?: boolean
 }
 
 interface ExecutionState {
@@ -61,6 +66,7 @@ const emptyRun = (jobId: string): ExecutionRun => ({
   jobStatus: null,
   citedEvidenceIds: null,
   benchmark: null,
+  recorded: false,
 })
 
 /** The evidence ids of a report's citations (`{evidenceId, …}`), each once. */
@@ -119,7 +125,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     )
   },
 
-  addRecord: ({ jobId, events, receipts, status, report, benchmark }) => {
+  addRecord: ({ jobId, events, receipts, status, report, benchmark, recorded }) => {
     const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
     const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
     const dropped = events.length + receipts.length - validEvents.length - validReceipts.length
@@ -133,6 +139,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
             jobStatus: status ?? run.jobStatus,
             citedEvidenceIds: citedEvidence(report) ?? run.citedEvidenceIds,
             benchmark: toBenchmark(benchmark) ?? run.benchmark,
+            recorded: recorded ?? run.recorded,
           },
         },
         dropped: state.dropped + dropped,
