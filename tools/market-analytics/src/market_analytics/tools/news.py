@@ -204,8 +204,9 @@ def _finite(value: float | None) -> float | None:
 
 
 def _moment(value: datetime | None) -> datetime | None:
-    """A frame timestamp, or None where a left join found no session (NaT)."""
-    return None if value is None or pd.isna(value) else value
+    """A frame timestamp, or None where a left join found no session (NaT). An identity check: under cudf.pandas,
+    pd.isna on a scalar falls back to pandas."""
+    return None if value is None or value is pd.NaT else value
 
 
 def sentiment_score(labels: pd.Series) -> pd.Series:
