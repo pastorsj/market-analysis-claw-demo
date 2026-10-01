@@ -62,8 +62,11 @@ export interface LayoutActions {
   setTheme: (theme: ThemeMode) => void
   /** Set the composer draft (null clears it) */
   setPromptDraft: (value: string | null) => void
-  /** Fetch data sources from the API and enable the ones enabled by default */
-  fetchDataSources: () => Promise<void>
+  /**
+   * Fetch data sources and enable the ones enabled by default: from the API,
+   * or in replay mode from the recordings bundle
+   */
+  fetchDataSources: (from?: 'api' | 'recordings') => Promise<void>
 }
 
 /** Combined layout store type */

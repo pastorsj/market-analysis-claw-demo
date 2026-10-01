@@ -24,7 +24,14 @@ const SOURCES = [
 ]
 
 const recordings: RecordingsSource = {
-  list: async () => [{ id: 'rec-1', title: 'Market leaders', recordedAt: '2026-09-01T00:00:00Z' }],
+  list: async () => [
+    {
+      id: 'rec-1',
+      title: 'Market leaders',
+      recordedAt: '2026-09-01T00:00:00Z',
+      questions: ['Which assets led?'],
+    },
+  ],
   load: async () => ({
     id: 'rec-1',
     title: 'Market leaders',
@@ -58,13 +65,24 @@ describe('MainLayout', () => {
   test('replay mode lists recordings and opens one read-only', async () => {
     render(<MainLayout />, { config: { mode: 'replay' }, feature: { recordings } })
 
-    expect(screen.queryByRole('textbox', { name: 'Chat message input' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Add data sources' })).not.toBeInTheDocument()
+    // As the original demo UI shows a recorded session: read only, not hidden
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toBeDisabled()
+    expect(screen.getByText('Recorded test session · read only')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add data sources' })).toBeDisabled()
+    expect(await screen.findByText('Showing 1 of 1 sessions · 1 of 1 questions')).toBeVisible()
+    expect(screen.getByRole('tab', { name: /Recorded \(1\)/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
 
-    await userEvent.click(await screen.findByText('Market leaders'))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Recorded session: Market leaders; Completed' })
+    )
 
     expect(await screen.findByText('Asset A led.')).toBeInTheDocument()
     expect(useChatStore.getState().currentConversation?.readOnly).toBe(true)
+    // Its data sources show in the composer's counter
+    expect(useLayoutStore.getState().enabledDataSourceIds).toEqual(['market_analysis_structured'])
     // Recorded sessions are shown, never saved.
     expect(useChatStore.getState().conversations).toEqual([])
   })
@@ -102,7 +120,9 @@ describe('MainLayout', () => {
       </p>
     )
     render(<MainLayout />, { config: { mode: 'replay' }, feature: { recordings, Workspace } })
-    await userEvent.click(await screen.findByText('Market leaders'))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Recorded session: Market leaders; Completed' })
+    )
     await screen.findByText('Asset A led.')
 
     useLayoutStore.getState().openExecution('job-1')

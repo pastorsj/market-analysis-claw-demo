@@ -115,7 +115,7 @@ test.describe('live mode', () => {
 test.describe('replay mode', () => {
   test.use({ baseURL: REPLAY_URL })
 
-  test('the research view never calls the API and offers no composer', async ({ page }) => {
+  test('the research view never calls the API and its composer is read only', async ({ page }) => {
     const apiCalls: string[] = []
     page.on('request', (request) => {
       if (new URL(request.url()).pathname.startsWith('/api/v1/')) apiCalls.push(request.url())
@@ -128,7 +128,12 @@ test.describe('replay mode', () => {
     await page.getByRole('link', { name: /Enter market analysis/ }).click()
 
     await expect(page.getByText('What do you want to know?')).toBeVisible()
-    await expect(page.getByRole('textbox', { name: 'Chat message input' })).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Chat message input' })).toBeDisabled()
+    await expect(page.getByText('Recorded test session · read only')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add data sources' })).toBeDisabled()
+    // The saved live session stays out of the replay's lists
+    await page.getByRole('tab', { name: 'My sessions' }).click()
+    await expect(page.getByText('Replay mode shows the recorded sessions only.')).toBeVisible()
     expect(apiCalls).toEqual([])
     const saved = await page.evaluate(() => localStorage.getItem('aiq-chat-store'))
     expect(JSON.parse(saved!).state.conversations[0].messages[0].deepResearchJobStatus).toBe(

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { fetchDataSources } from '@/adapters/api'
+import { fetchDataSources, fetchRecordedDataSources } from '@/adapters/api'
 import { useLayoutStore } from './store'
 
-vi.mock('@/adapters/api', () => ({ fetchDataSources: vi.fn() }))
+vi.mock('@/adapters/api', () => ({ fetchDataSources: vi.fn(), fetchRecordedDataSources: vi.fn() }))
 
 const initialState = useLayoutStore.getState()
 
@@ -93,6 +93,18 @@ describe('useLayoutStore', () => {
         enabledDataSourceIds: ['market_analysis_structured'],
         dataSourcesLoading: false,
         dataSourcesError: null,
+      })
+    })
+
+    test('reads the replay bundle instead of the API when asked', async () => {
+      vi.mocked(fetchRecordedDataSources).mockResolvedValue([{ id: 'market_news', name: 'News' }])
+
+      await useLayoutStore.getState().fetchDataSources('recordings')
+
+      expect(fetchDataSources).not.toHaveBeenCalled()
+      expect(useLayoutStore.getState()).toMatchObject({
+        availableDataSources: [{ id: 'market_news' }],
+        enabledDataSourceIds: ['market_news'],
       })
     })
 

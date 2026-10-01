@@ -109,7 +109,12 @@ const getJson = async (url: string): Promise<unknown> => {
 export const recordings: RecordingsSource = {
   list: async () => {
     const index = parseIndex(await getJson('/api/recordings/index.json'))
-    return index.sessions.map(({ id, title }) => ({ id, title, recordedAt: index.recordedAt }))
+    return index.sessions.map(({ id, title, turns }) => ({
+      id,
+      title,
+      recordedAt: index.recordedAt,
+      questions: turns.map((turn) => turn.question),
+    }))
   },
   load: async (sessionId) => {
     const session = parseSession(

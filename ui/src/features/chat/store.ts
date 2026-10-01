@@ -325,6 +325,8 @@ const toRecordedConversation = (session: RecordedSession, userId: string): Conve
     messages,
     createdAt: recordedAt,
     updatedAt: recordedAt,
+    // The data sources of its last question, for the composer's counter
+    enabledDataSourceIds: session.turns.at(-1)?.sourceIds ?? [],
     readOnly: true,
   }
 }
@@ -536,9 +538,10 @@ export const useChatStore = create<ChatStore>()(
           openRecordedSession: (session: RecordedSession) => {
             const { currentUserId } = get()
             if (!currentUserId) return
+            const conversation = toRecordedConversation(session, currentUserId)
             set(
               {
-                currentConversation: toRecordedConversation(session, currentUserId),
+                currentConversation: conversation,
                 isStreaming: false,
                 isLoading: false,
                 currentStatus: null,
@@ -547,6 +550,7 @@ export const useChatStore = create<ChatStore>()(
               false,
               'openRecordedSession'
             )
+            restoreConversationDataSources(conversation)
           },
 
           addUserMessage: (content, metadata) => {

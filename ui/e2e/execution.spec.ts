@@ -14,7 +14,7 @@ test.use({ baseURL: REPLAY_URL })
 const openSession = async (page: Page, title: string) => {
   await page.goto('/research')
   await page
-    .getByRole('button', { name: `Session: ${title}` })
+    .getByRole('button', { name: `Recorded session: ${title}; Completed` })
     .first()
     .click()
 }

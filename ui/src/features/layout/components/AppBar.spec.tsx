@@ -39,10 +39,10 @@ describe('AppBar', () => {
     expect(useLayoutStore.getState().rightPanel).toBe('data-sources')
   })
 
-  test('hides the data sources action when asked', () => {
-    render(<AppBar showDataSources={false} />)
+  test('disables the data sources action when asked', () => {
+    render(<AppBar isDataSourceSelectionDisabled />)
 
-    expect(screen.queryByRole('button', { name: 'Add data sources' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add data sources' })).toBeDisabled()
   })
 
   test('links to Phoenix only when it is configured', () => {

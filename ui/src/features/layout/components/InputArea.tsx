@@ -6,7 +6,8 @@
  *
  * Chat input area at the bottom of the chat view: the question, the
  * microphone when voice input is on, the data source indicator, and send (or
- * stop while a run is in progress).
+ * stop while a run is in progress). A recorded session (replay mode) shows it
+ * read only, as the original demo UI did.
  */
 
 'use client'
@@ -41,12 +42,14 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   const speechInsertionRef = useRef({ start: 0, end: 0 })
   const { sendMessage, stop } = useHermesChat()
-  const { speechInput: speechInputConfig } = useAppConfig()
+  const { mode, speechInput: speechInputConfig } = useAppConfig()
 
   // A running job in this session pauses the composer; it can be stopped.
   const isBusy = useIsCurrentSessionBusy()
 
   const currentConversation = useChatStore((state) => state.currentConversation)
+  const isRecordedSession = mode === 'replay' || currentConversation?.readOnly === true
+  const disabled = isBusy || isRecordedSession
   const ensureSession = useChatStore((state) => state.ensureSession)
 
   const enabledDataSourceIds = useLayoutStore((s) => s.enabledDataSourceIds)
@@ -64,13 +67,13 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   }, [promptDraft, setPromptDraft])
 
   const handleSubmit = useCallback(() => {
-    if (!message.trim() || isBusy) return
+    if (!message.trim() || disabled) return
     // Session creation needs the user ID, which is set at startup.
     if (!ensureSession()) return
     messageRef.current = ''
     setMessage('')
     sendMessage(message)
-  }, [message, isBusy, ensureSession, sendMessage])
+  }, [message, disabled, ensureSession, sendMessage])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
@@ -138,7 +141,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   )
 
   const speechInput = useSpeechInput({
-    enabled: speechInputConfig.enabled && !isBusy,
+    enabled: speechInputConfig.enabled && !disabled,
     maxSeconds: speechInputConfig.maxSeconds,
     onTranscript: insertSpeechTranscript,
   })
@@ -166,6 +169,11 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
         direction="col"
         className="composer-surface relative rounded-[var(--radius-composer)] border p-3.5 transition-colors"
       >
+        {isRecordedSession && (
+          <Text kind="label/semibold/xs" className="text-subtle mb-2 px-1">
+            Recorded test session · read only
+          </Text>
+        )}
         {/* Text Input */}
         <div onKeyDown={handleKeyDown}>
           <TextArea
@@ -174,8 +182,14 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
             value={message}
             onValueChange={handleValueChange}
             onSelect={rememberSpeechInsertionPoint}
-            placeholder={isBusy ? 'Please wait...' : placeholder}
-            disabled={isBusy}
+            placeholder={
+              isRecordedSession
+                ? 'Recorded test sessions are read only'
+                : isBusy
+                  ? 'Please wait...'
+                  : placeholder
+            }
+            disabled={disabled}
             resizeable="auto"
             size="medium"
             aria-label="Chat message input"
@@ -183,7 +197,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
               speechInputConfig.enabled ? (
                 <SpeechInputButton
                   state={speechInput.state}
-                  disabled={isBusy}
+                  disabled={disabled}
                   onBeforeToggle={rememberSpeechInsertionPoint}
                   onToggle={handleSpeechToggle}
                 />
@@ -211,6 +225,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
             kind="tertiary"
             size="tiny"
             onClick={toggleDataSources}
+            disabled={isRecordedSession}
             tabIndex={-1}
             aria-label="Toggle data sources connections"
             title="Selected data connections"
@@ -238,9 +253,9 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
             <Button
               kind="primary"
               size="small"
-              color={message.trim() ? 'brand' : undefined}
+              color={!message.trim() || disabled ? undefined : 'brand'}
               onClick={handleSubmit}
-              disabled={!message.trim()}
+              disabled={!message.trim() || disabled}
               aria-label="Send message"
               title="Send query"
             >

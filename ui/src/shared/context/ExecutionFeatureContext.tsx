@@ -70,7 +70,14 @@ export interface RecordedSession {
   turns: RecordedTurn[]
 }
 
-export type RecordedSessionSummary = Pick<RecordedSession, 'id' | 'title' | 'recordedAt'>
+/** A recorded session as the sessions list shows it, before it is loaded. */
+export interface RecordedSessionSummary extends Pick<
+  RecordedSession,
+  'id' | 'title' | 'recordedAt'
+> {
+  /** Its questions, one per turn */
+  questions: string[]
+}
 
 export interface RecordingsSource {
   list: () => Promise<RecordedSessionSummary[]>

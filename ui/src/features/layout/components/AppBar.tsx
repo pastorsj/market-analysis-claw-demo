@@ -26,8 +26,8 @@ interface AppBarProps {
   newSessionActionLabel?: string
   /** Disable creating a new session while a question is being submitted */
   isNewSessionDisabled?: boolean
-  /** Show the data sources action (hidden in replay mode) */
-  showDataSources?: boolean
+  /** Disable the data sources action (replay mode: recorded sessions are read only) */
+  isDataSourceSelectionDisabled?: boolean
 }
 
 /**
@@ -38,7 +38,7 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
   onNewSession,
   newSessionActionLabel = 'Create new session',
   isNewSessionDisabled = false,
-  showDataSources = true,
+  isDataSourceSelectionDisabled = false,
 }) {
   const { phoenixUrl } = useAppConfig()
   const rightPanel = useLayoutStore((s) => s.rightPanel)
@@ -111,22 +111,21 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
 
         {/* Right section: Actions */}
         <Flex align="center" gap="2" className="shrink-0">
-          {showDataSources && (
-            <Button
-              kind="tertiary"
-              size="small"
-              onClick={handleAddSourcesClick}
-              aria-label="Add data sources"
-              aria-pressed={isDataSourcesOpen}
-              title="Add data sources"
-              className={cn(isDataSourcesOpen && 'brand-tint')}
-            >
-              <Flex align="center" gap="1">
-                <Globe className="h-4 w-4" />
-                <Text kind="label/regular/md">Data Sources</Text>
-              </Flex>
-            </Button>
-          )}
+          <Button
+            kind="tertiary"
+            size="small"
+            onClick={handleAddSourcesClick}
+            disabled={isDataSourceSelectionDisabled}
+            aria-label="Add data sources"
+            aria-pressed={isDataSourcesOpen}
+            title="Add data sources"
+            className={cn(isDataSourcesOpen && 'brand-tint')}
+          >
+            <Flex align="center" gap="1">
+              <Globe className="h-4 w-4" />
+              <Text kind="label/regular/md">Data Sources</Text>
+            </Flex>
+          </Button>
 
           {phoenixUrl && (
             <a

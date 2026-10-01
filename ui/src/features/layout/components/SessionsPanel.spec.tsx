@@ -4,7 +4,7 @@
 import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, test, expect, beforeEach } from 'vitest'
-import { SessionsPanel } from './SessionsPanel'
+import { SessionsPanel, type RecordedCollection } from './SessionsPanel'
 
 const mockToggleSessionsSidebar = vi.fn()
 const mockSetSessionsCollapsed = vi.fn()
@@ -585,7 +585,7 @@ describe('SessionsPanel - Delete Button States', () => {
       const onSelectSession = vi.fn()
       render(<SessionsPanel sessions={mockSessions} onSelectSession={onSelectSession} readOnly />)
 
-      expect(screen.queryByRole('button', { name: /start new session/i })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /start new session/i })).toBeDisabled()
       expect(screen.queryByRole('button', { name: /delete all sessions/i })).not.toBeInTheDocument()
 
       await user.hover(screen.getByText('First Session'))
@@ -593,6 +593,82 @@ describe('SessionsPanel - Delete Button States', () => {
 
       await user.click(screen.getByText('First Session'))
       expect(onSelectSession).toHaveBeenCalledWith('session-1')
+    })
+  })
+
+  describe('recorded collection', () => {
+    const recordedSessions = [
+      {
+        id: 'leaders',
+        title: 'Market Leaders',
+        recordedAt: '2026-09-29T06:00:00Z',
+        questions: ['Which assets led over the last 20 sessions?'],
+      },
+      {
+        id: 'filings',
+        title: 'Moves and Filings',
+        recordedAt: '2026-09-29T06:00:00Z',
+        questions: ['Which assets moved most?', 'What did their 8-K filings say?'],
+      },
+    ]
+    const collection = (overrides: Partial<RecordedCollection> = {}): RecordedCollection => ({
+      sessions: recordedSessions,
+      status: 'ready',
+      error: null,
+      selectedId: null,
+      loadingId: null,
+      onSelect: vi.fn(),
+      onRetry: vi.fn(),
+      ...overrides,
+    })
+
+    test('lists the recordings as the original demo UI did, and searches their questions', async () => {
+      const user = userEvent.setup()
+      const recorded = collection()
+      render(<SessionsPanel sessions={[]} recorded={recorded} readOnly />)
+
+      expect(screen.getByRole('tab', { name: 'Recorded (2)' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
+      expect(screen.getByText('Showing 2 of 2 sessions · 3 of 3 questions')).toBeInTheDocument()
+      expect(screen.getByText('1 turn')).toBeInTheDocument()
+      expect(screen.getByText('2 turns')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Read-only test runs. Answers load on selection; execution data loads only when requested.'
+        )
+      ).toBeInTheDocument()
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search recorded sessions' }), '8-K')
+      expect(screen.getByText('Showing 1 of 2 sessions · 2 of 3 questions')).toBeInTheDocument()
+      await user.click(
+        screen.getByRole('button', { name: 'Recorded session: Moves and Filings; Completed' })
+      )
+      expect(recorded.onSelect).toHaveBeenCalledWith('filings')
+
+      await user.click(screen.getByRole('tab', { name: 'My sessions' }))
+      expect(screen.getByText('Replay mode shows the recorded sessions only.')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /start a new session/i })).not.toBeInTheDocument()
+    })
+
+    test('shows loading, then a failure with a retry', async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(
+        <SessionsPanel recorded={collection({ status: 'loading' })} readOnly />
+      )
+      expect(screen.getByText('Loading recorded sessions…')).toBeInTheDocument()
+
+      const failed = collection({ status: 'error', error: 'index.json returned 404' })
+      rerender(<SessionsPanel recorded={failed} readOnly />)
+      expect(screen.getByText('index.json returned 404')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Retry' }))
+      expect(failed.onRetry).toHaveBeenCalled()
+    })
+
+    test('without recordings there are no collection tabs', () => {
+      render(<SessionsPanel sessions={mockSessions} />)
+      expect(screen.queryByRole('tablist', { name: 'Session collections' })).not.toBeInTheDocument()
     })
   })
 })

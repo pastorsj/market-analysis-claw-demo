@@ -10,7 +10,7 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { fetchDataSources } from '@/adapters/api'
+import { fetchDataSources, fetchRecordedDataSources } from '@/adapters/api'
 import type { LayoutState, LayoutStore } from './types'
 
 const initialState: LayoutState = {
@@ -101,11 +101,12 @@ export const useLayoutStore = create<LayoutStore>()(
 
       setPromptDraft: (value) => set({ promptDraft: value }, false, 'setPromptDraft'),
 
-      fetchDataSources: async () => {
+      fetchDataSources: async (from = 'api') => {
         set({ dataSourcesLoading: true, dataSourcesError: null }, false, 'fetchDataSources/start')
 
         try {
-          const sources = await fetchDataSources()
+          const sources =
+            from === 'recordings' ? await fetchRecordedDataSources() : await fetchDataSources()
           set(
             {
               availableDataSources: sources,

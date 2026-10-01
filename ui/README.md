@@ -33,8 +33,10 @@ The browser only talks to this origin. The server routes are:
 ## Modes
 
 `UI_MODE=live` (default) submits questions to the API. `UI_MODE=replay` shows
-only the recorded sessions of the data pack: there is no composer, no data
-source selection, and the `/api/v1` proxy answers 404 without calling the API.
+only the recorded sessions of the data pack, under "Recorded" as the original
+demo UI did: the composer and the data source selection are read only, the data
+sources come from the bundle's `pack.json`, and the `/api/v1` proxy answers 404
+without calling the API.
 
 ## The execution view
 

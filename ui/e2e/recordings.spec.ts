@@ -47,7 +47,7 @@ for (const { id, title } of index.sessions) {
 
     await page.goto('/research')
     await page
-      .getByRole('button', { name: `Session: ${title}` })
+      .getByRole('button', { name: `Recorded session: ${title}; Completed` })
       .first()
       .click()
     await page.getByRole('button', { name: 'View execution for this response' }).click()

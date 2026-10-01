@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { fetchDataSources } from './data-sources-client'
+import { fetchDataSources, fetchRecordedDataSources } from './data-sources-client'
 
 const SOURCES = [{ id: 'market_news', name: 'Market news' }]
 
@@ -32,5 +32,32 @@ describe('fetchDataSources', () => {
     )
 
     await expect(fetchDataSources()).rejects.toThrow('The API is unavailable')
+  })
+})
+
+describe('fetchRecordedDataSources', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  test('reads the sources of the replay bundle pack.json', async () => {
+    const pack = {
+      id: 'synthetic-market',
+      sources: [
+        { id: 'market_news', name: 'Market news', description: 'Filings', kind: 'documents' },
+      ],
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(pack)))
+
+    await expect(fetchRecordedDataSources()).resolves.toEqual([
+      { id: 'market_news', name: 'Market news', description: 'Filings' },
+    ])
+    expect(fetch).toHaveBeenCalledWith('/api/recordings/pack.json', { signal: undefined })
+  })
+
+  test('fails when the bundle has no pack.json', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })))
+
+    await expect(fetchRecordedDataSources()).rejects.toThrow('404')
   })
 })

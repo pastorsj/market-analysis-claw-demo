@@ -42,11 +42,18 @@ describe('recordings bundle (v2)', () => {
         id: 'unusual-moves',
         title: 'Unusual moves and filings',
         recordedAt: '2026-09-28T06:00:00Z',
+        questions: [
+          'Which reviewed assets moved unusually this summer, and what did the filings say?',
+        ],
       },
       {
         id: 'structured-evidence',
         title: 'Dividends and news likelihood',
         recordedAt: '2026-09-28T06:00:00Z',
+        questions: [
+          'Which cash dividends were paid in 2026, and how did they change total return?',
+          'Which assets are most likely to have news in the next five days?',
+        ],
       },
     ])
 

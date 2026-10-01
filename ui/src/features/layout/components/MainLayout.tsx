@@ -12,8 +12,9 @@
  * - DataSourcesPanel (right, push panel)
  * - the execution workspace, when a run is opened from an answer
  *
- * In replay mode the sessions are the data pack's recordings and there is no
- * composer or data source selection.
+ * In replay mode the sessions are the data pack's recordings, listed under
+ * "Recorded" as in the original demo UI, and the composer and the data source
+ * selection are read only.
  */
 
 'use client'
@@ -21,10 +22,10 @@
 import { type FC, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Flex } from '@/adapters/ui'
-import { useAppConfig, useExecutionFeature, type RecordedSessionSummary } from '@/shared/context'
+import { useAppConfig, useExecutionFeature } from '@/shared/context'
 import { cn } from '@/shared/lib/cn'
 import { AppBar } from './AppBar'
-import { SessionsPanel } from './SessionsPanel'
+import { SessionsPanel, type RecordedCollection } from './SessionsPanel'
 import { ChatArea } from './ChatArea'
 import { InputArea } from './InputArea'
 import { ResearchPanel } from './ResearchPanel'
@@ -106,7 +107,14 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
   // Follows the current job's SSE stream
   useDeepResearch()
 
-  const { sessions: recordedSessions, open: openRecordedSession } = useRecordedSessions()
+  const {
+    sessions: recordedSessions,
+    status: recordedStatus,
+    error: recordedError,
+    loadingId: recordedLoadingId,
+    open: openRecordedSession,
+    retry: retryRecordedSessions,
+  } = useRecordedSessions()
 
   // Sync saved sessions with the ?session= query parameter
   const { updateSessionUrl, clearSessionUrl } = useSessionUrl({ enabled: !isReplay })
@@ -165,7 +173,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
   }, [deleteAllConversations, clearSessionUrl])
 
   const sessions = useMemo(() => {
-    if (isReplay) return recordedSessions.map(toRecordedSessionItem)
+    // Replay mode has no sessions of its own: its recordings are under Recorded
+    if (isReplay) return []
     return sortConversationsByLastUserMessage(
       currentUserId ? conversations.filter((c) => c.userId === currentUserId) : []
     ).map((conv) => ({
@@ -179,12 +188,37 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
     }))
   }, [
     isReplay,
-    recordedSessions,
     conversations,
     currentUserId,
     isDeepResearchStreaming,
     deepResearchOwnerConversationId,
   ])
+
+  const recordedConversationId = currentConversation?.readOnly ? currentConversation.id : null
+  const recorded = useMemo<RecordedCollection | undefined>(
+    () =>
+      isReplay
+        ? {
+            sessions: recordedSessions,
+            status: recordedStatus,
+            error: recordedError,
+            selectedId: recordedConversationId,
+            loadingId: recordedLoadingId,
+            onSelect: handleSelectSession,
+            onRetry: retryRecordedSessions,
+          }
+        : undefined,
+    [
+      isReplay,
+      recordedSessions,
+      recordedStatus,
+      recordedError,
+      recordedConversationId,
+      recordedLoadingId,
+      handleSelectSession,
+      retryRecordedSessions,
+    ]
+  )
 
   return (
     <Flex direction="col" className="h-screen min-w-[768px] overflow-x-auto overflow-y-hidden">
@@ -194,7 +228,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
         onNewSession={executionOpen ? closeExecution : handleNewSession}
         newSessionActionLabel={executionOpen ? 'Back to answer' : 'Create new session'}
         isNewSessionDisabled={executionOpen ? false : isReplay || isStreaming}
-        showDataSources={!isReplay}
+        isDataSourceSelectionDisabled={isReplay}
       />
 
       {/* Main content area: in-flow panels reflow the center column (push, not overlay) */}
@@ -208,6 +242,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
             onDeleteSession={handleDeleteSession}
             onDeleteAllSessions={handleDeleteAllSessions}
             onRenameSession={updateConversationTitle}
+            recorded={recorded}
             readOnly={isReplay}
           />
         )}
@@ -222,12 +257,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
           )}
         >
           <ChatArea compact={executionOpen} />
-          {!isReplay && (
-            <>
-              <NoSourcesBanner />
-              <InputArea />
-            </>
-          )}
+          {!isReplay && <NoSourcesBanner />}
+          <InputArea />
         </div>
 
         {Workspace && execution ? (
@@ -251,10 +282,3 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
     </Flex>
   )
 }
-
-const toRecordedSessionItem = (session: RecordedSessionSummary) => ({
-  id: session.id,
-  title: session.title,
-  date: new Date(session.recordedAt),
-  hasCompletedReport: true,
-})
