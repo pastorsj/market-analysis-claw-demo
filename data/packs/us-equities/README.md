@@ -64,7 +64,9 @@ to the anchor only; the build writes their ids into `pack.json`.
 `questions.yaml` holds ten questions; six are featured: market leaders among the 50 most liquid stocks, the
 widest intraday swings from the minute bars (`intraday_scan`), unusual sessions among the 50 most liquid, the
 peer network, the Form 8-K Item 1.05 rule with the filings that report an incident, and February's biggest movers
-beside their own 8-Ks. `eval/oracles/` computes the analytics answers from a build and `eval/retrieval.yaml`
+beside their own 8-Ks. Five two-turn `conversations` follow up on an answer: price context then weekly with a
+third stock, the peer network then its central stocks' returns, the leaders then their unusual sessions, two 8-K
+incident filings then the Title 17 requirements, and Regulation FD. `eval/oracles/` computes the analytics answers from a build and `eval/retrieval.yaml`
 names the documents a retrieval answer should cite; CI runs the oracles on the fixture's schema only, since the
 data is never in CI.
 

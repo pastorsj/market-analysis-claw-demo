@@ -3,7 +3,7 @@
 
 /**
  * Each pack's committed recordings, as `scripts/demo.sh replay` serves them: every session opens
- * with its answer and its run, and nothing calls the API.
+ * with an answer per turn and the last turn's run, and nothing calls the API.
  * The expectations come from the bundles themselves, so a re-recording needs no change here.
  */
 
@@ -42,7 +42,8 @@ for (const [pack, baseURL] of Object.entries(RECORDED_PACKS)) {
 
     for (const { id, title } of index.sessions) {
       test(`recorded session "${title}" replays its answer and run`, async ({ page }) => {
-        const [turn] = readJson<{ turns: { events: RecordedEvent[] }[] }>(`sessions/${id}.json`).turns
+        const { turns } = readJson<{ turns: { events: RecordedEvent[] }[] }>(`sessions/${id}.json`)
+        const turn = turns[turns.length - 1]
         const apiCalls: string[] = []
         page.on('request', (request) => {
           if (new URL(request.url()).pathname.startsWith('/api/v1/')) apiCalls.push(request.url())
@@ -53,7 +54,9 @@ for (const [pack, baseURL] of Object.entries(RECORDED_PACKS)) {
           .getByRole('button', { name: `Recorded session: ${title}; Completed` })
           .first()
           .click()
-        await page.getByRole('button', { name: 'View execution for this response' }).click()
+        const viewRuns = page.getByRole('button', { name: 'View execution for this response' })
+        await expect(viewRuns).toHaveCount(turns.length)
+        await viewRuns.last().click()
 
         const workspace = page.getByRole('region', { name: 'Execution workspace' })
         const steps = turn.events.length

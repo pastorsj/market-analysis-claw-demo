@@ -96,7 +96,7 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATA_PACK` | `synthetic-market` | A directory under `data/packs/`: `synthetic-market` (fictional, made with NeMo Data Designer) or `us-equities` (real prices you fetch) |
+| `DATA_PACK` | `synthetic-market` | A directory under `data/packs/`: `synthetic-market` (fictional, made with NeMo Data Designer; the public default, since it needs nothing fetched) or `us-equities` (real prices you fetch; the hosted demo deployment's pack, with `DATA_CORPORA=sec_filings,market_regulations,world_news`) |
 | `DATA_PACK_PROFILE` | the pack's default (`standard`) | `synthetic-market`'s scale: `standard` (2,000 issuers, daily bars), `interactive` (50, fast), `ci` (12, minute bars), `intraday` (500, minute bars) or `large` (10,000) |
 | `DATA_CORPORA` | the pack's defaults | Comma-separated corpus sources; empty means `sec_filings` (SEC EDGAR) and `market_regulations` (eCFR). `us-equities` adds the opt-in `world_news` (GDELT headlines) when it is named |
 | `SEC_USER_AGENT` | – | A name and an email, required by SEC's fair-access policy for the EDGAR filings corpus and for SEC company data (`us-equities`) |

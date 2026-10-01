@@ -196,8 +196,10 @@ profile and the default corpora. `up` needed nothing else installed.
 
    Remove any hosted `KUMO_RELATIONAL_URL`, since the kumo profile runs its own NIM.
 
-   **Real data** (`DATA_PACK=us-equities`) is fetched once, at setup, before the first `up` (`doctor` stops
-   `up` until it is). `DATA_SOURCE_DIR` defaults to `~/market-demo-data`, which on a Brev VM is on its one large
+   **Real data** (`DATA_PACK=us-equities`) is what the hosted demo deployment runs, with every corpus
+   (`DATA_CORPORA=sec_filings,market_regulations,world_news`); `synthetic-market` stays the default elsewhere
+   because `us-equities`' data cannot be committed. The data is fetched once, at setup, before the first `up`
+   (`doctor` stops `up` until it is). `DATA_SOURCE_DIR` defaults to `~/market-demo-data`, which on a Brev VM is on its one large
    disk; point it at a separate data disk if the VM has one. Either set `DATA_SOURCE_MINUTE_BARS` to a URL (a
    bucket, a signed HTTPS link or a Hugging Face dataset, with its credentials in `.env`) and run
    `./scripts/demo.sh data fetch` on the VM, which a Launchable's setup script can do too, or push the data

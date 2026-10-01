@@ -118,8 +118,10 @@ Voice input is off unless `SPEECH_INPUT_ENABLED` is true and `SPEECH_API_KEY` is
 
 ## Recordings
 
-`demo-api record` asks the pack's featured questions (`--all` for every one, `--question ID` for
-some) on a running stack and writes the bundle the UI replays:
+`demo-api record` asks the pack's featured questions (`--all` for every question and conversation,
+`--question ID` for some) on a running stack and writes the bundle the UI replays. A question is a
+session of one turn; a conversation (`conversations` in `questions.yaml`) is one session whose turns
+are asked in order with one `conversation-id`, so each sees the answers before it:
 
 ```text
 data/packs/<pack>/recordings/
@@ -138,8 +140,9 @@ in replay: each structured source's `GET .../schema`, the first 8 rows of each t
 viewer's starting query for each table. `demo-api snapshot-database --out <recordings>` rewrites only
 `database.json`. `scripts/demo.sh record` runs the command in
 the api image on the stack's network, where the defaults (`--api-url http://api:8000`,
-`DATA_ACTIVE_DIR=/data/active`) are right. A question that does not succeed is left out, and the
-command exits 1.
+`DATA_ACTIVE_DIR=/data/active`) are right. A question or conversation that does not succeed is left
+out, and the command exits 1. `--question` updates only the named sessions and keeps the rest of the
+bundle; a whole set (the featured questions, or `--all`) replaces it.
 
 ## Environment
 

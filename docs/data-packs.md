@@ -22,7 +22,7 @@ dataset. In both, SEC EDGAR filings are a separate document source, searched by 
 converted into news events or written to a news table: the demo shows the agent combining a price database and
 a document corpus, each through its own tool.
 
-| | [`synthetic-market`](../data/packs/synthetic-market/README.md) (default) | [`us-equities`](../data/packs/us-equities/README.md) (optional) |
+| | [`synthetic-market`](../data/packs/synthetic-market/README.md) (default) | [`us-equities`](../data/packs/us-equities/README.md) (optional; the demo deployment's pack) |
 |---|---|---|
 | Prices | Fictional issuers (2,000 at the default `standard` profile), seeded prices; one-minute bars in the `ci` and `intraday` profiles | About 1,600 real US stocks, January 2025 to March 2026, rolled up from real one-minute bars that stay outside the repository |
 | Company data | Names and profiles written by Nemotron with NeMo Data Designer, checked against SEC's ticker lists | SEC names, CIKs and SIC codes |
@@ -40,6 +40,10 @@ they are never committed. `us-equities`' data reaches a machine through a fetch 
 ./scripts/demo.sh data fetch          # into $DATA_SOURCE_DIR/minute-bars, verified against the pinned manifest
 ./scripts/demo.sh up                  # builds the pack; on a running stack, also switches everything to it
 ```
+
+The hosted demo deployment runs `us-equities` with every corpus
+(`DATA_CORPORA=sec_filings,market_regulations,world_news`), so its visitors see real prices. `synthetic-market` stays the default in `.env.example` and CI because
+`us-equities`' data cannot be committed: a fresh clone builds and replays the synthetic pack with nothing to fetch.
 
 ## How a pack is built
 
@@ -101,19 +105,25 @@ only the default profiles, fit the landing page on one screen, and are what `rec
 analytics question has an oracle in `eval/oracles/`, and `eval/retrieval.yaml` names the documents a retrieval
 answer should cite.
 
+`questions.yaml` can also hold `conversations`: two to six turns asked in order in one conversation, so a later
+turn can refer to an earlier answer ("For those same two examples, ..."). They follow the same source and profile
+rules, share the questions' ids, are not listed in the UI, and are recorded by `record --all`, each as one replay
+session. `us-equities` has five.
+
 ## Recordings
 
 The replay bundle lives with its pack, in `data/packs/<pack>/recordings/`, and is committed. It is written by:
 
 ```bash
 ./scripts/demo.sh record                          # the featured questions
-./scripts/demo.sh record --all                    # every question the build offers
+./scripts/demo.sh record --all                    # every question and conversation the build offers
 ./scripts/demo.sh record --question market-leaders --question peer-network
 ```
 
-`record` asks each question on the running stack, one at a time, and rewrites `index.json` with only the
-sessions it recorded, so `--question` makes a bundle of just those questions. A question that does not succeed
-is left out, and the command exits 1. Review the files before committing: they hold questions, answers, evidence
+`record` asks each question on the running stack, one at a time, and each conversation's turns in order in one
+conversation. A whole set (the featured questions, or `--all`) replaces the bundle; `--question` re-records only
+the named questions or conversations and keeps the bundle's other sessions. A question or conversation that does
+not succeed is left out (a re-recorded one keeps its earlier session), and the command exits 1. Review the files before committing: they hold questions, answers, evidence
 excerpts and model names. `./scripts/demo.sh replay` then serves the UI on the bundle alone, and stops with a
 hint when the pack has none. The format is in [`api/README.md`](../api/README.md#recordings).
 
