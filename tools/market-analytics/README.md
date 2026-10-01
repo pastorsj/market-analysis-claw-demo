@@ -96,7 +96,7 @@ Two tiers, so that a pack larger than the GPU still runs.
   pays about 25 ms per call, so reading file by file was 16 to 46 times slower on the GPU. In month partitions
   the window and the symbols go into the reader, which skips row groups by their statistics. One-symbol files
   have no symbol column, so they are read whole, and each row's symbol follows from its file's row count. Each
-  batch is reduced, for example to one bar per symbol and session (`session_bars`), before the next is read, so
+  batch is reduced, for example to one row per symbol and session (`session_profile`), before the next is read, so
   memory holds one batch whatever the dataset's size. Peak GPU memory was 5 to 7 times the batch's estimate.
   `intraday_scan`'s reduction (`tools/intraday.py`) turns each batch into one row per asset and session: its
   bar, VWAP, the sum of squared minute returns, the deepest fall from the running high close, and the volume in

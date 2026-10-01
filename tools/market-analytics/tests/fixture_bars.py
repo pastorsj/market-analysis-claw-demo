@@ -77,3 +77,24 @@ def _spec(root: Path, **layout: str) -> dict[str, Any]:
         "regular_session": ["09:30", "16:00"],
         **layout,
     }
+
+
+def session_bars(frame: pd.DataFrame) -> pd.DataFrame:
+    """A reduction for the scan tests: one bar per symbol and session (open, high, low, close, volume, VWAP from
+    closes, bar count).
+
+    Open and close are each group's first and last bar, so the files must be ordered by time within a symbol, as
+    both layouts are.
+    """
+    frame = frame.assign(session=frame["time"].dt.floor("D"), value=frame["close"] * frame["volume"])
+    bars = frame.groupby(["symbol", "session"]).agg(
+        open=("open", "first"),
+        high=("high", "max"),
+        low=("low", "min"),
+        close=("close", "last"),
+        volume=("volume", "sum"),
+        value=("value", "sum"),
+        bar_count=("close", "count"),
+    )
+    bars["vwap"] = bars["value"] / bars["volume"]
+    return bars.drop(columns="value").reset_index()

@@ -46,8 +46,9 @@ def scan_bars_without_fallbacks(specs: list[dict[str, Any]], window: tuple[Any, 
 
 
 def scan_bars(spec: dict[str, Any], window: tuple[Any, Any], budget: int | None) -> Any:
+    from fixture_bars import session_bars
+
     from market_analytics.bars import MinuteBars
-    from market_analytics.bars import session_bars
 
     bars = MinuteBars.from_pack({"market": {"bars": spec}})
     return bars.scan(["AAA", "CCC"], *window, session_bars, budget=budget).result

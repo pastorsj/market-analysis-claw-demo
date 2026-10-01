@@ -11,9 +11,9 @@ import pytest
 from fixture_bars import minute_bars
 from fixture_bars import month_partitions
 from fixture_bars import per_symbol
+from fixture_bars import session_bars
 
 from market_analytics.bars import MinuteBars
-from market_analytics.bars import session_bars
 
 # June 30, 2026 in UTC, the worker's timestamp model: 04:00 June 30 to 03:59 July 1 in New York (EDT, UTC-4).
 JUNE_30 = (datetime(2026, 6, 30, 4, 0), datetime(2026, 7, 1, 3, 59))

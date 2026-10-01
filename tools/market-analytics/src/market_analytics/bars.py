@@ -11,7 +11,8 @@ and are never loaded whole. A scan names symbols and a window, and:
 2. estimates from the footers what reading each file takes: the columns read, in the row groups read;
 3. reads the files in batches whose estimate stays under a byte budget (MARKET_ANALYTICS_BATCH_BYTES), one
    read_parquet call per batch;
-4. reduces each batch with the caller's function, such as `session_bars`, before it reads the next.
+4. reduces each batch with the caller's function, such as `session_profile` (tools/intraday.py), before it reads
+   the next.
 
 Memory holds one batch plus the reduced results, whatever the dataset's size, which is how a GPU scan goes past an
 A100's 40 GB. The reads are plain pandas calls, which cudf.pandas runs on cudf's Parquet reader. As with Polars'
@@ -197,26 +198,6 @@ class MinuteBars:
             keep = in_session if keep is None else keep & in_session
         frame = frame if keep is None else frame[keep]  # one filtered copy of the batch
         return frame[["symbol", *FIELDS]]
-
-
-def session_bars(frame: pd.DataFrame) -> pd.DataFrame:
-    """One bar per symbol and session: open, high, low, close, volume, VWAP (from closes) and the bar count.
-
-    Open and close are each group's first and last bar, so the files must be ordered by time within a symbol, as
-    both layouts are.
-    """
-    frame = frame.assign(session=frame["time"].dt.floor("D"), value=frame["close"] * frame["volume"])
-    bars = frame.groupby(["symbol", "session"]).agg(
-        open=("open", "first"),
-        high=("high", "max"),
-        low=("low", "min"),
-        close=("close", "last"),
-        volume=("volume", "sum"),
-        value=("value", "sum"),
-        bar_count=("close", "count"),
-    )
-    bars["vwap"] = bars["value"] / bars["volume"]
-    return bars.drop(columns="value").reset_index()
 
 
 def _batches(parts: list[Part], budget: int) -> Iterator[list[Part]]:
