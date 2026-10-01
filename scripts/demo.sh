@@ -426,16 +426,13 @@ cmd_test() {
 }
 
 test_unit() {
-  local project skill
+  local project
   for project in $PYTHON_PROJECTS; do
     log "$project"
     (cd "$ROOT/$project" && uv run --locked pytest -q -m "not gpu and not slow and not live")
   done
   # shellcheck disable=SC2086 # one project per word
   (cd "$ROOT" && uvx "$RUFF" check $PYTHON_PROJECTS && uvx "$RUFF" format --check $PYTHON_PROJECTS)
-  for skill in "$ROOT"/agent/profile/skills/*/; do
-    (cd "$ROOT/agent" && uv run --locked agentskills validate "$skill")
-  done
 }
 
 test_ui() {

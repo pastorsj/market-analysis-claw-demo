@@ -184,7 +184,7 @@ UI.
 ./scripts/demo.sh test              # unit (every Python project, ruff, skills lint), ui, contracts, compose
 ./scripts/demo.sh test e2e          # UI build and Playwright: live smoke and replay of the recordings
 ./scripts/demo.sh test switchyard   # build Switchyard and dry-run every route template
-uv run --directory api pytest       # one project: also agent, data and tools/*
+uv run --directory api pytest       # one project: also agent, data, data/generate and tools/*
 npm --prefix ui run lint            # also type-check, test:ci, build and e2e
 scripts/gen-contracts.sh --check    # the generated schemas and TypeScript are up to date
 pre-commit run --all-files          # ruff, shellcheck, JSON/YAML/TOML checks, gitleaks
@@ -258,7 +258,7 @@ Each component also has its own README with its environment and tests.
   serves no GPT model; the escalation templates take GPT-6 Sol from a provider you configure.
 - **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
   `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
-  need exact rows, such as the per-event price reactions. The replay bundle was recorded with it.
+  need exact rows or custom SQL, such as the per-sector counts and median returns (`sector-sql`). The replay bundle was recorded with it.
 - **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
 - **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
   person on one host.

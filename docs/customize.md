@@ -41,9 +41,9 @@ evidence and citation rules, and the answer format. Keep it free of tool details
 ## Add or change a skill
 
 Skills live in `agent/profile/skills/<name>/SKILL.md` in the Agent Skills format, which
-`agentskills validate` checks: YAML front matter (`name` matching the directory, a `description` of at most 60
-characters, since Hermes truncates longer ones in its skill index, `license`, `compatibility`, `metadata`),
-then *When to Use*, *Tool*, *Procedure*, *Pitfalls* and an *Example*. A skill teaches one tool family; `SOUL.md` loads it only when the run's sources grant that family.
+`uv run --directory agent pytest` checks (`tests/test_skills.py`): YAML front matter (`name` matching the
+directory, a `description` of at most 60 characters, since Hermes truncates longer ones in its skill index,
+`license`, `compatibility`, `metadata`), then *When to Use*, *Tool*, *Procedure*, *Pitfalls* and an *Example*. A skill teaches one tool family; `SOUL.md` loads it only when the run's sources grant that family.
 
 1. Write or edit the skill. Say what the application sets (for example `source_ids`) so the model does not
    pass it.
@@ -91,7 +91,8 @@ Everything above, plus:
 | `agent/sandbox-policy.yaml` | A network policy for `host.openshell.internal:<port>`, `protocol: mcp`, the handshake rules and the tool allowlist, binaries `*hermes` |
 | `scripts/lib/env.sh` | `agent_features`: map the profile to the feature |
 | `scripts/lib/doctor.sh` | The profile in `KNOWN_PROFILES`, its port in `check_ports` |
-| `scripts/demo.sh` | The service in `backend_services`, and a profile set that includes it in `PROFILE_SETS` |
+| `scripts/lib/openshell.sh` | The server's image in `TOOL_IMAGES`, so a new image of it recreates the sandbox (Hermes lists a server's tools once, when the sandbox starts) |
+| `scripts/demo.sh` | The service in `backend_services`, a profile set that includes it in `PROFILE_SETS`, and the project in `PYTHON_PROJECTS`, so `demo.sh test unit` runs its tests and ruff |
 | `.env.example`, `.github/workflows/ci.yml` | The profile in section 3; the project in the Python matrix |
 
 ## Add a tool family or a receipt kind

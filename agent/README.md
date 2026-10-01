@@ -108,5 +108,6 @@ provider profile, the MCP tool allowlists match the config and
 Add it to the MCP server, then to `contracts/tool-registry.json`, the server's
 `tools.include` in `profile/config.yaml`, the server's `tools/call` allowlist in
 `sandbox-policy.yaml`, and the skill that teaches it. A new server also needs a
-feature in `render_config.py` and a loopback port in `compose.yaml`. The tests
-name whatever you missed.
+feature in `render_config.py`, a loopback port in `compose.yaml`, and its image
+in `TOOL_IMAGES` (`scripts/lib/openshell.sh`). The tests name whatever else you
+missed; [customize.md](../docs/customize.md#add-an-mcp-server) lists every file.

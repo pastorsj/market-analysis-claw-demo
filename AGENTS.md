@@ -18,7 +18,7 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 ## Commands
 
 - Stack: `scripts/demo.sh <command>`; run it with no arguments for the list.
-- Python tests, per project: `uv run --directory <dir> pytest` (dirs: `api`, `data`, `agent`, `tools/*`).
+- Python tests, per project: `uv run --directory <dir> pytest` (dirs: `api`, `agent`, `data`, `data/generate`, `tools/*`).
 - Lint: `ruff check . && ruff format --check .` (one `ruff.toml` for the repo).
 - UI: `npm --prefix ui run lint`, `type-check`, `test:ci`.
 - Contracts: `scripts/gen-contracts.sh` to regenerate, `scripts/gen-contracts.sh --check` to verify.

@@ -72,18 +72,12 @@ jobs:
           uvx "$RUFF" format --check .
       - name: pytest
         run: uv run --locked pytest -m "not gpu and not slow and not live"
-      - name: pytest (slow; builds the interactive data pack in seconds)
+      - name: pytest (slow; builds synthetic-market's ci profile in seconds)
         if: matrix.project == 'data'
         run: uv run --locked pytest -m slow
       - name: pytest (fetch from a local web server, with the remote extra)
         if: matrix.project == 'data'
         run: uv run --locked --extra remote pytest tests/test_external.py
-      - name: Skills lint
-        if: matrix.project == 'agent'
-        run: |
-          for skill in profile/skills/*/; do
-            uv run --locked agentskills validate "$skill"
-          done
 
   contracts:
     runs-on: ubuntu-24.04

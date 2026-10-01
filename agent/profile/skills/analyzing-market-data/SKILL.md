@@ -100,8 +100,10 @@ The tools return fractions, not percentages. Convert them when you write:
   `max_drawdown` and volume shares: 0.2474 is 24.74%, and 1.0166 is +101.66%.
 - `volatility` is the standard deviation of daily returns: 0.0286 is 2.86% a
   day.
-- `comparison=zscore` scores and the anomaly scan's `observed_deviations` are
-  robust z-scores: write "+4.2 robust z-score", never a percentage.
+- `comparison=zscore` scores are z-scores against the universe's mean and
+  standard deviation: write "+2.1 z-score". The anomaly scan's
+  `observed_deviations` are robust (median/MAD) z-scores against the baseline
+  window: write "+4.2 robust z-score". Never write either as a percentage.
 - Never write a return as a multiple ("×") and never put a % sign on an
   unconverted fraction.
 
