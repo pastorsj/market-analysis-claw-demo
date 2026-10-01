@@ -40,7 +40,6 @@ judge call.
 | GPT-6 Sol from any OpenAI-compatible provider | `pinned-capable.nemotron-gpt`, capable GPT-6 Sol on `CAPABLE_BASE_URL` | A1: 24 |
 | Ultra escalating to GPT-6 Sol | `escalation.nemotron-gpt`, the same capable settings | A2: 20 |
 | All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`) | A4: 12 |
-| Nemotron 3.5 Super | not yet: not on build.nvidia.com, and a text preview elsewhere passed 4 of 34 | A5: 4 |
 
 Switching is an `.env` edit plus `./scripts/demo.sh restart switchyard`; the sandbox is not rebuilt.
 
@@ -115,7 +114,7 @@ contradiction or no evidence. The bake-off below measures it ([the tuned judge](
 | Judge and auxiliary calls, thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
 | Capable (escalation and pinned templates) | GPT-6 Sol, over the Responses API | not served; the id your provider lists, e.g. `gpt-6-sol` |
 | Judge for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
-| Later efficient model | Nemotron 3.5 Super | not served yet (a text preview elsewhere is not ready: A5 below) |
+| Candidate efficient model | Nemotron 3.5 Super | to be evaluated once it is served publicly |
 
 On any other OpenAI-compatible endpoint, use the ids its `GET /v1/models` lists; `./scripts/demo.sh doctor
 --keys` checks every id the template uses. Retrieval always uses the retriever endpoint (build.nvidia.com):
@@ -130,11 +129,10 @@ with a sandbox started for that pack.
 
 **Endpoints.** The Nemotron arms ran on build.nvidia.com, as the default does. GPT-6 Sol came from an
 OpenAI-compatible gateway through `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`, while the Nemotron side of those
-arms stayed on build.nvidia.com. The Nemotron 3.5 Super text preview is not on build.nvidia.com, so A5 ran
-entirely on that gateway.
+arms stayed on build.nvidia.com.
 
 **Arms.** Models: Ultra is Nemotron 3 Ultra 550B-A55B, Sol is GPT-6 Sol, Super is Nemotron 3 Super
-120B-A12B, Lightning is Nemotron 3.5 Lightning 30B-A3B, and 3.5 Super is the Nemotron 3.5 Super text preview.
+120B-A12B, and Lightning is Nemotron 3.5 Lightning 30B-A3B.
 Every arm used `SWITCHYARD_CONFIRMATIONS=1`.
 
 | Arm | `SWITCHYARD_ROUTES` | Efficient | Capable | Judge and auxiliary calls | Endpoints |
@@ -143,13 +141,12 @@ Every arm used `SWITCHYARD_CONFIRMATIONS=1`.
 | A1 Sol pinned | `pinned-capable.nemotron-gpt` | – | Sol | Super (auxiliary only) | Sol on the gateway, Super on build.nvidia.com |
 | A2 Ultra → Sol | `escalation.nemotron-gpt` | Ultra | Sol | Super, with the tuned judge prompt | Sol on the gateway, the rest on build.nvidia.com |
 | A4 Super → Ultra | `escalation.nemotron` | Super | Ultra | Lightning, with the tuned judge prompt | build.nvidia.com |
-| A5 3.5 Super alone | `passthrough.nemotron` | 3.5 Super | – | Super (auxiliary only) | the gateway |
 
 **Questions.** Each pack's six featured questions plus `outcome-prediction` and `large-universe-scan`, and on
 `synthetic-market` also `story-event-context` ([data packs](data-packs.md)): 9 and 8 questions, each sent
 with its own `sources`, as the UI's cards send them. Every question ran twice per arm: pass 1 in the order
-A0, A1, A2, A4, A5 and pass 2 in reverse, so a busy hour on an endpoint does not land on one arm. That is
-17 questions × 5 arms × 2 = 170 runs, one at a time.
+A0, A1, A2, A4 and pass 2 in reverse, so a busy hour on an endpoint does not land on one arm. That is
+17 questions × 4 arms × 2 = 136 runs, one at a time.
 
 **Procedure.**
 1. Point `.env` at the arm (the table above) and run `./scripts/demo.sh restart switchyard`. That re-renders
@@ -219,7 +216,6 @@ Then give overall (1-5) and pass: true only if you would show this report to a c
 | **A1 Sol pinned** | **24/34** | **13/18** | **11/16** | 25/34 | **28/34** | **3.93** | 97 | 260 / 12 / 96 | – | – | – | **60** | 617 | 4 | 25,404 |
 | A2 Ultra → Sol | 20/34 | 11/18 | 9/16 | 24/34 | 23/34 | 3.68 | 97 | 180 / 5 / 55 | 10/34 | 2 | 5 | 80 | 409 | 1 | 35,222 |
 | A4 Super → Ultra | 12/34 | 8/18 | 4/16 | 23/34 | 13/34 | 2.85 | 100 | 95 / 4 / 0 | 18/34 | 2 | 6 | 140 | 489 | 4 | 28,442 |
-| A5 3.5 Super alone | 4/34 | 3/18 | 1/16 | 22/34 | 8/34 | 2.62 | 98 | 166 / 2 / 1 | – | – | – | 36 | 473 | 2 | 35,754 |
 
 Served models (agent turns over the arm's 34 runs; Switchyard's upstream calls add the judge's):
 
@@ -229,30 +225,29 @@ Served models (agent turns over the arm's 34 runs; Switchyard's upstream calls a
 | A1 | Sol 219 | Sol 219, Super 1 | – |
 | A2 | Ultra 91, Sol 93, Super 2 (fallback) | Super 100, Sol 93, Ultra 91 | turn 1 in 5 runs, 2 in 1, 3 in 2, 6 in 1, 7 in 1 |
 | A4 | Ultra 64, Super 41, Lightning 16 (fallback) | Lightning 77, Ultra 64, Super 41 | turn 0 in 8 runs, 1 in 5, 2 in 5 |
-| A5 | 3.5 Super 259 | 3.5 Super 259 | – |
 
 Per question, one letter per run: `P` pass, `f` fail, `d` the deterministic check failed, `*` escalated,
 `~` at least one turn on the fallback route.
 
-| Pack | Question | A0 | A1 | A2 | A4 | A5 |
-|---|---|---|---|---|---|---|
-| synthetic | market-leaders | P~ P | P P | P P | fd~ P | f P |
-| synthetic | news-sentiment-reaction | fd fd | fd P | fd P* | fd* fd | fd fd |
-| synthetic | unusual-sessions | fd P | P P | fd P | fd* f* | f f |
-| synthetic | peer-network | P P | P P | P P | P P* | fd P |
-| synthetic | cyber-disclosure-rules | f~ f | fd P | fd* P* | f* P* | f fd |
-| synthetic | news-and-filings | f f | fd P | fd* fd~ | fd~ P* | f f |
-| synthetic | story-event-context | fd f | fd P | fd fd | f* fd | f fd |
-| synthetic | outcome-prediction | f P | P P | P P | f* P | fd f |
-| synthetic | large-universe-scan | f P | fd P | P P | P P | fd P |
-| us | market-leaders | fd P | fd P | P P | fd~ fd~ | fd P |
-| us | intraday-ranges | f P | P P | f f | fd P* | f f |
-| us | unusual-sessions | fd f | P P | P* P* | P* P* | f fd |
-| us | peer-network | f f | f fd | fd P | fd P* | f fd |
-| us | cyber-disclosure-rules | f f | fd P | fd* P* | fd f~ | f fd |
-| us | moves-and-filings | P P | fd P | P* P* | f* f | f f |
-| us | outcome-prediction | f P | P P | f f | f* f* | f fd |
-| us | large-universe-scan | f P | P P | fd P | f* f* | f f |
+| Pack | Question | A0 | A1 | A2 | A4 |
+|---|---|---|---|---|---|
+| synthetic | market-leaders | P~ P | P P | P P | fd~ P |
+| synthetic | news-sentiment-reaction | fd fd | fd P | fd P* | fd* fd |
+| synthetic | unusual-sessions | fd P | P P | fd P | fd* f* |
+| synthetic | peer-network | P P | P P | P P | P P* |
+| synthetic | cyber-disclosure-rules | f~ f | fd P | fd* P* | f* P* |
+| synthetic | news-and-filings | f f | fd P | fd* fd~ | fd~ P* |
+| synthetic | story-event-context | fd f | fd P | fd fd | f* fd |
+| synthetic | outcome-prediction | f P | P P | P P | f* P |
+| synthetic | large-universe-scan | f P | fd P | P P | P P |
+| us | market-leaders | fd P | fd P | P P | fd~ fd~ |
+| us | intraday-ranges | f P | P P | f f | fd P* |
+| us | unusual-sessions | fd f | P P | P* P* | P* P* |
+| us | peer-network | f f | f fd | fd P | fd P* |
+| us | cyber-disclosure-rules | f f | fd P | fd* P* | fd f~ |
+| us | moves-and-filings | P P | fd P | P* P* | f* f |
+| us | outcome-prediction | f P | P P | f f | f* f* |
+| us | large-universe-scan | f P | P P | fd P | f* f* |
 
 What the numbers show:
 - **Sol pinned is still the strongest arm**, as on 2026-09-29, and the margin held on both packs. Its
@@ -267,7 +262,6 @@ What the numbers show:
   them at the first turn, so it mostly runs Ultra with extra calls; 6 of its 30 reports had no citation. Its
   fallback route serves 3.5 Lightning, and 2 of its 4 failed jobs ended on HTTP 404 errors from its model
   calls during a nine-minute burst.
-- **The Nemotron 3.5 Super text preview is not ready** for this agent: 4 of 34, with the lowest judge mean.
 - **Two questions were held back by the tools in every arm**, and both are fixed since ([after the
   fixes](#after-the-tool-fixes)). The news tools had no universe filter, so `news-sentiment-reaction` got all
   545 news items instead of the 12 most liquid issuers' 13; only three runs on Sol answered or flagged it
@@ -324,7 +318,7 @@ opposite-moving pair apart from the pairs that moved together.
 - **Receipts, not tool descriptions.** The judge never sees what the tools tell the model. On `peer-network`
   it first counted "PageRank" and "daily-return correlations", which the relationship tool's description
   states, as unsupported, in every arm. That question's reference facts now quote the description, and its runs were
-  graded again; the tables use the second grades, which added 2 passes to A2 and 1 each to A4 and A5.
+  graded again; the tables use the second grades, which added 2 passes to A2 and 1 to A4.
 - **Stalled streams.** Model streams sometimes ended early, from the gateway's Sol and from build.nvidia.com's
   Nemotron models alike. Switchyard logged the early end within a second, but in at least four runs Hermes,
   behind the OpenShell proxy, saw the connection close only 5 to 10 minutes later and retried (three on Sol in
@@ -341,8 +335,7 @@ opposite-moving pair apart from the pairs that moved together.
 The first bake-off ran on the retired `market-analysis` pack: its seven hero questions (H1 to H7) and five
 more, once per arm, on the same kind of gateway for every model, with the stack on a laptop and Auto
 Ontology off. Sol pinned passed 11 of 12; Ultra alone and Ultra → Sol 6 each (the old judge latched falsely on
-half of Ultra's passes); Ultra → Sol with two confirmations 6; Super → Ultra 3; and the 3.5 Super preview
-escalating to Sol 5. Those results set today's defaults, and the 2026-09-30 bake-off confirms them.
+half of Ultra's passes); Ultra → Sol with two confirmations 6; and Super → Ultra 3. Those results set today's defaults, and the 2026-09-30 bake-off confirms them.
 
 ## Repeating the bake-off
 
@@ -358,5 +351,5 @@ Repeat it when a model id, a template, the judge prompt or the endpoint's model 
 5. Score each run with the checks and the judge prompt above, and fill in the tables.
 6. Put `.env` back on the winner and restart Switchyard.
 
-The 170 runs took about 8 hours, one at a time; the Sol arms' stalls and build.nvidia.com's overloads took
+The bake-off took about 8 hours, one run at a time; the Sol arms' stalls and build.nvidia.com's overloads took
 a large share of it.
