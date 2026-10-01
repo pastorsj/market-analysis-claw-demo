@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from demo_api.benchmark import market_calls
+from demo_api.benchmark import retrieval
 from demo_api.benchmark import run_benchmark
 from demo_api.jobs.export import export_turn
 from demo_api.jobs.runner import QueueFullError
@@ -162,7 +163,7 @@ async def trace(job_id: str, services: ServicesDep) -> dict[str, str]:
 @router.get("/job/{job_id}/export")
 async def export(job_id: str, services: ServicesDep) -> dict[str, Any]:
     """The job as one turn of the v2 recordings bundle (see ``jobs/export.py``)."""
-    return await export_turn(services.store, await _job(services, job_id))
+    return await export_turn(services.store, await _job(services, job_id), services.pack.data_dir)
 
 
 @router.get("/job/{job_id}/benchmark")
@@ -205,6 +206,22 @@ async def run_comparison(job_id: str, services: ServicesDep) -> dict[str, Any]:
     if result.status != "unavailable":
         await services.store.save_benchmark(job_id, body)
     return body
+
+
+@router.get("/job/{job_id}/retrieval-benchmark")
+async def retrieval_benchmark(job_id: str, services: ServicesDep) -> dict[str, Any]:
+    """The Milvus CPU/GPU index comparison that applies to the job's retrieval calls (``demo_api.benchmark.retrieval``).
+
+    404 on a CPU-only stack, which has no GPU index; 409 while the run is going or once the index was rebuilt.
+    """
+    job = await _job(services, job_id)
+    if job.is_active:
+        raise HTTPException(409, "The run is still going; its retrieval comparison applies once it has finished.")
+    try:
+        benchmark = retrieval.for_run(services.pack.data_dir, await services.store.receipts(job_id))
+    except retrieval.RetrievalBenchmarkUnavailable as error:
+        raise HTTPException(error.status_code, str(error)) from error
+    return benchmark.model_dump(mode="json")
 
 
 async def _job(services: Services, job_id: str) -> Job:

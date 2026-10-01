@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""The Benchmark routes: a finished job's market calls replayed on market analytics' CPU and GPU engines."""
+"""The Benchmark routes: a finished job's market calls replayed on market analytics' CPU and GPU engines, and the
+Milvus CPU/GPU index comparison that applies to its retrieval calls."""
 
 from __future__ import annotations
 
@@ -11,10 +12,14 @@ from typing import Any
 
 import httpx
 import pytest
+from pydantic import ValidationError
 from support import event
+from support import load_contract
 from support import receipt_for
 
 from demo_api.benchmark import Benchmark
+from demo_api.benchmark import RetrievalBenchmark
+from demo_api.benchmark.retrieval import RetrievalProfile
 from demo_api.benchmark.runner import stage_from
 from demo_api.settings import Settings
 
@@ -153,3 +158,51 @@ def test_a_speedup_is_claimed_only_when_every_pair_was_faster_on_the_gpu() -> No
         assert (stage.qualified, stage.speedup, stage.speedup_range) == (False, None, None)
     assert (one_slow_pair.cpu.median_ms, one_slow_pair.gpu.median_ms) == (100.0, 40.0)
     assert mismatch.outcome == "mismatch" and mismatch.parity is False
+
+
+async def test_the_milvus_comparison_applies_to_runs_on_the_same_index_build(
+    app, api, fake_hermes, post_receipt, data_dir
+):
+    job_id = await finished_job(api, app, fake_hermes, post_receipt, market=False)
+    route = f"/v1/jobs/async/job/{job_id}/retrieval-benchmark"
+
+    # A CPU-only stack has no GPU index, so no comparison
+    response = await api.get(route)
+    assert response.status_code == 404
+    assert "CPU index only" in response.json()["detail"]
+    assert (await api.get(f"/v1/jobs/async/job/{job_id}/export")).json()["retrievalBenchmark"] is None
+
+    [measured] = load_contract("retrieval-benchmarks.json")
+    (data_dir / "retrieval-benchmark.json").write_text(json.dumps(measured))
+    body = (await api.get(route)).json()
+    assert body == RetrievalBenchmark.model_validate(measured).model_dump(mode="json")
+    assert (await api.get(f"/v1/jobs/async/job/{job_id}/export")).json()["retrievalBenchmark"] == body
+
+    # Measured on another build of the index: it does not apply to this run
+    (data_dir / "retrieval-benchmark.json").write_text(json.dumps(measured | {"collectionVersion": "x__2"}))
+    assert (await api.get(route)).status_code == 409
+    assert (await api.get(f"/v1/jobs/async/job/{job_id}/export")).json()["retrievalBenchmark"] is None
+
+
+async def test_the_milvus_comparison_needs_a_run_that_searched_documents(app, api, fake_hermes, post_receipt, data_dir):
+    [measured] = load_contract("retrieval-benchmarks.json")
+    (data_dir / "retrieval-benchmark.json").write_text(json.dumps(measured))
+    job_id = await finished_job(api, app, fake_hermes, post_receipt)
+
+    assert (await api.get(f"/v1/jobs/async/job/{job_id}/retrieval-benchmark")).status_code == 422
+    assert (await api.get("/v1/jobs/async/job/nope/retrieval-benchmark")).status_code == 404
+
+
+def test_a_retrieval_speedup_is_claimed_only_with_passing_quality() -> None:
+    [measured] = load_contract("retrieval-benchmarks.json")
+    profile = measured["profiles"][1]
+    assert profile["claim"]["decision"] == "gpu_speedup"
+
+    failing = profile | {"quality": profile["quality"] | {"passed": False, "failureReasons": ["recall_below_gate"]}}
+    small = profile | {"claim": profile["claim"] | {"gpuSpeedupFactor": 1.05, "observedCpuOverGpuRatio": 1.05}}
+    for invalid in (failing, small):
+        with pytest.raises(ValidationError):
+            RetrievalProfile.model_validate(invalid)
+    unclaimed = profile["claim"] | {"decision": "cpu_faster_or_equal"}
+    with pytest.raises(ValidationError):  # a factor belongs to a claim only
+        RetrievalProfile.model_validate(profile | {"claim": unclaimed})

@@ -9,6 +9,7 @@ The JSON that services share. Services never import each other's code; they agre
 | `schemas/execution-event.schema.json` | Generated from `api/src/demo_api/events/` | UI types, replay bundles |
 | `schemas/receipt.schema.json` | Generated from `api/src/demo_api/receipts/` | UI types, agent plugin tests |
 | `schemas/benchmark.schema.json` | Generated from `api/src/demo_api/benchmark/` | UI types (the Benchmark tab), replay bundles |
+| `schemas/retrieval-benchmark.schema.json` | Generated from `api/src/demo_api/benchmark/retrieval.py` | `retrieval-benchmark` (`tools/retrieval`), UI types (the Benchmark tab's Milvus comparison), replay bundles |
 | `fixtures/*.json` | Hand-curated, canonicalized by the generator | api and UI tests |
 
 TypeScript for the schemas and the registry is generated into `ui/src/generated/`.
