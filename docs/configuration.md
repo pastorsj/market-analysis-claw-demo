@@ -89,7 +89,8 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 | Variable | Default | Meaning |
 |---|---|---|
 | `COMPOSE_PROFILES` | `core,retrieval,analytics` | The profiles to run (below). Commands that run the stack always add `core` |
-| `UI_PORT` | `3100` | The UI's port on 127.0.0.1 |
+| `UI_PORT` | `3100` | The UI's host port, on `UI_BIND_HOST` |
+| `UI_BIND_HOST` | `127.0.0.1` | The host address the UI is published on. `0.0.0.0` exposes the UI, and through its `/api/v1` proxy the agent, with no sign-in of its own: use it only behind a link that requires sign-in, such as a Brev link with sign-in set in the Brev console ([Brev VM mode](operations.md#brev-vm-mode)). `doctor` and `up` warn while it is set. Every other port stays on 127.0.0.1 |
 
 ### 4. Data pack
 
@@ -135,6 +136,10 @@ Changing either Hermes key recreates the sandbox on the next `up`.
 | `SPEECH_API_KEY` | empty | An nvapi- key for the ASR; empty uses `RETRIEVER_API_KEY` when the retriever is build.nvidia.com |
 | `SPEECH_CLEANUP_MODEL` | empty | A public model on build.nvidia.com that deletes fillers and false starts from a transcript, e.g. `nvidia/nemotron-3-super-120b-a12b`; empty means no cleanup |
 | `SPEECH_INPUT_MAX_SECONDS` | `60` | The longest recording, 1 to 90 seconds |
+| `DATA_DESIGNER_API_KEY` | `INFERENCE_API_KEY` | The key for `demo.sh data generate`, which writes the `synthetic-market` pack's text with NeMo Data Designer ([`data/generate/README.md`](../data/generate/README.md)). Building a pack never needs it |
+| `DATA_DESIGNER_BASE_URL` | `https://integrate.api.nvidia.com/v1` | The OpenAI-compatible endpoint `data generate` calls |
+| `DATA_DESIGNER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | The model `data generate` calls, with thinking off |
+| `DATA_DESIGNER_PARALLEL` | `8` | Concurrent requests during `data generate` |
 
 ### Derived by `demo.sh`
 
