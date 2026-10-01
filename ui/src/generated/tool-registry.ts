@@ -48,10 +48,6 @@ export interface Tool {
    * The Compose profile that provides the tool.
    */
   profile: 'retrieval' | 'analytics' | 'kumo' | 'ontology'
-  /**
-   * Earlier names of the tool, for reference only. Nothing reads them.
-   */
-  aliases?: string[]
 }
 
 export const TOOL_REGISTRY: ToolRegistry = {

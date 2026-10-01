@@ -70,12 +70,6 @@
         "profile": {
           "description": "The Compose profile that provides the tool.",
           "enum": ["retrieval", "analytics", "kumo", "ontology"]
-        },
-        "aliases": {
-          "description": "Earlier names of the tool, for reference only. Nothing reads them.",
-          "type": "array",
-          "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
         }
       }
     }
