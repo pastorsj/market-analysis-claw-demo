@@ -501,16 +501,19 @@ export const ExecutionWorkspace = ({
   const interactiveNodeIds = terminalInspection ? undefined : currentInspectableNodeIds
   const unobservedLegendLabel = runEnded(whole.status) ? 'Never activated' : 'Not activated yet'
 
-  // A cited source opens its node. Choosing or closing a node wins until another citation.
+  // A cited source opens its node. Choosing or closing a node wins until the next citation click, which
+  // brings a new focus object even when it cites the same source again.
   const [selectedNodeId, setSelectedNodeId] = useState<InspectableExecutionNodeId | null>(null)
   // An Auto Ontology call opened in the data viewer from its explorer
   const [queryReceipt, setQueryReceipt] = useState<StructuredQueryReceipt | null>(null)
-  const focusKey = focus ? `${focus.invocationId ?? ''}|${focus.referenceId ?? ''}` : null
   const focusCall = focusedCall(whole, focus)
   const focusNodeId = focusCall ? nodeOfCall(focusCall, events) : null
-  const [handledFocusKey, setHandledFocusKey] = useState<string | null>(null)
-  if (focusKey !== handledFocusKey && focusNodeId) {
-    setHandledFocusKey(focusKey)
+  const [handledFocus, setHandledFocus] = useState<ExecutionFocus | null>(null)
+  // Counts handled citations, so an explorer opened by one starts on its cited call
+  const [focusCount, setFocusCount] = useState(0)
+  if (focus !== handledFocus && focusNodeId) {
+    setHandledFocus(focus)
+    setFocusCount((count) => count + 1)
     setSelectedNodeId(focusNodeId)
   }
 
@@ -651,7 +654,7 @@ export const ExecutionWorkspace = ({
   } else if (selectedDetail?.id === 'nvidia-ontology') {
     inspector = (
       <OntologyLineageInspector
-        key={handledFocusKey ?? undefined}
+        key={focusCount}
         detail={selectedDetail}
         cursor={activeCursor}
         question={question}
@@ -671,7 +674,7 @@ export const ExecutionWorkspace = ({
     const operation = analytics.find((receipt) => receipt.content)?.content?.operationId
     inspector = (
       <MarketToolExplorer
-        key={`${selectedDetail.id}:${handledFocusKey}`}
+        key={`${selectedDetail.id}:${focusCount}`}
         nodeId={selectedDetail.id}
         title={operation ? OPERATION_LABELS[operation] : selectedDetail.label}
         cursor={activeCursor}

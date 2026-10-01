@@ -56,6 +56,14 @@ describe('useLayoutStore', () => {
       focus: { referenceId: 'ev-1' },
     })
 
+    // Citing the same source again is a new focus, so the workspace reopens its node
+    const evidence = { referenceId: 'ev-1' }
+    useLayoutStore.getState().openExecution('job-1', evidence)
+    const first = useLayoutStore.getState().execution?.focus
+    useLayoutStore.getState().openExecution('job-1', evidence)
+    expect(useLayoutStore.getState().execution?.focus).toEqual(first)
+    expect(useLayoutStore.getState().execution?.focus).not.toBe(first)
+
     useLayoutStore.getState().openExecution('job-2')
     expect(useLayoutStore.getState().execution).toEqual({ jobId: 'job-2', focus: null })
 

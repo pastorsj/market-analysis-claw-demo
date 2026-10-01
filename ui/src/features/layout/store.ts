@@ -74,8 +74,9 @@ export const useLayoutStore = create<LayoutStore>()(
           'closeRightPanel'
         ),
 
+      // A new focus object per call, so citing the same source again reopens its node
       openExecution: (jobId, focus) =>
-        set({ execution: { jobId, focus: focus ?? null } }, false, 'openExecution'),
+        set({ execution: { jobId, focus: focus ? { ...focus } : null } }, false, 'openExecution'),
 
       closeExecution: () => set({ execution: null }, false, 'closeExecution'),
 

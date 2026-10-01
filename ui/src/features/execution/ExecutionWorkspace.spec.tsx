@@ -102,7 +102,7 @@ describe('ExecutionWorkspace', () => {
     ).toHaveTextContent('Market Anomaly Scan is between observed calls')
   })
 
-  it('opens on the evidence a citation points at, and again for the next citation', () => {
+  it('opens on the evidence a citation points at, again for the same one, and for the next one', () => {
     serveDatabase()
     useExecutionStore.getState().addRecord(turn)
     const { rerender } = renderWorkspace('replay', {
@@ -119,6 +119,17 @@ describe('ExecutionWorkspace', () => {
     )
     fireEvent.click(within(explorer).getByRole('button', { name: `Close ${details}` }))
     expect(screen.queryByRole('dialog', { name: details })).toBeNull()
+
+    // The same citation, clicked again after closing its explorer
+    rerender(
+      <ExecutionWorkspace
+        jobId={JOB}
+        focus={{ referenceId: receiptOf('retrieval_evidence').receiptId }}
+        onClose={vi.fn()}
+      />
+    )
+    expect(screen.getByRole('dialog', { name: details })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: `Close ${details}` }))
 
     rerender(
       <ExecutionWorkspace
