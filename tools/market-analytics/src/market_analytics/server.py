@@ -147,8 +147,9 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
         Use direction=highest for leaders and direction=lowest for laggards; make two calls when both ends of the
         ranking are needed. The other metrics are reported next to the ranking one. Returns and volatility are
         fractions (0.25 is 25%; volatility is the daily standard deviation). A return runs from the close before
-        the window's first session to its last close. For "the N sessions ending D", pass end=D and sessions=N
-        instead of start.
+        the window's first session to its last close. peer_relative_return is an asset's return minus the mean
+        return of the universe's assets, not of its industry peers. For "the N sessions ending D", pass end=D and
+        sessions=N instead of start.
         """
         return await run_in_worker(
             "market_scan",

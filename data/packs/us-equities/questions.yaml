@@ -120,10 +120,10 @@ questions:
 - id: peer-relative-returns
   label: Peer-Relative Returns
   tag: ANALYTICS
-  description: Find the stocks that beat or trailed their declared industry peers by the most.
+  description: Find the stocks that beat or trailed the group's average return by the most.
   question: >-
-    Among the 50 most liquid US stocks, which five beat their declared industry peers by the most, and which five
-    trailed them by the most, over the 20 trading sessions ending March 12, 2026?
+    Among the 50 most liquid US stocks, which five beat the group's average return by the most, and which five
+    trailed it by the most, over the 20 trading sessions ending March 12, 2026?
   sources: [market_data]
   tools: [cudf]
 - id: second-half-2025
