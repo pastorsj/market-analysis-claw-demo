@@ -61,7 +61,7 @@ Skills are baked read-only; the agent cannot change them at run time.
 
 ## Add a tool to an existing MCP server
 
-For example, a seventh market tool on the `market_analytics` server:
+For example, an eighth market tool on the `market_analytics` server:
 
 1. Implement it in the server (`tools/market-analytics/src/market_analytics/`) with a typed result and the
    MCP annotation `read_only_hint=True` (Hermes replays read-only calls after a server restart). Add tests.
