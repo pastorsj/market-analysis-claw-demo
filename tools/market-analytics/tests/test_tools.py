@@ -167,20 +167,26 @@ def test_anomaly_scan_filters_by_percentile_and_rejects_overlapping_windows(data
     assert overlapping["error"]["code"] == "invalid_request"
 
 
-def test_price_context_summarizes_weekly_bars_for_tickers_and_names(data: MarketData) -> None:
+def test_price_context_summarizes_daily_bars_next_to_a_weekly_series(data: MarketData) -> None:
     result = run(data, "price_context", asset_ids=["ALPH", "Beta Beverages"], frequency="weekly", point_limit=3, **JUNE)
 
     payload = result["payload"]
     assert [summary["asset_id"] for summary in payload["summaries"]] == ["asset-alpha", "asset-beta"]
     alpha = payload["summaries"][0]
-    assert alpha["observation_count"] == 5  # five weeks overlap June
-    # Weekly summaries run from the first week's close (Friday 2026-06-05) to the last (Tuesday 2026-06-30).
-    assert datetime.fromisoformat(alpha["start_timestamp"]) == datetime(2026, 6, 5, 21, tzinfo=UTC)
-    assert datetime.fromisoformat(alpha["end_timestamp"]) == datetime(2026, 6, 30, 21, tzinfo=UTC)
-    assert alpha["total_return"] == pytest.approx(alpha["end_price"] / alpha["start_price"] - 1)
+    # The series has one point per week; its first is the first week's close (Friday 2026-06-05).
     assert len(payload["series"]) == 3 and payload["series_truncated"]
     assert result["warnings"] == ["The series is cut to the first 3 points."]
-    assert payload["series"][0]["timestamp"] == alpha["start_timestamp"]
+    assert datetime.fromisoformat(payload["series"][0]["timestamp"]) == datetime(2026, 6, 5, 21, tzinfo=UTC)
+    # The summary is the daily one, whatever the frequency.
+    daily = run(data, "price_context", asset_ids=["ALPH", "Beta Beverages"], include_series=False, **JUNE)["payload"]
+    assert payload["summaries"] == daily["summaries"]
+    assert alpha["observation_count"] == 22  # June's trading sessions, not its five weeks
+    assert datetime.fromisoformat(alpha["start_timestamp"]) == datetime(2026, 6, 1, 21, tzinfo=UTC)
+    assert datetime.fromisoformat(alpha["end_timestamp"]) == datetime(2026, 6, 30, 21, tzinfo=UTC)
+    assert alpha["total_return"] == pytest.approx(alpha["end_price"] / alpha["start_price"] - 1)
+    monthly = run(data, "price_context", asset_ids=["ALPH"], frequency="monthly", **JUNE)["payload"]
+    assert monthly["summaries"][0] == alpha
+    assert len(monthly["series"]) == 1
 
 
 def test_price_context_rejects_unknown_assets(data: MarketData) -> None:

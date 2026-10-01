@@ -31,7 +31,8 @@ def run(
     check_window(start, end)
     prices = data.prices
     bars = prices[prices["asset_id"].isin(data.resolve_assets(asset_ids)) & prices["timestamp"].between(start, end)]
-    series = bars[["asset_id", "timestamp", "adjusted_close", "volume"]]
+    daily = bars[["asset_id", "timestamp", "adjusted_close", "volume"]]
+    series = daily
     if frequency != "daily":
         # One point per asset and period: the period's last close and its total volume.
         series = (
@@ -45,7 +46,8 @@ def run(
         payload = PriceContextPayload(frequency=frequency, summaries=[], series=[], series_truncated=False)
         return Output(payload, rows_scanned=0, empty=True, warnings=("No prices matched the assets and window.",))
 
-    summary = series.groupby("asset_id").agg(
+    # The summary always comes from the daily bars; frequency shapes only the series.
+    summary = daily.groupby("asset_id").agg(
         start_timestamp=("timestamp", "first"),
         end_timestamp=("timestamp", "last"),
         start_price=("adjusted_close", "first"),

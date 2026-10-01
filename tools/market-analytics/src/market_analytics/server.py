@@ -207,7 +207,8 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
     ) -> MarketResult[PriceContextPayload]:
         """Summarize return, price range and volume for named assets over a window, with an optional price series.
 
-        Weekly and monthly series hold each period's last adjusted close and its total volume.
+        Weekly and monthly series hold each period's last adjusted close and its total volume. The summary always
+        comes from the daily bars, whatever the frequency.
         """
         return await run_in_worker(
             "price_context",
