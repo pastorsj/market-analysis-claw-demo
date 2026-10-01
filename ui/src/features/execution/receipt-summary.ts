@@ -334,7 +334,8 @@ const retrieval = (content: RetrievalEvidence): ReceiptSummary => {
       `Sources: ${content.sourceIds.join(', ')}`,
       `Collection: ${content.collection}`,
       `Collection version: ${content.collectionVersion}`,
-      `Vector index: ${content.index.type}`,
+      // Milvus names its GPU indexes GPU_*; the rest run on the CPU
+      `Vector index: ${content.index.type} (${content.index.type.startsWith('GPU_') ? 'GPU' : 'CPU'})`,
       `Vector metric: ${content.index.metric}`,
       ...(searchParameters.length
         ? [
@@ -358,9 +359,13 @@ const retrieval = (content: RetrievalEvidence): ReceiptSummary => {
           `Source: ${hit.sourceId}`,
           `Document: ${hit.documentId}`,
           `Chunk: ${hit.chunkId}`,
-          `Rerank score: ${hit.score}`,
+          // As the original listed it: a rerank logit only when it is not negative
+          ...(hit.score >= 0 ? [`Rerank score: ${hit.score}`] : []),
           `Vector score: ${hit.vectorScore}`,
           ...(hit.publishedAt ? [`Published: ${hit.publishedAt}`] : []),
+          ...(typeof hit.metadata?.citation === 'string' && hit.metadata.citation.trim()
+            ? [`Citation: ${boundedText(hit.metadata.citation, 400)}`]
+            : []),
           ...(hit.url ? [`Source URL: ${hit.url}`] : []),
         ],
       })),

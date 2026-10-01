@@ -33,7 +33,11 @@ describe('summarizeReceipt', () => {
     expect(summary.output?.kind).toBe('passages')
     if (summary.output?.kind !== 'passages') return
     expect(summary.output.passages[0]).toMatchObject({ source: content.hits[0].title })
-    expect(summary.output.passages[0].metadata).toContain(`Rerank score: ${content.hits[0].score}`)
+    // A negative rerank logit is left out, as the original did
+    expect(summary.output.passages[0].metadata.some((m) => m.startsWith('Rerank score'))).toBe(
+      content.hits[0].score >= 0
+    )
+    expect(summary.details).toContain(`Vector index: ${content.index.type} (CPU)`)
   })
 
   it('describes an Auto Ontology answer: its SQL and its rows', () => {
