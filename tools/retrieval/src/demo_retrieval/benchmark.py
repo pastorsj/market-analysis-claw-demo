@@ -16,8 +16,9 @@ result goes to retrieval-benchmark.json beside collection-manifest.json, where t
 build (demo_api.benchmark.RetrievalBenchmark).
 
 Answers never come from the GPU mirror: retrieve_evidence searches the CPU index on every host. On an unchanged build
-whose GPU copy has the current index the one-shot is a no-op; a new GPU index rebuilds the copy and measures again. It
-never fails the stack: a problem is logged, and the Benchmark tab says no comparison applies.
+whose GPU copy has the current index the one-shot is a no-op, and `benchmark --again` measures it once more (the GPU
+guard does); a new GPU index rebuilds the copy and measures again. It never fails the stack: a problem is logged, and
+the Benchmark tab says no comparison applies.
 """
 
 from __future__ import annotations
@@ -144,8 +145,13 @@ def run(
     *,
     gpu_index: dict[str, Any] = store.GPU_INDEX,
     gpu_search_params: dict[str, Any] = store.GPU_SEARCH_PARAMS,
+    again: bool = False,
 ) -> dict[str, Any] | None:
-    """Measure the active build and write retrieval-benchmark.json; None when there is nothing to compare."""
+    """Measure the active build and write retrieval-benchmark.json; None when there is nothing to compare.
+
+    ``again`` measures a build that was already measured once more (the GPU guard, `demo.sh test gpu --perf`),
+    reusing its GPU copy.
+    """
     if not settings.milvus_gpu_uri:
         logger.info("MILVUS_GPU_URI is not set: this stack has no GPU index to compare")
         return None
@@ -164,7 +170,8 @@ def run(
     gpu = MilvusClient(uri=settings.milvus_gpu_uri)
     try:
         previous = _previous(data_dir, collection)
-        if previous is not None and gpu.has_collection(collection) and _has_index(gpu, collection, gpu_index):
+        current = previous is not None and gpu.has_collection(collection) and _has_index(gpu, collection, gpu_index)
+        if current and not again:
             logger.info("%s was already measured: %s", collection, data_dir / BENCHMARK)
             return previous
         vectors = read_vectors(cpu, collection)

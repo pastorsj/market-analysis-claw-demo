@@ -186,15 +186,23 @@ UI.
 ./scripts/demo.sh test              # unit (every Python project, ruff, skills lint), ui, contracts, compose
 ./scripts/demo.sh test e2e          # UI build and Playwright: live smoke and replay of the recordings
 ./scripts/demo.sh test switchyard   # build Switchyard and dry-run every route template
-uv run --directory api pytest       # one project: also agent, data, data/generate and tools/*
+uv run --directory api pytest       # one project: also agent, data, data/generate, eval and tools/*
 npm --prefix ui run lint            # also type-check, test:ci, build and e2e
 scripts/gen-contracts.sh --check    # the generated schemas and TypeScript are up to date
 pre-commit run --all-files          # ruff, shellcheck, JSON/YAML/TOML checks, gitleaks
 ```
 
 Tests run offline with no keys. Tests marked `live` call real endpoints and those marked `gpu` need a GPU, so
-neither runs by default. CI
-(`.github/workflows/ci.yml`) runs shellcheck, the Compose config of every profile set, every Python project,
+neither runs by default. Three checks of a running deployment are on demand only, run by hand and never by CI
+([operations](docs/operations.md#on-demand-checks)):
+
+| Command | Checks |
+|---|---|
+| `./scripts/demo.sh test live --url URL` | Each featured question asked live through the deployment's UI: success, a resolved citation, tool pills against the tools called, the replay, the closing events, a latency budget; also its health and pack |
+| `./scripts/demo.sh eval [--pack P] [--runs N] [--questions ID,...]` | Answer quality against the pack's oracles; an LLM grader (a frontier model) when `GRADER_BASE_URL`, `GRADER_API_KEY` and `GRADER_MODEL` are set ([eval](eval/README.md)) |
+| `./scripts/demo.sh test gpu [--perf]` | On an NVIDIA GPU host, the CPU/GPU parity tests; `--perf` also the running stack's GPU speedups against floors set from the A100 recordings |
+
+CI (`.github/workflows/ci.yml`) runs shellcheck, the Compose config of every profile set, every Python project,
 the contracts check, the Switchyard dry-runs, and the UI's lint, type-check, unit tests, build and Playwright
 suite.
 
@@ -225,6 +233,7 @@ infra/openshell/         OpenShell pins, gateway config, provider profiles, CLI 
 infra/switchyard/        Switchyard image, route templates, judge prompt
 infra/phoenix/           Phoenix launcher
 data/                    data packs and the demo-data builder; packs/<id>/recordings is the replay bundle
+eval/                    on-demand checks of a running deployment: the answer-quality eval and the GPU guard
 contracts/               tool registry, JSON Schemas and golden fixtures
 scripts/                 demo.sh lifecycle and gen-contracts.sh codegen
 docs/                    the guides below

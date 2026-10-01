@@ -13,7 +13,8 @@ export default defineConfig({
     environment: 'happy-dom',
     testTimeout: 50000,
     root: './',
-    include: ['src/**/*.spec.{ts,tsx}'],
+    // e2e-live/checks.ts is the live test's logic (scripts/demo.sh test live); its unit tests run here
+    include: ['src/**/*.spec.{ts,tsx}', 'e2e-live/**/*.test.ts'],
     setupFiles: ['./config/vitest/vitest.setup.ts'],
     clearMocks: true,
     server: {

@@ -141,5 +141,5 @@ question that failed outright (it ran out of Hermes' tool-call budget) succeeded
 | `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot and EDGAR filings (URL and SHA-256 of every file) |
 | `corpus/select_filings.py` | selects the filings from the issuers' EDGAR submissions and writes their manifest |
-| `eval/` | SQL oracles for the analytics answers and the documents retrieval answers cite; never read at runtime |
+| `eval/` | SQL oracles for the analytics answers, the documents retrieval answers cite, the answer checks (`answers.yaml`) and the GPU guard's cases (`perf.yaml`) of the on-demand checks ([eval](../../../eval/README.md)); never read at runtime |
 | `recordings/` | the replay bundle of all 45 sessions, 30 questions and 15 conversations (`demo.sh record --all`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars. Private: the public repository ships `synthetic-market`'s recordings only |

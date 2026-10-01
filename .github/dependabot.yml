@@ -11,6 +11,7 @@ updates:
       - /api
       - /data
       - /data/generate
+      - /eval
       - /tools/market-analytics
       - /tools/retrieval
     schedule:
