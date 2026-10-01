@@ -54,7 +54,7 @@ In Hermes each tool's ID is `mcp__market_analytics__<tool>`, for example
 
 | Question shape | Skill |
 | --- | --- |
-| Sector or region rollups, drawdowns, dividends or splits, event windows, correlations for a chosen set of assets, reference attributes, or any exact rows | `querying-auto-ontology` |
+| Sector or industry rollups, multi-session drawdowns, correlations for a chosen set of assets, reference attributes (CIK, SIC code, exchange, liquidity rank), or any exact rows | `querying-auto-ontology` |
 | The likelihood of a future move or event | `predicting-with-kumo` |
 | What a filing, disclosure, or rule says | `searching-documents` |
 
