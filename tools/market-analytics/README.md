@@ -175,6 +175,10 @@ list fallbacks instead, set `LOG_FAST_FALLBACK=1` (cudf.pandas writes them to
 `cudf_pandas_unit_tests_debug.log` in the working directory) or run a call under `cudf.pandas.profiler.Profiler`.
 Lint with the repository's `ruff.toml` and CI's ruff version: `uvx ruff@0.16.9 check . && uvx ruff@0.16.9 format --check .`
 
+From the repository root, `./scripts/demo.sh test gpu` runs the GPU tests (it syncs the extra first, and skips on a
+host without an NVIDIA GPU), and `./scripts/demo.sh test gpu --perf` then checks the running stack's speedups
+through `POST /benchmark` against floors set from the timings below ([eval](../../eval/README.md#thresholds)).
+
 ## CPU and GPU timings
 
 Measured on a 40 GB A100 VM with 12 vCPUs, on the `qualification` profile of `market-analysis`, the pack

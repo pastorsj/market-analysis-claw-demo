@@ -107,3 +107,16 @@ and replay mode on each pack's committed recordings (`../data/packs/synthetic-ma
 and `../data/packs/us-equities/recordings`), each of whose sessions must replay. The fake API offers the default pack's six featured questions.
 It needs `npx playwright install chromium` once; on Linux, `npx playwright install --with-deps chromium`,
 which also installs Chromium's system libraries with apt (sudo), as CI and `demo.sh test e2e` do.
+
+`e2e-live/` is the live end-to-end test of a running deployment, `scripts/demo.sh test live --url URL`
+([operations](../docs/operations.md#on-demand-checks)), which CI never runs. `playwright.live.config.ts` runs it
+with no server of its own; its checks (`e2e-live/checks.ts`) are unit-tested with Vitest in
+`e2e-live/checks.test.ts`. To try the whole test without a deployment, point a live-mode UI at
+`e2e-live/fake-deployment.mjs`, a stand-in API that answers each question with its recorded session:
+
+```bash
+npm run build
+node e2e-live/fake-deployment.mjs &   # 127.0.0.1:3997; DATA_PACK picks the pack (default synthetic-market)
+HOSTNAME=127.0.0.1 PORT=3998 UI_MODE=live API_URL=http://127.0.0.1:3997 node .next/standalone/server.js &
+../scripts/demo.sh test live --url http://127.0.0.1:3998
+```

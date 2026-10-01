@@ -13,12 +13,13 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - `data/`: data packs (`data/packs/<id>/`) and the `demo-data` builder.
 - `contracts/`: tool registry, JSON Schemas and golden fixtures shared across languages.
 - `scripts/`: `demo.sh` (lifecycle) and `gen-contracts.sh` (codegen).
+- `eval/`: on-demand checks of a running deployment (`demo.sh eval`, `demo.sh test gpu --perf`); never run in CI.
 - `docs/`: guides. `architecture.md` for the design, `customize.md` for the files a new tool or skill touches.
 
 ## Commands
 
 - Stack: `scripts/demo.sh <command>`; run it with no arguments for the list.
-- Python tests, per project: `uv run --directory <dir> pytest` (dirs: `api`, `agent`, `data`, `data/generate`, `tools/*`).
+- Python tests, per project: `uv run --directory <dir> pytest` (dirs: `api`, `agent`, `data`, `data/generate`, `eval`, `tools/*`).
 - Lint: `ruff check . && ruff format --check .` (one `ruff.toml` for the repo).
 - UI: `npm --prefix ui run lint`, `type-check`, `test:ci`.
 - Contracts: `scripts/gen-contracts.sh` to regenerate, `scripts/gen-contracts.sh --check` to verify.
