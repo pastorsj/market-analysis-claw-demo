@@ -23,8 +23,8 @@ the command list.
 | `./scripts/demo.sh down [--volumes] [--prune]` | Deletes the sandbox, then stops everything; `--volumes` also deletes the data, the index, the jobs and the traces; `--prune` also removes this project's untagged images and Docker's unused build cache, which is host-wide ([disk](#disk)) |
 
 The first `up` builds every image (Switchyard compiles from source), downloads about 1.4 GB of SEC EDGAR
-filings and embeds about 23,600 chunks through the retriever endpoint; `up` waits up to an hour for it. Later
-runs reuse the images, the download cache and the index.
+filings and embeds about 23,600 chunks through the retriever endpoint; `up` waits up to an hour for it (it took
+about 45 minutes with every profile on an A100 VM). Later runs reuse the images, the download cache and the index.
 
 ## Phoenix
 
