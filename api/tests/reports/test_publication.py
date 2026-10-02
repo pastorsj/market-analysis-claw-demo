@@ -92,6 +92,17 @@ def test_raw_receipt_ids_written_any_way_become_numbered_markers(tool_registry):
     assert report.invalid_evidence_ids == []
 
 
+def test_a_hash_the_answer_quotes_in_brackets_is_not_a_citation(tool_registry):
+    """Only this run's receipt digests are citations without a prefix, in brackets as in prose."""
+    evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
+    quoted = f"The file hash is (see {'c' * 64}), and its SHA-256 [{'D' * 64}] matches."
+    report = publish_report(f"{quoted} Filings mention outages ({DIGEST}).", evidence)
+
+    assert report.markdown.splitlines()[0] == f"{quoted} Filings mention outages [1]."
+    assert report.invalid_evidence_ids == []
+    assert report.status == "reference_ids_resolved"
+
+
 def test_a_receipt_id_cut_short_still_names_its_receipt(tool_registry):
     evidence = citations_from_receipts(load_contract("receipts.json"), tool_registry)
     scan = evidence[0].evidence_id
