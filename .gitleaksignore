@@ -1,3 +1,0 @@
-# False positives in committed recordings, each checked by hand: public filing text, no secret.
-# generic-api-key on a date run into a company name in a Medtronic 8-K press release (synthetic-market cyber question)
-data/packs/synthetic-market/recordings/sessions/cyber-disclosure-rules.json:generic-api-key:1984

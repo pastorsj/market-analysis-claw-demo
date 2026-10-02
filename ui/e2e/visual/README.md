@@ -42,7 +42,7 @@ npm run e2e:visual        # e2e/visual/run.sh: npm ci, build and compare, in the
 
 It needs Docker and Node. node_modules and the build live in container volumes, so a macOS
 checkout's own are neither used nor changed. A failure leaves the expected, actual and diff images
-of each view under `test-results/` (in CI, the `visual-diffs` artifact).
+of each view under `test-results/visual/` (in CI, the `visual-diffs` artifact).
 
 ## Update
 
