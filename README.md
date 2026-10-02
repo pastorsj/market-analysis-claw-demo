@@ -74,7 +74,7 @@ describes the components, the request flow, the contracts and the trust boundari
 | Tool protocol | Model Context Protocol, Python SDK over streamable HTTP | `mcp` 2.2 |
 | Tracing | NeMo Relay (bundled with Hermes), Arize Phoenix | Relay < 0.9, Phoenix 20.16.0 |
 | Job API | Python, FastAPI, uvicorn, Pydantic, SQLite, DuckDB | 3.12, 0.141, 0.54, 2.13, –, 1.5.5 |
-| UI | Next.js, React, NVIDIA KUI, Zustand, Tailwind CSS | 16.3.6, 18.3, 0.600, 5, 4 |
+| UI | Next.js, React, NVIDIA KUI, Zustand, Tailwind CSS | 16.3.7, 18.3, 0.600, 5, 4 |
 | Platform | Docker Engine, Docker Compose, uv, Node.js | 28+, 2.30+, 0.12, 22 |
 
 ## Hardware

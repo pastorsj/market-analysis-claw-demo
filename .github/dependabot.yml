@@ -37,6 +37,11 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+    ignore:
+      # Major versions (React, TypeScript, Zod, the KUI components, ...) change APIs or the UI's
+      # look: upgrade them by hand, one at a time, against the visual baselines.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directories:
@@ -53,6 +58,14 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      # Major versions of a base image (Node, Debian, ...) are upgraded by hand.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # The Python base image (tools/retrieval/Dockerfile's FROM line) stays on Python 3.12, which
+      # every service's pyproject.toml requires: only its patch releases come here.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: /
