@@ -34,11 +34,15 @@ tables:
   daily_prices:
     description: >-
       Synthetic daily bars from a seeded factor model (market, industry and issuer returns with fat tails), in
-      USD. There are no splits or dividends. This data is not investment advice.
-      A return over a window is one number per issuer: its last adjusted_close in the window over its adjusted_close
-      on the session before the window's first session, minus 1 (the window's total_return_1d values compounded).
+      USD. There are no splits or dividends. This data is not investment advice. Every issuer has a bar on every
+      session.
+      An issuer's return over a window is one number: its last adjusted_close in the window over its adjusted_close
+      on the session before the window's first session, minus 1 (its total_return_1d values in the window
+      compounded). The N sessions ending on a date are the last session on or before that date and the N-1
+      sessions before it, so the base is the close on the session before those N and N daily returns compound.
       It is not measured from the first close in the window, and it is not an average or median of
-      total_return_1d. A group's median return is the median of its issuers' window returns.
+      total_return_1d. A group's issuer count is every issuer of the group in assets, and its median return is the
+      median of its issuers' window returns.
     columns:
       adjusted_close: Equal to close; there are no corporate actions.
       volume: Shares traded in the session.
