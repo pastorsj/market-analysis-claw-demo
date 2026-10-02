@@ -135,6 +135,46 @@ export const recordedSeconds = (session: unknown): number | null => {
   return typeof ms === 'number' && ms > 0 ? ms / 1000 : null
 }
 
+/** Answers worth another try, as the eval client has them: the queue is full, or a proxy or tunnel on the way failed. */
+export const TRANSIENT_STATUSES: ReadonlySet<number> = new Set([429, 502, 503, 504])
+
+/** A response with an HTTP status the request does not accept. */
+export class HttpStatusError extends Error {
+  readonly status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+/**
+ * `request`, tried again after a transient status or a network error (no answer at all), with a growing pause; any
+ * other status fails at once. One failed poll of a twenty-minute job must not fail its question.
+ */
+export const withRetries = async <T>(
+  request: () => Promise<T>,
+  {
+    attempts = 4,
+    pauseMs = (attempt: number) => 5000 * attempt,
+    sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+  }: {
+    attempts?: number
+    pauseMs?: (attempt: number) => number
+    sleep?: (ms: number) => Promise<void>
+  } = {}
+): Promise<T> => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await request()
+    } catch (error) {
+      const transient = !(error instanceof HttpStatusError) || TRANSIENT_STATUSES.has(error.status)
+      if (!transient || attempt >= attempts) throw error
+    }
+    await sleep(pauseMs(attempt))
+  }
+}
+
 export const checkSuccess = (status: string, turn: LiveTurn | null): Check =>
   status === 'success' && turn?.status === 'success'
     ? pass()

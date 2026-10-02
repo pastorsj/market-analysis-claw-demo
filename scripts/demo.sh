@@ -105,6 +105,7 @@ cmd_up() {
   log "preparing data and starting the tools, Switchyard, Phoenix and the API"
   # shellcheck disable=SC2046 # one service per word
   dc up -d --wait --wait-timeout "$UP_TIMEOUT" $(backend_services)
+  measure_retrieval_indexes
   openshell_up
   log "starting the UI"
   dc up -d --wait ui
@@ -425,11 +426,25 @@ reindex() {
   dc build --quiet retrieval # retrieval-index's image, as the data image above
   dc up -d --wait milvus
   dc run --rm --no-deps retrieval-index
-  # analytics-gpu: measure the new build on the CPU index and on its GPU copy (the Benchmark tab's Milvus row)
-  if has_profile analytics-gpu; then
-    dc up -d --wait milvus-gpu
-    dc run --rm --no-deps retrieval-benchmark
+  measure_retrieval_indexes
+}
+
+# analytics-gpu with retrieval: the Benchmark tab's Milvus row, the build's CPU index against its copy in the GPU
+# Milvus, measured once per build. Answers search the CPU index only, so a GPU Milvus that does not start (its GPU
+# memory taken, say) leaves the comparison out with a warning, and is stopped so it holds no GPU memory.
+measure_retrieval_indexes() {
+  has_profile retrieval && has_profile analytics-gpu || return 0
+  log "measuring the Milvus CPU index against its GPU copy (the Benchmark tab), once per build"
+  if ! retrieval_benchmark; then
+    warn "no Milvus CPU/GPU comparison for this build; answers are unaffected" \
+      "(./scripts/demo.sh logs retrieval-benchmark milvus-gpu)"
+    dc stop milvus-gpu >/dev/null 2>&1 || true
   fi
+}
+
+# The retrieval-benchmark one-shot, with ARGS (e.g. `benchmark --again`), once the GPU Milvus is healthy.
+retrieval_benchmark() {
+  dc up -d --wait milvus-gpu && dc run --rm --no-deps retrieval-benchmark "$@"
 }
 
 # test [SUITE...] | test live --url URL ... | test gpu [--perf]
@@ -538,7 +553,7 @@ test_gpu() {
 # The GPU guard on the running stack. Its inputs are copied out of the demo-data volume: the active build's
 # pack.json (which pack and profile) and the Milvus comparison, measured again first with `benchmark --again`.
 gpu_perf() {
-  local work status=0 retrieval=(--no-retrieval)
+  local work since status=0 retrieval=(--no-retrieval)
   load_env
   require_env
   has_profile analytics-gpu ||
@@ -550,10 +565,12 @@ gpu_perf() {
   dc exec -T api cat /data/active/pack.json >"$work/pack.json"
   if has_profile retrieval; then
     log "measuring the Milvus CPU index and its GPU copy again"
-    dc up -d --wait milvus-gpu
-    dc run --rm --no-deps retrieval-benchmark benchmark --again
+    # The guard fails a comparison measured before this time: when measuring again fails, the file keeps an older one
+    since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    retrieval_benchmark benchmark --again ||
+      warn "measuring the Milvus comparison again failed: ./scripts/demo.sh logs retrieval-benchmark milvus-gpu"
     dc exec -T api cat /data/active/retrieval-benchmark.json >"$work/retrieval.json" 2>/dev/null || true
-    retrieval=(--retrieval-benchmark "$work/retrieval.json")
+    retrieval=(--retrieval-benchmark "$work/retrieval.json" --measured-since "$since")
   fi
   log "GPU guard: the active pack's cases against their floors"
   uv run --project "$ROOT/eval" --locked demo-eval --repo "$ROOT" perf --build "$work/pack.json" "${retrieval[@]}" ||

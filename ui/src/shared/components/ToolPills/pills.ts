@@ -54,6 +54,18 @@ export const pillLabel = ({ pill, device }: ToolPillUse): string =>
 export const pillToolLabels = ({ tools = [] }: ToolPillUse): string[] =>
   tools.map((id) => TOOLS.get(id)?.label ?? id)
 
+/**
+ * The pills as words, for assistive technology: "cuDF (Market Scan), Retrieval (Unstructured Retrieval)".
+ * A pill's tooltip opens on hover only, and a recorded session's button names the session alone.
+ */
+export const describePills = (pills: readonly ToolPillUse[]): string =>
+  orderPills(pills)
+    .map((use) => {
+      const tools = pillToolLabels(use)
+      return tools.length ? `${pillLabel(use)} (${tools.join(', ')})` : pillLabel(use)
+    })
+    .join(', ')
+
 /** Pills in display order: by kind, a GPU run before a CPU run of the same kind. */
 export const orderPills = (pills: readonly ToolPillUse[]): ToolPillUse[] =>
   [...pills].sort(

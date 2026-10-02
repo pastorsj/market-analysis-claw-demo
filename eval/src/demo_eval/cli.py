@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from . import perf
@@ -33,6 +34,16 @@ REPO = Path(__file__).resolve().parents[3]
 
 def _log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
+
+
+def _utc_time(text: str) -> datetime:
+    try:
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not an ISO 8601 time: {text}") from None
+    if moment.tzinfo is None:
+        raise argparse.ArgumentTypeError(f"give the time zone, e.g. {text}Z")
+    return moment
 
 
 def _questions(text: str) -> tuple[str, ...]:
@@ -59,6 +70,11 @@ def main(argv: list[str] | None = None) -> int:
     guard.add_argument("--analytics-url", default="http://127.0.0.1:3010", help="market analytics (GPU service)")
     guard.add_argument("--build", type=Path, required=True, help="the active build's pack.json")
     guard.add_argument("--retrieval-benchmark", type=Path, help="the active build's retrieval-benchmark.json")
+    guard.add_argument(
+        "--measured-since",
+        type=_utc_time,
+        help="when the Milvus comparison was measured again (ISO 8601 UTC); an earlier measurement fails",
+    )
     guard.add_argument("--no-retrieval", action="store_true", help="the stack runs without the retrieval profile")
     guard.add_argument("--pairs", type=int, default=5, help="timed CPU/GPU pairs per case (default 5)")
     guard.add_argument("--budget", type=float, default=60.0, help="seconds of timed pairs per case (default 60)")
@@ -119,6 +135,7 @@ def _perf(args: argparse.Namespace) -> int:
         analytics_url=args.analytics_url,
         retrieval=retrieval,
         retrieval_expected=not args.no_retrieval,
+        retrieval_since=args.measured_since,
         pairs=args.pairs,
         budget_seconds=args.budget,
         log=_log,

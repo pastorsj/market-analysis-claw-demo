@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 from pymilvus import MilvusClient
 
+from demo_retrieval import __main__ as cli
 from demo_retrieval import benchmark
 from demo_retrieval import store
 from demo_retrieval.datapack import BenchmarkQuery
@@ -192,3 +193,24 @@ def test_a_speedup_is_claimed_only_past_the_threshold_with_passing_quality(passe
     gpu = benchmark.backend(replace(index, role="gpu"), measured(ms=gpu_ms, ids=[]))
 
     assert benchmark.claim(passed, cpu, gpu) == expected
+
+
+@pytest.mark.parametrize("outcome", ["raises", "nothing measured"])
+def test_the_one_shot_never_fails_but_measuring_again_does(monkeypatch, settings, tmp_path, outcome):
+    """`up`'s one-shot exits 0 whatever happens; `benchmark --again` (the GPU guard) exits 1 when nothing was
+    measured, so the guard never reads an earlier measurement as a new one."""
+
+    def run(*_args, **_kwargs):
+        if outcome == "raises":
+            raise TimeoutError("the index did not finish building")  # else nothing to compare: None
+
+    monkeypatch.setattr(benchmark, "run", run)
+    cli._benchmark(settings, tmp_path, again=False)
+    with pytest.raises(SystemExit) as exited:
+        cli._benchmark(settings, tmp_path, again=True)
+    assert exited.value.code == 1
+
+
+def test_measuring_again_succeeds_when_it_measured(monkeypatch, settings, tmp_path):
+    monkeypatch.setattr(benchmark, "run", lambda *_args, **_kwargs: {"profiles": []})
+    cli._benchmark(settings, tmp_path, again=True)

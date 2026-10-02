@@ -23,11 +23,13 @@ answer that called market analytics tools, the recorder asks for its CPU/GPU com
 (POST .../benchmark), which the export then carries; on a CPU-only stack there is none. A
 question or conversation that does not succeed is left out of the bundle and makes the command
 exit 1. Recording named ids (``--question``) updates those sessions of an existing bundle and
-keeps its other sessions; recording a whole set replaces the bundle.
+keeps its other sessions, naming them when they come from another build; recording a whole set replaces the
+bundle. An id the pack does not offer, or a bundle of another version of the pack, stops the command before
+anything is asked (exit 2).
 
-Served model ids are written under their public names. An OpenAI-compatible gateway may serve a model
-under a provider-prefixed id (``openai/openai/gpt-6.1-sol``, ``nvidia/nvidia/nemotron-3-ultra``); the
-bundle keeps the model's own name (``gpt-6.1-sol``, ``nemotron-3-ultra``), wherever the id appears.
+Served model ids are written without a gateway's provider prefix. An OpenAI-compatible gateway may serve a model
+under a provider-prefixed id (``<provider>/<publisher>/<model>``); the bundle keeps the last segment, the
+model's own name, wherever the id appears.
 
 ``demo-api snapshot-database --out <recordings>`` rewrites only ``database.json`` of a bundle.
 """
@@ -57,7 +59,8 @@ PREVIEW_ROWS = 8  # the rows the data viewer previews (ui/src/features/execution
 # The query the data viewer's SQL tab starts from for a table (DatabaseBrowser.tsx), so replay can run it too
 DEFAULT_TABLE_SQL = 'SELECT * FROM "{schema}"."{table}" LIMIT 25'
 BENCHMARK_TIMEOUT_SECONDS = 900.0
-# A gateway's provider-prefixed model id: <provider>/<publisher>/<model>, e.g. openai/openai/gpt-6.1-sol
+USAGE_ERROR = 2  # a request the pack or the bundle cannot take; nothing was asked
+# A gateway's provider-prefixed model id: <provider>/<publisher>/<model>, e.g. vertex/google/example-model-1
 PREFIXED_MODEL = re.compile(
     r"\b(?:nvidia|openai|azure|anthropic|aws|bedrock|gcp|google|vertex|meta)/(?:nvidia|openai|anthropic|google|meta)"
     r"/(?=[A-Za-z0-9])([A-Za-z0-9._:-]+)"
@@ -88,6 +91,14 @@ def record(
         for conversation in pack.get("conversations", [])
     ]
     order = [session_id for session_id, *_ in planned]
+    if unknown := [question_id for question_id in question_ids if question_id not in order]:
+        # /v1/pack leaves out a question whose sources this build lacks, so a pack's own id can be missing too
+        print(
+            f"Not in this build's pack (unknown, or its sources are not in this build): {', '.join(unknown)}. "
+            f"It offers: {', '.join(order)}",
+            file=sys.stderr,
+        )
+        return USAGE_ERROR
     wanted = [
         session
         for session in planned
@@ -96,14 +107,17 @@ def record(
     if not wanted:
         print("No pack questions match; nothing to record.", file=sys.stderr)
         return 1
-    sessions_dir = out_dir / "sessions"
-    sessions_dir.mkdir(parents=True, exist_ok=True)
     sessions: dict[str, dict[str, Any]] = {}
     index_path = out_dir / "index.json"
     if question_ids and index_path.is_file():
         previous = json.loads(index_path.read_text(encoding="utf-8"))
-        if previous.get("pack", {}).get("id") == pack["id"]:
-            sessions = {session["id"]: session for session in previous["sessions"] if session["id"] in order}
+        named = {session[0] for session in wanted}
+        kept = _kept_sessions(previous, pack, out_dir=out_dir, data_dir=data_dir, replaced=named)
+        if kept is None:
+            return USAGE_ERROR
+        sessions = {session["id"]: session for session in kept if session["id"] in order}
+    sessions_dir = out_dir / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
     failures = 0
     for session_id, title, featured, sources, questions in wanted:
         conversation_id = f"record-{uuid.uuid4()}"
@@ -147,6 +161,46 @@ def record(
     recorded = len(wanted) - failures
     print(f"Recorded {recorded} of {len(wanted)} sessions; {out_dir} holds {len(sessions)}", file=sys.stderr)
     return 1 if failures else 0
+
+
+def _kept_sessions(
+    previous: dict[str, Any], pack: dict[str, Any], *, out_dir: Path, data_dir: Path, replaced: set[str]
+) -> list[dict[str, Any]] | None:
+    """The sessions of an existing bundle that recording named ids keeps; None when it must keep none of them.
+
+    A bundle of another pack is replaced. One of another version of this pack is not updated piecemeal: its
+    questions may have changed, and its index would claim the new version for every session. On another build of
+    the same version (after a corpus change, say) the earlier sessions are kept and named, since their evidence and
+    answers come from that build.
+    """
+    recorded = previous.get("pack", {})
+    if recorded.get("id") != pack["id"]:
+        return []
+    if recorded.get("version") != pack["version"]:
+        print(
+            f"{out_dir} holds {pack['id']} {recorded.get('version')} and this stack serves {pack['version']}: "
+            "record every session again (--all, without --question)",
+            file=sys.stderr,
+        )
+        return None
+    sessions = list(previous.get("sessions", []))
+    earlier, current = _build(out_dir / "pack.json"), _build(data_dir / "pack.json")
+    if earlier != current and (others := [session["id"] for session in sessions if session["id"] not in replaced]):
+        print(
+            f"Keeping {len(others)} sessions recorded on build {earlier or 'unknown'}, not on this build "
+            f"({current or 'unknown'}): {', '.join(others)}",
+            file=sys.stderr,
+        )
+    return sessions
+
+
+def _build(pack_json: Path) -> str | None:
+    """The build id of a pack.json: the active build's, or the copy a bundle keeps."""
+    try:
+        build = json.loads(pack_json.read_text(encoding="utf-8")).get("build")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return build if isinstance(build, str) else None
 
 
 def _ask(

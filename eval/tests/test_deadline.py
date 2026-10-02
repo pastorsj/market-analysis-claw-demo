@@ -30,6 +30,12 @@ from demo_eval.deadline import deadline_ok
         "I could not verify the filing deadline from the retrieved evidence.",
         # The deadline stated while flagging that the corpus lacks it (acceptable)
         "Item 1.05 is generally due within four business days, though the retrieved text does not state it.",
+        # The Attorney General's delay (Item 1.05(c)) is part of the rule, not another deadline
+        "Item 1.05 must be filed within four business days after the registrant determines the incident is material. "
+        "The deadline can be delayed by up to 30 days if the U.S. Attorney General determines that disclosure poses "
+        "a substantial risk to national security.",
+        "Companies must file within four business days; the Attorney General may extend the delay for an additional "
+        "period of up to 60 days.",
         # A company's own filing timeline is not the rule
         "Data I/O filed five days after its ransomware event. The deadline is not in the retrieved text.",
         "Conduent filed within 90 days of the incident; the evidence does not show the filing deadline.",
@@ -48,6 +54,7 @@ def test_right_answers_pass(text):
         "Registrants have two business days to file the 8-K.",
         "Item 1.05 requires a filing no later than 10 days after the determination.",
         "The retrieved text does not state the deadline, but it is due within two business days.",
+        "Item 1.05 must be filed within 30 days, unless the Attorney General delays it.",
         # Denying that there is a deadline
         "Item 1.05 has no deadline; companies disclose when ready.",
         "There is no filing deadline for Item 1.05 disclosures.",

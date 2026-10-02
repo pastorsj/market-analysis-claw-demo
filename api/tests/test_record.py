@@ -34,13 +34,17 @@ SCHEMA = {
 # A model call served through a gateway that prefixes model ids with their provider
 GATEWAY_LLM_CALL = {
     "eventKind": "llm.call",
-    "display": {"attributes": {"served_model": "openai/openai/gpt-6.1-sol", "tier": "capable"}},
+    "display": {"attributes": {"served_model": "vertex/google/frontier-model-1", "tier": "capable"}},
 }
 ROWS = {"columns": ["asset_id"], "types": ["VARCHAR"], "rows": [["A1"]], "truncated": False, "duration_ms": 3}
 
 
 def fake_api(
-    statuses: dict[str, str], requests: list[str] | None = None, conversations: list[str] | None = None
+    statuses: dict[str, str],
+    requests: list[str] | None = None,
+    conversations: list[str] | None = None,
+    *,
+    pack: dict | None = None,
 ) -> httpx.MockTransport:
     """Answers every question at once; ``statuses`` maps a question to its final job status (default success).
 
@@ -53,7 +57,7 @@ def fake_api(
         path = request.url.path
         seen.append(f"{request.method} {path}")
         if path == "/v1/pack":
-            return httpx.Response(200, json=PUBLIC_PACK)
+            return httpx.Response(200, json=pack or PUBLIC_PACK)
         if path == "/v1/data_sources":
             structured = {"id": "market_analysis_structured", "name": "Prices", "database_name": "market_analysis"}
             return httpx.Response(200, json=[structured, {"id": "market_news", "name": "Filings"}])
@@ -184,6 +188,66 @@ def test_recording_named_sessions_keeps_the_rest_of_the_bundle(tmp_path, data_di
     ]
 
 
+def test_an_id_the_pack_does_not_offer_stops_the_command_before_anything_is_asked(tmp_path, data_dir, capsys):
+    requests: list[str] = []
+    with httpx.Client(transport=fake_api({}, requests), base_url="http://api.test") as client:
+        code = record(
+            client,
+            data_dir=data_dir,
+            out_dir=tmp_path,
+            question_ids=["market-leaders", "market-leaderz"],
+            featured_only=True,
+            timeout=5,
+        )
+
+    assert code == 2
+    assert "POST /v1/jobs/async/submit" not in requests
+    assert not (tmp_path / "index.json").exists()
+    error = capsys.readouterr().err
+    assert "Not in this build's pack" in error and "market-leaderz" in error
+    assert "It offers: market-leaders, filings, leaders-follow-up" in error
+
+
+def test_named_sessions_never_update_a_bundle_of_another_pack_version(tmp_path, data_dir, capsys):
+    with httpx.Client(transport=fake_api({}), base_url="http://api.test") as client:
+        record(client, data_dir=data_dir, out_dir=tmp_path, question_ids=[], featured_only=False, timeout=5)
+    before = (tmp_path / "index.json").read_text()
+
+    requests: list[str] = []
+    bumped = PUBLIC_PACK | {"version": "1.1.0"}
+    with httpx.Client(transport=fake_api({}, requests, pack=bumped), base_url="http://api.test") as client:
+        code = record(
+            client, data_dir=data_dir, out_dir=tmp_path, question_ids=["filings"], featured_only=True, timeout=5
+        )
+
+    assert code == 2
+    assert "POST /v1/jobs/async/submit" not in requests
+    assert (tmp_path / "index.json").read_text() == before
+    assert "holds market-analysis 1.0.0 and this stack serves 1.1.0" in capsys.readouterr().err
+
+
+def test_sessions_kept_from_another_build_are_named(tmp_path, data_dir, capsys):
+    (data_dir / "pack.json").write_text(json.dumps(PACK | {"build": "market-analysis@1.0.0+a"}))
+    with httpx.Client(transport=fake_api({}), base_url="http://api.test") as client:
+        record(client, data_dir=data_dir, out_dir=tmp_path, question_ids=[], featured_only=False, timeout=5)
+        capsys.readouterr()
+        (data_dir / "pack.json").write_text(json.dumps(PACK | {"build": "market-analysis@1.0.0+b"}))
+        code = record(
+            client, data_dir=data_dir, out_dir=tmp_path, question_ids=["filings"], featured_only=True, timeout=5
+        )
+
+    assert code == 0
+    assert [session["id"] for session in json.loads((tmp_path / "index.json").read_text())["sessions"]] == [
+        "market-leaders",
+        "filings",
+        "leaders-follow-up",
+    ]
+    assert (
+        "Keeping 2 sessions recorded on build market-analysis@1.0.0+a, not on this build "
+        "(market-analysis@1.0.0+b): market-leaders, leaders-follow-up"
+    ) in capsys.readouterr().err
+
+
 def test_served_model_ids_are_recorded_under_their_public_names(tmp_path, data_dir):
     with httpx.Client(transport=fake_api({}), base_url="http://api.test") as client:
         record(
@@ -191,18 +255,17 @@ def test_served_model_ids_are_recorded_under_their_public_names(tmp_path, data_d
         )
 
     turn = json.loads((tmp_path / "sessions" / "market-leaders.json").read_text())["turns"][0]
-    assert turn["events"][0]["display"]["attributes"] == {"served_model": "gpt-6.1-sol", "tier": "capable"}
+    assert turn["events"][0]["display"]["attributes"] == {"served_model": "frontier-model-1", "tier": "capable"}
 
 
 @pytest.mark.parametrize(
     ("served", "public"),
     [
-        ("openai/openai/gpt-6.1-sol", "gpt-6.1-sol"),
-        ("azure/openai/gpt-6.1-sol", "gpt-6.1-sol"),
-        ("nvidia/nvidia/nemotron-3-ultra", "nemotron-3-ultra"),
-        ("nvidia/nvidia/nemotron-3-super-v3", "nemotron-3-super-v3"),
-        ("nvidia/nvidia/nemotron-3.5-lightning", "nemotron-3.5-lightning"),
-        ("Escalated to openai/openai/gpt-6.1-sol.", "Escalated to gpt-6.1-sol."),
+        # Made-up ids in a gateway's <provider>/<publisher>/<model> shape
+        ("vertex/google/frontier-model-1", "frontier-model-1"),
+        ("bedrock/anthropic/frontier-model-2.5", "frontier-model-2.5"),
+        ("gcp/meta/small-model-v3", "small-model-v3"),
+        ("Escalated to vertex/google/frontier-model-1.", "Escalated to frontier-model-1."),
         # Public ids and other paths stay as they are
         ("nvidia/nemotron-3-ultra-550b-a55b", "nvidia/nemotron-3-ultra-550b-a55b"),
         ("nvidia/llama-nemotron-rerank-vl-1b-v2", "nvidia/llama-nemotron-rerank-vl-1b-v2"),

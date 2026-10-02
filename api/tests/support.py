@@ -113,9 +113,20 @@ class FakeHermes:
         self.created = asyncio.Event()
         self.stops: list[str] = []
 
-    def finish(self, run_id: str, *, events: list[dict[str, Any]], status: str = "completed", output: str = "") -> None:
+    def finish(
+        self,
+        run_id: str,
+        *,
+        events: list[dict[str, Any]],
+        status: str = "completed",
+        output: str = "",
+        times: tuple[float, float] | None = None,
+    ) -> None:
+        """End the run; ``times`` are its status's ``created_at`` and ``updated_at`` (Unix seconds)."""
         run = self.runs[run_id]
         run["events"], run["final_status"], run["output"] = events, status, output
+        if times is not None:
+            run["created_at"], run["updated_at"] = times
         run["released"].set()
 
     async def wait_for_run(self, count: int = 1) -> str:
@@ -152,7 +163,14 @@ class FakeHermes:
     def status(self, run_id: str) -> dict[str, Any]:
         run = self.runs[run_id]
         output = run["output"] if run["status"] == "completed" else None
-        return {"run_id": run_id, "status": run["status"], "session_id": run["payload"]["session_id"], "output": output}
+        times = {key: run[key] for key in ("created_at", "updated_at") if key in run}
+        return {
+            "run_id": run_id,
+            "status": run["status"],
+            "session_id": run["payload"]["session_id"],
+            "output": output,
+            **times,
+        }
 
 
 def event(name: str, **data: Any) -> dict[str, Any]:

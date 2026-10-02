@@ -47,6 +47,8 @@ _LOOSE_RECEIPT = re.compile(
     re.IGNORECASE,
 )
 _BARE_DIGEST = re.compile(r"(?P<lead>[ \t]*)(?:`|\*\*)?(?P<ref>\b[0-9a-f]{64}\b)(?:`|\*\*)?", re.IGNORECASE)
+# 64 hex digits with no receipt or evidence prefix: a citation only when they are a receipt digest of this run
+_BARE_HASH = re.compile(r"[0-9a-f]{64}", re.IGNORECASE)
 # Resolved citations are marked with control characters (the draft has none left) until the end, so code or bold
 # around them can be unwrapped and each becomes a [n] the UI renders as a citation: not after a letter or digit.
 _MARK = "\x00{}\x01"
@@ -181,6 +183,8 @@ def publish_report(draft: str, evidence: list[Citation]) -> PublishedReport:
         references = [found["ref"] for found in _GROUP_REFERENCE.finditer(match["body"])]
         if not references or not _GROUP_FILLER.match(_GROUP_REFERENCE.sub(" ", match["body"])):
             return match[0]
+        if any(_BARE_HASH.fullmatch(ref) and ref.casefold() not in by_digest for ref in references):
+            return match[0]  # a hash the answer quotes, which digest() leaves as written; it marks any receipt
         marks = "".join(mark(reference) for reference in references)
         return f"{match['lead']}{marks}" if marks else ""
 

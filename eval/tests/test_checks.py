@@ -70,6 +70,15 @@ def test_an_asset_is_named_by_its_ticker_or_its_company_name():
         ("up +24.74% over 20 sessions", 0.2474, True),
         ("up 24.7 % over 20 sessions", 0.2474, True),  # display rounding
         ("down -18.78%", -0.1878, True),
+        # A fall written without its sign
+        ("fell 1.23% over the window", -0.0123, True),
+        ("a 1.23% decline", -0.0123, True),
+        ("a median decline of 1.23%", -0.0123, True),
+        ("1.23% lower than in July", -0.0123, True),
+        ("rose 1.23%", -0.0123, False),
+        ("a median of 1.23%", -0.0123, False),  # no direction: the sign is unknown
+        ("fell +1.23%", -0.0123, False),  # an explicit sign must be the right one
+        ("fell 1.23%", 0.0123, True),  # a positive value matches its unsigned figure, as before
         ("up 25%", 0.2474, False),
         ("up 0.2474", 0.2474, False),  # a fraction is not shown as a percentage
         ("up 24.74%", None, False),

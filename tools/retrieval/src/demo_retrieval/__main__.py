@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import sys
 from pathlib import Path
 
 from opentelemetry import trace
@@ -30,7 +31,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--data-dir", type=Path, default=Path("/data/active"), help="the active data pack")
     parser.add_argument(
-        "--again", action="store_true", help="benchmark: measure a build that was already measured once more"
+        "--again",
+        action="store_true",
+        help="benchmark: measure a build that was already measured once more, and exit 1 if that fails",
     )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -42,13 +45,23 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "ingest":
         ingest.run(settings, args.data_dir)
     elif args.command == "benchmark":
-        try:
-            benchmark.run(settings, args.data_dir, again=args.again)
-        except Exception:  # the comparison is optional: log it, and let the stack start without one
-            logging.getLogger(__name__).exception("the CPU/GPU index comparison failed; the Benchmark tab will lack it")
+        _benchmark(settings, args.data_dir, again=args.again)
     else:
         _export_traces()
         server.serve(settings, args.data_dir)
+
+
+def _benchmark(settings: Settings, data_dir: Path, *, again: bool) -> None:
+    """The one-shot of `up` never fails the stack: the comparison is optional. ``again`` (the GPU guard, `demo.sh
+    test gpu --perf`) fails when nothing was measured, so the guard never reads an earlier measurement as new."""
+    log = logging.getLogger(__name__)
+    try:
+        measured = benchmark.run(settings, data_dir, again=again)
+    except Exception:
+        log.exception("the CPU/GPU index comparison failed; the Benchmark tab will lack it")
+        measured = None
+    if again and measured is None:
+        sys.exit(1)
 
 
 def _export_traces() -> None:

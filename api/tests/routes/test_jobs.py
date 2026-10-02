@@ -15,6 +15,7 @@ from support import event
 from support import receipt_for
 
 from demo_api.hermes.request import correlation_ref
+from demo_api.jobs.executor import HermesJobExecutor
 from demo_api.jobs.runner import API_RESTARTED
 from demo_api.jobs.store import JobStatus
 from demo_api.jobs.store import JobStore
@@ -77,7 +78,8 @@ async def test_a_question_runs_on_hermes_and_publishes_a_cited_answer(app, api, 
     assert (await post_receipt(receipt)).json()["duplicate"] is True  # stored once
     answer = f"Two filings report outages [evidence:{receipt['receiptId']}]. One is invented [evidence:bogus-1]."
     usage = {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
-    fake_hermes.finish(run_id, events=[*tool_events(), event("run.completed", usage=usage)], output=answer)
+    times = (1_790_000_000.0, 1_790_000_012.3456)  # Hermes's created_at and updated_at for the run
+    fake_hermes.finish(run_id, events=[*tool_events(), event("run.completed", usage=usage)], output=answer, times=times)
 
     job = await wait_for(api, "job-1", "success")
     assert job["error"] is None
@@ -121,9 +123,9 @@ async def test_a_question_runs_on_hermes_and_publishes_a_cited_answer(app, api, 
         "invalid_evidence_count": 1,
     }
     metrics = publication["report.metrics"]["display"]["attributes"]
-    assert metrics | {"wall_duration_ms": None} == {
+    assert metrics == {
         "runtime_profile": "enterprise-research",
-        "wall_duration_ms": None,  # Hermes's run times, when the status has them
+        "wall_duration_ms": 12346,  # from Hermes's run times, when the status has them
         "tool_call_count": 1,
         "known_tool_duration_ms": 1500,  # the tool call's reported 1.5 s
         "input_tokens": 10,
@@ -195,6 +197,45 @@ async def test_cancel_stops_the_hermes_run_and_interrupts_the_job(api, fake_herm
         while run_id not in fake_hermes.stops:
             await asyncio.sleep(0.01)
     assert (await api.post("/v1/jobs/async/job/job-1/cancel")).status_code == 409
+
+
+async def test_a_job_cancelled_while_its_answer_is_published_gets_no_publication_events(
+    app, api, fake_hermes, post_receipt, monkeypatch
+):
+    """Hermes has finished, so the run no longer sees the cancel; the answer and its replay steps are dropped."""
+    settle, run = HermesJobExecutor._settled_receipts, HermesJobExecutor.run
+    finished = asyncio.Event()
+
+    async def cancel_once_settled(self, job_id, expected):
+        receipts = await settle(self, job_id, expected)
+        assert await app.state.services.runner.cancel(job_id)
+        return receipts
+
+    async def run_and_flag(self, job, cancelled):
+        try:
+            await run(self, job, cancelled)
+        finally:
+            finished.set()
+
+    monkeypatch.setattr(HermesJobExecutor, "_settled_receipts", cancel_once_settled)
+    monkeypatch.setattr(HermesJobExecutor, "run", run_and_flag)
+    await submit(api, "job-1")
+    run_id = await fake_hermes.wait_for_run()
+    await wait_until_bound(app, "job-1")
+    receipt = receipt_for("job-1")
+    await post_receipt(receipt)
+    answer = f"Two filings report outages [evidence:{receipt['receiptId']}]."
+    fake_hermes.finish(run_id, events=[*tool_events(), event("run.completed")], output=answer)
+    async with asyncio.timeout(5):
+        await finished.wait()
+
+    job = await wait_for(api, "job-1", "interrupted")
+    assert job["error"] == "cancelled by user"
+    turn = (await api.get("/v1/jobs/async/job/job-1/export")).json()
+    kinds = [event["eventKind"] for event in turn["events"]]
+    assert kinds[-1] == "run.completed"
+    assert not [kind for kind in kinds if kind.startswith("report.")]
+    assert (await api.get("/v1/jobs/async/job/job-1/report")).json()["has_report"] is False
 
 
 async def test_a_full_queue_answers_429_with_retry_after(api, fake_hermes):
@@ -298,6 +339,10 @@ async def test_a_follow_up_carries_the_earlier_answers_of_its_conversation(api, 
     await submit(api, "job-1")
     fake_hermes.finish(await fake_hermes.wait_for_run(), events=[event("run.completed")], output="First answer.")
     await wait_for(api, "job-1", "success")
+    # Without Hermes's run times the metrics leave the wall time out rather than guess it
+    events = (await api.get("/v1/jobs/async/job/job-1/export")).json()["events"]
+    metrics = next(e["display"]["attributes"] for e in events if e["eventKind"] == "report.metrics")
+    assert "wall_duration_ms" not in metrics
 
     await submit(api, "job-2", input="And after that?")
     await fake_hermes.wait_for_run(2)

@@ -652,6 +652,15 @@ describe('SessionsPanel - Delete Button States', () => {
         ].map((pill) => pill.textContent)
       expect(pills('Market Leaders')).toEqual(['cuDF'])
       expect(pills('Moves and Filings')).toEqual(['pandas', 'Retrieval'])
+      // The label names the session; its turns and tools reach a screen reader as the description
+      expect(
+        screen.getByRole('button', { name: 'Recorded session: Market Leaders; Completed' })
+      ).toHaveAccessibleDescription('1 turn. Tools: cuDF (Market Scan).')
+      expect(
+        screen.getByRole('button', { name: 'Recorded session: Moves and Filings; Completed' })
+      ).toHaveAccessibleDescription(
+        '2 turns. Tools: pandas (Market Scan, Price Context), Retrieval (Unstructured Retrieval).'
+      )
       expect(
         screen.getByText(
           'Read-only test runs. Answers load on selection; execution data loads only when requested.'

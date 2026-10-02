@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -108,9 +109,19 @@ class Deployment:
         return [dict(zip(result["columns"], row, strict=True)) for row in result["rows"]]
 
     def submit(self, question: str, sources: list[str]) -> str:
-        """Submit one question as a fresh job (a new session) with its own sources, as the UI's cards do."""
-        answer = self.post("v1/jobs/async/submit", {"input": question, "data_sources": sources}, attempts=8)
-        return answer["job_id"]
+        """Submit one question as a fresh job (a new session) with its own sources, as the UI's cards do.
+
+        The job id is chosen here, so a retried submit cannot start a second job: if the first one was accepted
+        (its answer lost to a proxy error or a timeout), the retry gets a 409 for the same id.
+        """
+        job_id = str(uuid.uuid4())
+        body = {"input": question, "data_sources": sources, "job_id": job_id}
+        try:
+            self.post("v1/jobs/async/submit", body, attempts=8)
+        except HttpError as error:
+            if error.status != 409:
+                raise
+        return job_id
 
     def status(self, job_id: str) -> dict[str, Any]:
         return self.get(f"v1/jobs/async/job/{urllib.parse.quote(job_id)}")

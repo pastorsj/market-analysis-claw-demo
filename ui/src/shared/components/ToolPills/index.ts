@@ -4,6 +4,7 @@
 export { ToolPills } from './ToolPills'
 export {
   PILL_ORDER,
+  describePills,
   isPill,
   orderPills,
   pillLabel,

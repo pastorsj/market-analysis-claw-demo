@@ -4,8 +4,9 @@
 # The whole demo in one Compose file. Profiles pick what runs:
 #   core           OpenShell gateway + Hermes forwarder, Switchyard, Phoenix, data, API, UI
 #   retrieval      Milvus, the document corpus and index, the retrieval MCP server
-#   analytics      market analytics MCP server on CPU (analytics-gpu: on RAPIDS; never both). analytics-gpu with
-#                  retrieval also runs a GPU Milvus for the Benchmark tab's CPU/GPU index comparison
+#   analytics      market analytics MCP server on CPU (analytics-gpu: on RAPIDS; never both). analytics-gpu also
+#                  holds a GPU Milvus and its one-shot, for the Benchmark tab's CPU/GPU index comparison: demo.sh
+#                  starts them after the stack, with retrieval only, and nothing waits on them
 #   kumo           Kumo Relational NIM behind predict_asset_outcomes (x86_64 + NVIDIA GPU)
 #   ontology       Auto Ontology, required (the vendor/auto-ontology submodule, private until it is published)
 #   replay         the UI alone, on the recorded sessions: no keys, no API, no GPU
@@ -347,7 +348,8 @@ services:
       data-corpus: { condition: service_completed_successfully }
 
   # analytics-gpu with retrieval: times the build's vector searches on `milvus` and on its copy in `milvus-gpu`, once
-  # per build, into /data/active/retrieval-benchmark.json for the API. It never fails the stack.
+  # per build, into /data/active/retrieval-benchmark.json for the API. demo.sh runs it once the stack is up, and no
+  # service depends on it: a GPU Milvus that never turns healthy leaves the comparison out, never the answers.
   retrieval-benchmark:
     <<: *retrieval
     profiles: [analytics-gpu]
@@ -374,7 +376,6 @@ services:
     volumes: [demo-data:/data:ro]
     depends_on:
       retrieval-index: { condition: service_completed_successfully }
-      retrieval-benchmark: { condition: service_completed_successfully, required: false } # analytics-gpu only
       # The server keeps the collection of the build it started on: restart it when the data one-shot is
       # recreated for another build, as market analytics (demo.sh data prepare restarts it itself).
       data: { condition: service_completed_successfully, restart: true }

@@ -15,9 +15,11 @@ import {
   defaultBudget,
   failed,
   formatTable,
+  HttpStatusError,
   parseBudgets,
   parseStream,
   recordedSeconds,
+  withRetries,
   selectQuestions,
   type LiveEvent,
   type LiveTurn,
@@ -268,5 +270,45 @@ describe('the stream and the table', () => {
       /^peer-network\s+FAIL\s+ok\s+ok\s+ok\s+ok\s+ok\s+FAIL\s+.*latency: 200 s, over 120/m
     )
     expect(table).toContain('1 of 2 questions passed; deployment checks 1 of 2')
+  })
+})
+
+describe('withRetries', () => {
+  const noWait = { sleep: async () => undefined }
+
+  it('tries again after a transient status or a network error, and returns the answer', async () => {
+    const failures = [
+      new HttpStatusError(502, 'GET /x answered 502'),
+      new TypeError('socket hang up'),
+    ]
+    let calls = 0
+    const answer = await withRetries(async () => {
+      calls += 1
+      const failure = failures.shift()
+      if (failure) throw failure
+      return 'ok'
+    }, noWait)
+    expect([answer, calls]).toEqual(['ok', 3])
+  })
+
+  it('fails at once on another status, and after its last attempt on a transient one', async () => {
+    let calls = 0
+    const notFound = withRetries(async () => {
+      calls += 1
+      throw new HttpStatusError(404, 'GET /x answered 404')
+    }, noWait)
+    await expect(notFound).rejects.toThrow('answered 404')
+    expect(calls).toBe(1)
+
+    calls = 0
+    const unavailable = withRetries(
+      async () => {
+        calls += 1
+        throw new HttpStatusError(503, 'GET /x answered 503')
+      },
+      { ...noWait, attempts: 3 }
+    )
+    await expect(unavailable).rejects.toThrow('answered 503')
+    expect(calls).toBe(3)
   })
 })

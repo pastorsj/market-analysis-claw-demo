@@ -17,6 +17,12 @@ from .spec import Check
 from .spec import RowRef
 
 PERCENT = re.compile(r"([+\-]?\d+(?:\.\d+)?)\s?%")
+# A word for a fall just before or after an unsigned percentage: "fell 1.23%", "a decline of 1.23%", "1.23% lower"
+FALL = re.compile(
+    r"\b(?:down|fell|fall(?:s|ing)?|dropp?(?:ed|ing|s)?|declin\w*|decreas\w*|lower|negative|loss(?:es)?|lost|slid"
+    r"|slipp?\w*)\b",
+    re.IGNORECASE,
+)
 DASHES = re.compile("[‐-–−]")
 SOURCES = re.compile(r"\n#+\s*Sources")
 
@@ -43,10 +49,24 @@ def named(asset_id: Any, text: str, names: dict[str, str]) -> bool:
 
 
 def has_percent(text: str, fraction: Any, tolerance: float = 0.0005) -> bool:
-    """The report shows ``fraction`` as a percentage, within display rounding."""
+    """The report shows ``fraction`` as a percentage, within display rounding.
+
+    A negative value also counts written without its sign next to a word for a fall ("fell 1.23%", "a 1.23%
+    decline"); a signed figure must carry the right sign.
+    """
     if not isinstance(fraction, int | float) or isinstance(fraction, bool):
         return False
-    return any(abs(float(p) - fraction * 100) <= max(tolerance * 100, 0.051) for p in PERCENT.findall(text))
+    target, limit = fraction * 100, max(tolerance * 100, 0.051)
+    for match in PERCENT.finditer(text):
+        value = float(match[1])
+        if abs(value - target) <= limit:
+            return True
+        unsigned = match[1][0] not in "+-"
+        if target < 0 and unsigned and abs(value + target) <= limit:
+            before, after = text[max(0, match.start() - 25) : match.start()], text[match.end() : match.end() + 12]
+            if FALL.search(before) or FALL.search(after):
+                return True
+    return False
 
 
 def receipt_numbers(turn: dict[str, Any]) -> list[float]:

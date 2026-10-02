@@ -130,18 +130,20 @@ const structuredQuery = (content: StructuredQuery): ReceiptSummary => {
 }
 
 /**
- * A prediction in Kumo's binary-classification columns, as the original UI showed them. The receipt
- * keeps each entity's TRUE_PROB; ANCHOR_TIMESTAMP is the run's anchor, FALSE_PROB its complement
- * and PREDICTION whether TRUE_PROB is the larger of the two.
+ * A prediction in Kumo's binary-classification columns, as the original UI showed them: the most
+ * likely entity first. The receipt keeps each entity's TRUE_PROB; ANCHOR_TIMESTAMP is the run's
+ * anchor, FALSE_PROB its complement and PREDICTION whether TRUE_PROB is the larger of the two.
  */
 const kumoRows = (content: StructuredPrediction): Row[] =>
-  content.rows.map((row) => ({
-    ANCHOR_TIMESTAMP: content.anchor,
-    ENTITY: row.assetId,
-    FALSE_PROB: 1 - row.probability,
-    PREDICTION: row.probability > 0.5,
-    TRUE_PROB: row.probability,
-  }))
+  [...content.rows]
+    .sort((a, b) => b.probability - a.probability)
+    .map((row) => ({
+      ANCHOR_TIMESTAMP: content.anchor,
+      ENTITY: row.assetId,
+      FALSE_PROB: 1 - row.probability,
+      PREDICTION: row.probability > 0.5,
+      TRUE_PROB: row.probability,
+    }))
 
 const structuredPrediction = (
   content: StructuredPrediction,

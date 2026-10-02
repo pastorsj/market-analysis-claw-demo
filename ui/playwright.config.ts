@@ -80,6 +80,8 @@ export default defineConfig({
     {
       name: 'visual',
       testDir: './e2e/visual',
+      // Its own output, the only one CI uploads: the fixture pack and the fake API, never a pack's recordings
+      outputDir: './test-results/visual',
       use: {
         ...devices['Desktop Chrome'],
         // The size and theme of the parity screenshots taken against the original demo UI

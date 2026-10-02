@@ -148,3 +148,18 @@ def test_compose_publishes_every_sandbox_port_on_loopback(config):
             elif match := re.match(r"127\.0\.0\.1:(\d+):", str(port)):
                 published.add(int(match.group(1)))
     assert {url.port for url in sandbox_urls(config).values()} <= published
+
+
+def test_no_service_waits_on_the_gpu_milvus_comparison():
+    """The Benchmark tab's GPU Milvus and its one-shot are optional: `demo.sh up` runs them after the stack, so a GPU
+    Milvus that never turns healthy cannot hold back the retrieval server, the API or `up --wait`."""
+    services = load_yaml(COMPOSE)["services"]
+    optional = {"milvus-gpu", "retrieval-benchmark"}
+
+    def needs(name: str, seen: frozenset[str] = frozenset()) -> set[str]:
+        direct = set(services[name].get("depends_on") or {})
+        return direct | {found for dep in direct - seen if dep in services for found in needs(dep, seen | {name})}
+
+    waiting = {name: needs(name) & optional for name in services.keys() - optional}
+    assert {name: deps for name, deps in waiting.items() if deps} == {}
+    assert needs("retrieval-benchmark") >= {"milvus-gpu"}  # the one-shot itself still waits for it

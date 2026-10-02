@@ -25,8 +25,8 @@ against none, and left 6 of its 30 reports without a citation (Ultra alone: 4 of
 (under a second id at that provider), Nemotron 3 Super for auxiliary and fallback calls, and `CAPABLE_BASE_URL`
 and `CAPABLE_API_KEY` pointed at the provider ([configuration](configuration.md#1-inference-endpoint)). In the
 2026-10-01 frontier bake-off ([below](#the-2026-10-01-frontier-bake-off)) it passed 10 of 16 runs with the
-primary grader and 14 with the second, ahead of GPT-6.1 Sol pinned (7 and 9) and Claude Opus 5.5 pinned (8 and
-12), while GPT-6.1 Sol served 10% of the agent turns and, with its judge calls, 20% of the tokens.
+primary grader and 14 with the second, ahead of GPT-6.1 Sol pinned (7 and 9) and Claude Opus 5.5 pinned (9 and
+13), while GPT-6.1 Sol served 10% of the agent turns and, with its judge calls, 20% of the tokens.
 
 **Pinned frontier is the fallback.** Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) was the stronger
 and steadier pinned arm (p95 72 s, no tool errors). GPT-6.1 Sol pinned lost runs to repeated tool-argument errors
@@ -41,7 +41,7 @@ Ultra → Sol with a Nemotron 3 Super judge (24 against 20 of 34); a frontier ju
 | A provider serving GPT-6.1 Sol (recommended) | `escalation.nemotron-gpt`: Ultra → GPT-6.1 Sol, judged by GPT-6.1 Sol | 2026-10-01: 10 of 16 |
 | A provider serving Claude Opus 5.5 | `pinned-capable.nemotron-claude`, capable Claude Opus 5.5 on `CAPABLE_BASE_URL` | 2026-10-01: 9 of 16 |
 | GPT-6.1 Sol on every turn | `pinned-capable.nemotron-gpt` | 2026-10-01: 7 of 16 (GPT-6 Sol on 2026-09-30: 24 of 34) |
-| Ultra escalating to Claude Opus 5.5 | `escalation.nemotron-claude`, judged by Claude Opus 5.5 | 2026-10-01: 6 of 16 |
+| Ultra escalating to Claude Opus 5.5 | `escalation.nemotron-claude`, judged by Claude Opus 5.5 | 2026-10-01: 8 of 16 |
 | All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`) | 2026-09-30: 12 of 34 |
 
 Switching is an `.env` edit plus `./scripts/demo.sh restart switchyard`; the sandbox is not rebuilt.
@@ -59,14 +59,11 @@ that every model id the template uses is listed.
 
 ### The default on build.nvidia.com
 
-The committed replay bundles were recorded with the default on 2026-10-01: Ultra alone on build.nvidia.com,
-every profile, on a Brev A100 VM, one `record` run of each pack's six featured questions, unjudged. All twelve
-succeeded on the first ask, and 11 cite their evidence: `synthetic-market`'s Market Leaders answer matches the
-oracle but cites nothing. Market Leaders on both packs and the News & Price Reaction means match their
-oracles, and so do the Peer Network pairs, except that the `us-equities` answer ranks a strongly negative pair
-among the pairs that "moved together". The Cybersecurity Disclosures answer still searches many times: 9 on
-`synthetic-market`, where it reports that the corpus lacks the four-business-day text, and 25 in 7.5 minutes on
-`us-equities`, where it finds it.
+`synthetic-market`'s committed replay bundle was recorded with this default: Ultra alone on build.nvidia.com, every
+profile, on a Brev A100 VM. Its ten questions were recorded on 2026-10-01 and five of them again on 2026-10-02, and
+every answer was reviewed against the pack's oracles and evidence. `us-equities`, the hosted demo's pack, was
+recorded as that deployment runs, with Ultra escalating to GPT-6.1 Sol (`escalation.nemotron-gpt`). How both were
+made, and which faults remain, is in [data packs](data-packs.md#recordings) and each pack's README.
 
 The retired `market-analysis` pack's bundle was recorded the same way on 2026-09-29, in four `record` runs of
 the featured questions (three of all six, one of two). What they showed:
@@ -124,7 +121,7 @@ contradiction or no evidence. The bake-off below measures it ([the tuned judge](
 | Efficient (default: every turn) | Nemotron 3 Ultra 550B-A55B | `nvidia/nemotron-3-ultra-550b-a55b` |
 | Auxiliary and fallback calls (`AGENT_AUX_MODEL`), thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
 | Escalation judge in `*-gpt` and `*-claude` (`AGENT_JUDGE_MODEL`) | a frontier model from the capable provider: GPT-6.1 Sol or Claude Opus 5.5, under a second id there | not served |
-| Capable (escalation and pinned templates) | GPT-6 Sol, over the Responses API | not served; the id your provider lists, e.g. `gpt-6-sol` |
+| Capable (escalation and pinned templates) | GPT-6.1 Sol (GPT-6 Sol in the 2026-09-30 bake-off), over the Responses API | not served; the id your provider lists, e.g. `gpt-6.1-sol` |
 | Capable (`*-claude` templates) | Claude Opus 5.5, over the Anthropic Messages API | not served; the id your provider lists, e.g. `claude-opus-5-5` |
 | Judge (and aux) for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
 | Candidate efficient model | Nemotron 3.5 Super | to be evaluated once it is served publicly |
@@ -230,8 +227,7 @@ at least one citation. These runs predate the change that measures a window's re
 it: then `market_scan`, `price_context` and the oracles all started from the window's first close, so the
 checks compared like with like. With the change, the oracles' strongest and weakest stay the same for
 `synthetic-market`'s Market Leaders and both packs' Large-Universe Scan; on `us-equities`, Market Leaders'
-weakest is BABA instead of CRWV, and February's weakest three are BMNR, IBM and CRWD instead of IBM, AMD
-and BMNR.
+weakest and two of February's weakest three change.
 
 | Question | Check |
 |---|---|

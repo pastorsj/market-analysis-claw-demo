@@ -164,8 +164,8 @@ class HermesJobExecutor:
             "known_tool_duration_ms": normalizer.known_tool_duration_ms,
             **{key: value for key, value in normalizer.usage.items() if key != "reasoning_tokens"},
         }
-        for event in normalizer.publication(binding.run_id, resolution=report.resolution(), metrics=metrics):
-            await self._store.append_event(job.job_id, event.to_event_store_dict())
+        publication = normalizer.publication(binding.run_id, resolution=report.resolution(), metrics=metrics)
+        # With the success, in one transaction: a job cancelled or failed meanwhile gets no publication events
         await self._store.transition(
             job.job_id,
             expected={JobStatus.RUNNING},
@@ -177,7 +177,10 @@ class HermesJobExecutor:
                 "run_id": binding.run_id,
                 "usage": status.usage,
             },
-            events=[final_report_event(report.markdown, report.citations)],
+            events=[
+                *(event.to_event_store_dict() for event in publication),
+                final_report_event(report.markdown, report.citations),
+            ],
         )
 
     async def stop_detached(self, job: Job) -> None:
