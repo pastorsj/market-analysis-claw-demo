@@ -98,13 +98,16 @@ In the full stack, `compose.yaml` runs this image as the `ui` service.
 npm run lint
 npm run type-check
 npm run test:ci               # Vitest + coverage
-npm run build && npm run e2e  # Playwright smoke (Chromium), no screenshots
+npm run build && npm run e2e  # Playwright (Chromium): live smoke and every recorded session
+npm run e2e:visual            # visual baselines, in the Playwright Docker image
 ```
 
-The smoke test starts four servers from the build: live mode against
-`e2e/fake-api.mjs`, replay mode on the synthetic bundle in `e2e/fixtures/packs`,
-and replay mode on each pack's committed recordings (`../data/packs/synthetic-market/recordings`
-and `../data/packs/us-equities/recordings`), each of whose sessions must replay. The fake API offers the default pack's six featured questions.
+The e2e tests start servers from the build: live mode against
+`e2e/fake-api.mjs`, replay mode on the synthetic fixture pack in `e2e/fixtures/packs`,
+and replay mode on each pack's committed recordings in `../data/packs` (a pack without a
+recordings bundle is skipped). Every recorded session must replay without calling the API: its
+Recorded list entry with the tool pills its runs used, and for each turn the question, the answer,
+its cited sources and its run down to the closing events. The fake API offers the default pack's six featured questions.
 It needs `npx playwright install chromium` once; on Linux, `npx playwright install --with-deps chromium`,
 which also installs Chromium's system libraries with apt (sudo), as CI and `demo.sh test e2e` do.
 
@@ -120,3 +123,7 @@ node e2e-live/fake-deployment.mjs &   # 127.0.0.1:3997; DATA_PACK picks the pack
 HOSTNAME=127.0.0.1 PORT=3998 UI_MODE=live API_URL=http://127.0.0.1:3997 node .next/standalone/server.js &
 ../scripts/demo.sh test live --url http://127.0.0.1:3998
 ```
+
+The visual baselines (`e2e/visual`) are screenshots of the views that keep the original demo UI's
+look, on the fixture pack and the fake API only. They render in the official Playwright Docker
+image, as in CI; [e2e/visual/README.md](e2e/visual/README.md) says how to check and update them.
