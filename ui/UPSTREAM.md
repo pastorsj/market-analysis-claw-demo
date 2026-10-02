@@ -100,7 +100,7 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
 - Removed: `next-auth`, `@react-pdf/renderer`, `marked`, `http-proxy`,
   `concurrently`, `husky`, `msw`, `@mswjs/data`, `@faker-js/faker`,
   `@types/uuid`, `autoprefixer`.
-- Updated: `next` and `eslint-config-next` 16.2.12 → 16.3.6 (image-optimizer
+- Updated: `next` and `eslint-config-next` 16.2.12 → 16.3.7 (image-optimizer
   and `sharp` advisories), `vitest` and `@vitest/coverage-v8` 4.1.0 → 4.1.11
   (mocker advisory). `npm audit` reports 0 vulnerabilities.
 - Kept on the upstream pin: `@nvidia/foundations-react-core` 0.600, React 18.
