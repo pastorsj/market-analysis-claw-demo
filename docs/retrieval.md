@@ -49,6 +49,15 @@ The Hermes plugin sets `source_ids` to the job's selected document sources, and 
 the pack does not declare as documents. Each call becomes a `retrieval_evidence` receipt, which the UI's
 retrieval explorer shows.
 
+**Queries over filings.** The first passage of every 8-K and 6-K is its cover page: the form name, "current
+report", the registrant and the dates. A query that names the form ("second quarter 2026 operational disruption
+8-K") is nearest to those cover pages, and the reranker scores them above the passages that describe an event,
+so it returns cover pages only: on the synthetic-market sample, none of its 8 passages comes from a filing that
+reports a disruption, against 3 of 8 for the same query without "8-K". The tool description and the
+`searching-documents` skill therefore tell the agent to leave form names out and to write the event as the
+sentence a filing would contain: a list of keywords matches the risk lists of forward-looking statements
+instead. Each hit's metadata carries its form and filing date.
+
 ## Endpoints
 
 Retrieval uses the retriever endpoint (`RETRIEVER_*`), never the inference endpoint. Rerank requests go to the

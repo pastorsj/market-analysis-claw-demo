@@ -62,7 +62,10 @@ the bundle keeps the best of the three as Ultra answered:
   each issuer's mean five-session return after all its articles and the returns after GIOR's negative ones; it says
   one of KASI's negative items is in its list where there are two. Its filing half finds no Q2 2026 filing about
   an operational disruption, though the corpus holds some (a TotalEnergies 6-K on production shut down in the
-  Gulf, for one); one other attempt found them but named the wrong issuer as the most negative.
+  Gulf, for one); one other attempt found them but named the wrong issuer as the most negative. Its searches
+  named the form ("... 8-K"), which returns 8-K cover pages only ([retrieval](../../../docs/retrieval.md)); the
+  `searching-documents` skill now keeps form names out of filing searches, and the eval fails an answer that
+  retrieves none of the filings `eval/retrieval.yaml` lists. This session is to be recorded again.
 
 ## How it is made
 
