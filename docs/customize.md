@@ -93,7 +93,7 @@ Everything above, plus:
 | `scripts/lib/doctor.sh` | The profile in `KNOWN_PROFILES`, its port in `check_ports` |
 | `scripts/lib/openshell.sh` | The server's image in `TOOL_IMAGES`, so a new image of it recreates the sandbox (Hermes lists a server's tools once, when the sandbox starts) |
 | `scripts/demo.sh` | The service in `backend_services`, a profile set that includes it in `PROFILE_SETS`, and the project in `PYTHON_PROJECTS`, so `demo.sh test unit` runs its tests and ruff |
-| `.env.example`, `.github/workflows/ci.yml` | The profile in section 3; the project in the Python matrix |
+| `.env.example` | The profile in section 3 |
 
 ## Add a tool family or a receipt kind
 

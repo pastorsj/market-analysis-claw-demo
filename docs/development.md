@@ -54,11 +54,16 @@ neither runs by default. Three checks of a running deployment are on demand only
 | `./scripts/demo.sh eval [--pack P] [--runs N] [--questions ID,...]` | Answer quality against the pack's oracles; an LLM grader (a frontier model) when `GRADER_BASE_URL`, `GRADER_API_KEY` and `GRADER_MODEL` are set ([eval](../eval/README.md)) |
 | `./scripts/demo.sh test gpu [--perf]` | On an NVIDIA GPU host, the CPU/GPU parity tests; `--perf` also the running stack's GPU speedups against floors set from the A100 recordings |
 
-## CI
+## Checks
 
-CI (`.github/workflows/ci.yml`) runs shellcheck, the Compose config of every profile set, every Python project,
-the contracts check, the Switchyard dry-runs, and the UI's lint, type-check, unit tests, build and Playwright
-suite.
+There is no hosted CI. Before you push, run:
+
+| Command | Checks |
+|---|---|
+| `pre-commit run --all-files` | ruff, shellcheck, gitleaks, JSON/TOML/YAML syntax, and the guards: no market data files, no Makefile, no Git LFS |
+| `./scripts/demo.sh test all` | Every Python project's tests and ruff, the UI's lint, type-check, unit tests, build and Playwright suite, the contracts check, the Compose config of every profile set, and the Switchyard dry-runs |
+| `cd ui && npm run e2e:visual` | The visual baselines, in the Playwright Docker image ([e2e/visual](../ui/e2e/visual/README.md)) |
+| `cd data && uv run --locked pytest -m slow` | The end-to-end `synthetic-market` build |
 
 ## When you change the code
 

@@ -85,7 +85,7 @@ covers the options and what to review before committing a bundle.
 ## On-demand checks
 
 Three commands check a running deployment. You run them by hand, for example before a demo or after changing the
-host; CI never runs them. Every question they ask runs live and costs model calls.
+host. Every question they ask runs live and costs model calls.
 
 | Command | What it checks | Needs |
 |---|---|---|

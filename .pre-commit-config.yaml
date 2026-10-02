@@ -40,3 +40,13 @@ repos:
         entry: Real market data is never committed; external datasets belong in DATA_SOURCE_DIR.
         files: \.(parquet|arrow|feather|duckdb)$
         exclude: ^(data/packs/[^/]+/text|(.+/)?tests/fixtures)/
+      - id: no-makefile
+        name: no Makefile (scripts/demo.sh is the entry point)
+        language: fail
+        entry: Use scripts/demo.sh, not a Makefile.
+        files: (^|/)(GNUm|M|m)akefile$
+      - id: no-git-lfs
+        name: no Git LFS
+        language: pygrep
+        entry: filter=lfs
+        files: (^|/)\.gitattributes$

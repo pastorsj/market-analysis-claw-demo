@@ -561,7 +561,7 @@ A row that fails is asked again, for at most 5 rounds; after that, `generate` st
   text file's SHA-256.
 - The contract tables are validated again at `prepare`, like every pack.
 
-## The CI fixture
+## The test fixture
 
 The fixture is small, committed and fully synthetic. It holds no rows from any real dataset, and a committed
 script regenerates it.
@@ -572,7 +572,7 @@ script regenerates it.
 | `synthetic-market`, profile `ci` | The committed text plus seeds | An end-to-end `prepare` in seconds with no network, through the minute bars and the rollup (the `slow` marker); rollup exactness; the planted-event oracles |
 | `tools/market-analytics/tests/fixture_pack.py`, `fixture_bars.py` | The fixture pack with minute bars for three assets over three sessions, and a variant with neither news nor minute bars | `intraday_scan` against a hand reduction of the minute bars; the news tools and `intraday_scan` report that they are unavailable in the variant, whose descriptions say so and whose warm-up skips them; with a GPU, CPU/GPU parity for every tool with `CUDF_PANDAS_FAIL_ON_FALLBACK=1` |
 
-`us-equities` is checked in CI by `validate` and its fixture build: the schema, cross-references and declared
+`us-equities` is checked by the data tests through `validate` and its fixture build: the schema, cross-references and declared
 contracts, none of which needs the data. A live run on real data happens on a GPU VM, with the data fetched
 there.
 
@@ -653,4 +653,4 @@ the SEC filings corpus. On Brev, the images and the Docker volumes stay where th
 | `tools/market-analytics/` | The contract (optional news table, minute bars); `bars.py` (minute-bar scans) and `tools/intraday.py` (`intraday_scan`); the availability of each tool per pack; the sparse peer graph; the memory estimate |
 | `tools/retrieval/` | Streamed, resumable indexing |
 | `scripts/demo.sh`, `scripts/lib/doctor.sh`, `compose.yaml`, `.env.example` | `data fetch` and `data generate`, the `/sources` mounts, the `DATA_SOURCE_*`, `DATA_DESIGNER_*` and credential variables, the default `DATA_PACK` and `DATA_DATABASE_NAME` |
-| `.gitignore`, `.pre-commit-config.yaml`, `.github/workflows/ci.yml` | `data/external/`; the committed-data guards |
+| `.gitignore`, `.pre-commit-config.yaml` | `data/external/`; the committed-data guards |

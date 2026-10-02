@@ -30,7 +30,7 @@ still load the web fonts and icons from NVIDIA's CDN, so the run needs internet 
 In the official Playwright Docker image of the version in `package-lock.json`
 (`mcr.microsoft.com/playwright:v<version>-noble`), at 1440x900 in the dark theme, with
 `fonts.conf`: in that image the system font the UI asks for resolves to a font without bold, so
-FreeSans and Liberation Mono (also in the image) stand in. CI runs the same image on x86-64. The
+FreeSans and Liberation Mono (also in the image) stand in. The same image also runs on x86-64. The
 project runs only there (`E2E_VISUAL=1`): screenshots from macOS or a desktop Linux differ in
 fonts, so `npm run e2e` skips it.
 
@@ -42,7 +42,7 @@ npm run e2e:visual        # e2e/visual/run.sh: npm ci, build and compare, in the
 
 It needs Docker and Node. node_modules and the build live in container volumes, so a macOS
 checkout's own are neither used nor changed. A failure leaves the expected, actual and diff images
-of each view under `test-results/visual/` (in CI, the `visual-diffs` artifact).
+of each view under `test-results/visual/`.
 
 ## Update
 
@@ -59,6 +59,6 @@ above. Bumping `@playwright/test` changes the image and its Chromium, so expect 
 them.
 
 On an Apple silicon Mac the image runs natively as arm64 (its Chromium crashes under amd64
-emulation). The baselines here were rendered that way, and CI's x86-64 run matched them with no
+emulation). The baselines here were rendered that way, and an x86-64 run matched them with no
 tolerance. If a future image renders the two differently, set a small `maxDiffPixelRatio` in the
 `visual` project rather than rendering on one of them only.
