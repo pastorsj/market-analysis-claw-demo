@@ -161,7 +161,7 @@ Benchmark tab, and every answer that searched documents carries the Milvus CPU/G
 Ultra alone, on build.nvidia.com), as a public user runs it. `us-equities`, the hosted demo's pack, was recorded
 as that deployment runs: `DATA_CORPORA=sec_filings,market_regulations,world_news` and Nemotron 3 Ultra escalating
 to GPT-6.1 Sol (`escalation.nemotron-gpt`) on an OpenAI-compatible endpoint serving both. The recorder writes
-served model ids under their public names (`nemotron-3-ultra`, `gpt-6.1-sol`). Every answer was reviewed against
+served model ids without a gateway's provider prefix, keeping the last segment of the id the endpoint served. Every answer was reviewed against
 the pack's oracles and evidence; the ones that were wrong were asked again, and the bundles keep the faults that
 remained rather than hiding them (each pack's README lists them).
 The `us-equities` bundle holds results derived from its external dataset: the answers' figures and, in
