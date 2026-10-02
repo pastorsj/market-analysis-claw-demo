@@ -651,7 +651,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 690
+          "duration_ms": 693
         },
         "assets": {
           "table": "assets",
@@ -818,7 +818,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 685
+          "duration_ms": 682
         },
         "company_news": {
           "table": "company_news",
@@ -935,7 +935,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 731
+          "duration_ms": 698
         },
         "daily_prices": {
           "table": "daily_prices",
@@ -1082,7 +1082,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 691
+          "duration_ms": 687
         },
         "ticker_history": {
           "table": "ticker_history",
@@ -1159,7 +1159,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 683
+          "duration_ms": 688
         },
         "trading_sessions": {
           "table": "trading_sessions",
@@ -1226,7 +1226,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 710
+          "duration_ms": 709
         },
         "prediction.asset_entities": {
           "table": "prediction.asset_entities",
@@ -1303,7 +1303,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 702
+          "duration_ms": 675
         },
         "prediction.news_events": {
           "table": "prediction.news_events",
@@ -1380,7 +1380,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 721
+          "duration_ms": 724
         },
         "prediction.price_events": {
           "table": "prediction.price_events",
@@ -1467,7 +1467,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 717
+          "duration_ms": 723
         },
         "prediction.return_outcomes": {
           "table": "prediction.return_outcomes",
@@ -1554,7 +1554,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 734
+          "duration_ms": 732
         },
         "prediction.top_12_population": {
           "table": "prediction.top_12_population",
@@ -1591,16 +1591,16 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 706
+          "duration_ms": 688
         }
       },
       "queries": [
         {
-          "sql": "WITH recent_dates AS (SELECT trading_date FROM synthetic_market.main.trading_sessions WHERE trading_date <= DATE '2026-08-31' ORDER BY trading_date DESC LIMIT 20), asset_counts AS (SELECT sector, COUNT(DISTINCT asset_id) AS issuer_count FROM synthetic_market.main.assets GROUP BY sector), median_returns AS (SELECT a.sector, MEDIAN(dp.total_return_1d) AS median_return FROM synthetic_market.main.assets a JOIN synthetic_market.main.daily_prices dp ON a.asset_id = dp.asset_id JOIN recent_dates rd ON dp.trading_date = rd.trading_date GROUP BY a.sector) SELECT ac.sector, ac.issuer_count, mr.median_return FROM asset_counts ac LEFT JOIN median_returns mr ON ac.sector = mr.sector ORDER BY ac.sector;",
+          "sql": "WITH priced AS (SELECT p.asset_id, p.trading_date, p.close, LAG(p.close, 20) OVER (PARTITION BY p.asset_id ORDER BY p.trading_date ASC) AS close_20d_before FROM synthetic_market.main.daily_prices p WHERE p.trading_date <= DATE '2026-08-31'), returns AS (SELECT asset_id, (close - close_20d_before) / NULLIF(close_20d_before, 0) AS ret FROM priced WHERE trading_date = DATE '2026-08-31' AND close_20d_before IS NOT NULL) SELECT a.sector, COUNT(DISTINCT r.asset_id) AS asset_count, median(r.ret) AS median_return FROM returns r JOIN synthetic_market.main.assets a ON r.asset_id = a.asset_id GROUP BY a.sector ORDER BY a.sector;",
           "result": {
             "columns": [
               "sector",
-              "issuer_count",
+              "asset_count",
               "median_return"
             ],
             "types": [
@@ -1612,41 +1612,41 @@
               [
                 "Construction",
                 41,
-                0.0010557255092956686
+                0.039640117530274493
               ],
               [
                 "Finance, Insurance and Real Estate",
                 425,
-                0.0008214532573163069
+                0.04215648267241537
               ],
               [
                 "Manufacturing",
                 792,
-                0.0013738018380901051
+                0.03266764689580014
               ],
               [
                 "Mining",
                 119,
-                -0.0009788732317390636
+                -0.020889233188962117
               ],
               [
                 "Retail Trade",
                 138,
-                -0.0005718639166656936
+                0.0022656817736886213
               ],
               [
                 "Services",
                 304,
-                0.0002115828219330096
+                -0.007396695305398331
               ],
               [
                 "Transportation, Communications, Electric, Gas and Sanitary Services",
                 181,
-                -0.0001536595917986383
+                -0.005028104422879062
               ]
             ],
             "truncated": false,
-            "duration_ms": 756
+            "duration_ms": 950
           }
         },
         {
@@ -1844,7 +1844,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 725
+            "duration_ms": 690
           }
         },
         {
@@ -2285,7 +2285,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 713
+            "duration_ms": 701
           }
         },
         {
@@ -2591,7 +2591,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 711
+            "duration_ms": 723
           }
         },
         {
@@ -2978,7 +2978,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 736
+            "duration_ms": 679
           }
         },
         {
@@ -3176,7 +3176,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 682
+            "duration_ms": 688
           }
         },
         {
@@ -3347,7 +3347,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 699
+            "duration_ms": 731
           }
         },
         {
@@ -3454,7 +3454,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 675
+            "duration_ms": 693
           }
         },
         {
@@ -3652,7 +3652,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 714
+            "duration_ms": 716
           }
         },
         {
@@ -3877,7 +3877,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 740
+            "duration_ms": 717
           }
         },
         {
@@ -4102,7 +4102,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 734
+            "duration_ms": 755
           }
         },
         {
@@ -4153,7 +4153,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 686
+            "duration_ms": 707
           }
         }
       ]

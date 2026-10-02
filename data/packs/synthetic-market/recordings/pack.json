@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "build": "synthetic-market@1.0.0+standard+f65756f60868",
+  "build": "synthetic-market@1.0.0+standard+48a5be4f9685",
   "id": "synthetic-market",
   "version": "1.0.0",
   "title": "Synthetic US Equities",
@@ -49,6 +49,17 @@
       "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml",
       "as_of": "2026-08-17",
       "retrieved_on": "2026-09-22"
+    },
+    {
+      "id": "federal-register-2023-16194",
+      "title": "SEC final rule, Cybersecurity Risk Management, Strategy, Governance, and Incident Disclosure (88 FR 51896), Federal Register XML",
+      "kind": "download",
+      "synthetic": false,
+      "license": "US-Government-Public-Information",
+      "url": "https://www.federalregister.gov/documents/full_text/xml/2023/08/04/2023-16194.xml",
+      "as_of": "2023-08-04",
+      "retrieved_on": "2026-10-01",
+      "notes": "The rule's summary and its appendices of amended form text: Form 8-K General Instruction B.1 and Item 1.05, Form 10-K Item 1C, Form 20-F Item 16K and Form S-3. The preamble's discussion is left out."
     },
     {
       "id": "sec-edgar-2026-q2",
@@ -100,8 +111,8 @@
     {
       "id": "market_regulations",
       "name": "Market Regulations",
-      "description": "Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
-      "agent_description": "Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities regulation research.",
+      "description": "Current public eCFR Title 17 sections and the SEC's 2023 cybersecurity disclosure rule, retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
+      "agent_description": "Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities regulation research, and the form text the SEC's 2023 cybersecurity disclosure rule adopted (Form 8-K Item 1.05 and its filing deadline, Form 10-K Item 1C), which the CFR does not hold.",
       "kind": "documents",
       "capabilities": [
         "unstructured_retrieval"
@@ -382,7 +393,7 @@
         "09:30",
         "16:00"
       ],
-      "root": "/data/cache/generated/a4068089ddb5aae4"
+      "root": "/data/cache/generated/461399dcf1c3703b"
     }
   },
   "documents": {
@@ -527,19 +538,19 @@
         "tables/daily_prices.parquet": "a79befea158bdbe7b462ab54237c8d76ed4a1d5f4f0c40d5ad0cc9dbfaab7846",
         "tables/ticker_history.parquet": "8c59b071f6a75fea534523a984908a48179eb324adcdb18c3718342980366d41",
         "tables/trading_sessions.parquet": "88c3f650eb639cf9ec4ea9640aa90c60ff22d8e12689f0851510cd6922fe724b",
-        "structured/synthetic_market.duckdb": "81f85f7f02c499e07043d8fd9b028d61ce77d93bb1bfaa905bb76ab1d7931b37",
-        "ontology/model.yaml": "c6551ae4cc3fb6196d5d1a4566cc189a05a99c4348f1ea29916e3a7131f24df2",
+        "structured/synthetic_market.duckdb": "806263e83dbd31b0d2db2dc7af80ddd32e5e00b53c26d16843e6944f713920eb",
+        "ontology/model.yaml": "705c5c76643a730611709ed06b79e591575647f5e2634283888f3d04806d3b45",
         "prediction/graph.json": "83cede57e89567148fc25a4f1cea7be439ae9560a977f8e9df7a993e271664ca",
         "prediction/templates.json": "26f6b451f85b59ee2172ccc714b4065e2ff3edacface974aeca305d9a649689d"
       }
     },
     "corpus": {
       "documents": {
-        "market_regulations": 3525,
+        "market_regulations": 3530,
         "sec_filings": 1696
       },
       "files": {
-        "corpus/documents.jsonl": "d0de030d57bbf72e383064178f3150c5e15c7e55e4b113a24bfe3359e3517952"
+        "corpus/documents.jsonl": "1a9e309e2770ab5a3f104f1f6cc4f761f8c18befa03539cf0a73245968d81373"
       }
     }
   }
