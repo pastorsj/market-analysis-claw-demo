@@ -177,6 +177,9 @@ The `us-equities` bundle holds results derived from its external dataset: the an
 3. Set `DATA_PACK=<new-id>` in `.env`, then run `./scripts/demo.sh data validate` and
    `./scripts/demo.sh up`. Record its sessions with `./scripts/demo.sh record`.
 
+Auto Ontology answers from the descriptions in `ontology.yaml`. After you edit them, the next `up` rebuilds the
+model and seeds the pack's catalog again ([seeding](../tools/auto-ontology/README.md#seeding)).
+
 No code changes are needed while the pack satisfies the contracts its tools own. Market analytics requires what
 `tools/market-analytics/contract/market-analytics.v1.json` lists (a pack declares
 `analytics.contract: market-analytics/v1`); `validate` checks the declared schema and `prepare` checks the

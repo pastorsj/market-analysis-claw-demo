@@ -66,9 +66,13 @@ or `evidence`.
 - Keep measures at their natural grain. Ask for totals before a one-to-many join
   can multiply them.
 - A return over a window is one number per asset, measured as the market tools
-  measure it: from the close on the session before the window's first session
-  to the last close in the window. Say so in the question, and ask for the
-  median or average of those per-asset returns, never of daily returns.
+  measure it: from the asset's close on its latest trading day before the window
+  (its first close in the window if it was listed inside it) to its close on its
+  latest trading day in the window. Say so in the question, in those words: "last
+  close" can come back as the highest close. Ask for the median or average of
+  those per-asset returns, never of daily returns, and for every asset of a group
+  to be counted; an asset without a close in the window has no return and stays
+  out of the median or average.
 - Ask separate questions for different time grains, such as daily and monthly.
 - A correlation in the rows is not a cause.
 
@@ -79,11 +83,12 @@ many assets does each sector have?"
 
 ```
 ask_question(
-    question="For each asset, compute its return from its adjusted close on the "
-             "last session before 2026-08-01 to its last adjusted close on or before "
-             "2026-08-31. Then, for each sector, give the number of assets and the "
-             "average of those per-asset returns. Sort sectors by that average, "
-             "highest first.",
+    question="For each sector, count every asset and give the average of its assets' "
+             "returns from 2026-08-01 to 2026-08-31. Measure each asset's return from its "
+             "close on its latest trading day before 2026-08-01 (or its first close in "
+             "the window, if it was listed later) to its close on its latest trading day "
+             "in the window; an asset without a close in the window has no return. Sort "
+             "sectors by that average, highest first.",
 )
 ```
 

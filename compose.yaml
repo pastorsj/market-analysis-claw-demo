@@ -485,11 +485,16 @@ services:
       auto-ontology-migrate: { condition: service_completed_successfully }
       data: { condition: service_completed_successfully }
 
-  # Imports /data/active/ontology/model.yaml before ingestion first reads the database.
+  # Imports /data/active/ontology/model.yaml before ingestion first reads the database. When the model changed
+  # since the last seed, it first resets that database's catalog (tools/auto-ontology/seed.py), so it needs
+  # Postgres and the backend's own code in /app.
   auto-ontology-seed:
     profiles: [ontology]
     image: market-demo/auto-ontology:local
     entrypoint: [python, /seed.py]
+    environment:
+      <<: *auto-ontology-env
+      PYTHONPATH: /app
     volumes:
       - demo-data:/data:ro
       - ./tools/auto-ontology/seed.py:/seed.py:ro
