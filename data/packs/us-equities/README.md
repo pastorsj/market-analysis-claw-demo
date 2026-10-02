@@ -105,20 +105,27 @@ cybersecurity rule: `cyber-disclosure-rules`, `large-universe-scan`, `sector-sql
 `restructuring-costs`. Four of them were asked again, twice at most, and the bundle keeps the best attempt.
 `trading-plans-follow-up` was asked three more times to check its follow-up citations live: none left a raw
 evidence id, but each new first turn cited the director and officer certification as (c)(1)(i)(C) rather than
-(c)(1)(ii)(C), so it keeps its earlier recording. What remains:
+(c)(1)(ii)(C), so it keeps its earlier recording.
+
+Later on 2026-10-02 twelve were asked again the same way, once Auto Ontology's seed imported a changed model again
+(so the return convention in `ontology.yaml` reached its catalog) and filing searches stopped naming the form. Nine
+replaced their recordings: `sector-sql`, `peer-network-follow-up` (its second turn now answers through Auto
+Ontology), `cyber-disclosure-rules`, `executive-changes`, `incidents-and-prices`, `moves-and-filings`,
+`nvidia-results-and-prices`, `restructuring-costs` and `results-follow-up`. `bank-results`, `material-agreements`
+and `filings-to-regulations` keep their earlier recordings, because each new attempt was worse: one read the
+banks' results 8-Ks as Item 1.05 filings, one listed three agreements as the only ones, and one second turn on the
+rules lost its citations and another called Item 1.05 part of Regulation S-K. What remains:
 
 - `cyber-disclosure-rules` (featured) gives Item 1.05's content and its four-business-day deadline from Form 8-K
-  General Instruction B.1 in the 2023 rule, but names four of the six Item 1.05 filings (Data I/O twice, Coupang,
-  Coinbase), saying the list may be incomplete.
-- `sector-sql` measures each stock's return from the close before the window, as the oracle does, but leaves out
-  the 19 stocks with no close before it (the oracle measures them from their first close), so five divisions count
-  1 to 11 fewer stocks and three medians differ slightly from the oracle's.
+  General Instruction B.1 in the 2023 rule, and names five of the six Item 1.05 filings (Data I/O twice, Coupang,
+  Coinbase, Conduent): it leaves out BayFirst while calling its list the corpus's Item 1.05 filings.
 - `large-universe-scan` matches the oracle's returns and volume z-scores, but calls the z-score one of dollar
   volume; the volume is shares traded.
 - Smaller slips, a figure or label a viewer is unlikely to notice: an open-to-close move called close-to-close
-  (`intraday-ranges`), "9 of 10" for 8 of 10 (`second-half-2025`), and "which filings" lists that name only some
-  of the in-window filings (`executive-changes`, six companies; `restructuring-costs`, five of the six Item 2.05
-  filers; `filings-to-regulations`, the two it compares; `material-agreements`, eight, which it says came from "32
+  (`intraday-ranges`), "9 of 10" for 8 of 10 (`second-half-2025`), CrowdStrike's results for the quarter ended
+  January 31, 2026 called its fiscal third quarter rather than its fourth (`moves-and-filings`), and "which
+  filings" lists that name only some of the in-window filings (`executive-changes`, eight companies;
+  `filings-to-regulations`, the two it compares; `material-agreements`, eight, which it says came from "32
   candidate filings", the passages its search ranked).
 
 ## Known issues
