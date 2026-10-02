@@ -99,8 +99,10 @@ same vectors, as the original demo did. Answers never change: `retrieve_evidence
 on every host, and the GPU index exists only for this comparison.
 
 - **Where.** The analytics-gpu profile adds `milvus-gpu`, Milvus on the GPU image (embedded etcd, local
-  storage, its own volume, no host port), and `retrieval-benchmark`, a one-shot that `retrieval` waits for.
-  Without the profile neither runs, and the Benchmark tab says the stack runs the CPU index only.
+  storage, its own volume, no host port), and `retrieval-benchmark`, a one-shot that `demo.sh up` (and `data
+  reindex`) runs once the stack is up, with the retrieval profile. Nothing waits on either: if `milvus-gpu` does not
+  turn healthy, `up` warns, stops it and goes on. Without the profiles neither runs, and the Benchmark tab says the
+  stack runs the CPU index only.
 - **The GPU index.** The one-shot reads the active build's chunk ids, sources and vectors from `milvus`, and
   writes them, L2-normalized, to a collection of the same name in `milvus-gpu` under `GPU_IVF_FLAT` (NVIDIA
   cuVS IVF-Flat, as the original demo used: inner product, `nlist = 128`; searches probe `nprobe = 64` lists).

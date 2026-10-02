@@ -3,6 +3,8 @@
 """The GPU performance guard: each case against its floor, a second measurement before failing, Milvus gates."""
 
 import json
+from datetime import UTC
+from datetime import datetime
 from itertools import count
 
 import pytest
@@ -95,6 +97,18 @@ def test_milvus_profiles_need_their_quality_gates_and_floor():
     )
 
 
+def test_a_milvus_comparison_measured_before_the_guard_fails():
+    """`benchmark --again` failed and left the earlier measurement: it must not pass as a new one."""
+    single = RetrievalCase("vector-single", (1.13,), 0.55)
+    since = datetime(2026, 10, 2, 3, 0, tzinfo=UTC)
+    fresh = milvus() | {"measuredAt": "2026-10-02T03:00:05.123456Z"}
+    assert perf.judge_retrieval(single, fresh, since).result == "PASS"
+    stale = perf.judge_retrieval(single, milvus() | {"measuredAt": "2026-10-01T18:33:12.5Z"}, since)
+    assert stale.result == "FAIL" and "before this check: measuring it again failed" in stale.detail
+    assert perf.judge_retrieval(single, milvus(), since).result == "FAIL"  # no measuredAt at all
+    assert perf.judge_retrieval(single, milvus()).result == "PASS"  # no start time given: not checked
+
+
 def test_another_profile_or_no_retrieval_skips_instead_of_failing():
     spec = PerfSpec("p", "standard", (CASE,), (RetrievalCase("vector-single", (1.1,), 0.55),))
     skipped = perf.guard(spec, {"profile": "ci"}, analytics_url="http://x", retrieval=None, retrieval_expected=True)
@@ -137,6 +151,16 @@ def test_the_command_measures_the_active_packs_cases_and_prints_a_table(tmp_path
     assert next(calls) == len(spec.market)
     assert "| scan-all-issuers | market_scan |" in printed and "| milvus vector-concurrency |" in printed
     assert "0 failed" in printed
+
+    # The same file, against a start time after its measurement: every Milvus profile fails
+    retrieval.write_text(json.dumps({"profiles": profiles, "measuredAt": "2026-10-01T18:33:12Z"}))
+    with serve({("POST", "/benchmark"): benchmark}) as (url, _):
+        code = cli.main(
+            ["perf", "--analytics-url", url, "--build", str(build), "--retrieval-benchmark", str(retrieval)]
+            + ["--measured-since", "2026-10-02T03:00:00Z", "--pairs", "3", "--budget", "20"]
+        )
+    printed = capsys.readouterr().out
+    assert code == 1 and f"{len(spec.retrieval)} failed" in printed
 
 
 def test_the_command_exits_69_on_a_cpu_only_stack_and_0_for_a_pack_without_cases(tmp_path, capsys):

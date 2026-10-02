@@ -10,7 +10,8 @@ tools' own compute timers) stays below the case's floor in two measurements.
 
 Milvus: each workload profile of the active build's `retrieval-benchmark.json` (the CPU HNSW index against its
 GPU_IVF_FLAT copy, measured again just before) fails when its recall and agreement gates fail or its CPU/GPU
-search-time ratio is below the floor.
+search-time ratio is below the floor. A comparison measured before the guard started (`--measured-since`) fails too:
+measuring it again did not succeed, and the file still holds an earlier measurement.
 
 A floor is half the lowest speedup recorded on the A100 for that case, rounded down to 0.05: wide enough for
 run-to-run noise on a shared host, narrow enough to catch the regressions seen so far (cudf.pandas falling back to
@@ -23,6 +24,8 @@ import statistics
 from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import replace
+from datetime import UTC
+from datetime import datetime
 from typing import Any
 
 from .client import HttpError
@@ -107,11 +110,26 @@ def market_case(
     return outcome
 
 
-def judge_retrieval(case: RetrievalCase, benchmark: dict[str, Any] | None) -> Outcome:
+def _measured_at(benchmark: dict[str, Any]) -> datetime | None:
+    try:
+        moment = datetime.fromisoformat(str(benchmark.get("measuredAt")))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)  # the benchmark writes UTC
+
+
+def judge_retrieval(
+    case: RetrievalCase, benchmark: dict[str, Any] | None, measured_since: datetime | None = None
+) -> Outcome:
+    """One workload profile of the Milvus comparison; ``measured_since``: when the guard measured it again."""
     base = {"case": f"milvus {case.profile_id}", "tool": "retrieve_evidence", "floor": case.min_speedup}
     base |= {"recorded": case.recorded}
+    logs = "./scripts/demo.sh logs retrieval-benchmark milvus-gpu"
     if benchmark is None:
-        detail = "no Milvus comparison for this build (./scripts/demo.sh logs retrieval-benchmark milvus-gpu)"
+        return Outcome(**base, result="FAIL", detail=f"no Milvus comparison for this build ({logs})")
+    measured_at = _measured_at(benchmark)
+    if measured_since is not None and (measured_at is None or measured_at < measured_since):
+        detail = f"measured at {benchmark.get('measuredAt')}, before this check: measuring it again failed ({logs})"
         return Outcome(**base, result="FAIL", detail=detail)
     profile = next((p for p in benchmark.get("profiles", []) if p.get("profileId") == case.profile_id), None)
     if profile is None:
@@ -142,6 +160,7 @@ def guard(
     analytics_url: str,
     retrieval: dict[str, Any] | None,
     retrieval_expected: bool,
+    retrieval_since: datetime | None = None,
     pairs: int = 5,
     budget_seconds: float = 60.0,
     post: Callable[..., Any] = request_json,
@@ -160,7 +179,7 @@ def guard(
             detail = "the stack runs without the retrieval profile"
             outcomes.append(Outcome(f"milvus {case.profile_id}", "retrieve_evidence", "SKIP", detail=detail))
         else:
-            outcomes.append(judge_retrieval(case, retrieval))
+            outcomes.append(judge_retrieval(case, retrieval, retrieval_since))
     return outcomes
 
 

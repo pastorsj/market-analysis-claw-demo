@@ -132,7 +132,9 @@ stack, which needs `analytics-gpu` in `COMPOSE_PROFILES`:
   over the median GPU time on the tools' own compute timers, stays below its floor in two measurements.
 - **Milvus.** With the retrieval profile, the guard measures the index comparison again
   (`demo-retrieval benchmark --again`, the CPU HNSW index against its `GPU_IVF_FLAT` copy) and fails a workload
-  profile whose recall and agreement gates fail or whose search-time ratio is below its floor.
+  profile whose recall and agreement gates fail or whose search-time ratio is below its floor. If measuring it again
+  fails, every profile fails: the file then still holds an earlier measurement, which `--measured-since` (the time
+  `demo.sh` started measuring) rejects.
 
 The cases are written for one build profile (`profile:` in `perf.yaml`); on another the market cases are skipped.
 It prints one row per case (CPU and GPU milliseconds, the speedup, the floor, the recorded speedups) and exits 1 if
