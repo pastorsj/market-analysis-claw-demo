@@ -163,12 +163,17 @@ floor and is only reported.
 | `us-equities` (default) | `intraday_scan`, 50 stocks, 9 sessions, by range | 4.1x, 4.11x | 2.05x |
 | | `intraday_scan`, 50 stocks, February, by drawdown | 4.23x | 2.1x |
 | | `intraday_scan`, 50 stocks, 4 sessions, by volume | 3.87x | 1.9x |
-| | `market_scan` and `market_anomaly_scan`, 50 stocks | 0.46x, 0.59x (the CPU wins at this size) | reported only |
+| | `market_scan`, every stock, January 2025 to March 2026 | 2.69x, 2.65x, 2.66x, 2.49x | 1.2x |
+| | `market_scan`, every stock, 20 sessions | 1.58x, 1.57x, 1.57x, 1.53x | 0.75x |
+| | `market_anomaly_scan`, every stock | 1.81x, 1.65x, 1.9x, 1.79x | 0.8x |
+| | `market_scan` and `market_anomaly_scan`, 50 stocks | 0.78x to 0.89x, 0.69x to 0.73x (the CPU wins at this size) | reported only |
 | | Milvus single, batch, concurrent | 1.13x and 1.22x, 1.11x and 1.20x, 1.76x and 1.07x | 0.55x, 0.55x, 0.5x |
 
 The speedups come from the isolated method of [operations](../docs/operations.md#brev-vm-mode) (step 7) and the
 [market-analytics README](../tools/market-analytics/README.md#cpu-and-gpu-timings), on 2026-09-29 and 2026-09-30,
-and from `POST /benchmark` on the running stack for the recorded sessions' calls, on 2026-10-01. To add a case,
+and from `POST /benchmark` on the running stack for the recorded sessions' calls, on 2026-10-01, and for
+`us-equities`' daily `market_scan` and `market_anomaly_scan` cases, on 2026-10-02
+([why the 50-stock cases are reported only](../tools/market-analytics/README.md#daily-tools-on-us-equities)). To add a case,
 measure it on the GPU host a few times, list the speedups in `recorded`, and set `min_speedup` by the rule.
 
 ## Test
