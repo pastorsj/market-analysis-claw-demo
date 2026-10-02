@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """A pack's eval files: `eval/answers.yaml` (the answer checks) and `eval/perf.yaml` (the GPU guard's cases).
 
-Both live in the pack, beside `eval/oracles/` and `eval/retrieval.yaml`, and are outside the pack's build digest:
-changing them never rebuilds the pack. The formats are described in the files' headers and in `eval/README.md`.
+Both live in the pack, beside `eval/oracles/` and `eval/retrieval.yaml` (the filings a retrieval answer should cite,
+which a `retrieved_filing` check reads), and are outside the pack's build digest: changing them never rebuilds the
+pack. The formats are described in the files' headers and in `eval/README.md`.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,7 @@ CHECK_KINDS = frozenset(
         "pattern",  # the report matches a regular expression (or any of a list)
         "item_105_deadline",  # Form 8-K Item 1.05's deadline is right or flagged as missing (deadline.py)
         "retrieved_source",  # a retrieval call searched this source and returned hits
+        "retrieved_filing",  # a retrieval call returned a passage of a filing that eval/retrieval.yaml lists
         "percent_grounding",  # at least this share of the report's percentages match a number in the evidence
         "prediction_named",  # the Kumo prediction's top N assets are named
         "prediction_first",  # the prediction's top asset is the first of them the report names
@@ -184,7 +187,10 @@ def _question(pack_dir: Path, qid: str, entry: dict[str, Any], where: str) -> Qu
         tools.append(frozenset(str(tool) for tool in group))
     checks = []
     for raw in entry.get("checks") or []:
-        checks.append(_check(_mapping(raw, f"{where}: check"), names, where))
+        check = _check(_mapping(raw, f"{where}: check"), names, where)
+        if check.kind == "retrieved_filing":
+            check = replace(check, value=_listed_filings(pack_dir, qid, f"{where}: check {check.id}"))
+        checks.append(check)
     if len({check.id for check in checks}) != len(checks):
         raise SpecError(f"{where}: check ids repeat")
     facts = " ".join(str(entry.get("facts") or "").split())
@@ -192,6 +198,16 @@ def _question(pack_dir: Path, qid: str, entry: dict[str, Any], where: str) -> Qu
         if match["oracle"] not in names:
             raise SpecError(f"{where}: facts name oracle {match['oracle']}, which the question does not compute")
     return QuestionSpec(qid, tuple(oracles), tuple(tools), tuple(checks), facts)
+
+
+def _listed_filings(pack_dir: Path, qid: str, where: str) -> tuple[str, ...]:
+    """The filing ids (<cik>:<accession>) that `eval/retrieval.yaml` lists for the question."""
+    path = pack_dir / "eval" / "retrieval.yaml"
+    listed = _mapping(yaml.safe_load(path.read_text()) if path.is_file() else None, str(path)).get(qid) or {}
+    filings = tuple(str(filing) for filing in _mapping(listed, f"{path}: {qid}").get("filings") or ())
+    if not filings:
+        raise SpecError(f"{where}: eval/retrieval.yaml lists no filings for {qid}")
+    return filings
 
 
 def _check(entry: dict[str, Any], oracles: set[str], where: str) -> Check:

@@ -118,6 +118,17 @@ def retrieved_sources(turn: dict[str, Any]) -> set[str]:
     }
 
 
+def retrieved_filings(turn: dict[str, Any]) -> set[str]:
+    """The filings (<cik>:<accession>) that the run's retrieval hits come from: edgar:<cik>:<accession>:<file>."""
+    return {
+        ":".join(parts[1:3])
+        for receipt in (turn or {}).get("receipts", [])
+        if receipt.get("artifactKind") == "retrieval_evidence"
+        for hit in (receipt.get("content") or {}).get("hits", [])
+        if (parts := str(hit.get("documentId") or "").split(":"))[0] == "edgar" and len(parts) >= 4
+    }
+
+
 def first_named(text: str, candidates: list[str]) -> str | None:
     """Which of ``candidates`` the report's body names first, by ticker."""
     positions = [(m.start(), c) for c in candidates for m in re.finditer(rf"\b{re.escape(c)}\b", body(text))]
@@ -144,6 +155,8 @@ def evaluate(check: Check, text: str, turn: dict[str, Any], oracles: Oracles, na
         return deadline_ok(text)
     if check.kind == "retrieved_source":
         return str(check.value) in retrieved_sources(turn)
+    if check.kind == "retrieved_filing":
+        return not retrieved_filings(turn).isdisjoint(check.value)
     if check.kind == "percent_grounding":
         share = grounding(text, turn)
         return share is not None and share >= float(check.value)

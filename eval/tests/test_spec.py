@@ -105,6 +105,7 @@ def _pack(tmp_path: Path, answers: str) -> Path:
         ("questions: {q: {tools: [market_scan]}}", "tools is a list"),
         ("questions: {q: {facts: '{leaders: asset_id}'}}", "facts name oracle leaders"),
         ("questions: {q: {colour: red}}", "unknown key"),
+        ("questions: {q: {checks: [{id: a, retrieved_filing: true}]}}", "eval/retrieval.yaml lists no filings for q"),
         (
             "questions: {q: {oracles: {leaders: {}}}, r: {oracles: {leaders: {limit: 5}}}}",
             "oracle leaders is defined differently",
@@ -119,3 +120,21 @@ def test_a_malformed_answers_file_is_refused_with_its_entry(tmp_path, answers, m
 def test_a_pack_without_eval_files_gets_only_the_generic_checks(tmp_path):
     assert load_answers(tmp_path).questions == {}
     assert load_perf(tmp_path) is None
+
+
+def test_a_retrieved_filing_check_reads_the_question_s_filings_from_retrieval_yaml(tmp_path):
+    pack = _pack(tmp_path, "questions: {q: {checks: [{id: a, retrieved_filing: true}]}}")
+    (pack / "eval" / "retrieval.yaml").write_text("q:\n  filings: [0000000001:0000000001-26-000001]\n")
+
+    (check,) = load_answers(pack).question("q").checks
+
+    assert (check.kind, check.value) == ("retrieved_filing", ("0000000001:0000000001-26-000001",))
+
+
+def test_the_featured_filing_question_requires_a_filing_that_reports_a_disruption():
+    pack = REPO / "data" / "packs" / "synthetic-market"
+    checks = {check.id: check for check in load_answers(pack).question("news-and-filings").checks}
+    listed = yaml.safe_load((pack / "eval" / "retrieval.yaml").read_text())["news-and-filings"]["filings"]
+
+    assert checks["disruption_filing_retrieved"].value == tuple(listed)
+    assert "retrieved_source" not in {check.kind for check in checks.values()}  # any cover page passed it

@@ -32,6 +32,19 @@ async def test_tool_schema(server: MCPServer):
     assert tool.annotations.read_only_hint
 
 
+async def test_the_description_keeps_form_names_out_of_queries(server: MCPServer):
+    """A query with "8-K" returns cover pages: every filing's first passage repeats the form name and dates."""
+    async with Client(server) as client:
+        (tool,) = (await client.list_tools()).tools
+
+    description = " ".join(tool.description.split())
+    assert "When you search filings, write the query as one sentence the passage itself would contain" in description
+    assert "not as a list of keywords" in description
+    assert "Leave form names (8-K, 6-K)" in description and "cover page" in description
+    assert "metadata gives its form and filing date" in description
+    assert "for filings, no form names" in tool.input_schema["properties"]["query"]["description"]
+
+
 async def test_retrieve_evidence_returns_structured_hits(server: MCPServer):
     async with Client(server) as client:
         result = await client.call_tool(
