@@ -1,4 +1,4 @@
-# Enterprise Research: market analysis agent
+# Enterprise Research: Market Analysis Agent
 
 <p align="center">
   <a href="https://hermes-agent.nousresearch.com"><img height="40" src="docs/assets/logos/hermes-agent.svg" alt="Nous Research Hermes Agent" title="Nous Research Hermes Agent"></a>&nbsp;&nbsp;
