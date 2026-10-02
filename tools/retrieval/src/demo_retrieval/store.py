@@ -20,6 +20,13 @@ INDEX = {"index_type": "HNSW", "metric_type": "COSINE", "params": {"M": 16, "efC
 # HNSW needs ef >= the search limit; the tool's per-source limit is at most 4 x 25 = 100.
 SEARCH_PARAMS = {"metric_type": "COSINE", "params": {"ef": 128}}
 
+# The analytics-gpu profile's mirror of the collection, for retrieval-benchmark only: NVIDIA cuVS IVF-Flat on the GPU,
+# as the original demo used, over L2-normalized vectors, so inner product ranks as cosine does on the CPU index. Probing
+# half the lists matched the CPU index's neighbors on every us-equities benchmark query (A100, 32,676 chunks). GPU_CAGRA
+# returned wrong neighbors on these 2048-dimension vectors in Milvus 2.6.25 (recall 0, whatever its build algorithm).
+GPU_INDEX = {"index_type": "GPU_IVF_FLAT", "metric_type": "IP", "params": {"nlist": 128}}
+GPU_SEARCH_PARAMS = {"metric_type": "IP", "params": {"nprobe": 64}}
+
 Candidate = tuple[dict[str, Any], float]  # (stored fields including dynamic metadata, cosine similarity)
 
 
@@ -38,6 +45,16 @@ def create_collection(client: MilvusClient, name: str, dimension: int) -> None:
     index = client.prepare_index_params()
     index.add_index(VECTOR_FIELD, **INDEX)
     client.create_collection(name, schema=schema, index_params=index, consistency_level="Strong")
+
+
+def present(client: MilvusClient, collection: str, chunk_ids: list[str]) -> set[str]:
+    """Which of these chunk ids the collection already holds (a primary-key lookup).
+
+    The ids are JSON-quoted, as in `search`: MilvusClient.get wraps them in single quotes without escaping, so one
+    apostrophe in a document id breaks the expression.
+    """
+    rows = client.query(collection, filter=f"chunk_id in {json.dumps(chunk_ids)}", output_fields=["chunk_id"])
+    return {row["chunk_id"] for row in rows}
 
 
 def build_name(alias: str, digest: str) -> str:

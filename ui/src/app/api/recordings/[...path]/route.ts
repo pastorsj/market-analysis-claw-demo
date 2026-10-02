@@ -7,10 +7,14 @@
  * Serves the active data pack's replay bundle, read-only, from
  * `$PACKS_DIR/$DATA_PACK/recordings` (e.g. `/api/recordings/index.json`).
  * Only JSON and JSON Lines files inside that directory are served.
+ *
+ * `index.json` from a bundle recorded before the index listed each session's
+ * `tools` gets them derived from the sessions' recorded events.
  */
 
-import { readFile, realpath } from 'node:fs/promises'
+import { readFile, realpath, stat } from 'node:fs/promises'
 import path from 'node:path'
+import { sessionPills, type ToolPillUse } from '@/shared/components/ToolPills'
 import { readRecordingsDir } from '@/shared/config/env'
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -37,10 +41,39 @@ export async function GET(
     const root = await realpath(readRecordingsDir())
     const file = await realpath(path.join(root, ...segments))
     if (!file.startsWith(root + path.sep)) return notFound()
-    return new Response(await readFile(file), {
+    const body =
+      file === path.join(root, 'index.json') ? await withTools(root, file) : await readFile(file)
+    return new Response(body, {
       headers: { 'content-type': contentType, 'cache-control': 'no-cache' },
     })
   } catch {
     return notFound()
   }
+}
+
+/** Derived pills by session file, kept while the file is unchanged. */
+const derived = new Map<string, { modified: number; tools: ToolPillUse[] }>()
+
+/** The index, with `tools` derived for every session that lacks them. */
+const withTools = async (root: string, file: string): Promise<string> => {
+  const index = JSON.parse(await readFile(file, 'utf8')) as { sessions?: unknown }
+  if (!Array.isArray(index.sessions)) return JSON.stringify(index)
+  for (const session of index.sessions as Array<Record<string, unknown>>) {
+    if (Array.isArray(session.tools) || typeof session.id !== 'string' || !SEGMENT.test(session.id))
+      continue
+    const sessionFile = path.join(root, 'sessions', `${session.id}.json`)
+    try {
+      const modified = (await stat(sessionFile)).mtimeMs
+      let cached = derived.get(sessionFile)
+      if (cached?.modified !== modified) {
+        const { turns } = JSON.parse(await readFile(sessionFile, 'utf8')) as { turns?: unknown }
+        cached = { modified, tools: sessionPills(Array.isArray(turns) ? turns : []) }
+        derived.set(sessionFile, cached)
+      }
+      session.tools = cached.tools
+    } catch {
+      session.tools = []
+    }
+  }
+  return JSON.stringify(index)
 }

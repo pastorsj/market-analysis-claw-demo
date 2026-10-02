@@ -26,7 +26,9 @@ import duckdb
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
+from .bars import MinuteBars
 from .models import InvalidRequest
 
 # The contract ships next to the sources (tools/market-analytics/contract/) so demo-data validates packs
@@ -35,6 +37,10 @@ CONTRACT_PATH = Path(__file__).resolve().parents[2] / "contract" / "market-analy
 
 FEATURES = ("adjusted_return_1d", "adjusted_return_5d", "realized_volatility_20d", "log_volume_deviation_20d")
 SENTIMENT_SCORES = {"negative": -1, "neutral": 0, "positive": 1}
+# Bytes the loaded frames take per table row, measured on a 1.36-million-row pack, plus 8 for the price frame's
+# return base: a daily price row counts its prices and anomaly-feature rows. cudf keeps strings in Arrow columns,
+# so the GPU needs less than pandas.
+BYTES_PER_ROW = {"cpu": {"price": 233, "news": 310}, "gpu": {"price": 143, "news": 130}}
 
 
 class ContractError(Exception):
@@ -57,12 +63,13 @@ class Pack:
     source_id: str
     database_name: str
     contract_id: str
-    news_table: str
+    news_table: str | None  # None: the pack has no ticker-linked news, and the news tools are unavailable
     session_close: timedelta  # added to trading_date to timestamp a daily bar (UTC)
     universes: dict[str, Universe]
     graph_window: tuple[date, date]
     graph_mode: str  # full_correlation | sparse_declared_peers
     prediction: dict[str, Any] | None
+    minute_bars: MinuteBars | None  # None: the pack has no minute bars, and intraday_scan is unavailable
 
     @classmethod
     def load(cls, root: Path) -> Pack:
@@ -84,6 +91,7 @@ class Pack:
             graph_window=(date.fromisoformat(graph["window_start"]), date.fromisoformat(graph["window_end"])),
             graph_mode=graph["mode"],
             prediction=manifest.get("prediction"),
+            minute_bars=MinuteBars.from_pack(manifest),
         )
 
     def table(self, name: str) -> Path:
@@ -104,6 +112,8 @@ def validate(pack: Pack) -> None:
     with duckdb.connect() as db:
         for name, spec in contract["tables"].items():
             table = pack.news_table if name == "$news_table" else name
+            if table is None:  # no news table: the news tools report news_unavailable
+                continue
             path = pack.table(table)
             if not path.is_file():
                 problems.append(f"table {table} is missing ({path})")
@@ -139,7 +149,7 @@ def validate(pack: Pack) -> None:
 
 @dataclass(frozen=True)
 class MarketData:
-    """Everything the six market tools read, derived once from the pack tables."""
+    """Everything the daily market tools read, derived once from the pack tables."""
 
     pack: Pack
     prices: pd.DataFrame  # asset_id, trading_date, timestamp, session, adjusted_close, volume, returns
@@ -186,6 +196,15 @@ class MarketData:
         return resolved
 
 
+def footprint(pack: Pack, device: str) -> str:
+    """Row counts from the Parquet footers, and about how much memory the frames will take once loaded."""
+    tables = {"price": "daily_prices", "news": pack.news_table}  # a pack may have no news table
+    rows = {kind: pq.read_metadata(pack.table(table)).num_rows for kind, table in tables.items() if table}
+    size = sum(count * BYTES_PER_ROW[device][kind] for kind, count in rows.items())
+    counts = " and ".join(f"{count:,} {kind} rows" for kind, count in rows.items())
+    return f"{counts}: about {size / 1e9:.1f} GB on the {device}"
+
+
 def utc_naive(values: pd.Series) -> pd.Series:
     """Dates or timestamps as tz-naive UTC datetime64[ns], the worker's one timestamp model.
 
@@ -208,6 +227,9 @@ def _prices(pack: Pack) -> pd.DataFrame:
     # asset has enough earlier sessions. `.where(session > n)` blanks the rows where it would not.
     previous_close = prices["adjusted_close"].shift(1).where(prices["session"] > 1)
     prices["adjusted_return_1d"] = prices["adjusted_close"] / previous_close - 1
+    # The close a return over a window starting at this session is measured from, so "the N sessions ending D"
+    # are N daily returns: the previous session's close, or this session's own for an asset's first session.
+    prices["return_base"] = previous_close.fillna(prices["adjusted_close"])
     # A copy consolidates the columns added one by one: pandas selects rows from it about 3x faster.
     return prices.copy()
 
@@ -215,7 +237,9 @@ def _prices(pack: Pack) -> pd.DataFrame:
 def _features(prices: pd.DataFrame) -> pd.DataFrame:
     """Point-in-time price/volume features for the anomaly detector (price_volume_v1)."""
     session = prices["session"]
-    log_volume = np.log(prices["volume"].astype("float64"))
+    # A session with no volume has no log volume (not -inf): it, and the 20 sessions it is a baseline for, drop out.
+    volume = prices["volume"].astype("float64")
+    log_volume = np.log(volume.where(volume > 0))
     prior_volume = log_volume.shift(1).rolling(20)  # the 20 sessions before this one
     prior_std = prior_volume.std().where(session > 20)
     features = pd.DataFrame(
@@ -233,6 +257,10 @@ def _features(prices: pd.DataFrame) -> pd.DataFrame:
 
 
 def _news(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
+    if pack.news_table is None:  # the news tools report news_unavailable and never read it
+        types = {"news_id": str, "asset_id": str, "published_at": "datetime64[ns]", "source_name": str}
+        types |= {"sentiment_label": str, "session": "int64"}
+        return pd.DataFrame({column: pd.Series(dtype=dtype) for column, dtype in types.items()})
     columns = ["news_id", "primary_asset_id", "published_at", "source_name", "sentiment_label"]
     news = pd.read_parquet(pack.table(pack.news_table), columns=columns).rename(
         columns={"primary_asset_id": "asset_id"}
@@ -256,20 +284,47 @@ def _news(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
 def _edges(pack: Pack, prices: pd.DataFrame) -> pd.DataFrame:
     """The return-correlation graph over the pack's window: every pair of assets, or only declared peers."""
     start, end = (datetime.combine(day, time()) for day in pack.graph_window)
-    window = prices[prices["trading_date"].between(start, end)]
+    window = prices.loc[prices["trading_date"].between(start, end), ["trading_date", "asset_id", "total_return_1d"]]
+    if pack.graph_mode == "sparse_declared_peers":
+        edges = _peer_correlations(pack, window)
+    else:
+        edges = _all_correlations(window)
+    edges = edges.assign(weight=edges["correlation"].abs().clip(lower=1e-6))
+    return edges.sort_values(["source", "target"], ignore_index=True)
+
+
+def _all_correlations(window: pd.DataFrame) -> pd.DataFrame:
+    """Every pair of assets, from a dates x assets matrix: memory grows with the square of the assets."""
     returns = window.pivot(index="trading_date", columns="asset_id", values="total_return_1d")
     matrix = returns.corr().rename_axis(index="source")
     # var_name explicitly: pandas names the melted column after the columns axis, cudf.pandas does not.
     edges = matrix.reset_index().melt(id_vars="source", var_name="target", value_name="correlation")
     edges = edges.dropna(subset=["correlation"])
-    edges = edges[edges["source"] != edges["target"]]
-    if pack.graph_mode == "sparse_declared_peers":
-        declared = pd.read_parquet(pack.table("asset_relationships"), columns=["source_asset_id", "target_asset_id"])
-        declared.columns = ["source", "target"]
-        pairs = pd.concat([declared, declared.rename(columns={"source": "target", "target": "source"})])
-        edges = edges.merge(pairs.drop_duplicates(), on=["source", "target"])
-    edges = edges.assign(weight=edges["correlation"].abs().clip(lower=1e-6))
-    return edges.sort_values(["source", "target"], ignore_index=True)
+    return edges[edges["source"] != edges["target"]]
+
+
+def _peer_correlations(pack: Pack, window: pd.DataFrame) -> pd.DataFrame:
+    """Only the declared peers (both directions): memory grows with the pairs, not the square of the assets.
+
+    The same Pearson correlation as DataFrame.corr, over the sessions where both assets have a return: each pair's
+    returns are joined on the date, centered on the pair's own means, and summed.
+    """
+    declared = pd.read_parquet(pack.table("asset_relationships"), columns=["source_asset_id", "target_asset_id"])
+    declared.columns = ["source", "target"]
+    pairs = pd.concat([declared, declared.rename(columns={"source": "target", "target": "source"})]).drop_duplicates()
+    pairs = pairs[pairs["source"] != pairs["target"]]
+    returns = window.dropna(subset=["total_return_1d"])
+    x = returns.rename(columns={"asset_id": "source", "total_return_1d": "x"})
+    y = returns.rename(columns={"asset_id": "target", "total_return_1d": "y"})
+    joined = pairs.merge(x, on="source").merge(y, on=["target", "trading_date"])
+    keys = ["source", "target"]
+    by_pair = joined.groupby(keys)
+    dx = joined["x"] - by_pair["x"].transform("mean")
+    dy = joined["y"] - by_pair["y"].transform("mean")
+    sums = joined[keys].assign(xy=dx * dy, xx=dx * dx, yy=dy * dy).groupby(keys).sum()
+    sums = sums[(sums["xx"] > 0) & (sums["yy"] > 0)]  # a single shared session or a flat series has no correlation
+    correlation = sums["xy"] / np.sqrt(sums["xx"] * sums["yy"])
+    return correlation.rename("correlation").reset_index()
 
 
 def _universes(pack: Pack) -> dict[str, tuple[str, ...]]:
@@ -297,13 +352,16 @@ def _aliases(pack: Pack) -> dict[str, tuple[str, ...]]:
             """,
             [str(pack.table("assets")), str(pack.table("ticker_history"))],
         ).fetchall()
-    aliases: dict[str, set[str]] = {}
+    exact: dict[str, set[str]] = {}
+    prefixes: dict[str, set[str]] = {}
     for asset_id, company_name, ticker in rows:
+        for name in [asset_id, company_name, *([ticker] if isinstance(ticker, str) else [])]:
+            exact.setdefault(_normalized(name), set()).add(asset_id)
         words = _normalized(company_name).split()
-        names = [asset_id, company_name, *([ticker] if isinstance(ticker, str) else [])]
-        prefixes = [" ".join(words[:count]) for count in range(1, len(words))]
-        for alias in {_normalized(name) for name in names} | set(prefixes):
-            aliases.setdefault(alias, set()).add(asset_id)
+        for count in range(1, len(words)):
+            prefixes.setdefault(" ".join(words[:count]), set()).add(asset_id)
+    # An id, ticker or full name wins over name prefixes: ticker ACI is Albertsons, not also "ACI Worldwide".
+    aliases = prefixes | exact
     return {alias: tuple(sorted(asset_ids)) for alias, asset_ids in aliases.items()}
 
 

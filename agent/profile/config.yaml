@@ -28,6 +28,14 @@ providers:
       market-research-efficient: { context_length: 262144 }  # bake-off baselines
       market-research-capable: { context_length: 262144 }
       market-research-aux: { context_length: 262144 }  # passthrough for side tasks
+      market-research-fallback: { context_length: 262144 }  # the auxiliary model, for overloads
+
+# build.nvidia.com can answer "Service temporarily overloaded" inside a 200
+# stream, which Switchyard passes through. After two failed retries Hermes
+# moves the rest of the run to this route instead of waiting out its recovery
+# cycles (about 5 minutes) and failing the job.
+fallback_providers:
+  - { provider: "custom:switchyard", model: market-research-fallback }
 
 # Side tasks that default to the main route would share the job's session and
 # be judged by the escalation router. Turn off the ones a stateless job never
@@ -100,6 +108,7 @@ mcp_servers:
         - sentiment_timeline
         - analyze_news_price_relationship
         - analyze_market_relationships
+        - intraday_scan
         - predict_asset_outcomes  # kumo feature
       resources: false
       prompts: false

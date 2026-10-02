@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutionStore } from '../store'
 import { readRecording } from '../test-utils/fixtures'
-import { loadJobExport, parseIndex, parseSession, recordings } from './sources'
+import { archiveId, loadJobExport, parseIndex, parseSession, recordings } from './sources'
 
 const index = readRecording('index.json')
 const session = readRecording('sessions/unusual-moves.json')
@@ -42,11 +42,25 @@ describe('recordings bundle (v2)', () => {
         id: 'unusual-moves',
         title: 'Unusual moves and filings',
         recordedAt: '2026-09-28T06:00:00Z',
+        questions: [
+          'Which reviewed assets moved unusually this summer, and what did the filings say?',
+        ],
+        tools: [
+          { pill: 'cudf', device: 'gpu', tools: ['market_anomaly_scan'] },
+          { pill: 'cuml', device: 'gpu', tools: ['market_anomaly_scan'] },
+          { pill: 'retrieval', device: null, tools: ['retrieve_evidence'] },
+        ],
       },
       {
         id: 'structured-evidence',
         title: 'Dividends and news likelihood',
         recordedAt: '2026-09-28T06:00:00Z',
+        questions: [
+          'Which cash dividends were paid in 2026, and how did they change total return?',
+          'Which assets are most likely to have news in the next five days?',
+        ],
+        // Not in this index: the recordings route derives them (app/api/recordings)
+        tools: [],
       },
     ])
 
@@ -62,7 +76,37 @@ describe('recordings bundle (v2)', () => {
     const runs = useExecutionStore.getState().runs
     expect(runs['0dcd9841-b68a-456b-9dc5-87403c34efcb'].events).toHaveLength(5)
     expect(Object.keys(runs['18d6824d-df8e-4d57-89eb-22a055226124'].receipts)).toHaveLength(1)
+    // Recorded runs have no live job behind them, in either mode
+    expect(runs['0dcd9841-b68a-456b-9dc5-87403c34efcb'].recorded).toBe(true)
+    // …and the archive they came from, as the original keyed recorded runs
+    expect(runs['0dcd9841-b68a-456b-9dc5-87403c34efcb'].archive).toBe('20260928T060000Z-e2e')
     expect(useExecutionStore.getState().dropped).toBe(0)
+  })
+
+  it('names a bundle’s archive by when it was recorded and its pack', () => {
+    expect(archiveId(parseIndex(index))).toBe('20260928T060000Z-e2e')
+    expect(
+      archiveId({
+        ...parseIndex(index),
+        recordedAt: '2026-10-01T04:55:12.689096Z',
+        pack: { id: 'us-equities', version: '0.1.0' },
+      })
+    ).toBe('20261001T045512Z-us-equities')
+    expect(archiveId({ ...parseIndex(index), recordedAt: '2026-10-01T04:55:12+00:00' })).toBe(
+      '20261001T045512Z-e2e'
+    )
+  })
+
+  it('loads a recorded session without its archive when the index is unavailable', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) =>
+      String(input).endsWith('index.json')
+        ? new Response(null, { status: 503 })
+        : Response.json(readRecording('sessions/structured-evidence.json'))
+    )
+    await recordings.load('structured-evidence')
+    const run = useExecutionStore.getState().runs['0dcd9841-b68a-456b-9dc5-87403c34efcb']
+    expect(run.recorded).toBe(true)
+    expect(run.archive).toBeNull()
   })
 
   it('loads a live job from its export', async () => {

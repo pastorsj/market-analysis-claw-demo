@@ -13,6 +13,8 @@ dependencies = [
     "duckdb==1.5.5",
     "fastapi>=0.141,<1",
     "httpx>=0.28.1,<0.29",
+    # Voice input: NVIDIA Nemotron ASR on build.nvidia.com, over gRPC (demo_api/speech)
+    "nvidia-riva-client>=2.27.0,<3",
     "pydantic>=2.13,<3",
     "pydantic-settings>=2.15,<3",
     "pytz==2026.4", # DuckDB needs it to return TIMESTAMP WITH TIME ZONE values to Python
@@ -30,7 +32,6 @@ dev = [
     "jsonschema>=4.26,<5",
     "pytest>=9.1,<10",
     "pytest-asyncio>=1.4,<2",
-    "ruff>=0.16.9,<0.17",
 ]
 
 [build-system]

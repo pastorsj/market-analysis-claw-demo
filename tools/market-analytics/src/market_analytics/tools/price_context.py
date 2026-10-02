@@ -31,7 +31,8 @@ def run(
     check_window(start, end)
     prices = data.prices
     bars = prices[prices["asset_id"].isin(data.resolve_assets(asset_ids)) & prices["timestamp"].between(start, end)]
-    series = bars[["asset_id", "timestamp", "adjusted_close", "volume"]]
+    daily = bars[["asset_id", "timestamp", "adjusted_close", "volume"]]
+    series = daily
     if frequency != "daily":
         # One point per asset and period: the period's last close and its total volume.
         series = (
@@ -43,12 +44,16 @@ def run(
         )
     if series.empty:
         payload = PriceContextPayload(frequency=frequency, summaries=[], series=[], series_truncated=False)
-        return Output(payload, rows_scanned=0, empty=True, warnings=("No prices matched the assets and window.",))
+        return Output(
+            payload, rows_scanned=0, assets=0, empty=True, warnings=("No prices matched the assets and window.",)
+        )
 
-    summary = series.groupby("asset_id").agg(
+    # The summary always comes from the daily bars; frequency shapes only the series. Its return runs from the close
+    # before the window's first session (data.py's return_base), as market_scan's does.
+    summary = bars.groupby("asset_id").agg(
         start_timestamp=("timestamp", "first"),
         end_timestamp=("timestamp", "last"),
-        start_price=("adjusted_close", "first"),
+        start_price=("return_base", "first"),
         end_price=("adjusted_close", "last"),
         minimum_price=("adjusted_close", "min"),
         maximum_price=("adjusted_close", "max"),
@@ -65,4 +70,4 @@ def run(
         series_truncated=truncated,
     )
     warnings = (f"The series is cut to the first {point_limit} points.",) if truncated else ()
-    return Output(payload, rows_scanned=len(bars), warnings=warnings)
+    return Output(payload, rows_scanned=len(bars), assets=len(summary), warnings=warnings)

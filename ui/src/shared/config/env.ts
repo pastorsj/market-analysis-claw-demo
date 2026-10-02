@@ -12,8 +12,10 @@
  * | `UI_MODE`    | `live`                | `live` talks to the API; `replay` never does     |
  * | `API_URL`    | `http://api:8000`     | Base URL of the demo API (server-side only)      |
  * | `PACKS_DIR`  | `/packs`              | Directory holding the data packs                 |
- * | `DATA_PACK`  | `market-analysis`     | Active pack; recordings are read from its folder |
+ * | `DATA_PACK`  | `synthetic-market`    | Active pack; recordings are read from its folder |
  * | `PHOENIX_URL`| unset                 | Browser-reachable Phoenix UI; unset hides links  |
+ * | `SPEECH_INPUT_ENABLED` | `false`     | Show the microphone (live mode; the API transcribes) |
+ * | `SPEECH_INPUT_MAX_SECONDS` | `60`    | Longest recording, 1 to 90 seconds               |
  */
 
 import path from 'node:path'
@@ -39,12 +41,26 @@ const readHttpUrl = (name: string, value: string): string => {
   return value.replace(/\/+$/, '')
 }
 
+const readMaxSeconds = (env: Env): number => {
+  const raw = env.SPEECH_INPUT_MAX_SECONDS?.trim()
+  if (!raw || !/^\d+$/.test(raw)) return 60
+  return Math.min(90, Math.max(1, Number(raw)))
+}
+
 /** Configuration the browser needs, passed through `AppConfigProvider`. */
 export const readAppConfig = (env: Env = process.env): AppConfig => {
   const phoenixUrl = env.PHOENIX_URL?.trim()
+  const mode = readMode(env)
   return {
-    mode: readMode(env),
+    mode,
     phoenixUrl: phoenixUrl ? readHttpUrl('PHOENIX_URL', phoenixUrl) : null,
+    speechInput: {
+      // Replay never calls the API, so it has no transcription
+      enabled:
+        mode === 'live' &&
+        ['true', '1', 'yes', 'on'].includes(env.SPEECH_INPUT_ENABLED?.trim().toLowerCase() ?? ''),
+      maxSeconds: readMaxSeconds(env),
+    },
   }
 }
 
@@ -55,7 +71,7 @@ export const readApiUrl = (env: Env = process.env): string =>
 
 /** `$PACKS_DIR/$DATA_PACK/recordings`: the replay bundle of the active data pack. */
 export const readRecordingsDir = (env: Env = process.env): string => {
-  const pack = env.DATA_PACK?.trim() || 'market-analysis'
+  const pack = env.DATA_PACK?.trim() || 'synthetic-market'
   if (!PACK_ID.test(pack)) {
     throw new Error(`DATA_PACK must match ${PACK_ID}, got "${pack}"`)
   }

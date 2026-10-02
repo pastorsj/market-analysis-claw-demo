@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 from sklearn import config_context
 from sklearn.decomposition import PCA
 
@@ -22,10 +23,12 @@ from ..models import InvalidRequest
 from ..models import MarketAnomalyPayload
 from .common import Output
 from .common import check_window
+from .common import host
 
 LIMITATIONS = (
     "Anomaly scores describe unusual observed feature combinations; they are not forecasts or probabilities.",
-    "Observed deviations are descriptive reason codes and do not establish a cause or adverse event.",
+    "Observed deviations are robust z-scores against the training window, not returns or percentages; they are "
+    "descriptive reason codes and do not establish a cause or adverse event.",
 )
 MIN_TRAINING_ROWS = 8
 FLAG_QUANTILE = 0.95
@@ -72,34 +75,45 @@ def run(
         score_error = np.mean((score_z - model.inverse_transform(model.transform(score_z))) ** 2, axis=1)
     threshold = np.quantile(train_error, FLAG_QUANTILE)
 
-    ranked = scoring.assign(anomaly_score=score_error, decision_score=threshold - score_error).sort_values(
-        ["anomaly_score", "asset_id", "timestamp"], ascending=[False, True, True], ignore_index=True
-    )
-    # NumPy positions, not index arithmetic: under cudf.pandas, dividing the index compiles a CUDA kernel on
-    # first use, again for some index lengths (seconds each on an A100), which a warm-up cannot cover.
-    position = np.arange(len(ranked))
-    ranked["rank"] = position + 1
-    ranked["cohort_percentile"] = 100 * (len(ranked) - position) / len(ranked)
+    decision_score = threshold - score_error
+
+    # Ranked on the host too: only the `limit` highest scores are needed, and on the GPU sorting the whole scoring
+    # frame by three keys, then reading its top rows back, took more pandas calls than the PCA itself. The order is
+    # the one that sort gave (score descending, then asset id, then time), and a percentile still counts every row.
+    count = len(score_error)
+    top, asset_ids, timestamps = _highest(scoring, score_error, min(limit, count))
+    position = np.arange(len(top))
+    cohort_percentile = 100 * (count - position) / count
     if minimum_percentile is not None:
-        ranked = ranked[ranked["cohort_percentile"] >= minimum_percentile]
-    top = ranked.head(limit)
+        kept = cohort_percentile >= minimum_percentile  # it falls with the position, so the kept rows lead
+        top, asset_ids, timestamps = top[kept], asset_ids[kept], timestamps[kept]
+        position, cohort_percentile = position[kept], cohort_percentile[kept]
 
     # Robust z-scores (median / MAD) against the training window explain which features moved.
     median = np.median(train, axis=0)
     mad = np.median(np.abs(train - median), axis=0) * 1.4826
-    deviations = (np.asarray(top[list(FEATURES)].to_numpy(np.float64)) - median) / np.where(mad > 1e-12, mad, 1.0)
+    deviations = (score[top] - median) / np.where(mad > 1e-12, mad, 1.0)
     observations = [
         AnomalyObservation(
-            rank=row["rank"],
-            asset_id=row["asset_id"],
-            timestamp=row["timestamp"],
-            anomaly_score=row["anomaly_score"],
-            decision_score=row["decision_score"],
-            cohort_percentile=row["cohort_percentile"],
-            is_anomaly=row["decision_score"] < 0,
-            observed_deviations=dict(zip(FEATURES, row_deviations.tolist(), strict=True)),
+            rank=rank,
+            asset_id=asset_id,
+            timestamp=timestamp,
+            anomaly_score=anomaly_score,
+            decision_score=decision,
+            cohort_percentile=percentile,
+            is_anomaly=decision < 0,
+            observed_deviations=dict(zip(FEATURES, row_deviations, strict=True)),
         )
-        for row, row_deviations in zip(top.to_dict("records"), deviations, strict=True)
+        for rank, asset_id, timestamp, anomaly_score, decision, percentile, row_deviations in zip(
+            (position + 1).tolist(),
+            asset_ids.tolist(),
+            timestamps.astype("datetime64[us]").tolist(),
+            score_error[top].tolist(),
+            decision_score[top].tolist(),
+            cohort_percentile.tolist(),
+            deviations.tolist(),
+            strict=True,
+        )
     ]
     payload = MarketAnomalyPayload(
         universe_id=universe_id,
@@ -109,4 +123,22 @@ def run(
         flagged_observations=int((score_error > threshold).sum()),
         observations=observations,
     )
-    return Output(payload, rows_scanned=len(training) + len(scoring), empty=not observations)
+    # Concatenated, then counted: both windows' assets, on the GPU under cudf.pandas
+    assets = pd.concat([training["asset_id"], scoring["asset_id"]]).nunique()
+    return Output(payload, rows_scanned=len(training) + len(scoring), assets=assets, empty=not observations)
+
+
+def _highest(scoring: pd.DataFrame, scores: np.ndarray, limit: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The positions of the `limit` highest scores, in rank order, with their asset ids and timestamps.
+
+    Only the rows that can rank are read back: those scoring at least the `limit`-th highest score, ties included,
+    which the asset id and time then order exactly as a sort of every row would.
+    """
+    if limit <= 0:
+        return np.array([], dtype=np.int64), np.array([], dtype=object), np.array([], dtype="datetime64[ns]")
+    cutoff = np.partition(scores, len(scores) - limit)[len(scores) - limit]
+    candidates = np.flatnonzero(scores >= cutoff)
+    rows = scoring.iloc[candidates]
+    asset_ids, timestamps = host(rows["asset_id"]), host(rows["timestamp"])
+    order = np.lexsort((timestamps, asset_ids, -scores[candidates]))[:limit]
+    return candidates[order], asset_ids[order], timestamps[order]

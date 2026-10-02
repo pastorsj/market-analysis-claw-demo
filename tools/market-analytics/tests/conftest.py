@@ -22,3 +22,14 @@ def pack(pack_root: Path) -> Pack:
 @pytest.fixture(scope="session")
 def data(pack: Pack) -> MarketData:
     return MarketData.load(pack)
+
+
+@pytest.fixture(scope="session")
+def daily_only_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The same pack with neither ticker-linked news nor minute bars."""
+    return write_pack(tmp_path_factory.mktemp("daily_only"), daily_only=True)
+
+
+@pytest.fixture(scope="session")
+def daily_only(daily_only_root: Path) -> MarketData:
+    return MarketData.load(Pack.load(daily_only_root))

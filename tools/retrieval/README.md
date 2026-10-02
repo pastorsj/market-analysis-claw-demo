@@ -8,13 +8,20 @@ SPDX-License-Identifier: Apache-2.0
 The `retrieve_evidence` MCP tool. It searches the active data pack's document sources with NVIDIA Nemotron
 embed and rerank models (through LangChain's `langchain-nvidia-ai-endpoints`) over Milvus.
 
-One image, two commands:
+One image, three commands:
 
 - `demo-retrieval ingest`: the `retrieval-index` one-shot. It reads `/data/active/corpus/documents.jsonl`,
   splits documents into chunks, embeds the chunks as passages, loads them into a new Milvus collection, points
-  the collection alias at it, and writes `/data/active/collection-manifest.json`.
+  the collection alias at it, and writes `/data/active/collection-manifest.json`. It streams the corpus and
+  resumes an interrupted build (see [data contract](#data-contract)).
 - `demo-retrieval serve` (default): the MCP server. It uses streamable HTTP at `:8120/mcp`, has a `GET /health`
   check, and runs as the `retrieval` service.
+- `demo-retrieval benchmark`: the `retrieval-benchmark` one-shot of the analytics-gpu profile. It copies the active
+  build's vectors into a GPU Milvus (`MILVUS_GPU_URI`) under `GPU_IVF_FLAT`, times the pack's held-out queries
+  (`documents.benchmark_queries`) on both indexes, and writes `/data/active/retrieval-benchmark.json` for the
+  Benchmark tab ([retrieval](../../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)). Answers never use
+  the GPU copy. Without `MILVUS_GPU_URI` it does nothing. A build measured once is not measured again, except with
+  `--again`, which the GPU guard (`demo.sh test gpu --perf`) uses.
 
 ## How it fits
 
@@ -42,6 +49,7 @@ SDK's `tools/call retrieve_evidence` span.
 | `RETRIEVER_RERANK_MODEL` | `nvidia/llama-nemotron-rerank-vl-1b-v2` | |
 | `RETRIEVER_RERANK_URL` | unset | Full rerank URL; see below |
 | `MILVUS_URI` | `http://milvus:19530` | A local `*.db` path uses Milvus Lite (dev only) |
+| `MILVUS_GPU_URI` | unset | `benchmark` only: the GPU Milvus (`http://milvus-gpu:19530` under analytics-gpu) |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | unset | e.g. `http://phoenix:6006/v1/traces`; no spans are exported when unset |
 
 `NVIDIA_BASE_URL` and `NVIDIA_API_KEY` are never read.
@@ -73,10 +81,16 @@ URL and model, the chunking and the index parameters.
 - Re-running `ingest` on unchanged input does nothing.
 - Changed input builds a new collection and moves the alias only when it is complete, so `serve` keeps answering
   from the previous build. Older builds are then dropped.
+- The corpus is streamed, never held in memory: one pass validates every row (the schema, unique
+  `document_id`s, declared sources) before anything is embedded, and a second chunks, embeds and inserts it in
+  batches of 50 chunks.
+- An interrupted build resumes. Its collection is still there, under the same fingerprint, so the next run
+  looks up each batch's chunk ids (which are stable: `<document_id>:<NNNN>`) and embeds only the missing
+  chunks.
 
 ## Tool result
 
-`retrieve_evidence(query, source_ids, top_k=8)` returns:
+`retrieve_evidence(query, source_ids, top_k=8)` returns at most 8 passages (a larger `top_k` returns 8):
 
 - `hits[]`: `rank`, `score` (rerank logit), `vector_score` (cosine), `source_id`, `document_id`, `chunk_id`,
   `title`, `url`, `published_at`, `snippet` and `metadata`.
@@ -90,20 +104,23 @@ URL and model, the chunking and the index parameters.
 
 ### Size
 
-A passage is a chunk of up to 2,400 characters. Each hit adds about 1 KB of ids, URL, citation, other metadata
-and JSON indentation, so one copy of a result is at most about `top_k × 3.3 KB`.
+A passage is a chunk of up to 2,400 characters, never cut shorter. Each hit adds about 1 KB of ids, URL,
+citation, other metadata and JSON indentation.
 
 The MCP SDK sends every result twice: once as `structuredContent` and once as the same JSON in a text block.
 The response on the wire is therefore about double one copy. Hermes drops `structuredContent` when a text block
-repeats it, so the model reads only one copy.
+repeats it, so the model reads only one copy, as a JSON string, with the receipts plugin's `evidence_id`.
 
-These are the worst-case sizes, measured in-process with every hit a full chunk and EDGAR-style metadata:
+Hermes saves a result longer than 50,000 characters to a file the agent cannot read
+([tool result size](../../docs/architecture.md#tool-result-size)). So `budget.py` caps a call at 8 passages and
+drops the lowest-ranked ones while the result is longer than 30,000 characters as the agent reads it; a lone
+passage that is still too long has its title, metadata and text cut. `tests/test_budget.py` measures the worst
+case: eight full chunks of text that JSON escapes twice, with long titles, URLs and metadata.
 
-| `top_k` | one copy | JSON-RPC response |
+| `top_k` | as the agent reads it | JSON-RPC response |
 |---|---|---|
 | 3 | 11 KB | 21 KB |
-| 8 (default) | 27 KB | 53 KB |
-| 25 | 83 KB | 164 KB |
+| 8 (default and most) | 27 KB, 30 KB at most | 53 KB |
 
 OpenShell 0.1.2 limits JSON-RPC bodies to 64 KiB by default, but only request bodies (the tool arguments), so
 these responses pass through.
@@ -122,8 +139,8 @@ Everything uses public API; there are no patches.
    - These are retried: dropped connections, timeouts, 408, 429 and 5xx. That includes the async client's
      `[###] Unknown Error`, which is how it reports a non-JSON error body, such as a gateway's 502/503/504 page.
    - A tool call gets 3 attempts, because an agent is waiting on it.
-   - `ingest` gets 8 attempts, with 0.5 s to 8 s of jittered backoff. One request that fails for good restarts
-     the whole build.
+   - `ingest` gets 8 attempts, with 0.5 s to 8 s of jittered backoff. A request that fails for good stops the
+     build; the next run resumes it.
 5. **Three explicit spans.** LangChain's instrumentation emits nothing for direct embed, search or rerank calls.
 6. **Pin `==1.4.3` and set `NVIDIA_USAGE_TELEMETRY_ENABLED=false`.** The next release turns on usage telemetry
    by default, and 1.4.3 is the floor for GHSA-g28h-2cmm-rj9x.
@@ -137,19 +154,24 @@ The store is plain `pymilvus` 2.6, matching the Milvus 2.6 server, with an expli
 - dynamic fields for each source's extra metadata.
 
 `milvus/embedEtcd.yaml` and `milvus/user.yaml` configure the single-container Milvus: embedded etcd, local
-storage, no MinIO. They come from the official `standalone_embed.sh` recipe.
+storage, no MinIO. They come from the official `standalone_embed.sh` recipe. `milvus-gpu` uses the same recipe on
+the GPU image, with `milvus/gpu.yaml` as its `user.yaml`: a GPU memory pool of 1 GiB at start, 4 GiB at most.
 
 ## Run
 
-`scripts/demo.sh` runs both commands as part of the stack. By hand, from the repository root:
+`scripts/demo.sh` runs both as part of the stack. By hand, from the repository root:
 
 ```bash
-docker compose --profile retrieval run --rm retrieval-index   # build or refresh the index
-docker compose --profile retrieval up -d retrieval            # serve at 127.0.0.1:8120/mcp
+./scripts/demo.sh data reindex   # build or refresh the index
+./scripts/demo.sh up             # serve at 127.0.0.1:8120/mcp, with the rest of the stack
 ```
 
+Raw Compose needs the OpenShell pins, `.env` and the `core` profile, which `retrieval-index` depends on:
+`docker compose --env-file infra/openshell/versions.env --env-file .env --profile core --profile retrieval
+run --rm retrieval-index`.
+
 The image runs as uid 1000. `ingest` writes the manifest into `/data/active`, so `retrieval-index` mounts the
-`demo-data` volume read-write; `retrieval` mounts it read-only.
+`demo-data` volume read-write, as `retrieval-benchmark` does for its result; `retrieval` mounts it read-only.
 
 Locally, with Milvus Lite:
 

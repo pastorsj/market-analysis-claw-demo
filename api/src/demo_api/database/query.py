@@ -28,7 +28,7 @@ class QueryError(Exception):
 async def run_query(
     path: Path, database_name: str, sql: str, tables: dict[str, list[str]], *, max_rows: int = 100
 ) -> dict[str, Any]:
-    """Return ``{columns, rows, truncated, duration_ms}``; raise ``QueryError`` with an HTTP status otherwise."""
+    """Return ``{columns, types, rows, truncated, duration_ms}``; raise ``QueryError`` with an HTTP status otherwise."""
     if _slots.locked():
         raise QueryError(429, "Database queries are busy. Try again shortly.")
     started = time.monotonic()

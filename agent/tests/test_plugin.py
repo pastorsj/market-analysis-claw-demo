@@ -100,9 +100,15 @@ PRICE_CONTEXT = {
         "series_truncated": True,
     },
     "error": None,
-    "engine": {"device": "cpu", "library": "pandas", "version": "2.3.3"},
-    "timing": {"compute_ms": 8.152874994266313, "total_ms": 8.152874994266313},
+    "engine": {"device": "cpu", "library": "pandas", "version": "2.3.3", "engine_id": "pandas-cpu.v1"},
+    "timing": {
+        "compute_ms": 8.152874994266313,
+        "setup_ms": 0.6416250066831708,
+        "engine_ms": 8.794500000949484,
+        "total_ms": 9.425041987560689,
+    },
     "rows_scanned": 22,
+    "asset_count": 1,
     "warnings": ["The series is cut to the first 3 points."],
     "limitations": ["Prices are adjusted historical observations and are not investment advice."],
 }
@@ -114,8 +120,14 @@ REJECTED_PRICE_CONTEXT = {
     "payload": None,
     "error": {"code": "invalid_request", "message": "unknown asset 'NOPE'"},
     "engine": None,
-    "timing": {"compute_ms": 0.01049999991664663, "total_ms": 0.01049999991664663},
+    "timing": {
+        "compute_ms": 0.01049999991664663,
+        "setup_ms": 0.0899169989861548,
+        "engine_ms": 0.10041699890280142,
+        "total_ms": 0.6247919914312661,
+    },
     "rows_scanned": 0,
+    "asset_count": None,
     "warnings": [],
     "limitations": [],
 }
@@ -248,6 +260,21 @@ def test_market_results_record_the_public_parameters(hooks, api):
     assert json.loads(output)["evidence_id"] == receipt["receiptId"]
 
 
+def test_market_results_keep_what_the_receipt_card_shows(hooks, api):
+    """The engine id, the asset count and the timing, to the microsecond, reach the receipt as the tool sent them."""
+    run_tool(hooks, "price_context", {"asset_ids": ["ALPH"]}, PRICE_CONTEXT)
+
+    content = posted_receipt(api)["content"]
+    assert content["engine"]["engineId"] == "pandas-cpu.v1"
+    assert content["assetCount"] == 1
+    assert content["timing"] == {
+        "computeMs": 8.152874994266313,
+        "setupMs": 0.6416250066831708,
+        "engineMs": 8.794500000949484,
+        "totalMs": 9.425041987560689,
+    }
+
+
 def test_a_failed_market_result_gives_a_failed_receipt_without_evidence_id(hooks, api):
     output = run_tool(hooks, "price_context", {"asset_ids": ["NOPE"]}, REJECTED_PRICE_CONTEXT)
 
@@ -313,6 +340,62 @@ def test_sql_rows_are_cut_to_25_rows_of_40_columns(hooks, api):
     assert content["databaseName"] == "market_analysis"
 
 
+def test_a_result_too_long_to_read_whole_is_shortened(hooks, api):
+    """Hermes hides an MCP result over 50,000 characters behind a preview; Auto Ontology can return 100 wide rows."""
+    rows = [{f"column_{c}": f"value {r}-{c} " * 3 for c in range(12)} for r in range(100)]
+    reasoning = "Resolved the question to daily_prices. " * 400
+    result = {"answer": "100 rows", "sql": "SELECT 1", "rows": rows, "row_count": 340, "truncated": True}
+    result |= {"reasoning": reasoning, "resolution_lineage": []}
+
+    output = run_tool(hooks, "ask_question", {"question": "Which assets?"}, result)
+
+    assert len(output) <= plugin.MAX_RESULT_CHARS < 50_000
+    read = json.loads(output)
+    assert list(read)[0] == "evidence_id" and read["evidence_id"] == posted_receipt(api)["receiptId"]
+    shortened = json.loads(read["result"])
+    assert 1 <= len(shortened["rows"]) < 100 and shortened["rows"] == rows[: len(shortened["rows"])]
+    assert shortened["truncated"] is True and shortened["row_count"] == 340
+    assert read["shortened_to_fit"].startswith(f"result.rows lists the first {len(shortened['rows'])} of 100 items")
+    assert len(posted_receipt(api)["content"]["rows"]) == 25, "the receipt is built from the whole result"
+
+
+def test_a_long_text_result_is_cut(hooks, api):
+    output = hooks.transform_tool_result(
+        tool_name=TOOLS["ask_question"]["hermes_name"],
+        args={"question": "x"},
+        result=json.dumps({"result": "plain text " * 10_000}),
+        session_id=JOB,
+        tool_call_id="call_9",
+    )
+
+    assert len(output) <= plugin.MAX_RESULT_CHARS
+    assert json.loads(output)["result"].endswith("…")
+
+
+def test_a_second_copy_of_a_long_result_is_left_out(hooks, api):
+    rows = [{"value": "x" * 100} for _ in range(400)]
+    envelope = {"result": json.dumps({"rows": rows[:5]}), "structuredContent": {"rows": rows}}
+
+    output = hooks.transform_tool_result(
+        tool_name=TOOLS["ask_question"]["hermes_name"],
+        args={"question": "x"},
+        result=json.dumps(envelope),
+        session_id=JOB,
+        tool_call_id="call_8",
+    )
+
+    read = json.loads(output)
+    assert len(output) <= plugin.MAX_RESULT_CHARS and "structuredContent" not in read
+    assert json.loads(read["result"]) == {"rows": rows[:5]}
+
+
+def test_a_result_that_fits_is_unchanged_but_for_its_evidence_id(hooks, api):
+    output = json.loads(run_tool(hooks, "price_context", {}, PRICE_CONTEXT))
+
+    assert output.keys() == {"evidence_id", "result"}
+    assert json.loads(output["result"]) == PRICE_CONTEXT
+
+
 def test_the_lineage_keeps_only_complete_bindings(hooks, api):
     binding = {"phrase": "closing price", "ontology_object": "Close", "table": "main.daily_prices", "column": "close"}
     # Auto Ontology leaves out a table or column it could not resolve; an empty one must not fail the receipt either.
@@ -324,6 +407,16 @@ def test_the_lineage_keeps_only_complete_bindings(hooks, api):
     assert posted_receipt(api)["content"]["resolutionLineage"] == [
         {"phrase": "closing price", "ontologyObject": "Close", "table": "main.daily_prices", "column": "close"}
     ]
+
+
+def test_a_whole_question_as_the_lineage_phrase_is_cut(hooks, api):
+    # Auto Ontology can bind a long question as one phrase; the receipt allows 500 characters.
+    binding = {"phrase": "q" * 600, "ontology_object": "News", "table": "main.company_news", "column": "headline"}
+    result = {"answer": "ALPH", "sql": "SELECT 1", "rows": [], "row_count": 0, "resolution_lineage": [binding]}
+
+    run_tool(hooks, "ask_question", {"question": "Which issuers had negative news?"}, result)
+
+    assert len(posted_receipt(api)["content"]["resolutionLineage"][0]["phrase"]) == 500
 
 
 def test_each_tool_gets_the_sources_its_family_allows(hooks, api):
@@ -338,7 +431,7 @@ def test_each_tool_gets_the_sources_its_family_allows(hooks, api):
     assert api.scope_reads == 1
 
 
-def test_ask_question_drops_the_thread_database_prediction_and_evidence(hooks):
+def test_ask_question_keeps_only_the_question(hooks):
     args = {
         "question": "Which asset closed highest?",
         "conversation_id": ",",
@@ -351,7 +444,7 @@ def test_ask_question_drops_the_thread_database_prediction_and_evidence(hooks):
 
     # Hermes dispatches this same dict; a modify directive could only add keys, never remove one.
     assert directive is None
-    assert args == {"question": "Which asset closed highest?", "source_ids": ["x"]}
+    assert args == {"question": "Which asset closed highest?"}
 
 
 def test_other_tools_keep_their_arguments(hooks):

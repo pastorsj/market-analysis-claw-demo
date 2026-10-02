@@ -3,7 +3,12 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { FakeEventSource } from '@/test-utils/fake-event-source'
-import { cancelJob, createDeepResearchClient, submitJob } from './deep-research-client'
+import {
+  ApiRequestError,
+  cancelJob,
+  createDeepResearchClient,
+  submitJob,
+} from './deep-research-client'
 
 describe('createDeepResearchClient', () => {
   beforeEach(() => {
@@ -140,5 +145,42 @@ describe('REST functions', () => {
     )
 
     await expect(cancelJob('job-1')).rejects.toThrow('Failed to cancel job: 422 - Unknown source')
+  })
+
+  test('tells an answer from the API apart from one by the UI proxy', async () => {
+    const submit = () =>
+      submitJob({
+        input: 'Which assets led?',
+        conversationId: 's_1',
+        dataSources: [],
+        jobId: 'job-1',
+      })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ detail: 'The API is starting or stopping.' }, { status: 503 })
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { error: { code: 'PROXY_ERROR', message: 'The API is unavailable' } },
+          { status: 502 }
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const refused = await submit().catch((error: unknown) => error)
+    const lost = await submit().catch((error: unknown) => error)
+
+    expect(refused).toBeInstanceOf(ApiRequestError)
+    expect(refused).toMatchObject({
+      status: 503,
+      fromApi: true,
+      message: 'Failed to start research: 503 - The API is starting or stopping.',
+    })
+    expect(lost).toMatchObject({
+      status: 502,
+      fromApi: false,
+      message: 'Failed to start research: 502 - The API is unavailable',
+    })
   })
 })

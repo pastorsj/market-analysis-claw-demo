@@ -19,7 +19,10 @@ def main() -> None:
     serve()
 
 
-def worker_main(connection: Connection, root: Path) -> None:
+def worker_main(connection: Connection, root: Path, engine: str | None = None) -> None:
+    """The worker process. `engine` overrides MARKET_ANALYTICS_ENGINE, e.g. a CPU worker next to the GPU one."""
+    if engine is not None:
+        os.environ["MARKET_ANALYTICS_ENGINE"] = engine  # tools.engine() reads it too
     if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu":
         install_gpu_accelerators()
 

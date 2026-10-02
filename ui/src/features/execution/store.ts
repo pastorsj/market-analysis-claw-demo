@@ -4,11 +4,21 @@
 /**
  * Execution runs by job id: the `execution.v2` events in stream order and the
  * receipts they reference. Live SSE records, job exports and recorded turns
- * all land here. Nothing is persisted; a reload refetches the export.
+ * all land here. Nothing is persisted; a reload refetches the export (or the
+ * recording).
  */
 
 import { create } from 'zustand'
-import { toExecutionEvent, toReceipt, type ExecutionEventV2, type ReceiptV2 } from './contract'
+import {
+  toBenchmark,
+  toExecutionEvent,
+  toReceipt,
+  toRetrievalBenchmark,
+  type Benchmark,
+  type ExecutionEventV2,
+  type ReceiptV2,
+  type RetrievalBenchmark,
+} from './contract'
 
 /** Events kept per run. The stream replays from the start, so it can only repeat, not grow. */
 const MAX_EVENTS = 5000
@@ -21,6 +31,16 @@ export interface ExecutionRun {
   receipts: Record<string, ReceiptV2>
   /** The job's latest status (`running`, `success`, `failure`, `interrupted`, …); null until known */
   jobStatus: string | null
+  /** Evidence (receipt) ids the answer cites; null until its report is known */
+  citedEvidenceIds: string[] | null
+  /** The CPU/GPU comparison of its market calls, once one has run (the Benchmark tab) */
+  benchmark: Benchmark | null
+  /** The Milvus CPU/GPU index comparison that applies to its retrieval calls, once known */
+  retrievalBenchmark: RetrievalBenchmark | null
+  /** From the data pack's recordings: no live job behind it, in either mode */
+  recorded: boolean
+  /** The recordings archive it came from (`archiveId`), when known */
+  archive: string | null
 }
 
 /** A job's execution record as the API exports it and a recording stores it. */
@@ -29,6 +49,13 @@ export interface ExecutionRecord {
   events: unknown[]
   receipts: unknown[]
   status?: string
+  report?: { citations: unknown[] } | null
+  benchmark?: unknown
+  retrievalBenchmark?: unknown
+  /** Loaded from the data pack's recordings */
+  recorded?: boolean
+  /** The recordings archive it came from */
+  archive?: string | null
 }
 
 interface ExecutionState {
@@ -38,6 +65,8 @@ interface ExecutionState {
   addEvent: (jobId: string, value: unknown, cursor?: string | null) => void
   addRecord: (record: ExecutionRecord) => void
   setJobStatus: (jobId: string, status: string) => void
+  setBenchmark: (jobId: string, benchmark: Benchmark) => void
+  setRetrievalBenchmark: (jobId: string, benchmark: RetrievalBenchmark) => void
 }
 
 const emptyRun = (jobId: string): ExecutionRun => ({
@@ -45,7 +74,29 @@ const emptyRun = (jobId: string): ExecutionRun => ({
   events: [],
   receipts: {},
   jobStatus: null,
+  citedEvidenceIds: null,
+  benchmark: null,
+  retrievalBenchmark: null,
+  recorded: false,
+  archive: null,
 })
+
+/** The evidence ids of a report's citations (`{evidenceId, …}`), each once. */
+const citedEvidence = (report: ExecutionRecord['report']): string[] | null =>
+  report
+    ? [
+        ...new Set(
+          report.citations.flatMap((citation) =>
+            typeof citation === 'object' &&
+            citation !== null &&
+            'evidenceId' in citation &&
+            typeof citation.evidenceId === 'string'
+              ? [citation.evidenceId]
+              : []
+          )
+        ),
+      ]
+    : null
 
 const merge = (
   run: ExecutionRun,
@@ -86,18 +137,55 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     )
   },
 
-  addRecord: ({ jobId, events, receipts, status }) => {
+  addRecord: ({
+    jobId,
+    events,
+    receipts,
+    status,
+    report,
+    benchmark,
+    retrievalBenchmark,
+    recorded,
+    archive,
+  }) => {
     const validEvents = events.map((event) => toExecutionEvent(event)).filter((e) => e !== null)
     const validReceipts = receipts.map(toReceipt).filter((r) => r !== null)
     const dropped = events.length + receipts.length - validEvents.length - validReceipts.length
     set((state) => {
       const run = merge(state.runs[jobId] ?? emptyRun(jobId), validEvents, validReceipts)
       return {
-        runs: { ...state.runs, [jobId]: { ...run, jobStatus: status ?? run.jobStatus } },
+        runs: {
+          ...state.runs,
+          [jobId]: {
+            ...run,
+            jobStatus: status ?? run.jobStatus,
+            citedEvidenceIds: citedEvidence(report) ?? run.citedEvidenceIds,
+            benchmark: toBenchmark(benchmark) ?? run.benchmark,
+            retrievalBenchmark: toRetrievalBenchmark(retrievalBenchmark) ?? run.retrievalBenchmark,
+            recorded: recorded ?? run.recorded,
+            archive: archive ?? run.archive,
+          },
+        },
         dropped: state.dropped + dropped,
       }
     })
   },
+
+  setBenchmark: (jobId, benchmark) =>
+    set((state) => ({
+      runs: {
+        ...state.runs,
+        [jobId]: { ...(state.runs[jobId] ?? emptyRun(jobId)), benchmark },
+      },
+    })),
+
+  setRetrievalBenchmark: (jobId, retrievalBenchmark) =>
+    set((state) => ({
+      runs: {
+        ...state.runs,
+        [jobId]: { ...(state.runs[jobId] ?? emptyRun(jobId)), retrievalBenchmark },
+      },
+    })),
 
   setJobStatus: (jobId, status) =>
     set((state) => ({

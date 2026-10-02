@@ -121,6 +121,7 @@ export const Refresh = createIcon('refresh')
 export const Send = createIcon('forward')
 export const Chat = createIcon('chat-single')
 export const Mail = createIcon('envelope')
+export const Microphone = createIcon('microphone')
 
 // ---------------------------------------------------------------------------
 // Status icons

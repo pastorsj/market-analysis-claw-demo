@@ -10,7 +10,7 @@ import type { ExecutionFeature } from '@/shared/context'
 import { ExecutionWorkspace } from './ExecutionWorkspace'
 import { recordings } from './replay/sources'
 import { useExecutionStore } from './store'
-import { ActivityPanel } from './timeline/ActivityPanel'
+import { ActivityPanel } from './activity/ActivityPanel'
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}

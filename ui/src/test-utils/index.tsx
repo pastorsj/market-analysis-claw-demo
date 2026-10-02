@@ -21,7 +21,14 @@ interface ProviderOptions {
 
 const renderWithProviders = (ui: ReactElement, { config, feature }: ProviderOptions = {}) => {
   const wrap = (children: ReactNode) => (
-    <AppConfigProvider config={{ mode: 'live', phoenixUrl: null, ...config }}>
+    <AppConfigProvider
+      config={{
+        mode: 'live',
+        phoenixUrl: null,
+        speechInput: { enabled: false, maxSeconds: 60 },
+        ...config,
+      }}
+    >
       <ExecutionFeatureProvider feature={{ ...noExecutionFeature, ...feature }}>
         <ThemeProvider theme="light">{children}</ThemeProvider>
       </ExecutionFeatureProvider>

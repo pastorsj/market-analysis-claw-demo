@@ -1,10 +1,12 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""The active data pack (/data/active): pack.json and corpus/documents.jsonl in, collection-manifest.json out."""
+"""The active data pack (/data/active): pack.json and corpus/documents.jsonl in, collection-manifest.json (and on a
+GPU host retrieval-benchmark.json) out."""
 
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,18 +21,31 @@ from .store import VECTOR_FIELD
 
 DOCUMENTS = Path("corpus/documents.jsonl")
 MANIFEST = Path("collection-manifest.json")
+BENCHMARK = Path("retrieval-benchmark.json")
+
+
+@dataclass(frozen=True)
+class BenchmarkQuery:
+    query: str
+    source_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class Pack:
     collection: str  # documents.collection: the Milvus alias that retrieve_evidence searches
     document_sources: frozenset[str]  # the only source_ids retrieve_evidence accepts
+    # documents.benchmark_queries: held-out queries for the CPU/GPU index comparison (retrieval-benchmark)
+    benchmark_queries: tuple[BenchmarkQuery, ...] = ()
 
     @classmethod
     def load(cls, data_dir: Path) -> Pack:
         pack = json.loads((data_dir / "pack.json").read_text())
         sources = frozenset(source["id"] for source in pack["sources"] if source.get("kind") == "documents")
-        return cls(collection=pack["documents"]["collection"], document_sources=sources)
+        queries = tuple(
+            BenchmarkQuery(query=entry["query"], source_ids=tuple(entry["sources"]))
+            for entry in pack["documents"].get("benchmark_queries", [])
+        )
+        return cls(collection=pack["documents"]["collection"], document_sources=sources, benchmark_queries=queries)
 
 
 class CorpusDocument(BaseModel):
@@ -57,15 +72,12 @@ class CorpusDocument(BaseModel):
         return metadata
 
 
-def read_documents(data_dir: Path) -> list[CorpusDocument]:
-    path = data_dir / DOCUMENTS
-    documents = [CorpusDocument.model_validate_json(line) for line in path.read_text().splitlines() if line.strip()]
-    if not documents:
-        raise ValueError(f"{path} has no documents")
-    ids = [document.document_id for document in documents]
-    if len(ids) != len(set(ids)):
-        raise ValueError(f"{path} repeats document_id values")
-    return documents
+def iter_documents(data_dir: Path) -> Iterator[CorpusDocument]:
+    """corpus/documents.jsonl, one validated row at a time, so a corpus never has to fit in memory."""
+    with (data_dir / DOCUMENTS).open(encoding="utf-8") as lines:
+        for line in lines:
+            if line.strip():
+                yield CorpusDocument.model_validate_json(line)
 
 
 class CollectionManifest(BaseModel):

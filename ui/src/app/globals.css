@@ -1,7 +1,5 @@
 @import 'tailwindcss/theme.css';
 @import 'tailwindcss/preflight.css';
-/* React Flow (execution graph). Unlayered and after preflight, so preflight cannot override it. */
-@import '@xyflow/react/dist/style.css';
 @import 'tailwindcss/utilities.css';
 
 /* KUI Foundations 0.600 — extracted from @kui/foundations-tailwind-plugin.
@@ -160,6 +158,55 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * Keep every native select arrow inside a square end-cap. Centering the
+ * chevron in that square makes its top, bottom, and right optical insets
+ * identical regardless of the control height.
+ */
+.ui-select-shell {
+  position: relative;
+  display: inline-grid;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ui-select-shell > select {
+  appearance: none;
+  min-width: 0;
+  padding-right: 2rem !important;
+}
+
+.ui-select-chevron {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  height: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  color: var(--text-color-secondary);
+  pointer-events: none;
+  transition: color 120ms ease;
+}
+
+.ui-select-chevron::before {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: '';
+  transform: rotate(45deg);
+}
+
+.ui-select-shell > select:hover:not(:disabled) + .ui-select-chevron,
+.ui-select-shell > select:focus-visible + .ui-select-chevron {
+  color: var(--text-color-brand);
+}
+
+.ui-select-shell > select:disabled + .ui-select-chevron {
+  opacity: 0.38;
+}
+
 /* Hide scrollbar utility */
 @utility scrollbar-hide {
   -ms-overflow-style: none;
@@ -301,6 +348,73 @@ body {
 /* Constrain spinner SVG inside the research panel toggle tab */
 .research-panel-toggle .nv-spinner svg {
   width: 100%;
+}
+
+.activity-panel-resizer {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline-offset: -2px;
+}
+
+.activity-panel-resizer::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 1px;
+  background: var(--border-color-base);
+  content: '';
+  transition:
+    width 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.activity-panel-resizer::after {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 3px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--border-color-base);
+  content: '';
+  opacity: 0.55;
+  transform: translateY(-50%);
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease;
+}
+
+.activity-panel-resizer:hover::before,
+.activity-panel-resizer:focus-visible::before,
+.activity-panel-resizer[data-resizing='true']::before {
+  width: 2px;
+  background: var(--border-color-brand);
+  box-shadow: 0 0 12px rgb(118 185 0 / 30%);
+}
+
+.activity-panel-resizer:hover::after,
+.activity-panel-resizer:focus-visible::after,
+.activity-panel-resizer[data-resizing='true']::after {
+  background: var(--border-color-brand);
+  opacity: 0.95;
+}
+
+body.activity-panel-resizing,
+body.activity-panel-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 /* Global scrollbar styles */
@@ -762,6 +876,52 @@ body {
   color: var(--color-brand);
 }
 
+/* Technology pills (shared/components/ToolPills): tinted like .brand-chip, in RAPIDS purple (the RAPIDS logo's
+   #7400ff) for the market tools' libraries and NVIDIA green for the rest. The tint is opaque over the raised
+   surface, so a highlighted row does not change it, and the text shade keeps WCAG AA contrast against it in each
+   theme (dark: 5.1:1 purple, 6.4:1 green; light: 5.3:1 purple, 5.4:1 green). */
+:where(:root, .nv-light) {
+  --tool-pill-rapids-text: #7400ff;
+  --tool-pill-nvidia-text: var(--color-green-600);
+}
+
+.nv-dark {
+  --tool-pill-rapids-text: color-mix(in srgb, #7400ff 60%, #ffffff);
+  --tool-pill-nvidia-text: var(--color-brand);
+}
+
+.tool-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool-pill {
+  --tool-pill-color: var(--color-brand);
+  display: inline-flex;
+  height: 16px;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--tool-pill-color) 40%, transparent);
+  border-radius: 9999px;
+  background-color: color-mix(
+    in srgb,
+    var(--tool-pill-color) 12%,
+    var(--background-color-surface-raised)
+  );
+  color: var(--tool-pill-nvidia-text);
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tool-pill[data-family='rapids'] {
+  --tool-pill-color: #7400ff;
+  color: var(--tool-pill-rapids-text);
+}
+
 .assistant-turn {
   animation: assistant-turn-in var(--dur-mid) var(--ease-premium);
 }
@@ -795,6 +955,16 @@ body {
 .composer-textarea textarea,
 .composer-textarea [contenteditable='true'] {
   background: transparent;
+}
+
+/* Align the microphone with the composer's first line instead of centering it
+   against the full three-line textarea. The `lh` unit follows the active
+   composer typography without coupling this slot to a fixed pixel offset. */
+.composer-textarea .speech-input-button-slot {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  height: 1lh;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,7 +15,7 @@ only agent, and LangChain is used only for its NVIDIA embed and rerank clients.
 | `langchain-nvidia-ai-endpoints` (`NVIDIAEmbeddings`, `NVIDIARerank`) | 1.4.3, exact pin |
 | `langchain-text-splitters` (`RecursiveCharacterTextSplitter`) | 1.x |
 | `pymilvus` | 2.6.17 |
-| Milvus | 2.6.25, CPU standalone: embedded etcd, local storage, no MinIO |
+| Milvus | 2.6.25, CPU standalone: embedded etcd, local storage, no MinIO. The analytics-gpu profile adds a second, GPU standalone (`v2.6.25-gpu`) for the [CPU/GPU index comparison](#cpugpu-index-comparison-analytics-gpu) only |
 | Embed model | `nvidia/nemotron-3-embed-1b` |
 | Rerank model | `nvidia/llama-nemotron-rerank-vl-1b-v2` |
 
@@ -36,17 +36,27 @@ Re-running the index on unchanged input does nothing, and a changed input builds
 server keeps answering from the previous one. The default pack indexes about 5,200 documents
 (SEC EDGAR filings and eCFR Title 17) as about 23,600 chunks.
 
-**Search (`retrieval`, `127.0.0.1:8120/mcp`).** `retrieve_evidence(query, source_ids, top_k=8)`, with `top_k`
-at most 25:
+**Search (`retrieval`, `127.0.0.1:8120/mcp`).** `retrieve_evidence(query, source_ids, top_k=8)`; a `top_k` above
+8 (the schema allows 25) returns 8:
 1. Embed the query once.
 2. Search every selected source for the same share of candidates, `min(4 × top_k, 200 ÷ sources)`, in the
    build the alias points at (resolved once per call).
 3. Rerank all candidates together in one request and return the best `top_k` passages with their title, URL,
-   date, scores and metadata, plus the models, the index settings and timings.
+   date, scores and metadata, plus the models, the index settings and timings. A result longer than 30,000
+   characters as the agent reads it drops its lowest-ranked passages ([result size](#result-size)).
 
 The Hermes plugin sets `source_ids` to the job's selected document sources, and the tool refuses any source
 the pack does not declare as documents. Each call becomes a `retrieval_evidence` receipt, which the UI's
 retrieval explorer shows.
+
+**Queries over filings.** The first passage of every 8-K and 6-K is its cover page: the form name, "current
+report", the registrant and the dates. A query that names the form ("second quarter 2026 operational disruption
+8-K") is nearest to those cover pages, and the reranker scores them above the passages that describe an event,
+so it returns cover pages only: on the synthetic-market sample, none of its 8 passages comes from a filing that
+reports a disruption, against 3 of 8 for the same query without "8-K". The tool description and the
+`searching-documents` skill therefore tell the agent to leave form names out and to write the event as the
+sentence a filing would contain: a list of keywords matches the risk lists of forward-looking statements
+instead. Each hit's metadata carries its form and filing date.
 
 ## Endpoints
 
@@ -91,16 +101,61 @@ Two related details:
 metadata. The index is HNSW with cosine similarity, `M = 16`, `efConstruction = 200`, and searches use
 `ef = 128`, above the largest per-source candidate count (100).
 
+## CPU/GPU index comparison (analytics-gpu)
+
+On a GPU host the Benchmark tab compares Milvus vector search on the CPU index with an NVIDIA GPU index of the
+same vectors, as the original demo did. Answers never change: `retrieve_evidence` searches the CPU index above
+on every host, and the GPU index exists only for this comparison.
+
+- **Where.** The analytics-gpu profile adds `milvus-gpu`, Milvus on the GPU image (embedded etcd, local
+  storage, its own volume, no host port), and `retrieval-benchmark`, a one-shot that `demo.sh up` (and `data
+  reindex`) runs once the stack is up, with the retrieval profile. Nothing waits on either: if `milvus-gpu` does not
+  turn healthy, `up` warns, stops it and goes on. Without the profiles neither runs, and the Benchmark tab says the
+  stack runs the CPU index only.
+- **The GPU index.** The one-shot reads the active build's chunk ids, sources and vectors from `milvus`, and
+  writes them, L2-normalized, to a collection of the same name in `milvus-gpu` under `GPU_IVF_FLAT` (NVIDIA
+  cuVS IVF-Flat, as the original demo used: inner product, `nlist = 128`; searches probe `nprobe = 64` lists).
+  Inner product on normalized vectors ranks as cosine does on the CPU. Older builds' copies are dropped, so the
+  GPU holds one, and a copy under another index is rebuilt. `GPU_CAGRA` was tried first and returned wrong
+  neighbors on these 2,048-dimension vectors in Milvus 2.6.25 on an A100 (recall 0, with IVF-PQ or NN-descent
+  graph builds and with either metric), while `GPU_IVF_FLAT` and `GPU_BRUTE_FORCE` matched the exact neighbors.
+  Measured on 2026-10-01 on the A100 with `us-equities` (32,676 chunks, its 15 held-out queries): recall@10 0.98
+  on both indexes and a CPU/GPU overlap of 1.0 in every profile, and the GPU searched 1.13x faster one query at
+  a time, 1.11x in batches of five and 1.76x with five concurrent requests. The GPU Milvus then held 4.7 GiB. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
+  memory pool (1 GiB at start, 4 GiB at most).
+- **The workload.** The pack's held-out queries (`documents.benchmark_queries` in `pack.yaml`, 15 per pack,
+  never the demo questions), each embedded once with Nemotron Embed. Three profiles: one query per request,
+  batches of five query vectors of one source scope, and five concurrent requests. Each profile warms both
+  indexes up, then sends every request three times, alternating which index goes first. Only the Milvus search
+  call is timed (top 10, filtered to the query's sources); embedding and reranking are left out.
+- **Quality gates.** Recall@10 of each index against the exact inner-product neighbors, computed from the same
+  vectors: at least 0.95 on average and 0.80 for every query. The two indexes' results overlap by at least
+  0.95 on average (Jaccard), and each returns the same neighbors in every repetition. Neighbors compare by
+  their exact score, so chunks with identical vectors (boilerplate repeated across filings) count as one.
+- **Claim.** A profile claims a GPU speedup only when its gates pass and the CPU's total search time is at
+  least 1.1 times the GPU's; otherwise it reports the ratio without a claim.
+- **Result.** `/data/active/retrieval-benchmark.json` (contract `RetrievalBenchmark`,
+  [contracts](../contracts/README.md)). The API serves it as `GET /v1/jobs/async/job/{id}/retrieval-benchmark`
+  for a run whose retrieval calls searched the same build, and a job export, so a recording, carries it. An
+  unchanged build is not measured again, unless its GPU copy was built under another index; `data reindex`
+  measures a new one. The one-shot never fails the
+  stack: a problem is logged (`demo.sh logs retrieval-benchmark`), and the tab shows no comparison.
+
 ## Result size
 
-A passage is at most 2,400 characters, and each hit adds about 1 KB of ids, URL and metadata. The MCP SDK
-sends a result twice (structured content and the same JSON as text), and Hermes gives the model one copy.
+A passage is one chunk, at most 2,400 characters, and it is never cut shorter: the fact a question needs can sit
+at a chunk's end. Each hit adds about 1 KB of ids, URL and metadata. The MCP SDK sends a result twice
+(structured content and the same JSON as text), and Hermes gives the model one copy, inside a JSON string.
 
-| `top_k` | One copy | JSON-RPC response |
+Hermes hides an MCP result longer than 50,000 characters from the model ([tool result
+size](architecture.md#tool-result-size)), so a call returns at most 8 passages and drops its lowest-ranked ones
+while it is longer than 30,000 characters as the agent reads it. The longest eight eCFR chunks of the us-equities
+corpus come to 29,100 characters; eight 2,400-character SEC filing passages, 28,200.
+
+| `top_k` | As the agent reads it | JSON-RPC response |
 |---|---|---|
 | 3 | 11 KB | 21 KB |
-| 8 (default) | 27 KB | 53 KB |
-| 25 | 83 KB | 164 KB |
+| 8 (default and most) | 27 KB, 30 KB at most | 53 KB |
 
 OpenShell 0.1.2 caps MCP JSON-RPC request bodies at 64 KiB, not responses, so these pass. The receipt cuts
 each passage to 1,500 characters for the UI.

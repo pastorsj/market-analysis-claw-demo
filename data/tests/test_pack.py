@@ -1,38 +1,68 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Pack validation and resolution, on the real market-analysis pack and broken copies of it."""
+"""Pack validation and resolution, on the real packs and broken copies of them."""
 
 from __future__ import annotations
 
+import json
+
 import pytest
+import yaml
+from conftest import PACKS
 from conftest import edit_yaml
 
+from demo_data.pack import DATA_ROOT
 from demo_data.pack import PackError
 from demo_data.pack import declared_contract_errors
 from demo_data.pack import find_contracts
 from demo_data.pack import load_pack
 
 
-def test_market_pack_is_valid_and_satisfies_the_market_analytics_contract(market_pack, contract):
-    assert market_pack.id == "market-analysis"
-    assert market_pack.database_tables == [
+@pytest.mark.parametrize("name", ["synthetic-market", "us-equities"])
+def test_the_packs_are_valid_and_satisfy_every_tool_contract(name, contract):
+    pack = load_pack(PACKS / name)
+    assert pack.database_tables[:5] == [
         "assets",
         "ticker_history",
         "trading_sessions",
         "daily_prices",
-        "corporate_actions",
-        "news_articles",
         "asset_relationships",
-        "index_memberships",
     ]
-    assert declared_contract_errors(market_pack, [contract]) == []
-
-
-def test_market_pack_satisfies_every_tool_contract_in_the_repository(market_pack):
+    assert declared_contract_errors(pack, [contract]) == []
     contracts = find_contracts()
-    if not contracts:
-        pytest.skip("no tools/*/contract/*.json in this checkout")
-    assert declared_contract_errors(market_pack, contracts) == []
+    if contracts:  # tools/*/contract/*.json, when this checkout has them
+        assert declared_contract_errors(pack, contracts) == []
+    assert sum(question.get("featured", False) for question in pack.questions) == 6
+
+
+def test_filings_are_a_document_source_in_both_packs_and_never_news():
+    for name in ("synthetic-market", "us-equities"):
+        pack = load_pack(PACKS / name)
+        sources = {source["id"]: source for source in pack.manifest["sources"]}
+        filings = [corpus for corpus in pack.manifest["documents"]["corpora"] if corpus["source"] == "sec_filings"]
+        assert sources["sec_filings"]["kind"] == "documents"
+        assert [corpus["format"] for corpus in filings] == ["edgar-filings"]
+        assert pack.manifest["market"]["news"] in (None, "news.parquet")  # a dataset table, never filings
+
+
+# The documents.jsonl id prefixes of each document source that eval/retrieval.yaml names documents of
+DOCUMENT_PREFIXES = {"market_regulations": ("ecfr-title17:", "fr-"), "world_news": ("gdelt:",)}
+
+
+@pytest.mark.parametrize("name", ["synthetic-market", "us-equities"])
+def test_retrieval_answer_checks_name_questions_and_pinned_filings(name):
+    pack = load_pack(PACKS / name)
+    checks = yaml.safe_load(pack.path("eval/retrieval.yaml").read_text())
+    corpus = pack.select_corpora(["sec_filings"])[0]
+    pinned = {filing["filing_id"] for filing in json.loads(pack.path(corpus["manifest"]).read_text())["filings"]}
+    questions = {question["id"]: question for question in pack.questions}
+
+    for question_id, check in checks.items():
+        sources = set(questions[question_id]["sources"])
+        assert sources & {"sec_filings", "market_regulations", "world_news"}, question_id
+        assert set(check.get("filings", [])) <= pinned, question_id
+        prefixes = tuple(prefix for source, found in DOCUMENT_PREFIXES.items() if source in sources for prefix in found)
+        assert all(document.startswith(prefixes) for document in check.get("documents", [])), question_id
 
 
 def test_a_broken_pack_reports_every_problem(pack_copy):
@@ -42,6 +72,7 @@ def test_a_broken_pack_reports_every_problem(pack_copy):
         manifest["structured"]["database_name"] = "market"
         manifest["provenance"][0]["license"] = "MIT"
         manifest["documents"]["corpora"][1]["manifest"] = "corpus/missing.json"
+        manifest["documents"]["corpora"][0]["format"] = "gdelt-parquet"
         manifest["analytics"]["news_table"] = "news_feed"
         manifest["prediction"]["entity"]["table"] = "assets"
 
@@ -58,15 +89,58 @@ def test_a_broken_pack_reports_every_problem(pack_copy):
 
     assert sorted(raised.value.errors) == sorted(
         [
-            "structured.database_name must be 'market_analysis' (the pack id in snake_case)",
+            "structured.database_name must be 'synthetic_market' (the pack id in snake_case)",
             "origin synthetic-market-generator: unknown license 'MIT'",
+            "corpus sec_filings: format gdelt-parquet takes files",
             "corpus market_regulations: manifest corpus/missing.json not found",
+            "the tables with origin synthetic-market-generator must be exactly "
+            "['asset_relationships', 'assets', 'daily_prices', 'news_feed', 'ticker_history', 'trading_sessions']",
             "analytics.news_table 'news_feed' is not a table",
             "prediction.entity.table must be one of prediction.tables",
             "question market-leaders: unknown source 'market_prices'",
             "at least one question must be featured",
         ]
     )
+
+
+def test_conversations_share_the_question_ids_and_name_known_sources(pack_copy):
+    pack_dir = pack_copy("us-equities")
+
+    def break_conversations(document):
+        document["conversations"][0]["id"] = "market-leaders"
+        document["conversations"][1]["sources"] = ["market_prices"]
+
+    edit_yaml(pack_dir / "questions.yaml", break_conversations)
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert sorted(raised.value.errors) == [
+        "conversation peer-network-follow-up: unknown source 'market_prices'",
+        "question market-leaders is declared twice",
+    ]
+
+
+def test_resolve_serves_only_the_conversations_the_build_can_answer():
+    pack = load_pack(PACKS / "us-equities")
+    resolved = pack.resolve(pack.resolve_profile(None), pack.select_corpora(["market_regulations"]))
+
+    conversations = {conversation["id"]: conversation for conversation in resolved["conversations"]}
+    assert "filings-to-regulations" not in conversations  # needs sec_filings, which is not built
+    assert "regulation-fd-follow-up" in conversations
+    assert all(len(conversation["turns"]) >= 2 for conversation in conversations.values())
+
+
+def test_files_are_read_only_from_an_external_dataset(pack_copy):
+    pack_dir = pack_copy("us-equities")
+    edit_yaml(pack_dir / "pack.yaml", lambda m: m["documents"]["corpora"][3].update(origin="ecfr-title-17"))
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert raised.value.errors == [
+        "corpus world_news: files are read from an external dataset, so the origin must be external"
+    ]
 
 
 def test_schema_errors_name_the_offending_field(pack_copy):
@@ -82,46 +156,68 @@ def test_schema_errors_name_the_offending_field(pack_copy):
     assert raised.value.errors[0].startswith("pack.yaml: prediction/population/ids: ")
 
 
-def test_resolve_serves_only_what_the_build_contains(market_pack):
-    corpora = market_pack.select_corpora(["market_regulations"])
-    resolved = market_pack.resolve("interactive", corpora)
+def test_resolve_serves_only_what_the_build_contains(synthetic_pack, tmp_path):
+    corpora = synthetic_pack.select_corpora(["market_regulations"])
+    resolved = synthetic_pack.resolve("interactive", corpora, market_root=tmp_path)
 
-    assert [source["id"] for source in resolved["sources"]] == ["market_analysis_structured", "market_regulations"]
+    assert [source["id"] for source in resolved["sources"]] == ["market_data", "market_regulations"]
     questions = [question["id"] for question in resolved["questions"]]
-    assert "market-regulations-cybersecurity" in questions
-    assert "market-news-cybersecurity-disclosures" not in questions  # needs market_news, which is not built
-    assert "market-qualification-universe-scan" not in questions  # qualification profile only
-    assert list(resolved["analytics"]["universes"]) == ["reviewed_assets"]
+    assert "market-leaders" in questions
+    assert "cyber-disclosure-rules" not in questions  # needs sec_filings, which is not built
+    assert "large-universe-scan" not in questions  # standard and large profiles only
+    assert "intraday-ranges" not in questions  # 1-minute profiles only
+    assert list(resolved["analytics"]["universes"]) == ["top_12", "all_assets"]
     assert resolved["analytics"]["relationship_graph"]["mode"] == "full_correlation"
-    assert resolved["structured"]["database"] == "structured/market_analysis.duckdb"
+    assert resolved["structured"]["database"] == "structured/synthetic_market.duckdb"
+    queries = resolved["documents"].pop("benchmark_queries")
     assert resolved["documents"] == {
-        "collection": "aiq_market_intelligence_current",
+        "collection": "synthetic_market_documents",
         "sources": ["market_regulations"],
         "path": "corpus/documents.jsonl",
     }
+    # The Milvus comparison's held-out queries: only those on the corpora the build indexed
+    assert len(queries) == 6
+    assert all(query["sources"] == ["market_regulations"] for query in queries)
 
 
-def test_default_corpora_include_the_briefs(market_pack):
-    sources = [corpus["source"] for corpus in market_pack.select_corpora(None)]
-    assert sources == ["market_news", "market_regulations", "market_briefs"]
+def test_resolve_reports_the_bars_a_profile_writes(synthetic_pack, tmp_path):
+    """Every profile's bars are imported as minute bars, but only the 1-minute profiles have more than one a day."""
+    daily = synthetic_pack.resolve("standard", [], market_root=tmp_path)["market"]["bars"]
+    minutes = synthetic_pack.resolve("intraday", [], market_root=tmp_path)["market"]["bars"]
+
+    assert (daily["frequency"], minutes["frequency"]) == ("1d", "1min")
+    assert daily["root"] == str(tmp_path)
+
+
+def test_default_corpora_skip_opt_in_ones():
+    pack = load_pack(PACKS / "us-equities")
+
+    assert [corpus["source"] for corpus in pack.select_corpora(None)] == [
+        "sec_filings",
+        "market_regulations",
+        "market_regulations",  # the eCFR and the Federal Register rule
+    ]
+    assert [corpus["source"] for corpus in pack.select_corpora(["world_news"])] == ["world_news"]
     with pytest.raises(PackError, match="no corpus for"):
-        market_pack.select_corpora(["market_prices"])
+        pack.select_corpora(["market_prices"])
 
 
-def test_default_corpora_skip_opt_in_ones(pack_copy):
-    pack_dir = pack_copy()
+def test_a_source_s_corpora_are_all_opt_in_or_none_are(pack_copy):
+    pack_dir = pack_copy("us-equities")
     edit_yaml(pack_dir / "pack.yaml", lambda m: m["documents"]["corpora"][2].update(opt_in=True))
-    pack = load_pack(pack_dir)
 
-    assert [corpus["source"] for corpus in pack.select_corpora(None)] == ["market_news", "market_regulations"]
-    assert [corpus["source"] for corpus in pack.select_corpora(["market_briefs"])] == ["market_briefs"]
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert raised.value.errors == ["source market_regulations has opt-in and default corpora"]
 
 
-def test_profiles(market_pack):
-    assert market_pack.resolve_profile(None) == "qualification"
-    assert market_pack.resolve_profile("interactive") == "interactive"
+def test_profiles(synthetic_pack):
+    assert synthetic_pack.resolve_profile(None) == "standard"
+    assert synthetic_pack.resolve_profile("ci") == "ci"
     with pytest.raises(PackError, match="unknown profile"):
-        market_pack.resolve_profile("huge")
+        synthetic_pack.resolve_profile("huge")
+    assert load_pack(PACKS / "us-equities").resolve_profile(None) == "default"
 
 
 def test_digest_tracks_build_inputs_only(pack_copy):
@@ -130,11 +226,37 @@ def test_digest_tracks_build_inputs_only(pack_copy):
     digest = pack.digest("interactive", corpora, "builder")
 
     assert pack.digest("interactive", corpora, "builder") == digest
-    assert pack.digest("qualification", corpora, "builder") != digest
+    assert pack.digest("standard", corpora, "builder") != digest
     assert pack.digest("interactive", corpora[:1], "builder") != digest
     assert pack.digest("interactive", corpora, "another builder") != digest
     (pack.directory / "README.md").write_text("data card")
     (pack.directory / "eval" / "notes.md").write_text("not an input")
+    # data generate's resumable work directory, left by an interrupted run
+    (pack.directory / "text" / ".work" / "seeds").mkdir(parents=True)
+    (pack.directory / "text" / ".work" / "seeds" / "companies.parquet").write_bytes(b"seed")
     assert pack.digest("interactive", corpora, "builder") == digest
     (pack.directory / "ontology.yaml").write_text(pack.path("ontology.yaml").read_text() + "\n")
     assert pack.digest("interactive", corpora, "builder") != digest
+
+
+def test_benchmark_queries_must_search_corpora_of_the_pack(pack_copy):
+    pack_dir = pack_copy()
+
+    def add_query(manifest):
+        manifest["documents"]["benchmark_queries"].append({"query": "anything", "sources": ["market_data"]})
+
+    edit_yaml(pack_dir / "pack.yaml", add_query)
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert raised.value.errors == ["benchmark query 16: ['market_data'] have no corpus"]
+
+
+def test_question_tools_are_the_tool_registry_pills():
+    """questions.yaml `tools` and the UI's pills are one vocabulary: Pill in contracts/tool-registry.schema.json."""
+    contract = json.loads((DATA_ROOT.parent / "contracts" / "tool-registry.schema.json").read_text())
+    schema = json.loads((DATA_ROOT / "schemas" / "questions.schema.json").read_text())
+    question = schema["properties"]["questions"]["items"]["properties"]
+
+    assert question["tools"]["items"]["enum"] == contract["$defs"]["Pill"]["enum"]

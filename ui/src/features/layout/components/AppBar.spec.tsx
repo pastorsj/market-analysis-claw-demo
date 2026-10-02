@@ -39,10 +39,10 @@ describe('AppBar', () => {
     expect(useLayoutStore.getState().rightPanel).toBe('data-sources')
   })
 
-  test('hides the data sources action when asked', () => {
-    render(<AppBar showDataSources={false} />)
+  test('disables the data sources action when asked', () => {
+    render(<AppBar isDataSourceSelectionDisabled />)
 
-    expect(screen.queryByRole('button', { name: 'Add data sources' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add data sources' })).toBeDisabled()
   })
 
   test('links to Phoenix only when it is configured', () => {
@@ -57,11 +57,37 @@ describe('AppBar', () => {
     )
   })
 
+  test('shows Phoenix disabled in replay, where there are no traces', async () => {
+    render(<AppBar />, { config: { mode: 'replay', phoenixUrl: 'http://127.0.0.1:6006' } })
+    const link = screen.getByTestId('phoenix-observability-link')
+
+    expect(link).not.toHaveAttribute('href')
+    expect(link).toHaveAttribute('aria-disabled', 'true')
+    expect(link).toHaveTextContent('Phoenix')
+    await userEvent.hover(link)
+    expect(
+      (await screen.findAllByText('Traces are only available in live mode.')).length
+    ).toBeGreaterThan(0)
+  })
+
   test('switches between light and dark themes', async () => {
     useLayoutStore.setState({ theme: 'light' })
     render(<AppBar />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }))
     expect(useLayoutStore.getState().theme).toBe('dark')
+  })
+
+  test('shows the Default User, whose menu says sign-in is not configured and sets the theme', async () => {
+    useLayoutStore.setState({ theme: 'light' })
+    render(<AppBar />)
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Default User - Authentication Not Configured' })
+    )
+    expect(await screen.findByText('Default User')).toBeInTheDocument()
+    expect(screen.getByText('Authentication Not Configured')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: 'System theme' }))
+    expect(useLayoutStore.getState().theme).toBe('system')
   })
 })

@@ -17,6 +17,7 @@ async def test_pack_lists_questions_the_running_sources_can_answer(api, data_dir
     pack = (await api.get("/v1/pack")).json()
     assert (pack["id"], pack["title"]) == ("market-analysis", "Synthetic Multi-Asset Market Analysis")
     assert [(q["id"], q["featured"]) for q in pack["questions"]] == [("market-leaders", True), ("filings", False)]
+    assert [(c["id"], len(c["turns"])) for c in pack["conversations"]] == [("leaders-follow-up", 2)]
 
     (data_dir / "collection-manifest.json").unlink()
     assert [q["id"] for q in (await api.get("/v1/pack")).json()["questions"]] == ["market-leaders"]
@@ -59,6 +60,7 @@ async def test_preview_returns_the_first_rows(api):
     preview = (await api.get(f"{STRUCTURED}/preview", params={"table": "daily_prices"})).json()
 
     assert preview["columns"] == ["price_id", "asset_id", "close", "traded_at"]
+    assert preview["types"] == ["VARCHAR", "VARCHAR", "DOUBLE", "TIMESTAMP WITH TIME ZONE"]
     assert (len(preview["rows"]), preview["truncated"]) == (100, True)
     assert preview["rows"][0][3].startswith("2026-08-01")
     few = (await api.get(f"{STRUCTURED}/preview", params={"table": "prediction.asset_entities", "limit": 1})).json()
@@ -71,7 +73,12 @@ async def test_query_runs_one_bounded_select(api):
     result = (await api.post(f"{STRUCTURED}/query", json={"sql": sql})).json()
 
     assert result.pop("duration_ms") >= 0
-    assert result == {"columns": ["name", "n"], "rows": [["Alpha", 75], ["Beta", 75]], "truncated": False}
+    assert result == {
+        "columns": ["name", "n"],
+        "types": ["VARCHAR", "BIGINT"],
+        "rows": [["Alpha", 75], ["Beta", 75]],
+        "truncated": False,
+    }
 
 
 @pytest.mark.parametrize(

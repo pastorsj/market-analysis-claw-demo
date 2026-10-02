@@ -32,7 +32,7 @@ api ──▶ hermes-gateway (openshell forward service) ──gRPC/mTLS──�
 | `gateway.toml` | Gateway config (schema v2): bind `0.0.0.0:18080` in its container, health on `:18081`, `grpc_endpoint` `https://127.0.0.1:18080`, runtime images by digest, sandbox namespace `market-demo`, bind mounts off. |
 | `cli.Dockerfile` | CLI image from the sha256-checked release tarball (amd64, arm64). Runs one-off commands and the forwarder. |
 | `providers/switchyard.yaml` | Credential-free inference provider: `POST /v1/chat/completions` and `GET /v1/models` on `host.openshell.internal:4000`. |
-| `providers/receipts.yaml` | Binds `HERMES_RECEIPT_API_KEY` to the API's two `/internal/hermes` routes on `:8000`. Hermes sees only a placeholder; the supervisor substitutes the real key on those routes. |
+| `providers/receipts.yaml` | Binds `HERMES_RECEIPT_API_KEY` to the API's three `/internal/hermes` routes on `:8000` (execution-scope, tool-receipts, llm-calls). Hermes sees only a placeholder; the supervisor substitutes the real key on those routes. |
 
 ## Compose contract
 
@@ -53,30 +53,39 @@ The gateway health endpoint is `http://127.0.0.1:18081/readyz`.
 
 ## Bring-up
 
-Run with `cli="docker compose run --rm -T openshell-cli"`. This is the sequence
-proven on Docker 28.4 (Ubuntu 24.04 arm64, kernel 6.8):
+`demo.sh` runs all of this. By hand, from the repository root, Compose needs the
+OpenShell pins as well as `.env` (a bare `docker compose` fails on the empty
+image names). These helpers work in bash and zsh:
 
 ```bash
+dc() { docker compose --env-file infra/openshell/versions.env --env-file .env "$@"; }
+cli() { dc run --rm -T openshell-cli "$@"; }
+```
+
+This is the sequence proven on Docker 28.4 (Ubuntu 24.04 arm64, kernel 6.8):
+
+```bash
+set -a; . infra/openshell/versions.env; set +a          # the image pins, for the two pulls
 docker pull "$OPENSHELL_SUPERVISOR_IMAGE"; docker pull "$OPENSHELL_SANDBOX_IMAGE"   # else the gateway pulls at start
-docker compose up -d openshell                         # certs and preflight run first
+dc up -d openshell                                      # certs and preflight run first
 curl -fsS http://127.0.0.1:18081/readyz
 
-$cli profile lint -f /providers/switchyard.yaml
-$cli profile import -f /providers/switchyard.yaml      # create-only; see "Updating profiles"
-$cli profile import -f /providers/receipts.yaml
-$cli provider create --name switchyard --type switchyard
-docker compose run --rm -T -e HERMES_RECEIPT_API_KEY openshell-cli \
+cli profile lint -f /providers/switchyard.yaml
+cli profile import -f /providers/switchyard.yaml        # create-only; see "Updating profiles"
+cli profile import -f /providers/receipts.yaml
+cli provider create --name switchyard --type switchyard
+dc run --rm -T -e HERMES_RECEIPT_API_KEY openshell-cli \
   provider create --name receipts --type receipts --credential HERMES_RECEIPT_API_KEY
 
 # Start Switchyard, the MCP servers, Phoenix and the API first: Hermes parks an
 # MCP server it cannot reach at startup.
-docker compose run --rm -T -e HERMES_API_SERVER_KEY --entrypoint sh openshell-cli -c \
+dc run --rm -T -e HERMES_API_SERVER_KEY --entrypoint sh openshell-cli -c \
   'exec openshell sandbox create --name hermes --from market-demo/hermes-sandbox:local \
      --provider switchyard --provider receipts --no-auto-providers \
      --label demo.fingerprint=<hash> --env "API_SERVER_KEY=$HERMES_API_SERVER_KEY" \
      --no-credential-warnings --detach --no-tty -- /opt/hermes/.venv/bin/hermes gateway run'
-$cli sandbox get hermes -o json                        # poll until .phase == "Ready" (about 5 s)
-docker compose up -d hermes-gateway
+cli sandbox get hermes -o json                          # poll until .phase == "Ready" (about 5 s)
+dc up -d hermes-gateway
 ```
 
 - `--credential KEY` and `sh -c` with `-e KEY` keep secret values off the host
@@ -96,9 +105,9 @@ docker compose up -d hermes-gateway
 
 ```bash
 # first: step 2 of "Leaked volumes" below
-$cli sandbox delete hermes      # before stopping the gateway; gone in about 5 s
+cli sandbox delete hermes       # before stopping the gateway; gone in about 5 s
 # then: step 3 of "Leaked volumes"
-docker compose down -v          # never --remove-orphans on a shared project
+dc down -v                      # never --remove-orphans on a shared project
 ```
 
 ### Leaked volumes
@@ -157,7 +166,7 @@ the profile, and `profile update <ID> --file <FILE>` requires the current
 `resource_version`. Prepend it to the file from this directory:
 
 ```bash
-docker compose run --rm -T --entrypoint sh openshell-cli -c \
+dc run --rm -T --entrypoint sh openshell-cli -c \
   'v=$(openshell profile export receipts -o json | jq -r .resource_version)
    { echo "resource_version: $v"; cat /providers/receipts.yaml; } > /tmp/profile.yaml
    openshell profile update receipts --file /tmp/profile.yaml'
@@ -188,8 +197,8 @@ Container Isolation. amd64 and arm64 both work.
 
 | Symptom | Look at |
 |---|---|
-| Gateway not ready | `docker compose logs openshell-preflight openshell` |
-| Sandbox stuck in `Provisioning` | `$cli sandbox get hermes -o json` (`conditions`), `$cli logs hermes` |
-| A tool call fails while the sandbox is Ready | `endpoint_statuses` in `sandbox get`; `$cli logs hermes --since 5m` shows `DENIED` lines with the binary, host and reason |
+| Gateway not ready | `./scripts/demo.sh logs openshell-preflight openshell` |
+| Sandbox stuck in `Provisioning` | `cli sandbox get hermes -o json` (`conditions`), `cli logs hermes` |
+| A tool call fails while the sandbox is Ready | `endpoint_statuses` in `sandbox get`; `cli logs hermes --since 5m` shows `DENIED` lines with the binary, host and reason |
 | Receipts return 403 `credential_endpoint_mismatch` | The request left the routes bound in `providers/receipts.yaml` |
-| Effective policy | `$cli policy get hermes --full` (includes the `_provider_*` rules) |
+| Effective policy | `cli policy get hermes --full` (includes the `_provider_*` rules) |

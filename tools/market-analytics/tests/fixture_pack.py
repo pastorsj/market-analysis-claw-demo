@@ -3,7 +3,9 @@
 """A tiny pack that satisfies market-analytics/v1, laid out like /data/active.
 
 Four assets over 70 sessions. Alpha and beta share a common return factor, so they are strongly correlated;
-gamma has one planted anomalous session (a crash on heavy volume) at GAMMA_SPIKE; omega is not reviewed.
+gamma has one planted anomalous session (a crash on heavy volume) at GAMMA_SPIKE; omega is not reviewed. Alpha,
+beta and gamma also have minute bars on three sessions (fixture_bars.py). `daily_only=True` writes the pack with
+neither news nor minute bars, like a real-data pack without ticker-linked news.
 """
 
 import json
@@ -15,6 +17,7 @@ from pathlib import Path
 import duckdb
 import numpy as np
 import pandas as pd
+from fixture_bars import per_symbol
 
 SESSIONS = pd.bdate_range("2026-05-01", periods=70)
 GAMMA_SPIKE = 60  # session index of gamma's planted anomaly
@@ -119,7 +122,7 @@ def write_prediction_database(path: Path, prices: pd.DataFrame) -> None:
         )
 
 
-def write_pack(root: Path) -> Path:
+def write_pack(root: Path, *, daily_only: bool = False) -> Path:
     """Write the pack under `root` and return it."""
     (root / "tables").mkdir()
     (root / "structured").mkdir()
@@ -133,8 +136,9 @@ def write_pack(root: Path) -> Path:
         "asset_relationships": pd.DataFrame(
             {"source_asset_id": ["asset-alpha", "asset-beta"], "target_asset_id": ["asset-beta", "asset-gamma"]}
         ),
-        "market_news": market_news(),
     }
+    if not daily_only:
+        tables["market_news"] = market_news()
     for name, frame in tables.items():
         frame.to_parquet(root / "tables" / f"{name}.parquet", index=False)
     write_prediction_database(root / "structured" / "market_fixture.duckdb", prices)
@@ -145,7 +149,7 @@ def write_pack(root: Path) -> Path:
         "structured": {"source": "market_fixture_structured", "database_name": "market_fixture"},
         "analytics": {
             "contract": "market-analytics/v1",
-            "news_table": "market_news",
+            "news_table": None if daily_only else "market_news",
             "session_close_utc": "21:00",
             "universes": {
                 "reviewed_assets": {"description": "The three reviewed issuers.", "where": "is_reviewed"},
@@ -167,5 +171,8 @@ def write_pack(root: Path) -> Path:
             "templates": TEMPLATES,
         },
     }
+    if not daily_only:
+        bars = per_symbol(root / "minute-bars", symbols=["asset-alpha", "asset-beta", "asset-gamma"])
+        manifest["market"] = {"bars": bars}
     (root / "pack.json").write_text(json.dumps(manifest, indent=2))
     return root

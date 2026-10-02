@@ -11,6 +11,7 @@ import pytest
 from conftest import FIXTURES
 from conftest import PACKS
 
+from demo_data import corpus
 from demo_data import structured
 from demo_data.cli import main
 
@@ -30,7 +31,13 @@ def run(tmp_path, capsys):
 @pytest.fixture
 def no_tables(monkeypatch):
     """Skip the structured build (generator, DuckDB, ontology) in tests about what pack.json lists."""
-    monkeypatch.setattr(structured, "build", lambda pack, profile, contracts, out: {"assets": 0})
+    monkeypatch.setattr(structured, "build", lambda pack, profile, contracts, out, **_: {"rows": {"assets": 0}})
+
+
+@pytest.fixture
+def no_documents(monkeypatch):
+    """Skip the corpus downloads in tests about which part a build holds."""
+    monkeypatch.setattr(corpus, "build", lambda pack, corpora, downloads, out, **_: {c["source"]: 0 for c in corpora})
 
 
 def active(tmp_path: Path) -> Path:
@@ -86,27 +93,27 @@ def test_verify_notices_a_changed_file(run, tmp_path):
 
 
 def test_a_structured_build_lists_no_documents_until_its_corpus_is_built(run, tmp_path, no_tables):
-    code, _, _ = run("prepare", "--structured", packs=PACKS)  # the default corpora: news, regulations and briefs
+    code, _, _ = run("prepare", "--structured", packs=PACKS)  # synthetic-market, with SEC filings and regulations
 
     assert code == 0
     pack = active_pack(tmp_path)
-    assert [source["id"] for source in pack["sources"]] == ["market_analysis_structured"]
+    assert [source["id"] for source in pack["sources"]] == ["market_data"]
     needed = {source for question in pack["questions"] for source in question["sources"]}
-    assert needed == {"market_analysis_structured"}
+    assert needed == {"market_data"}
     assert "documents" not in pack
 
 
-def test_a_corpus_alone_fails_until_the_same_build_gets_its_structured_part(run, tmp_path, no_tables):
-    code, out, err = run("prepare", "--corpus", "--corpora", "market_briefs", packs=PACKS)
+def test_a_corpus_alone_fails_until_the_same_build_gets_its_structured_part(run, tmp_path, no_tables, no_documents):
+    code, out, err = run("prepare", "--corpus", "--corpora", "market_regulations", packs=PACKS)
 
     assert code == 1
     assert "corpus: built" in out and "has no structured part" in err
     assert not (tmp_path / "data" / "active").exists()
 
-    assert run("prepare", "--structured", "--corpora", "market_briefs", packs=PACKS)[0] == 0
+    assert run("prepare", "--structured", "--corpora", "market_regulations", packs=PACKS)[0] == 0
     pack = active_pack(tmp_path)
-    assert [source["id"] for source in pack["sources"]] == ["market_analysis_structured", "market_briefs"]
-    assert pack["documents"]["sources"] == ["market_briefs"]
+    assert [source["id"] for source in pack["sources"]] == ["market_data", "market_regulations"]
+    assert pack["documents"]["sources"] == ["market_regulations"]
     assert set(pack["parts"]) == {"corpus", "structured"}
 
 
@@ -116,7 +123,7 @@ def test_prepare_fails_fast_without_a_required_variable(run, tmp_path, monkeypat
     code, _, err = run("prepare", "--corpus", packs=PACKS)
 
     assert code == 1
-    hint = "market_news needs SEC_USER_AGENT (or skip it: set DATA_CORPORA=market_regulations,market_briefs for both"
+    hint = "sec_filings needs SEC_USER_AGENT (or skip it: set DATA_CORPORA=market_regulations for both"
     assert hint in err
     assert not (tmp_path / "data" / "builds").exists()
 

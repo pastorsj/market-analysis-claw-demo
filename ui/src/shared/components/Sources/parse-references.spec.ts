@@ -12,6 +12,18 @@ describe('splitReferences', () => {
     expect(sources).toEqual([])
   })
 
+  test('keeps the API evidence limitation, which precedes the Sources list, in the body', () => {
+    const content =
+      'A claim [1].\n\n## Evidence limitation\n\nOne or more citations did not match evidence recorded for this run.' +
+      '\n\n## Sources\n\n- [1] Market analytics result — market scan — evidence `hermes-receipt:abc`'
+    const { body, sources } = splitReferences(content)
+    expect(body).toBe(
+      'A claim [1].\n\n## Evidence limitation\n\nOne or more citations did not match evidence recorded for this run.',
+    )
+    expect(sources).toHaveLength(1)
+    expect(sources[0].evidence).toEqual({ referenceId: 'hermes-receipt:abc' })
+  })
+
   test('strips a **References:** block and parses web sources', () => {
     const content =
       'NVIDIA shipped record volume [1].\n\n**References:**\n- [1] NVIDIA Q4 results - https://www.nvidia.com/news\n- [2] Industry brief - https://docs.example.ai/report'

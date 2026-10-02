@@ -63,6 +63,23 @@ class Settings(BaseSettings):
     agent_efficient_model: str = ""
     agent_capable_model: str = ""
 
+    # Market analytics, for the Benchmark tab's matched CPU/GPU runs of a finished job's calls
+    market_analytics_url: str = "http://market-analytics:3010"
+    benchmark_pairs: int = Field(default=5, ge=1, le=20)
+    benchmark_budget_seconds: float = Field(default=20, gt=0, le=300)
+
+    # Voice input (demo_api/speech): NVIDIA Nemotron ASR on build.nvidia.com. Off unless enabled and keyed.
+    speech_input_enabled: bool = False
+    speech_api_key: SecretStr = SecretStr("")  # an nvapi- key; demo.sh fills it from the retriever's
+    speech_input_max_seconds: int = Field(default=60, ge=1, le=90)
+    speech_max_concurrent: int = Field(default=2, ge=1, le=8)
+    speech_asr_server: str = Field(default="grpc.nvcf.nvidia.com:443", pattern=r"^[A-Za-z0-9.-]+:[0-9]{1,5}$")
+    speech_asr_function_id: str = Field(default="bb0837de-8c7b-481f-9ec8-ef5663e9c1fa", min_length=1)
+    speech_asr_language: str = "en-US"
+    speech_asr_timeout_seconds: float = Field(default=60, ge=1, le=300)
+    # A public model id on build.nvidia.com for the deletion-only cleanup; empty = no cleanup
+    speech_cleanup_model: str = ""
+
     # Phoenix, for the job trace link
     aiq_phoenix_internal_url: str = "http://phoenix:6006"
     phoenix_project: str = "market-analysis-agent"

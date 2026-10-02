@@ -12,8 +12,10 @@
  * - DataSourcesPanel (right, push panel)
  * - the execution workspace, when a run is opened from an answer
  *
- * In replay mode the sessions are the data pack's recordings and there is no
- * composer or data source selection.
+ * The data pack's recordings are listed under "Recorded", beside the browser's
+ * own sessions ("My sessions"), as in the original demo UI. A recorded session
+ * is read only: its composer and data source selection are disabled. Replay
+ * mode has the recordings only.
  */
 
 'use client'
@@ -21,15 +23,15 @@
 import { type FC, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { Flex } from '@/adapters/ui'
-import { useAppConfig, useExecutionFeature, type RecordedSessionSummary } from '@/shared/context'
+import { useAppConfig, useExecutionFeature } from '@/shared/context'
 import { cn } from '@/shared/lib/cn'
 import { AppBar } from './AppBar'
-import { SessionsPanel } from './SessionsPanel'
+import { SessionsPanel, type RecordedCollection } from './SessionsPanel'
 import { ChatArea } from './ChatArea'
 import { InputArea } from './InputArea'
 import { ResearchPanel } from './ResearchPanel'
 import { DataSourcesPanel } from './DataSourcesPanel'
-import { useChatStore, useDeepResearch, NoSourcesBanner } from '@/features/chat'
+import { useChatStore, useDeepResearch, NoSourcesBanner, type ChatMessage } from '@/features/chat'
 import {
   hasActiveDeepResearchJob,
   hasCompletedDeepResearchReport,
@@ -37,6 +39,7 @@ import {
 } from '@/features/chat/lib/session-activity'
 import { useLayoutStore } from '../store'
 import { useRecordedSessions } from '../use-recorded-sessions'
+import type { DemoScenario } from '../scenarios'
 import { useSessionUrl } from '@/hooks/use-session-url'
 
 /** A question to place in the composer, e.g. a featured question from the landing page. */
@@ -47,13 +50,26 @@ export interface InitialQuestion {
 
 interface MainLayoutProps {
   initialQuestion?: InitialQuestion | null
+  /** The active data pack's questions, offered by the composer's demo scenario picker */
+  demoScenarios?: DemoScenario[]
+}
+
+/** The question, and its data sources, that started a job in this conversation. */
+const turnOfJob = (
+  messages: readonly ChatMessage[] | undefined,
+  jobId: string | undefined
+): { question: string; sourceIds: string[] } | null => {
+  const answer = messages?.findIndex((message) => message.deepResearchJobId === jobId) ?? -1
+  if (!messages || !jobId || answer < 0) return null
+  const asked = messages.slice(0, answer).findLast((message) => message.role === 'user')
+  return asked ? { question: asked.content, sourceIds: asked.enabledDataSources ?? [] } : null
 }
 
 /**
  * Main application layout with all panels and regions.
  * Chat state is managed via the useChatStore.
  */
-export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
+export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null, demoScenarios }) => {
   const { mode } = useAppConfig()
   const isReplay = mode === 'replay'
   const { Workspace } = useExecutionFeature()
@@ -87,11 +103,22 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
   const closeExecution = useLayoutStore((s) => s.closeExecution)
   const availableDataSources = useLayoutStore((s) => s.availableDataSources)
   const executionOpen = Boolean(Workspace && execution)
+  const executionTurn = useMemo(
+    () => turnOfJob(currentConversation?.messages, execution?.jobId),
+    [currentConversation?.messages, execution?.jobId]
+  )
 
   // Follows the current job's SSE stream
   useDeepResearch()
 
-  const { sessions: recordedSessions, open: openRecordedSession } = useRecordedSessions()
+  const {
+    sessions: recordedSessions,
+    status: recordedStatus,
+    error: recordedError,
+    loadingId: recordedLoadingId,
+    open: openRecordedSession,
+    retry: retryRecordedSessions,
+  } = useRecordedSessions()
 
   // Sync saved sessions with the ?session= query parameter
   const { updateSessionUrl, clearSessionUrl } = useSessionUrl({ enabled: !isReplay })
@@ -110,18 +137,39 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
     clearSessionUrl()
   }, [initialQuestion, availableDataSources, startNewSessionDraft, clearSessionUrl])
 
-  const handleSelectSession = useCallback(
+  const handleSelectRecordedSession = useCallback(
     (sessionId: string) => {
       closeExecution()
+      clearSessionUrl()
+      void openRecordedSession(sessionId)
+    },
+    [clearSessionUrl, closeExecution, openRecordedSession]
+  )
+
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
       if (isReplay) {
-        void openRecordedSession(sessionId)
+        handleSelectRecordedSession(sessionId)
         return
       }
+      closeExecution()
       selectConversation(sessionId)
       updateSessionUrl(sessionId)
     },
-    [closeExecution, isReplay, openRecordedSession, selectConversation, updateSessionUrl]
+    [closeExecution, handleSelectRecordedSession, isReplay, selectConversation, updateSessionUrl]
   )
+
+  // A recorded session restored with the page: load its run again, since the
+  // execution records are not kept across reloads.
+  const reopenedRecording = useRef(false)
+  useEffect(() => {
+    if (reopenedRecording.current || recordedStatus !== 'ready') return
+    reopenedRecording.current = true
+    const restored = useChatStore.getState().currentConversation
+    if (restored?.readOnly && recordedSessions.some((session) => session.id === restored.id)) {
+      void openRecordedSession(restored.id)
+    }
+  }, [openRecordedSession, recordedSessions, recordedStatus])
 
   // Start a new unsaved draft session and clear URL until first interaction.
   // Open Data Sources panel so it stays visible (default panel for new sessions).
@@ -150,7 +198,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
   }, [deleteAllConversations, clearSessionUrl])
 
   const sessions = useMemo(() => {
-    if (isReplay) return recordedSessions.map(toRecordedSessionItem)
+    // Replay mode has no sessions of its own: its recordings are under Recorded
+    if (isReplay) return []
     return sortConversationsByLastUserMessage(
       currentUserId ? conversations.filter((c) => c.userId === currentUserId) : []
     ).map((conv) => ({
@@ -164,12 +213,40 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
     }))
   }, [
     isReplay,
-    recordedSessions,
     conversations,
     currentUserId,
     isDeepResearchStreaming,
     deepResearchOwnerConversationId,
   ])
+
+  const isRecordedSession = isReplay || currentConversation?.readOnly === true
+  const recordedConversationId = currentConversation?.readOnly ? currentConversation.id : null
+  // Live mode lists the recordings once they have loaded, if the pack has any.
+  const showRecorded = isReplay || (recordedStatus === 'ready' && recordedSessions.length > 0)
+  const recorded = useMemo<RecordedCollection | undefined>(
+    () =>
+      showRecorded
+        ? {
+            sessions: recordedSessions,
+            status: recordedStatus,
+            error: recordedError,
+            selectedId: recordedConversationId,
+            loadingId: recordedLoadingId,
+            onSelect: handleSelectRecordedSession,
+            onRetry: retryRecordedSessions,
+          }
+        : undefined,
+    [
+      showRecorded,
+      recordedSessions,
+      recordedStatus,
+      recordedError,
+      recordedConversationId,
+      recordedLoadingId,
+      handleSelectRecordedSession,
+      retryRecordedSessions,
+    ]
+  )
 
   return (
     <Flex direction="col" className="h-screen min-w-[768px] overflow-x-auto overflow-y-hidden">
@@ -179,7 +256,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
         onNewSession={executionOpen ? closeExecution : handleNewSession}
         newSessionActionLabel={executionOpen ? 'Back to answer' : 'Create new session'}
         isNewSessionDisabled={executionOpen ? false : isReplay || isStreaming}
-        showDataSources={!isReplay}
+        isDataSourceSelectionDisabled={isRecordedSession}
       />
 
       {/* Main content area: in-flow panels reflow the center column (push, not overlay) */}
@@ -193,6 +270,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
             onDeleteSession={handleDeleteSession}
             onDeleteAllSessions={handleDeleteAllSessions}
             onRenameSession={updateConversationTitle}
+            recorded={recorded}
             readOnly={isReplay}
           />
         )}
@@ -207,12 +285,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
           )}
         >
           <ChatArea compact={executionOpen} />
-          {!isReplay && (
-            <>
-              <NoSourcesBanner />
-              <InputArea />
-            </>
-          )}
+          {!isReplay && <NoSourcesBanner />}
+          <InputArea scenarios={demoScenarios} showDemoScenarios={!executionOpen} />
         </div>
 
         {Workspace && execution ? (
@@ -221,12 +295,14 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
               key={execution.jobId}
               jobId={execution.jobId}
               focus={execution.focus}
+              question={executionTurn?.question ?? null}
+              sourceIds={executionTurn?.sourceIds}
               onClose={closeExecution}
             />
           </div>
         ) : (
           <>
-            {!isReplay && <DataSourcesPanel />}
+            {!isRecordedSession && <DataSourcesPanel />}
             <ResearchPanel />
           </>
         )}
@@ -234,10 +310,3 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null }) => {
     </Flex>
   )
 }
-
-const toRecordedSessionItem = (session: RecordedSessionSummary) => ({
-  id: session.id,
-  title: session.title,
-  date: new Date(session.recordedAt),
-  hasCompletedReport: true,
-})

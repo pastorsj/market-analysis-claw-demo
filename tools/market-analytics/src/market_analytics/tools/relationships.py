@@ -47,4 +47,4 @@ def run(data: MarketData, *, top_k: int = 10) -> Output:
             for row in strongest.to_dict("records")
         ],
     )
-    return Output(payload, rows_scanned=len(edges))
+    return Output(payload, rows_scanned=len(edges), assets=payload.node_count)

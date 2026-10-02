@@ -59,7 +59,7 @@ Anything the policy does not allow is denied.
 | Filesystem | `/opt/hermes` and `/opt/agent` read-only; `/opt/data` and the workspace read-write; OpenShell's baseline system paths |
 | Landlock | `hard_requirement`: the sandbox fails closed on a kernel without it |
 | `retrieval_mcp` | `host.openshell.internal:8120/mcp`: the MCP handshake, `tools/list`, `ping`, and `tools/call` for `retrieve_evidence` |
-| `market_analytics_mcp` | `:3010/mcp`: the same, for the six market tools and `predict_asset_outcomes` |
+| `market_analytics_mcp` | `:3010/mcp`: the same, for the seven market tools and `predict_asset_outcomes` |
 | `auto_ontology_mcp` | `:3003/mcp`: the same, for `ask_question` |
 | `phoenix_otlp` | `:6006`: `POST /v1/traces` only |
 | Provider `switchyard` | `:4000`: `POST /v1/chat/completions` and `GET /v1/models`. No credential: Switchyard holds the model key |
@@ -85,9 +85,13 @@ cannot reach at startup. Then it:
 3. creates the sandbox `hermes` and waits until it is `Ready`;
 4. starts the `hermes-gateway` forwarder.
 
-The sandbox carries a fingerprint label: a hash of the agent image ID, the provider profiles, `gateway.toml`,
-the OpenShell pins, `AGENT_FEATURES` and the two Hermes keys. `up` recreates the sandbox only when the
-fingerprint changes, so a repeat `up` keeps it. `./scripts/demo.sh restart agent` recreates it on demand.
+The sandbox carries a fingerprint label: a hash of the agent image ID, the tool servers' image IDs, the active
+data pack's `pack.yaml` and `DATA_PACK_PROFILE`, the provider profiles, `gateway.toml`, the OpenShell pins,
+`AGENT_FEATURES` and the two Hermes keys. `up` and `data prepare` recreate the sandbox only when the fingerprint
+changes, so a repeat `up` keeps it. Hermes lists each MCP server's tools once, when it starts, and the pack and
+its profile shape those tools (the universes, the relationship graph, whether there are minute bars). So a new
+tool image or a `DATA_PACK` or `DATA_PACK_PROFILE` switch must recreate it: otherwise the model keeps seeing the
+previous build's tools and fails its calls. `./scripts/demo.sh restart agent` recreates it on demand.
 `./scripts/demo.sh down` deletes the sandbox through the gateway before it stops Compose.
 
 The OpenShell CLI and `jq` run in the `openshell-cli` container with their own client volume, so the host
@@ -101,8 +105,9 @@ needs only Docker and curl, and the host's `~/.config/openshell` is never read o
 
 It runs a script in the sandbox as Hermes' interpreter and passes only if:
 the receipt key is a placeholder; egress to a host outside the policy is blocked; Switchyard's model list is
-allowed but `POST /v1/responses` is denied; the API's public routes are denied; and the plugin's three
-internal routes reach the API.
+allowed but `POST /v1/responses` is denied; the API's public routes are denied; market analytics'
+`POST /benchmark`, which only the API calls, is denied (the policy allows its `/mcp` only); and the plugin's
+three internal routes reach the API.
 
 `./scripts/demo.sh logs agent [-f]` shows Hermes' log, including `DENIED` lines with the binary, host and
 reason of any refused connection.

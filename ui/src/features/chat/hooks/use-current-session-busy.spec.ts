@@ -50,7 +50,7 @@ describe('useIsCurrentSessionBusy', () => {
   // ─── Ephemeral State Tests ─────────────────────────────────────
 
   it('returns false when no operations are active', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector(idleState)
     )
 
@@ -59,7 +59,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns true while a question is being submitted', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({ ...idleState, isStreaming: true })
     )
 
@@ -68,7 +68,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns true when deep research SSE is streaming and owned by the current session', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({
         ...idleState,
         isDeepResearchStreaming: true,
@@ -82,7 +82,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns true when deep research status is "submitted" for the current session', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({
         ...idleState,
         deepResearchStatus: 'submitted',
@@ -95,7 +95,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns true when deep research status is "running" for the current session', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({
         ...idleState,
         deepResearchStatus: 'running',
@@ -110,7 +110,7 @@ describe('useIsCurrentSessionBusy', () => {
   it('returns false when deep research is streaming but owned by another session', () => {
     // Session A owns the background deep research; session B (current) must not be
     // marked busy, so no Stop button renders and B's socket cannot be disconnected.
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({
         ...idleState,
         isDeepResearchStreaming: true,
@@ -125,7 +125,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns false when deep research status is "success" (terminal state)', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({ ...idleState, deepResearchStatus: 'success' })
     )
 
@@ -134,7 +134,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns false when deep research status is "failure" (terminal state)', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({ ...idleState, deepResearchStatus: 'failure' })
     )
 
@@ -143,7 +143,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns false when deep research status is "interrupted" (terminal state)', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({ ...idleState, deepResearchStatus: 'interrupted' })
     )
 
@@ -152,7 +152,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns true when a submission and a job are both active', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({
         ...idleState,
         isStreaming: true,
@@ -172,8 +172,8 @@ describe('useIsCurrentSessionBusy', () => {
     // Simulate page refresh: ephemeral state is reset, but persisted messages indicate active job
     mockHasActiveJob.mockReturnValue(true)
 
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
-      selector(idleState) // All ephemeral state is idle
+    mockUseChatStore.mockImplementation(
+      (selector: (state: object) => unknown) => selector(idleState) // All ephemeral state is idle
     )
 
     const { result } = renderHook(() => useIsCurrentSessionBusy())
@@ -181,7 +181,7 @@ describe('useIsCurrentSessionBusy', () => {
   })
 
   it('returns false when currentConversation is null', () => {
-    mockUseChatStore.mockImplementation((selector: (state: any) => any) =>
+    mockUseChatStore.mockImplementation((selector: (state: object) => unknown) =>
       selector({ ...idleState, currentConversation: null })
     )
 

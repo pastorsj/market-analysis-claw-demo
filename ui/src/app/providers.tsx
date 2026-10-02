@@ -79,17 +79,24 @@ const useThemeEffect = (theme: ThemeMode): void => {
 }
 
 /**
- * Hook to fetch data sources on app initialization (live mode only).
+ * Hook to fetch data sources on app initialization: from the API in live
+ * mode, from the recordings bundle's pack.json in replay mode.
  */
-const useDataSourcesInit = (enabled: boolean): void => {
+const useDataSourcesInit = (isLive: boolean): void => {
   const fetchDataSources = useLayoutStore((state) => state.fetchDataSources)
   const availableDataSources = useLayoutStore((state) => state.availableDataSources)
+  const replayRequested = useRef(false)
 
   useEffect(() => {
-    if (enabled && availableDataSources === null) {
+    if (availableDataSources !== null) return
+    if (isLive) {
       fetchDataSources()
+    } else if (!replayRequested.current) {
+      // Once: a bundle without pack.json leaves replay without sources
+      replayRequested.current = true
+      fetchDataSources('recordings')
     }
-  }, [enabled, fetchDataSources, availableDataSources])
+  }, [isLive, fetchDataSources, availableDataSources])
 }
 
 /**

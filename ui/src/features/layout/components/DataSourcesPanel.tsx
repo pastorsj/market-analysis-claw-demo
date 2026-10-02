@@ -157,7 +157,7 @@ export const DataSourcesPanel: FC = memo(function DataSourcesPanel() {
             title={isBusy ? 'Data source changes disabled during active operations' : undefined}
           >
             <Text kind="label/semibold/sm" className="text-primary">
-              Disable / Enable All
+              {anyEnabled ? 'Disable Selected' : 'Enable Compatible'}
             </Text>
             <Switch
               size="small"
@@ -168,8 +168,8 @@ export const DataSourcesPanel: FC = memo(function DataSourcesPanel() {
                 isBusy
                   ? 'Toggle all connections (disabled)'
                   : anyEnabled
-                    ? 'Disable all connections'
-                    : 'Enable all connections'
+                    ? 'Disable selected connections'
+                    : 'Enable compatible connections'
               }
             />
           </Flex>
@@ -180,6 +180,10 @@ export const DataSourcesPanel: FC = memo(function DataSourcesPanel() {
             className="text-subtle mb-3 font-mono uppercase tracking-[0.08em]"
           >
             Individual Connections ({sources.length})
+          </Text>
+          <Text kind="body/regular/xs" className="text-subtle mb-3">
+            Each pack has one market database plus its document collections. Enable any
+            combination; the agent uses only the enabled ones.
           </Text>
 
           {dataSourcesLoading ? (

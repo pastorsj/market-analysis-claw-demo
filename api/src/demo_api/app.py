@@ -32,9 +32,11 @@ from .registry import ToolRegistry
 from .routes import internal
 from .routes import jobs
 from .routes import sources
+from .routes import speech
 from .services import Services
 from .services import ServicesDep
 from .settings import Settings
+from .speech import build_speech_service
 
 logger = logging.getLogger(__name__)
 RETENTION_INTERVAL_SECONDS = 3_600
@@ -73,6 +75,7 @@ def create_app(
                 runner=runner,
                 http=http,
                 transport=transport,
+                speech=build_speech_service(settings),
             )
             await runner.start()
             retention = asyncio.create_task(_retention(store, settings.job_retention_seconds))
@@ -86,6 +89,7 @@ def create_app(
     app = FastAPI(title="Market analysis job API", lifespan=lifespan)
     app.include_router(jobs.router)
     app.include_router(sources.router)
+    app.include_router(speech.router)
     app.include_router(internal.router)
 
     @app.get("/health", tags=["health"])

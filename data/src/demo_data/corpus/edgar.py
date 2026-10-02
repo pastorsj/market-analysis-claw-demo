@@ -4,11 +4,12 @@
 
 Manifest (`format: edgar-filings`):
     {"source_id", "filings": [{"filing_id": "<cik>:<accession>", "company_name", "form", "filed_on",
-                               "source_url", "sha256"}, ...]}
+                               "source_url", "sha256", "ticker"?, "items"?}, ...]}
 
-Each filing is pinned with the master-index fields it needs, so a build never depends on SEC's quarterly index,
-which SEC regenerates. SEC requires a descriptive User-Agent (SEC_USER_AGENT, e.g. "Example Co admin@example.com")
-and at most 10 requests a second.
+Each filing is pinned with the index fields it needs, so a build never depends on SEC's indexes, which SEC
+regenerates. An optional `ticker` (the filer's stock in the pack) and `items` (the 8-K items it reports, such as
+"1.05,9.01") become metadata for citations; the filings stay documents, never news. SEC requires a descriptive
+User-Agent (SEC_USER_AGENT, e.g. "Example Co admin@example.com") and at most 10 requests a second.
 """
 
 from __future__ import annotations
@@ -81,6 +82,7 @@ def filing_documents(filing: dict[str, Any], submission: str, source_id: str) ->
                     "accession": accession,
                     "document_type": document_type,
                     "filename": filename,
+                    **{key: filing[key] for key in ("ticker", "items") if filing.get(key)},
                 },
             )
         )

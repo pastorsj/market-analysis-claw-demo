@@ -7,7 +7,9 @@
  * Persistent left sidebar of session history. Pushes the chat rather than
  * overlaying it, and collapses to a slim icon rail. The top actions (toggle,
  * new session, search) share one fixed-height row in both states, so their
- * icons keep the same size and position when the rail expands.
+ * icons keep the same size and position when the rail expands. With recorded
+ * sessions, "My sessions | Recorded" switches between the browser's sessions
+ * and the data pack's read-only recordings, as in the original demo UI.
  */
 
 'use client'
@@ -31,6 +33,7 @@ import {
   Close,
   DocumentCheckmark,
   Edit,
+  Error as ErrorIcon,
   LoadingSpinner,
   Menu,
   Plus,
@@ -42,6 +45,8 @@ import { useChatStore } from '@/features/chat'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { checkStorageHealth } from '@/features/chat/lib/storage-manager'
 import { cn } from '@/shared/lib/cn'
+import type { RecordedSessionSummary } from '@/shared/context'
+import { ToolPills, describePills } from '@/shared/components/ToolPills'
 import { DeleteSessionConfirmationModal } from './DeleteSessionConfirmationModal'
 import { DeleteAllSessionsConfirmationModal } from './DeleteAllSessionsConfirmationModal'
 
@@ -53,6 +58,19 @@ interface Session {
   date: Date
   hasActiveDeepResearch?: boolean
   hasCompletedReport?: boolean
+}
+
+/** The data pack's recorded sessions, listed under "Recorded". */
+export interface RecordedCollection {
+  sessions: RecordedSessionSummary[]
+  status: 'loading' | 'ready' | 'error'
+  error: string | null
+  /** The open recorded session */
+  selectedId: string | null
+  /** The session being loaded */
+  loadingId: string | null
+  onSelect: (sessionId: string) => void
+  onRetry: () => void
 }
 
 interface SessionsPanelProps {
@@ -70,7 +88,9 @@ interface SessionsPanelProps {
   onDeleteAllSessions?: () => void
   /** Callback when a session is renamed */
   onRenameSession?: (sessionId: string, newTitle: string) => void
-  /** Recorded sessions (replay mode): browse only, no create, rename or delete */
+  /** Recorded sessions, shown in a second collection when given */
+  recorded?: RecordedCollection
+  /** Replay mode: browse only, no create, rename or delete */
   readOnly?: boolean
 }
 
@@ -122,6 +142,7 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
   onDeleteSession,
   onDeleteAllSessions,
   onRenameSession,
+  recorded,
   readOnly = false,
 }) {
   const collapsed = useLayoutStore((s) => s.sessionsCollapsed)
@@ -140,6 +161,11 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
 
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const recordedSelectedId = recorded?.selectedId ?? null
+  const [sessionCollection, setSessionCollection] = useState<'saved' | 'recorded'>(() =>
+    recorded && (readOnly || recordedSelectedId) ? 'recorded' : 'saved'
+  )
+  const [recordedSearchQuery, setRecordedSearchQuery] = useState('')
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false)
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null)
@@ -159,6 +185,10 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
       })
     }
   }, [collapsed, readOnly, refreshDeepResearchSessionStatuses])
+
+  useEffect(() => {
+    if (recordedSelectedId) setSessionCollection('recorded')
+  }, [recordedSelectedId])
 
   const handleDeleteClick = useCallback((sessionId: string) => {
     setSessionToDelete(sessionId)
@@ -224,6 +254,23 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
   const railSessions = useMemo(() => namedSessions.slice(0, RAIL_SESSION_LIMIT), [namedSessions])
   const hasSessions = namedSessions.length > 0
   const isEmptyState = filteredSessions.length === 0
+  const recordedSessions = recorded?.sessions
+  const filteredRecordedSessions = useMemo(() => {
+    const query = recordedSearchQuery.trim().toLowerCase()
+    return (recordedSessions ?? []).filter(
+      (session) =>
+        !query ||
+        [session.title, ...session.questions].some((value) => value.toLowerCase().includes(query))
+    )
+  }, [recordedSessions, recordedSearchQuery])
+  const recordedQuestionCount = useMemo(
+    () => (recordedSessions ?? []).reduce((total, session) => total + session.questions.length, 0),
+    [recordedSessions]
+  )
+  const filteredRecordedQuestionCount = useMemo(
+    () => filteredRecordedSessions.reduce((total, session) => total + session.questions.length, 0),
+    [filteredRecordedSessions]
+  )
 
   return (
     <div
@@ -268,27 +315,67 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
           </Flex>
         )}
 
-        {!readOnly && (
-          <NavRow
-            icon={<Plus className="h-5 w-5" />}
-            label="New Session"
-            collapsed={collapsed}
-            onClick={handleNewSession}
-            disabled={isNavigationBlocked}
-            ariaLabel={
-              isNavigationBlocked
+        <NavRow
+          icon={<Plus className="h-5 w-5" />}
+          label="New Session"
+          collapsed={collapsed}
+          onClick={handleNewSession}
+          disabled={readOnly || isNavigationBlocked}
+          ariaLabel={
+            readOnly
+              ? 'Start new session (not available in replay mode)'
+              : isNavigationBlocked
                 ? 'Start new session (disabled during active operations)'
                 : 'Start new session'
-            }
-            title={
-              isNavigationBlocked
+          }
+          title={
+            readOnly
+              ? 'Replay mode is read only'
+              : isNavigationBlocked
                 ? 'Cannot create new session while current session is active'
                 : 'Start new session'
-            }
-          />
+          }
+        />
+
+        {!collapsed && recorded && (
+          <div
+            role="tablist"
+            aria-label="Session collections"
+            className="bg-surface-raised-30 mx-2 grid grid-cols-2 gap-1 rounded-lg p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sessionCollection === 'saved'}
+              onClick={() => setSessionCollection('saved')}
+              className={cn(
+                'text-primary rounded-md px-2 py-1.5 text-xs font-semibold transition-colors',
+                sessionCollection === 'saved'
+                  ? 'bg-surface-raised shadow-sm'
+                  : 'hover:bg-surface-raised-50'
+              )}
+            >
+              My sessions
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sessionCollection === 'recorded'}
+              onClick={() => setSessionCollection('recorded')}
+              className={cn(
+                'text-primary rounded-md px-2 py-1.5 text-xs font-semibold transition-colors',
+                sessionCollection === 'recorded'
+                  ? 'bg-surface-raised shadow-sm'
+                  : 'hover:bg-surface-raised-50'
+              )}
+            >
+              Recorded {recorded.sessions.length ? `(${recorded.sessions.length})` : ''}
+            </button>
+          </div>
         )}
 
-        {hasSessions &&
+        {sessionCollection === 'saved' &&
+          hasSessions &&
           (!collapsed && searchOpen ? (
             <Flex align="center" gap="3" className="h-10 px-3">
               <span className="text-secondary grid h-5 w-5 shrink-0 place-items-center">
@@ -363,6 +450,22 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
               )
             })}
           </Flex>
+        ) : sessionCollection === 'recorded' && recorded ? (
+          <RecordedSessionsList
+            sessions={filteredRecordedSessions}
+            totalCount={recorded.sessions.length}
+            questionCount={filteredRecordedQuestionCount}
+            totalQuestionCount={recordedQuestionCount}
+            status={recorded.status}
+            error={recorded.error}
+            searchQuery={recordedSearchQuery}
+            selectedSessionId={recordedSelectedId}
+            loadingSessionId={recorded.loadingId}
+            isNavigationBlocked={isNavigationBlocked}
+            onSearchQueryChange={setRecordedSearchQuery}
+            onSelect={recorded.onSelect}
+            onRetry={recorded.onRetry}
+          />
         ) : (
           <Flex direction="col" className="scrollbar-hide -mr-1 mt-1 flex-1 overflow-y-auto pr-1">
             {groupedSessions.map((group) => (
@@ -407,7 +510,7 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
                     {searchOpen && searchQuery.trim()
                       ? 'Try a different search term.'
                       : readOnly
-                        ? 'Recorded sessions for this data pack will show up here.'
+                        ? 'Replay mode shows the recorded sessions only.'
                         : 'Your research sessions will show up here.'}
                   </Text>
                 </Flex>
@@ -424,7 +527,7 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
           </Flex>
         )}
 
-        {!collapsed && !readOnly && (
+        {!collapsed && !readOnly && sessionCollection === 'saved' && (
           <Flex direction="col" gap="2" className="border-base mt-2 border-t pt-3">
             {hasSessions && (
               <Flex justify="end">
@@ -483,6 +586,179 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
     </div>
   )
 })
+
+interface RecordedSessionsListProps {
+  sessions: RecordedSessionSummary[]
+  totalCount: number
+  questionCount: number
+  totalQuestionCount: number
+  status: RecordedCollection['status']
+  error: string | null
+  searchQuery: string
+  selectedSessionId: string | null
+  loadingSessionId: string | null
+  isNavigationBlocked: boolean
+  onSearchQueryChange: (value: string) => void
+  onSelect: (sessionId: string) => void
+  onRetry: () => void
+}
+
+/** The recorded sessions: a search, the count, one row per session, and a note on how they load. */
+const RecordedSessionsList: FC<RecordedSessionsListProps> = ({
+  sessions,
+  totalCount,
+  questionCount,
+  totalQuestionCount,
+  status,
+  error,
+  searchQuery,
+  selectedSessionId,
+  loadingSessionId,
+  isNavigationBlocked,
+  onSearchQueryChange,
+  onSelect,
+  onRetry,
+}) => (
+  <Flex direction="col" className="min-h-0 flex-1 pt-1">
+    <Flex direction="col" gap="2" className="border-base border-b px-2 pb-3 pt-1">
+      <div className="border-base bg-surface-raised-30 flex h-9 items-center gap-2 rounded-lg border px-2.5">
+        <Search className="text-subtle h-4 w-4 shrink-0" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => onSearchQueryChange(event.target.value)}
+          placeholder="Search questions or datasets"
+          aria-label="Search recorded sessions"
+          className="text-primary placeholder:text-subtle min-w-0 flex-1 border-0 bg-transparent text-xs outline-none"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => onSearchQueryChange('')}
+            aria-label="Clear recorded session search"
+            className="text-subtle hover:text-primary grid h-5 w-5 place-items-center"
+          >
+            <Close className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {status === 'ready' && (
+        <Text kind="body/regular/xs" className="text-subtle px-0.5">
+          Showing {sessions.length} of {totalCount} sessions · {questionCount} of{' '}
+          {totalQuestionCount} questions
+        </Text>
+      )}
+      {status === 'ready' && error && (
+        <Text kind="body/regular/xs" className="text-error px-0.5" role="alert">
+          {error}
+        </Text>
+      )}
+    </Flex>
+
+    {status === 'loading' ? (
+      <Flex direction="col" align="center" justify="center" gap="2" className="flex-1 p-6">
+        <LoadingSpinner className="text-accent-primary" aria-label="Loading recorded sessions" />
+        <Text kind="body/regular/sm" className="text-subtle">
+          Loading recorded sessions…
+        </Text>
+      </Flex>
+    ) : status === 'error' ? (
+      <Flex
+        direction="col"
+        align="center"
+        justify="center"
+        gap="3"
+        className="flex-1 p-6 text-center"
+      >
+        <ErrorIcon className="text-error h-6 w-6" />
+        <Text kind="body/regular/sm" className="text-secondary">
+          {error || 'Unable to load recorded sessions.'}
+        </Text>
+        <Button kind="secondary" size="small" onClick={onRetry}>
+          Retry
+        </Button>
+      </Flex>
+    ) : sessions.length === 0 ? (
+      <Flex
+        direction="col"
+        align="center"
+        justify="center"
+        gap="2"
+        className="flex-1 p-6 text-center"
+      >
+        <Search className="text-subtle h-6 w-6" />
+        <Text kind="label/semibold/sm" className="text-primary">
+          No matching recorded sessions
+        </Text>
+        <Text kind="body/regular/xs" className="text-subtle">
+          Try using a broader search.
+        </Text>
+      </Flex>
+    ) : (
+      <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-1 py-2">
+        {sessions.map((session) => {
+          const isSelected = selectedSessionId === session.id
+          const isLoading = loadingSessionId === session.id
+          const turnCount = session.questions.length
+          const turns = `${turnCount} ${turnCount === 1 ? 'turn' : 'turns'}`
+          const tools = describePills(session.tools)
+          // The label names the session; what the row shows besides, pills included, is its description
+          const descriptionId = `recorded-session-${session.id}-description`
+          return (
+            <button
+              key={session.id}
+              type="button"
+              onClick={() => onSelect(session.id)}
+              disabled={isNavigationBlocked || isLoading}
+              aria-label={`Recorded session: ${session.title}; Completed`}
+              aria-describedby={descriptionId}
+              className={cn(
+                'focus-visible:ring-brand mb-1.5 flex w-full gap-2 rounded-lg px-2.5 py-2.5 text-left outline-none focus-visible:ring-2',
+                isNavigationBlocked || isLoading
+                  ? 'cursor-not-allowed opacity-60'
+                  : 'hover:bg-surface-raised-50 cursor-pointer',
+                isSelected && 'brand-tint bg-surface-raised'
+              )}
+            >
+              <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center">
+                {isLoading ? (
+                  <LoadingSpinner className="text-accent-primary" aria-label="Loading session" />
+                ) : (
+                  <DocumentCheckmark className="text-success h-4 w-4" aria-label="Completed" />
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <Text
+                  kind="body/regular/sm"
+                  className="text-primary line-clamp-3 leading-5"
+                  title={session.title}
+                >
+                  {session.title}
+                </Text>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <Text kind="body/regular/xs" className="text-subtle">
+                    {turns}
+                  </Text>
+                  <Text kind="body/regular/xs" className="text-subtle">
+                    Completed
+                  </Text>
+                </span>
+                <ToolPills pills={session.tools} className="mt-1.5" />
+              </span>
+              <span id={descriptionId} className="sr-only">
+                {tools ? `${turns}. Tools: ${tools}.` : `${turns}.`}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    )}
+
+    <Text kind="body/regular/xs" className="border-base text-subtle border-t px-3 py-3">
+      Read-only test runs. Answers load on selection; execution data loads only when requested.
+    </Text>
+  </Flex>
+)
 
 /**
  * SessionItem Component

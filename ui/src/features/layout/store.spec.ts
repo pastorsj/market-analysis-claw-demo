@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { fetchDataSources } from '@/adapters/api'
+import { fetchDataSources, fetchRecordedDataSources } from '@/adapters/api'
 import { useLayoutStore } from './store'
 
-vi.mock('@/adapters/api', () => ({ fetchDataSources: vi.fn() }))
+vi.mock('@/adapters/api', () => ({ fetchDataSources: vi.fn(), fetchRecordedDataSources: vi.fn() }))
 
 const initialState = useLayoutStore.getState()
 
@@ -56,6 +56,14 @@ describe('useLayoutStore', () => {
       focus: { referenceId: 'ev-1' },
     })
 
+    // Citing the same source again is a new focus, so the workspace reopens its node
+    const evidence = { referenceId: 'ev-1' }
+    useLayoutStore.getState().openExecution('job-1', evidence)
+    const first = useLayoutStore.getState().execution?.focus
+    useLayoutStore.getState().openExecution('job-1', evidence)
+    expect(useLayoutStore.getState().execution?.focus).toEqual(first)
+    expect(useLayoutStore.getState().execution?.focus).not.toBe(first)
+
     useLayoutStore.getState().openExecution('job-2')
     expect(useLayoutStore.getState().execution).toEqual({ jobId: 'job-2', focus: null })
 
@@ -85,6 +93,18 @@ describe('useLayoutStore', () => {
         enabledDataSourceIds: ['market_analysis_structured'],
         dataSourcesLoading: false,
         dataSourcesError: null,
+      })
+    })
+
+    test('reads the replay bundle instead of the API when asked', async () => {
+      vi.mocked(fetchRecordedDataSources).mockResolvedValue([{ id: 'market_news', name: 'News' }])
+
+      await useLayoutStore.getState().fetchDataSources('recordings')
+
+      expect(fetchDataSources).not.toHaveBeenCalled()
+      expect(useLayoutStore.getState()).toMatchObject({
+        availableDataSources: [{ id: 'market_news' }],
+        enabledDataSourceIds: ['market_news'],
       })
     })
 

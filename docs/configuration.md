@@ -38,19 +38,25 @@ The agent's models (through Switchyard) and Auto Ontology's reasoning models.
 | `INFERENCE_API_KEY` | – | Key for that endpoint (`nvapi-` for build.nvidia.com). Read by Switchyard, Auto Ontology and, when `RETRIEVER_API_KEY` is empty, the retrieval tools |
 | `SWITCHYARD_ROUTES` | `passthrough.nemotron` | The routing template in `infra/switchyard/routes/` |
 | `AGENT_EFFICIENT_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b` | The passthrough model; the model an escalation template tries first |
-| `AGENT_CAPABLE_MODEL` | `gpt-6-sol` | The model a session escalates to; the pinned model. Unused by `passthrough.nemotron` |
-| `AGENT_JUDGE_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | The escalation judge, and Hermes' auxiliary calls (thinking off) |
-| `CAPABLE_BASE_URL`, `CAPABLE_API_KEY` | empty | The capable model's own OpenAI-compatible endpoint and key. Empty means `INFERENCE_BASE_URL` and `INFERENCE_API_KEY` |
+| `AGENT_AUX_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Hermes' auxiliary calls and the overload fallback (thinking off), in every template. Must differ from the efficient model |
+| `AGENT_CAPABLE_MODEL` | – (commented) | The model a session escalates to; the pinned model. Unused by `passthrough.nemotron` |
+| `AGENT_JUDGE_MODEL` | – (commented) | The escalation judge, escalation templates only: a frontier model's id at `CAPABLE_BASE_URL` in `*-gpt` and `*-claude` (another id than `AGENT_CAPABLE_MODEL`), a Nemotron id in `escalation.nemotron` |
+| `CAPABLE_BASE_URL`, `CAPABLE_API_KEY` | – (commented) | The capable model's own endpoint and key: OpenAI-compatible, or the Anthropic Messages API for the `*-claude` templates. An empty endpoint means `INFERENCE_BASE_URL`. An empty key means `INFERENCE_API_KEY` only when the endpoint is empty or the same as `INFERENCE_BASE_URL`; another endpoint needs its own key, so the inference key never goes to another host |
 | `SWITCHYARD_CONFIRMATIONS` | `1` | Consecutive "escalate" verdicts before a session switches (1 or 2) |
 | `AUTO_ONTOLOGY_REASONING_MODEL`, `AUTO_ONTOLOGY_NON_REASONING_MODEL` | `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b` | Auto Ontology's models (ontology profile) |
 
-The model ids a template uses must all differ. Which combination to use, and why the default is Nemotron 3
+The efficient, capable and judge models a template uses must all differ, and the aux model must differ
+from the efficient one. Which combination to use, and why the default is Nemotron 3
 Ultra alone, is in [models and routing](models-and-routing.md).
 
 **A capable model from another provider.** build.nvidia.com serves no GPT model, so the `*-gpt` templates
 (`escalation.nemotron-gpt`, `pinned-capable.nemotron-gpt`) need `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`
-pointed at an OpenAI-compatible provider that serves `AGENT_CAPABLE_MODEL` over the Responses API. Only the
-capable model goes there; the efficient and judge models stay on `INFERENCE_BASE_URL`. Then:
+pointed at an OpenAI-compatible provider that serves `AGENT_CAPABLE_MODEL` over the Responses API. The
+capable model and, in the escalation template, the judge go there; the efficient and aux models stay on
+`INFERENCE_BASE_URL`. The `*-claude`
+templates (`escalation.nemotron-claude`, `pinned-capable.nemotron-claude`) work the same way with a Claude
+model, such as Claude Opus 5.5, from an endpoint that serves it over the Anthropic Messages API: Anthropic's
+API (`CAPABLE_BASE_URL=https://api.anthropic.com/v1`) or a gateway that speaks that API. Then:
 
 ```bash
 ./scripts/demo.sh doctor --keys
@@ -89,18 +95,27 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 | Variable | Default | Meaning |
 |---|---|---|
 | `COMPOSE_PROFILES` | `core,retrieval,analytics` | The profiles to run (below). Commands that run the stack always add `core` |
-| `UI_PORT` | `3100` | The UI's port on 127.0.0.1 |
+| `UI_PORT` | `3100` | The UI's host port, on `UI_BIND_HOST` |
+| `UI_BIND_HOST` | `127.0.0.1` | The host address the UI is published on. `0.0.0.0` exposes the UI, and through its `/api/v1` proxy the agent, with no sign-in of its own: use it only behind a link that requires sign-in, such as a Brev link with sign-in set in the Brev console ([Brev VM mode](operations.md#brev-vm-mode)). `doctor` and `up` warn while it is set. Every other port stays on 127.0.0.1 |
 
 ### 4. Data pack
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `DATA_PACK` | `market-analysis` | A directory under `data/packs/` |
-| `DATA_PACK_PROFILE` | the pack's default (`qualification`) | The generator profile: `qualification` (2,000 issuers) or `interactive` (12, fast) |
-| `DATA_CORPORA` | the pack's defaults | Comma-separated corpus sources; empty means `market_news` (SEC EDGAR), `market_regulations` (eCFR) and `market_briefs` (fictional briefs) |
-| `SEC_USER_AGENT` | – | A name and an email, required by SEC EDGAR's fair-access policy for `market_news` |
+| `DATA_PACK` | `synthetic-market` | A directory under `data/packs/`: `synthetic-market` (fictional, made with NeMo Data Designer; the public default, since it needs nothing fetched) or `us-equities` (real prices you fetch; the hosted demo deployment's pack, with `DATA_CORPORA=sec_filings,market_regulations,world_news`) |
+| `DATA_PACK_PROFILE` | the pack's default (`standard`) | `synthetic-market`'s scale: `standard` (2,000 issuers, daily bars), `interactive` (50, fast), `ci` (12, minute bars), `intraday` (500, minute bars) or `large` (10,000) |
+| `DATA_CORPORA` | the pack's defaults | Comma-separated corpus sources; empty means `sec_filings` (SEC EDGAR) and `market_regulations` (eCFR and the SEC's 2023 cybersecurity rule). `us-equities` adds the opt-in `world_news` (GDELT headlines) when it is named |
+| `SEC_USER_AGENT` | – | A name and an email, required by SEC's fair-access policy for the EDGAR filings corpus and for SEC company data (`us-equities`) |
+| `DATA_SOURCE_DIR` | `$HOME/market-demo-data` | Where external datasets live on the host, outside the repository: one directory per dataset, mounted read-only at `/sources`. On a VM, the large disk |
+| `DATA_SOURCE_<ID>` | – | Where `data fetch` gets external dataset `<id>` (upper case, `-` as `_`; `us-equities` reads `DATA_SOURCE_MINUTE_BARS`): a directory or `host:/path` (rsync), or an `https`, `s3`, `gs` or `hf` URL. Empty: verify what is in place |
+| `DATA_SOURCE_HTTP_TOKEN`, `AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS`, `HF_TOKEN` | – | Credentials for those URLs, only when the source needs them. Each reaches only the one-shot fetch run, and only for its scheme |
+| `DATA_DUCKDB_MEMORY` | DuckDB's default | A memory cap for the data build, e.g. `8GB`; past it the rollup spills to the data volume |
 
-After changing any of them, run `./scripts/demo.sh data prepare`. See [data packs](data-packs.md).
+After changing `DATA_PACK` or `DATA_PACK_PROFILE` on a running stack, run `./scripts/demo.sh up` (and
+`data fetch` first for a new external dataset). It rebuilds the data, and recreates what names the pack's
+database, such as Auto Ontology, which keeps one database per pack, and the sandbox, so Hermes lists the new
+build's tool schemas. After changing only `DATA_CORPORA`, `./scripts/demo.sh data prepare` is enough. See
+[data packs](data-packs.md) and [data platform](data-platform.md).
 
 ### 5. Internal secrets
 
@@ -122,7 +137,16 @@ Changing either Hermes key recreates the sandbox on the next `up`.
 | `KUMO_API_KEY` | empty | Only for a hosted Kumo endpoint (sent as `X-API-Key`) |
 | `JOB_RETENTION_SECONDS` | `86400` | How long finished jobs stay available |
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one market tool call may run before its worker is replaced |
+| `MARKET_ANALYTICS_BATCH_BYTES` | empty | The most an `intraday_scan` reads at once, in bytes; empty means 256 MiB on the CPU and 1 GiB on the GPU. A CPU scan peaks at 8 to 14 times it, so raise it only with memory to spare |
 | `PHOENIX_URL` | `http://127.0.0.1:6006` | The Phoenix address the browser links to; empty hides the link |
+| `SPEECH_INPUT_ENABLED` | `false` | Voice input: a microphone in the composer; the API transcribes with NVIDIA Nemotron ASR on build.nvidia.com ([`api/README.md`](../api/README.md#voice-input)) |
+| `SPEECH_API_KEY` | empty | An nvapi- key for the ASR; empty uses `RETRIEVER_API_KEY` when the retriever is build.nvidia.com |
+| `SPEECH_CLEANUP_MODEL` | empty | A public model on build.nvidia.com that deletes fillers and false starts from a transcript, e.g. `nvidia/nemotron-3-super-120b-a12b`; empty means no cleanup |
+| `SPEECH_INPUT_MAX_SECONDS` | `60` | The longest recording, 1 to 90 seconds |
+| `DATA_DESIGNER_API_KEY` | `INFERENCE_API_KEY`, only when `DATA_DESIGNER_BASE_URL` is `INFERENCE_BASE_URL` or for an nvapi- key on build.nvidia.com | The key for `demo.sh data generate`, which writes the `synthetic-market` pack's text with NeMo Data Designer ([`data/generate/README.md`](../data/generate/README.md)). Set it for any other endpoint: the inference key never goes to another host. Building a pack never needs it |
+| `DATA_DESIGNER_BASE_URL` | `https://integrate.api.nvidia.com/v1` | The OpenAI-compatible endpoint `data generate` calls |
+| `DATA_DESIGNER_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | The model `data generate` calls, with thinking off |
+| `DATA_DESIGNER_PARALLEL` | `8` | Concurrent requests during `data generate` |
 
 ### Derived by `demo.sh`
 
@@ -134,7 +158,8 @@ Compose cannot compute these, so `demo.sh` exports them before every Compose cal
 | `AGENT_FEATURES` | The tools baked into the agent image, from the profiles: `retrieval`, `analytics` (also for analytics-gpu), `kumo` (the kumo profile or a hosted `KUMO_RELATIONAL_URL`) and `ontology` |
 | `KUMO_RELATIONAL_URL` | `http://kumo-relational:8000` under the kumo profile |
 | `AUTO_ONTOLOGY_URL` | `http://auto-ontology-frontend:3000` under the ontology profile, for the API's ontology view |
-| `DATA_DATABASE_NAME` | The pack id in snake case (`market-analysis` → `market_analysis`) |
+| `DATA_DATABASE_NAME` | The pack id in snake case (`synthetic-market` → `synthetic_market`) |
+| `SPEECH_API_KEY` | `RETRIEVER_API_KEY` when empty and `RETRIEVER_BASE_URL` is build.nvidia.com (the ASR's host) |
 
 The services' own settings (queue sizes, Hermes run budgets, timeouts) have working defaults and are
 documented in each component's README, for example [`api/README.md`](../api/README.md#environment).
@@ -144,11 +169,11 @@ documented in each component's README, for example [`api/README.md`](../api/READ
 | Profile | Adds | Needs |
 |---|---|---|
 | `core` (always) | UI, API, OpenShell and the Hermes sandbox, Switchyard, Phoenix, the data build | the inference key |
-| `retrieval` | Milvus, the document corpus and index, `retrieve_evidence` | the retriever key; `SEC_USER_AGENT` for `market_news` |
-| `analytics` | the six market tools on CPU (pandas, scikit-learn, NetworkX) | – |
-| `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 with this pack, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls; the two smallest break even or run slower ([measured](operations.md#brev-vm-mode)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit |
+| `retrieval` | Milvus, the document corpus and index, `retrieve_evidence` | the retriever key; `SEC_USER_AGENT` for `sec_filings` |
+| `analytics` | the seven market tools on CPU (pandas, scikit-learn, NetworkX) | – |
+| `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 at 2,000 issuers, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls, the two smallest breaking even or running slower ([measured](operations.md#brev-vm-mode)); on `us-equities` (1,601 stocks), 1.5x to 2.7x faster over every stock and slower than the CPU over 50 stocks (0.7x to 0.9x) ([measured](../tools/market-analytics/README.md#daily-tools-on-us-equities)); `intraday_scan` over real minute bars, 4x to 12x ([measured](../tools/market-analytics/README.md#intraday_scan-on-real-minute-bars)). With `retrieval`, also a GPU Milvus holding a `GPU_IVF_FLAT` copy of the index, for the Benchmark tab's CPU/GPU Milvus comparison only: answers still come from the CPU index ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit; 3.6 GB more image for the GPU Milvus |
 | `kumo` | Kumo Relational NIM behind `predict_asset_outcomes`; needs `analytics` or `analytics-gpu` | x86_64 and an NVIDIA GPU (it ran on an A100 with no override); the image from `nvcr.io`, which pulled without a login ([operations](operations.md#brev-vm-mode)) |
-| `ontology` | Auto Ontology and `ask_question` | access to the private `NVIDIA/auto-ontology` repository |
+| `ontology` | Auto Ontology and `ask_question`: required, it answers the structured questions | the `vendor/auto-ontology` submodule; until `NVIDIA/auto-ontology` is public, access to that repository |
 | `replay` | the UI alone, on the recorded sessions | nothing |
 
 After changing `COMPOSE_PROFILES`, run `./scripts/demo.sh up`: it rebuilds the agent image with the matching
@@ -160,11 +185,11 @@ tools and skills, and recreates the sandbox because the image changed.
 |---|---|---|
 | Replay | `replay` (`./scripts/demo.sh replay`) | Any Docker host; no keys, no GPU |
 | CPU | `core,retrieval,analytics` (the default), optionally with a hosted `KUMO_RELATIONAL_URL` | Linux kernel 6.2 or later on the Docker host (OpenShell needs Landlock ABI 3), Docker Engine 28+, Compose 2.30+, at least 8 GiB of memory for Docker (Milvus), x86_64 or arm64. Verified on macOS with colima (arm64, 4 CPU, 9 GiB) |
-| GPU | `core,retrieval,analytics-gpu,kumo` | Linux x86_64 with an NVIDIA GPU, driver 535 or newer and the NVIDIA Container Toolkit. The Kumo NIM image is about 14 GB to download and 44 GB on disk, and runs with a 16 GB shared-memory segment. Plan for 150 GB of free disk, or 200 GB to rebuild images on the host ([disk](operations.md#disk)). On a 40 GB A100 the stack held 4.3 GiB of GPU memory once Kumo had predicted, and 9.3 GiB of RAM ([footprint](operations.md#brev-vm-mode)). Target: a Brev A100 VM ([operations](operations.md#brev-vm-mode)) |
+| GPU | `core,retrieval,analytics-gpu,kumo` | Linux x86_64 with an NVIDIA GPU, driver 535 or newer and the NVIDIA Container Toolkit. The Kumo NIM image is about 14 GB to download and 44 GB on disk, and runs with a 16 GB shared-memory segment. Plan for 150 GB of free disk, or 200 GB to rebuild images on the host ([disk](operations.md#disk)). On a 40 GB A100 the stack held 4.3 GiB of GPU memory once Kumo had predicted, and 9.3 GiB of RAM ([footprint](operations.md#brev-vm-mode)), before the GPU Milvus, whose memory pool starts at 1 GiB and may grow to 4 GiB. Target: a Brev A100 VM ([operations](operations.md#brev-vm-mode)) |
 
-Models always run on the hosted endpoints; no tier serves a model locally. On macOS, Docker Desktop needs host
-networking on and Enhanced Container Isolation off (an OpenShell requirement, not verified here); colima
-needs neither.
+The language, embedding and rerank models are always hosted; only the kumo profile runs a model locally (the
+Kumo Relational NIM). On macOS, Docker Desktop needs host networking on and Enhanced Container Isolation off
+(an OpenShell requirement, not verified here); colima needs neither.
 
 ## `doctor`
 
@@ -172,7 +197,7 @@ needs neither.
 architecture for the GPU profiles, Docker memory for Milvus), that the published ports are free (skipped
 while the stack runs), and that
 `.env` is consistent: profile rules, required keys, distinct model ids for the template, an existing template,
-key and model id shapes on build.nvidia.com, `SEC_USER_AGENT` for `market_news`, and the generated secrets. `up` runs the same checks
+key and model id shapes on build.nvidia.com, `SEC_USER_AGENT` for `sec_filings`, and the generated secrets. `up` runs the same checks
 except ports and keys. Messages name variables, never their values.
 
 `doctor --keys` also asks each endpoint for its model list with your key and looks for every id the selected

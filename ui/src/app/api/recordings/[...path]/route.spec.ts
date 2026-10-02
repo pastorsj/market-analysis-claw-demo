@@ -50,3 +50,51 @@ describe('/api/recordings', () => {
     }
   )
 })
+
+describe('/api/recordings/index.json of a bundle recorded before sessions listed their tools', () => {
+  let packsDir: string
+  const recorded = { pill: 'retrieval', device: null, tools: ['retrieve_evidence'] }
+
+  beforeAll(async () => {
+    packsDir = await mkdtemp(path.join(tmpdir(), 'packs-'))
+    const recordings = path.join(packsDir, 'older', 'recordings')
+    await mkdir(path.join(recordings, 'sessions'), { recursive: true })
+    const sessions = [
+      { id: 'filings', title: 'Filings', turns: [], tools: [recorded] },
+      { id: 'peers', title: 'Peers', turns: [] },
+    ]
+    await writeFile(path.join(recordings, 'index.json'), JSON.stringify({ sessions }))
+    const turn = {
+      events: [
+        { eventKind: 'tool.completed', toolName: 'skill_view' },
+        {
+          eventKind: 'artifact.available',
+          toolName: 'analyze_market_relationships',
+          artifactRefs: ['r1'],
+        },
+      ],
+      receipts: [{ receiptId: 'r1', content: { engine: { device: 'cpu', library: 'networkx' } } }],
+    }
+    await writeFile(
+      path.join(recordings, 'sessions', 'peers.json'),
+      JSON.stringify({ turns: [turn] })
+    )
+    vi.stubEnv('PACKS_DIR', packsDir)
+    vi.stubEnv('DATA_PACK', 'older')
+  })
+
+  afterAll(async () => {
+    vi.unstubAllEnvs()
+    await rm(packsDir, { recursive: true, force: true })
+  })
+
+  test('derives the missing tools from the recorded events, with the engine that ran them', async () => {
+    const index = await (await get('index.json')).json()
+
+    expect(index.sessions[0].tools).toEqual([recorded])
+    expect(index.sessions[1].tools).toEqual([
+      { pill: 'cudf', device: 'cpu', tools: ['analyze_market_relationships'] },
+      { pill: 'cugraph', device: 'cpu', tools: ['analyze_market_relationships'] },
+    ])
+  })
+})

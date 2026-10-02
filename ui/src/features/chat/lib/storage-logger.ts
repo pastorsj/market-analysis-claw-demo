@@ -8,6 +8,9 @@
  * Helps debug intermittent session clearing issues.
  */
 
+// This module is a logger: its debug lines are deliberate and run only in development.
+/* eslint-disable no-console */
+
 import type { Conversation } from '../types'
 
 const LOG_PREFIX = '[SessionsStore]'

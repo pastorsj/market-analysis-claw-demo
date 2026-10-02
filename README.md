@@ -13,8 +13,12 @@ points to, and the trace in Phoenix.
   pin a model or escalate a session from an efficient model to a capable one; a measured bake-off informed the
   default.
 - **NVIDIA retrieval and GPU analytics.** Nemotron embed and rerank models over Milvus find cited passages in
-  SEC filings and the eCFR. The market tools run on pandas or, with the same code, on RAPIDS. Kumo Relational
-  predicts outcomes, and NVIDIA Auto Ontology answers structured questions with SQL.
+  SEC filings and the eCFR, a document source separate from the prices. The market tools run on pandas or,
+  with the same code, on RAPIDS, down to scanning raw minute bars. Kumo Relational predicts outcomes, and NVIDIA
+  Auto Ontology answers structured questions with SQL.
+- **Swappable data.** The default market is fictional, made with NeMo Data Designer and Nemotron, so it builds
+  anywhere with no key. The same format holds real US equities from minute bars you fetch, which are never
+  committed.
 - **Evidence you can inspect.** Every tool call becomes a typed receipt, every citation opens its receipt, and
   recorded sessions replay without keys or a GPU.
 
@@ -46,11 +50,11 @@ flowchart LR
     pack --- ontology
 ```
 
-Every port is published on 127.0.0.1 only (`UI_BIND_HOST` can open the UI's alone to a trusted proxy, such as
-a Brev secure link: [operations](docs/operations.md#brev-vm-mode)). The sandbox reaches the services as `host.openshell.internal`,
-which the host-networked OpenShell supervisor maps to the host's loopback. The browser talks only to the UI,
-which proxies an allowlisted set of API routes. [Architecture](docs/architecture.md) describes the components,
-the request flow, the contracts and the trust boundaries.
+Every port is published on 127.0.0.1 only (`UI_BIND_HOST` can open the UI's alone to a link that requires
+sign-in, such as a Brev link: [operations](docs/operations.md#brev-vm-mode)). The sandbox reaches the services
+as `host.openshell.internal`, which the host-networked OpenShell supervisor maps to the host's loopback. The
+browser talks only to the UI, which proxies an allowlisted set of API routes. [Architecture](docs/architecture.md)
+describes the components, the request flow, the contracts and the trust boundaries.
 
 ## Technologies
 
@@ -60,16 +64,17 @@ the request flow, the contracts and the trust boundaries.
 | Sandbox | NVIDIA OpenShell (gateway, supervisor, sandbox, CLI) | 0.1.2 |
 | Model router | NVIDIA Switchyard (`switchyard-server`) | 0.3.0 |
 | Models (default, build.nvidia.com) | Nemotron 3 Ultra 550B-A55B on every turn; Nemotron 3 Super 120B-A12B for auxiliary calls | hosted |
-| Models (optional escalation) | Nemotron 3 Ultra escalating to GPT-6 Sol from any OpenAI-compatible provider, judged by Nemotron 3 Super | hosted |
+| Models (with a frontier-model provider) | Nemotron 3 Ultra escalating to GPT-6.1 Sol, judged by GPT-6.1 Sol (`escalation.nemotron-gpt`); Nemotron 3 Super for auxiliary calls | hosted |
 | Retrieval models | Nemotron 3 Embed 1B, Llama Nemotron Rerank VL 1B v2 | hosted |
-| Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone) | 1.4.3, 2.6.17, 2.6.25 |
+| Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone; with analytics-gpu, a GPU standalone for the Benchmark tab's index comparison) | 1.4.3, 2.6.17, 2.6.25 |
 | Market analytics | pandas, scikit-learn, NetworkX; on GPU, RAPIDS cuDF, cuML and nx-cugraph | 2.3, 1.9, 3.6; 26.06 (CUDA 12) |
 | Prediction | Kumo Relational NIM, `kumo-relational-client` | 1.0.1, 1.0.2 |
-| Structured questions (optional) | NVIDIA Auto Ontology | 1.0.0 |
+| Synthetic data | NeMo Data Designer (`data-designer`) | 0.9.3 |
+| Structured questions | NVIDIA Auto Ontology (`ontology` profile, required) | 1.0.0 |
 | Tool protocol | Model Context Protocol, Python SDK over streamable HTTP | `mcp` 2.2 |
 | Tracing | NeMo Relay (bundled with Hermes), Arize Phoenix | Relay < 0.9, Phoenix 20.16.0 |
 | Job API | Python, FastAPI, uvicorn, Pydantic, SQLite, DuckDB | 3.12, 0.141, 0.54, 2.13, –, 1.5.5 |
-| UI | Next.js, React, NVIDIA KUI, React Flow (`@xyflow/react`), Zustand, Tailwind CSS | 16.3.6, 18.3, 0.600, 12.12.0, 5, 4 |
+| UI | Next.js, React, NVIDIA KUI, Zustand, Tailwind CSS | 16.3.6, 18.3, 0.600, 5, 4 |
 | Platform | Docker Engine, Docker Compose, uv, Node.js | 28+, 2.30+, 0.12, 22 |
 
 ## Hardware
@@ -80,8 +85,10 @@ the request flow, the contracts and the trust boundaries.
 | CPU (default) | `core,retrieval,analytics` | Docker Engine 28+ on a Linux 6.2+ kernel (OpenShell needs Landlock), at least 8 GiB of memory for Docker, x86_64 or arm64. Linux, or macOS with colima |
 | GPU | `core,retrieval,analytics-gpu,kumo` | Linux x86_64, an NVIDIA GPU (driver 535+), the NVIDIA Container Toolkit, the Kumo NIM image from `nvcr.io`, and 150 GB of free disk (200 GB to rebuild images on the host). Tested on a 40 GB A100, where the stack held 4.3 GiB of GPU memory once Kumo had predicted, and 9.3 GiB of RAM. For example a Brev A100 VM ([Brev VM mode](docs/operations.md#brev-vm-mode)) |
 
-The models are always hosted; no tier serves a model locally. Add the `ontology` profile to a live tier if you
-have access to Auto Ontology. Details: [configuration](docs/configuration.md#hardware-tiers).
+The language, embedding and rerank models are always hosted; only the kumo profile runs a model locally (the Kumo
+Relational NIM). Add the `ontology` profile to either live tier: Auto Ontology is required for the structured
+questions, and until `NVIDIA/auto-ontology` is public it needs repository access. Details:
+[configuration](docs/configuration.md#hardware-tiers).
 
 ## Quickstart
 
@@ -106,8 +113,10 @@ is at <http://127.0.0.1:6006>.
 
 The first `up` builds every image, downloads about 1.4 GB of SEC EDGAR filings and embeds them, so it takes a
 while (about 45 minutes with every profile on a Brev A100); later runs reuse all of it. `.env.example` defaults to build.nvidia.com, with
-Nemotron 3 Ultra answering every turn. To escalate to GPT-6 Sol from another OpenAI-compatible provider, or to
-use a different endpoint for every model, see [configuration](docs/configuration.md#1-inference-endpoint).
+Nemotron 3 Ultra answering every turn. With another OpenAI-compatible provider that serves GPT-6.1 Sol, Ultra
+escalating to GPT-6.1 Sol (`escalation.nemotron-gpt`) is recommended, and GPT-6.1 Sol pinned on every turn is the
+fallback ([models and routing](docs/models-and-routing.md#recommendation)); for that, or a different endpoint for
+every model, see [configuration](docs/configuration.md#1-inference-endpoint).
 
 ### Replay, with no keys
 
@@ -116,28 +125,33 @@ use a different endpoint for every model, see [configuration](docs/configuration
 ```
 
 This serves the UI alone on the sessions recorded with the data pack, at <http://127.0.0.1:3100>: the answers,
-their evidence and the execution graphs, with no `.env`, keys, API or GPU. `./scripts/demo.sh up` returns to
-live mode.
+their evidence and the execution graphs, with no `.env`, keys, API or GPU. `synthetic-market` ships ten of its
+eleven questions recorded (`intraday-ranges` needs a minute-bar profile), and `us-equities` all 45 of its sessions (30 questions and 15 two-turn conversations);
+`DATA_PACK=us-equities ./scripts/demo.sh replay` replays the other one
+([data packs](docs/data-packs.md#recordings)). `./scripts/demo.sh up` returns to live mode.
 
 ## Example questions
 
-The featured questions (shortened here) are on the landing page and in the replay bundle.
+The default pack, `synthetic-market`, is a fictional US market written with NeMo Data Designer and Nemotron:
+2,000 issuers with seeded prices, ticker-linked company news and twelve planted stories, so answers can be
+checked. Real SEC EDGAR filings and eCFR Title 17 sit beside it as separate document sources. Its featured
+questions (shortened here) are on the landing page:
 
-| Question | Tool | Runs with |
+| Question | Tools | Runs with |
 |---|---|---|
-| Which assets had the strongest and weakest adjusted returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare? | `market_scan` | featured |
-| With January 2 to June 30, 2026 as the baseline, which 10 asset sessions in July and August were most unusual, and which features made them so? | `market_anomaly_scan` | featured |
-| What does Title 17 of the eCFR require public companies to disclose about material cybersecurity incidents and cybersecurity risk management, strategy, and governance? | `retrieve_evidence` | featured |
-| What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention? | `retrieve_evidence` over the fictional briefs | featured |
-| Across the 2,000-issuer qualification universe, which assets had the strongest and weakest adjusted returns from January 2, 2024 through August 31, 2026? | `market_scan` | featured |
-| For each synthetic market event published from August 18 through August 28, 2026, what was the asset's return on the publication session and over the next two sessions? | `ask_question` | featured; needs the ontology profile |
-| At the August 24, 2026 market-close anchor, rank the reviewed assets by likelihood of a positive return over the next five trading sessions. | `predict_asset_outcomes` | the kumo profile or a hosted Kumo endpoint |
-| Which assets are most central in the June-through-August 2026 return-correlation network, and how do the leaders compare with unusual 20-session returns? | `analyze_market_relationships` | default |
-| Compare second-quarter 2026 issuer disclosures about cybersecurity incidents with the current Title 17 requirements. | `retrieve_evidence` over both corpora | default |
+| Among the 12 most liquid issuers, which had the strongest and weakest returns over the 20 sessions ending August 31, 2026, and how did their volatility compare? | `market_scan` | featured |
+| For company news about those issuers published August 17 to 24, 2026, how did the sentiment labels line up with the next five sessions' returns? | `sentiment_timeline`, `analyze_news_price_relationship` | featured |
+| With January 2 to June 30, 2026 as the baseline, which 10 issuer sessions in July and August were most unusual, and why? | `market_anomaly_scan` | featured |
+| In the June-through-August 2026 return-correlation network, which issuers are most central, and which pairs moved together most closely? | `analyze_market_relationships` | featured |
+| What does Form 8-K Item 1.05 require after a material cybersecurity incident, and which second-quarter 2026 filings report one? | `retrieve_evidence` | featured |
+| Which issuers had the most negative company news in July and August 2026, and separately, which real 2026 Q2 filings describe operational disruptions? | `sentiment_timeline`, `price_context`, `retrieve_evidence` | featured |
+| At the August 24, 2026 market-close anchor, rank the 12 most liquid issuers by likelihood of a positive five-session return. | `predict_asset_outcomes` | the kumo profile or a hosted Kumo endpoint |
+| How many issuers are in each sector, and what was each sector's median 20-session return? | `ask_question` | the ontology profile |
 
-The market is synthetic: twelve fictional issuers (plus 1,988 generated ones) with planted events, so answers
-can be checked. The documents are real SEC filings and eCFR sections. All questions are in
-[`data/packs/market-analysis/questions.yaml`](data/packs/market-analysis/questions.yaml).
+The optional `us-equities` pack holds real prices for about 1,600 US stocks, rolled up from real one-minute
+bars that you fetch, with the companies' own 8-K filings as their document source. Its featured questions include
+the widest intraday swings of the 50 most liquid stocks, which `intraday_scan` answers from the minute bars
+themselves. All questions are in `data/packs/<pack>/questions.yaml`; see [data packs](docs/data-packs.md).
 
 ## How it works
 
@@ -171,17 +185,26 @@ UI.
 
 ```bash
 ./scripts/demo.sh test              # unit (every Python project, ruff, skills lint), ui, contracts, compose
-./scripts/demo.sh test e2e          # UI build and Playwright: live smoke and replay of the recordings
+./scripts/demo.sh test e2e          # UI build and Playwright: live smoke and replay of every recorded session
 ./scripts/demo.sh test switchyard   # build Switchyard and dry-run every route template
-uv run --directory api pytest       # one project: also agent, data and tools/*
+uv run --directory api pytest       # one project: also agent, data, data/generate, eval and tools/*
 npm --prefix ui run lint            # also type-check, test:ci, build and e2e
+npm --prefix ui run e2e:visual      # the UI's visual baselines, in Docker (ui/e2e/visual/README.md)
 scripts/gen-contracts.sh --check    # the generated schemas and TypeScript are up to date
 pre-commit run --all-files          # ruff, shellcheck, JSON/YAML/TOML checks, gitleaks
 ```
 
 Tests run offline with no keys. Tests marked `live` call real endpoints and those marked `gpu` need a GPU, so
-neither runs by default. CI
-(`.github/workflows/ci.yml`) runs shellcheck, the Compose config of every profile set, every Python project,
+neither runs by default. Three checks of a running deployment are on demand only, run by hand and never by CI
+([operations](docs/operations.md#on-demand-checks)):
+
+| Command | Checks |
+|---|---|
+| `./scripts/demo.sh test live --url URL` | Each featured question asked live through the deployment's UI: success, a resolved citation, tool pills against the tools called, the replay, the closing events, a latency budget; also its health and pack |
+| `./scripts/demo.sh eval [--pack P] [--runs N] [--questions ID,...]` | Answer quality against the pack's oracles; an LLM grader (a frontier model) when `GRADER_BASE_URL`, `GRADER_API_KEY` and `GRADER_MODEL` are set ([eval](eval/README.md)) |
+| `./scripts/demo.sh test gpu [--perf]` | On an NVIDIA GPU host, the CPU/GPU parity tests; `--perf` also the running stack's GPU speedups against floors set from the A100 recordings |
+
+CI (`.github/workflows/ci.yml`) runs shellcheck, the Compose config of every profile set, every Python project,
 the contracts check, the Switchyard dry-runs, and the UI's lint, type-check, unit tests, build and Playwright
 suite.
 
@@ -192,7 +215,8 @@ When you change the code:
 - Keep the wiring in sync: `agent/tests/test_wiring.py` fails when the registry, the agent config, the sandbox
   policy, the provider profiles and `compose.yaml` disagree about a tool or an endpoint.
 - Services share JSON contracts only; never import another service's code.
-- Publish ports on `127.0.0.1` only, and keep every Docker resource in the `market-demo` project.
+- Publish ports on `127.0.0.1` only (the UI's alone follows `UI_BIND_HOST`), and keep every Docker resource in
+  the `market-demo` project.
 - New files carry the SPDX header (`Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES`, `Apache-2.0`).
 - Run the tests of every project you touch.
 
@@ -205,16 +229,17 @@ agent/                   Hermes profile, skills, receipts plugin, patches, sandb
 api/                     Job API (FastAPI): jobs, execution.v2 events, receipts, reports, recordings
 ui/                      Next.js UI based on the upstream AI-Q UI; src/features/execution is the execution view
 tools/retrieval/         retrieve_evidence: LangChain NVIDIA embed and rerank over Milvus
-tools/market-analytics/  six market tools and Kumo prediction, on CPU or RAPIDS
-tools/auto-ontology/     patches and seed for the optional Auto Ontology profile
+tools/market-analytics/  seven market tools and Kumo prediction, on CPU or RAPIDS
+tools/auto-ontology/     patches and seed for Auto Ontology (the ontology profile)
 infra/openshell/         OpenShell pins, gateway config, provider profiles, CLI image
 infra/switchyard/        Switchyard image, route templates, judge prompt
 infra/phoenix/           Phoenix launcher
 data/                    data packs and the demo-data builder; packs/<id>/recordings is the replay bundle
+eval/                    on-demand checks of a running deployment: the answer-quality eval and the GPU guard
 contracts/               tool registry, JSON Schemas and golden fixtures
 scripts/                 demo.sh lifecycle and gen-contracts.sh codegen
 docs/                    the guides below
-vendor/                  the private Auto Ontology submodule (not checked out by default)
+vendor/                  the Auto Ontology submodule (not checked out by default; private until it is published)
 ```
 
 ## Documentation
@@ -227,6 +252,7 @@ vendor/                  the private Auto Ontology submodule (not checked out by
 | [OpenShell](docs/openshell.md) | The sandbox image, the policy, the providers, the lifecycle, known issues |
 | [Retrieval](docs/retrieval.md) | The retrieval pipeline and its documented configuration items |
 | [Data packs](docs/data-packs.md) | The pack contract, building, recording, adding a pack |
+| [Data platform](docs/data-platform.md) | External data, fetch, the importer and its cache, the Data Designer pack, per-pack questions |
 | [Customize](docs/customize.md) | Adding a tool, a server, a skill or a model |
 | [Operations](docs/operations.md) | Lifecycle, Phoenix, jobs, troubleshooting, Brev VM mode |
 | [Decisions](docs/decisions.md) | The decision log and the documented workarounds |
@@ -242,22 +268,27 @@ Each component also has its own README with its environment and tests.
   government information, but not the official legal edition of the CFR.
 - **Hosted models, with their terms.** Every model call goes to a hosted endpoint and is subject to that
   provider's terms. The default endpoint, build.nvidia.com, is open to anyone with an NVIDIA account but
-  serves no GPT model; the escalation templates take GPT-6 Sol from a provider you configure.
-- **Structured questions need Auto Ontology (the `ontology` profile); everything else runs without it.**
-  Without the ontology profile, the agent declines questions that need exact rows, such as the per-event price
-  reactions. The replay bundle was recorded with it.
+  serves no GPT model; the `*-gpt` templates take GPT-6.1 Sol from a provider you configure.
+- **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
+  `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
+  need exact rows or custom SQL, such as the per-sector counts and median returns (`sector-sql`). The replay bundle was recorded with it.
 - **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
 - **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
   person on one host.
-- **Measured once.** The routing bake-off ran each question once (12 questions, 6 arms); its limits are in
-  [models and routing](docs/models-and-routing.md#limits-of-this-bake-off).
+- **Small bake-offs.** The recommendation rests on the 2026-10-01 bake-off: 8 `us-equities` questions run twice
+  for each of 5 arms (16 runs per arm), with two graders that are also among the models compared, so a difference
+  of one or two runs is noise. The 2026-09-30 bake-off ran 17 questions twice over 4 arms, with one grader. Their
+  limits are in models and routing ([2026-10-01](docs/models-and-routing.md#the-2026-10-01-frontier-bake-off),
+  [2026-09-30](docs/models-and-routing.md#limits-of-this-bake-off)).
 
 ## Security considerations
 
 - **Loopback only.** Every port is published on `127.0.0.1`; on a remote host, use an SSH tunnel. Never
   publish Switchyard (no authentication), Phoenix (full trace payloads) or the Auto Ontology MCP server
   (trusted service mode). The UI has no sign-in and spends your inference credits: open it with
-  `UI_BIND_HOST=0.0.0.0` only to a trusted proxy, such as a Brev secure link, and `doctor` warns while you do.
+  `UI_BIND_HOST=0.0.0.0` only behind a link that requires sign-in, such as a Brev link with sign-in set in the
+  Brev console, and `doctor` warns while you do. Anyone who can open a link without sign-in can run the agent
+  on the keys in `.env`.
 - **Keys.** `.env` holds the keys; it is created with mode 600 and is gitignored. Services get keys as Compose
   secret files; only Auto Ontology and an optional hosted Kumo key are read from the environment. Switchyard is
   the only holder of the model key on the agent path. `doctor` never prints a key, and replay needs none.
@@ -287,5 +318,5 @@ NeMo Relay, [NVIDIA Nemotron](https://build.nvidia.com) models,
 [RAPIDS](https://rapids.ai), [Kumo](https://kumo.ai) Relational, NVIDIA Auto Ontology, the
 [Model Context Protocol](https://modelcontextprotocol.io), [Arize Phoenix](https://github.com/Arize-ai/phoenix),
 [FastAPI](https://fastapi.tiangolo.com), [DuckDB](https://duckdb.org), [Next.js](https://nextjs.org),
-NVIDIA KUI and [React Flow](https://reactflow.dev). Each keeps its own license, and each model its provider's
+NVIDIA KUI. Each keeps its own license, and each model its provider's
 terms.

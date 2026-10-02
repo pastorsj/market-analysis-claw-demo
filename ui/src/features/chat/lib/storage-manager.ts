@@ -67,13 +67,6 @@ export const calculateTotalStorageSize = (): number => {
   }
 }
 
-/**
- * Calculate the size of the chat store in bytes
- */
-export const calculateChatStoreSize = (): number => {
-  return getKeySize(STORAGE_KEY)
-}
-
 const bytesToMB = (bytes: number): number => {
   return bytes / (1024 * 1024)
 }

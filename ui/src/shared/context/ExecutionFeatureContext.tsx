@@ -15,6 +15,7 @@
 'use client'
 
 import { createContext, useContext, type ComponentType, type ReactNode } from 'react'
+import type { ToolPillUse } from '@/shared/components/ToolPills'
 
 /** One record of a job's SSE stream (`GET /v1/jobs/async/job/{id}/stream`), as the API sent it. */
 export interface JobStreamEvent {
@@ -36,12 +37,20 @@ export interface ExecutionFocus {
 export interface ExecutionWorkspaceProps {
   jobId: string
   focus: ExecutionFocus | null
+  /** The question that started the job, when the conversation has it */
+  question?: string | null
+  /** Data sources selected for that question */
+  sourceIds?: string[]
   onClose: () => void
 }
 
 export interface ActivityPanelProps {
   /** The running job, or the latest job of the current conversation; null when there is none. */
   jobId: string | null
+  /** Whether that job is running now */
+  streaming: boolean
+  /** Whether the panel is open; a closed panel keeps its tabs but renders no content */
+  open: boolean
 }
 
 /** One question and its recorded answer. */
@@ -62,7 +71,16 @@ export interface RecordedSession {
   turns: RecordedTurn[]
 }
 
-export type RecordedSessionSummary = Pick<RecordedSession, 'id' | 'title' | 'recordedAt'>
+/** A recorded session as the sessions list shows it, before it is loaded. */
+export interface RecordedSessionSummary extends Pick<
+  RecordedSession,
+  'id' | 'title' | 'recordedAt'
+> {
+  /** Its questions, one per turn */
+  questions: string[]
+  /** The tools its runs used, as pills */
+  tools: ToolPillUse[]
+}
 
 export interface RecordingsSource {
   list: () => Promise<RecordedSessionSummary[]>
@@ -74,7 +92,7 @@ export interface ExecutionFeature {
   onJobEvent: (event: JobStreamEvent) => void
   /** Full view opened from an answer's "View Execution" action. */
   Workspace: ComponentType<ExecutionWorkspaceProps> | null
-  /** Content of the Agent Activity side panel. */
+  /** Content of the Agent Activity side panel: its tabs and their views. */
   ActivityPanel: ComponentType<ActivityPanelProps> | null
   /** Recorded sessions listed in replay mode. */
   recordings: RecordingsSource | null

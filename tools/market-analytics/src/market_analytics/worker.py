@@ -25,6 +25,7 @@ from . import bootstrap
 from . import tools
 from .data import MarketData
 from .data import Pack
+from .data import footprint
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +37,10 @@ class WorkerError(RuntimeError):
 
 
 class Worker:
-    def __init__(self, root: Path, *, timeout: float) -> None:
+    def __init__(self, root: Path, *, timeout: float, engine: str | None = None) -> None:
         self.root = root
         self.timeout = timeout  # seconds one call may run before the worker is replaced
+        self.engine = engine  # "cpu" or "gpu"; None follows MARKET_ANALYTICS_ENGINE
         self._lock = threading.Lock()
         self._process: multiprocessing.process.BaseProcess | None = None
         self._connection: Connection | None = None
@@ -80,7 +82,10 @@ class Worker:
         context = multiprocessing.get_context("spawn")
         self._connection, child = context.Pipe()
         self._process = context.Process(
-            target=bootstrap.worker_main, args=(child, self.root), name="market-analytics-worker", daemon=True
+            target=bootstrap.worker_main,
+            args=(child, self.root, self.engine),
+            name=f"market-analytics-{self.engine}-worker" if self.engine else "market-analytics-worker",
+            daemon=True,
         )
         self._process.start()
         child.close()
@@ -118,7 +123,9 @@ def serve(connection: Connection, root: Path) -> None:
     """The worker process: load the pack, then answer (tool, arguments) requests until the pipe closes."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(processName)s %(name)s: %(message)s")
     try:
-        data = MarketData.load(Pack.load(root))
+        pack = Pack.load(root)
+        logger.info("loading %s: %s", root, footprint(pack, tools.engine("tabular").device))
+        data = MarketData.load(pack)
     except Exception as error:
         logger.exception("loading %s failed", root)
         connection.send(("failed", f"{type(error).__name__}: {error}"))
@@ -155,13 +162,15 @@ def warm_up(data: MarketData) -> str:
 
 
 def _warm_up_calls(data: MarketData) -> list[tuple[str, dict[str, Any]]]:
-    """Every tool on the largest universe: the scans over the whole price history, the others over its last month."""
+    """Every tool the pack supports, on the largest universe: the scans over the whole price history, the others
+    over its last month, and intraday_scan over ten assets' last week."""
     universe = max(sorted(data.universes), key=lambda name: len(data.universes[name]))
     timestamps = data.prices["timestamp"]
     start, end = timestamps.min().to_pydatetime(), timestamps.max().to_pydatetime()
     middle = start + (end - start) / 2
     month = {"start": end - timedelta(days=30), "end": end}
-    return [
+    assets = data.universes[universe]
+    calls = [
         ("market_scan", {"universe_id": universe, "start": start, "end": end, "metrics": ["return", "volatility"]}),
         (
             "market_anomaly_scan",
@@ -173,8 +182,10 @@ def _warm_up_calls(data: MarketData) -> list[tuple[str, dict[str, Any]]]:
                 "scoring_end": end,
             },
         ),
-        ("price_context", {"asset_ids": [data.universes[universe][0]], "frequency": "weekly", **month}),
+        ("price_context", {"asset_ids": [assets[0]], "frequency": "weekly", **month}),
         ("sentiment_timeline", {"frequency": "weekly", **month}),
         ("analyze_news_price_relationship", {"published_from": month["start"], "published_to": end}),
         ("analyze_market_relationships", {}),
+        ("intraday_scan", {"asset_ids": list(assets[:10]), "start": end - timedelta(days=7), "end": end}),
     ]
+    return [(tool, arguments) for tool, arguments in calls if tools.available(data.pack, tool)]

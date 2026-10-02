@@ -6,5 +6,6 @@
  */
 
 export { MainLayout, type InitialQuestion } from './components'
+export { toDemoScenarios, type DemoScenario } from './scenarios'
 export { useLayoutStore } from './store'
 export type { ThemeMode } from './types'

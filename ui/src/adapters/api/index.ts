@@ -8,9 +8,14 @@
  * server-only pack client is imported directly from './pack-client'.
  */
 
-export { fetchDataSources, type DataSourceFromAPI } from './data-sources-client'
+export {
+  fetchDataSources,
+  fetchRecordedDataSources,
+  type DataSourceFromAPI,
+} from './data-sources-client'
 
 export {
+  ApiRequestError,
   cancelJob,
   createDeepResearchClient,
   getJobReport,

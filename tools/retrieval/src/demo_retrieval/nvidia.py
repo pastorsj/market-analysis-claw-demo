@@ -97,5 +97,5 @@ def _retry(attempts: int, max_wait: float):
 # The clients have no retries of their own; wrap each embed or rerank call with one of these.
 # A tool call has an agent waiting on it, so it gives up after a few seconds.
 retry_transient = _retry(attempts=3, max_wait=4)
-# Ingest sends hundreds of requests in a row, and one that fails for good restarts the build from scratch.
+# Ingest sends hundreds of requests in a row; one that fails for good stops the build until the next run resumes it.
 retry_bulk = _retry(attempts=8, max_wait=8)

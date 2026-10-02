@@ -4,7 +4,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest'
 import {
   calculateTotalStorageSize,
-  calculateChatStoreSize,
   checkStorageHealth,
   cleanupOldSessions,
   ensureStorageCapacity,
@@ -59,22 +58,6 @@ describe('storage-manager', () => {
 
     test('returns 0 for empty storage', () => {
       const size = calculateTotalStorageSize()
-      expect(size).toBe(0)
-    })
-  })
-
-  describe('calculateChatStoreSize', () => {
-    test('calculates chat store size', () => {
-      localStorage.setItem('aiq-chat-store', 'test data')
-
-      const size = calculateChatStoreSize()
-
-      // 'test data' = 9 chars × 2 bytes = 18 bytes
-      expect(size).toBe(18)
-    })
-
-    test('returns 0 when chat store does not exist', () => {
-      const size = calculateChatStoreSize()
       expect(size).toBe(0)
     })
   })

@@ -1,12 +1,14 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""demo-data: validate | prepare [--structured | --corpus] | verify | list | clean.
+"""demo-data: validate | fetch | prepare [--structured | --corpus] | verify | list | clean.
 
 Settings come from flags or the environment:
-  DATA_PACK           pack id under the packs directory (default market-analysis)
+  DATA_PACK           pack id under the packs directory (default synthetic-market)
   DATA_PACK_PROFILE   generator profile (default: the pack's default_profile)
   DATA_CORPORA        comma-separated corpus sources to build (default: every corpus that is not opt-in)
   DATA_DIR            where builds live (default /data)
+  DATA_SOURCE_DIR     where external datasets live, one directory per dataset (default /sources)
+  DATA_SOURCE_<ID>    where `fetch` gets external dataset <id> from (see fetch.py)
   DATA_PACKS_DIR      where packs live (default: the packs directory next to this package)
   DATA_CONTRACTS_DIR  tool contracts to validate against (default: tools/*/contract/ in the repository)
 """
@@ -24,10 +26,15 @@ from typing import Any
 import yaml
 
 from demo_data import corpus
+from demo_data import external
+from demo_data import fetch
 from demo_data import publish
+from demo_data import sec
 from demo_data import structured
 from demo_data.corpus.common import CorpusError
 from demo_data.corpus.common import Downloads
+from demo_data.external import ExternalError
+from demo_data.market import MarketError
 from demo_data.pack import DATA_ROOT
 from demo_data.pack import Pack
 from demo_data.pack import PackError
@@ -41,7 +48,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         return args.run(args)
-    except (PackError, CorpusError, structured.BuildError, subprocess.CalledProcessError) as error:
+    except (
+        PackError,
+        CorpusError,
+        ExternalError,
+        MarketError,
+        sec.SecError,
+        structured.BuildError,
+        subprocess.CalledProcessError,
+    ) as error:
         print(f"demo-data: {error}", file=sys.stderr)
         return 1
 
@@ -51,14 +66,21 @@ def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="demo-data", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    root.add_argument("--pack", default=env("DATA_PACK") or "market-analysis")
+    root.add_argument("--pack", default=env("DATA_PACK") or "synthetic-market")
     root.add_argument("--packs-dir", type=Path, default=env("DATA_PACKS_DIR") or DATA_ROOT / "packs")
     root.add_argument("--data-dir", type=Path, default=env("DATA_DIR") or "/data")
+    root.add_argument("--sources-dir", type=Path, default=env("DATA_SOURCE_DIR") or "/sources")
     root.add_argument("--contracts-dir", type=Path, default=env("DATA_CONTRACTS_DIR") or None)
     commands = root.add_subparsers(required=True, metavar="command")
 
     command = commands.add_parser("validate", help="check the pack: schema, cross-references, tool contracts")
     command.set_defaults(run=validate)
+
+    command = commands.add_parser("fetch", help="fetch the pack's external datasets and verify them")
+    command.add_argument("datasets", nargs="*", help="dataset ids (default: every external dataset of the pack)")
+    command.add_argument("--verify-only", action="store_true", help="only hash what is already in place")
+    command.add_argument("--jobs", type=int, default=int(env("DATA_FETCH_JOBS") or 8), help="parallel files")
+    command.set_defaults(run=fetch_datasets)
 
     command = commands.add_parser("prepare", help="build the pack (or reuse its cached build) and make it active")
     part = command.add_mutually_exclusive_group()
@@ -66,6 +88,7 @@ def parser() -> argparse.ArgumentParser:
     part.add_argument("--corpus", action="store_true", help="only corpus/documents.jsonl")
     command.add_argument("--profile", default=env("DATA_PACK_PROFILE") or None)
     command.add_argument("--corpora", default=env("DATA_CORPORA") or None, help="comma-separated corpus sources")
+    command.add_argument("--refresh-sec", action="store_true", help="fetch a new SEC company snapshot")
     command.set_defaults(run=prepare)
 
     command = commands.add_parser("verify", help="check the active build against its pack.json")
@@ -74,8 +97,8 @@ def parser() -> argparse.ArgumentParser:
     command = commands.add_parser("list", help="show the packs available and the builds present")
     command.set_defaults(run=list_packs)
 
-    command = commands.add_parser("clean", help="remove inactive builds")
-    command.add_argument("--all", action="store_true", help="also remove the download cache")
+    command = commands.add_parser("clean", help="remove inactive builds and the rollups only they used")
+    command.add_argument("--all", action="store_true", help="also remove the download cache and every cache")
     command.set_defaults(run=clean)
     return root
 
@@ -94,6 +117,40 @@ def validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def fetch_datasets(args: argparse.Namespace) -> int:
+    pack = load_pack(args.packs_dir / args.pack)
+    found = external.datasets(pack.manifest, args.sources_dir)
+    if not found:
+        print(f"{pack.id}: no external datasets")
+        return 0
+    unknown = sorted(set(args.datasets) - set(found))
+    if unknown:
+        raise PackError(pack.id, [f"no external dataset {unknown}; choose from {sorted(found)}"])
+    for dataset_id in args.datasets or sorted(found):
+        dataset = found[dataset_id]
+        source = os.environ.get(dataset.source_variable, "").strip()
+        started = time.monotonic()
+        if source and not args.verify_only:
+            print(f"{dataset_id}: fetching from {source.split('?', 1)[0]} into {dataset.root}")
+            report = fetch.fetch(dataset, source, jobs=args.jobs)
+        else:
+            print(f"{dataset_id}: verifying {dataset.root}")
+            report = external.verify(dataset, jobs=args.jobs)
+        print(
+            f"{dataset_id}: {report.files:,} files, {report.bytes / 1e9:.2f} GB, {report.hashed:,} hashed, "
+            f"in {time.monotonic() - started:.1f}s"
+        )
+        if report.extra:
+            print(f"{dataset_id}: {len(report.extra):,} files are not in the manifest (left alone): {report.extra[0]}")
+        if report.bad:
+            raise ExternalError(
+                f"{dataset_id}: {len(report.bad):,} files are missing or do not match the manifest, "
+                f"e.g. {report.bad[0]}; fetch them with {dataset.source_variable} set"
+            )
+        print(f"{dataset_id}: verified (fingerprint {dataset.fingerprint[:12]})")
+    return 0
+
+
 def prepare(args: argparse.Namespace) -> int:
     pack = load_pack(args.packs_dir / args.pack)
     profile = pack.resolve_profile(args.profile)
@@ -107,7 +164,11 @@ def prepare(args: argparse.Namespace) -> int:
     if "corpus" in parts:
         require_env(pack, corpora)
     contracts = find_contracts(args.contracts_dir)
-    digest = pack.digest(profile, corpora, publish.builder_fingerprint())
+    cache_dir = args.data_dir / "cache"
+    inputs = []
+    if pack.manifest.get("market", {}).get("companies") == "sec":
+        inputs.append(f"sec {sec.digest(sec.snapshot(cache_dir, refresh=args.refresh_sec))}")
+    digest = pack.digest(profile, corpora, publish.builder_fingerprint(), inputs)
     name = f"{pack.id}@{pack.manifest['version']}+{profile}+{digest[:12]}"
 
     with publish.locked(args.data_dir):
@@ -119,16 +180,33 @@ def prepare(args: argparse.Namespace) -> int:
             started = time.monotonic()
             with build.staging(part) as staging:
                 if part == "structured":
-                    receipt = {"rows": structured.build(pack, profile, contracts, staging)}
+                    receipt = structured.build(
+                        pack, profile, contracts, staging, sources_dir=args.sources_dir, cache_dir=cache_dir
+                    )
                 else:
+                    downloads = Downloads(args.data_dir / "downloads")
                     receipt = {
-                        "documents": corpus.build(pack, corpora, Downloads(args.data_dir / "downloads"), staging)
+                        "documents": corpus.build(pack, corpora, downloads, staging, sources_dir=args.sources_dir)
                     }
             # The build is keyed on the selected corpora, but pack.json offers their sources and questions only
             # once the corpus part is in it.
             served = corpora if part == "corpus" or build.has("corpus") else []
-            build.record(part, pack.resolve(profile, served), receipt)
+            root = (
+                structured.market_root(pack, profile, args.sources_dir, cache_dir)
+                if "market" in pack.manifest
+                else None
+            )
+            resolved = pack.resolve(profile, served, root)
+            build.record(part, structured.with_population(resolved, build.directory), receipt)
             print(f"{part}: built in {time.monotonic() - started:.1f}s ({summary(receipt)})")
+            if imported := receipt.get("import"):
+                rollup = imported["rollup"]
+                dropped = ", ".join(f"{reason} {count:,}" for reason, count in imported["dropped"].items() if count)
+                print(
+                    f"import: {imported['assets']:,} of {imported['symbols']:,} symbols kept ({dropped or 'none'} "
+                    f"dropped), {imported['sessions']:,} sessions; daily rollup {rollup['key']} "
+                    + ("reused" if rollup["cached"] else f"built in {rollup['seconds']}s")
+                )
         if not build.ready():
             print(
                 f"demo-data: the corpus is in {name}, which has no structured part, so it is not active: run "
@@ -160,7 +238,7 @@ def require_env(pack: Pack, corpora: list[dict[str, Any]]) -> None:
     ]
     if missing:
         blocked = {source for source, _ in missing}
-        others = [corpus["source"] for corpus in corpora if corpus["source"] not in blocked]
+        others = list(dict.fromkeys(corpus["source"] for corpus in corpora if corpus["source"] not in blocked))
         problems = "; ".join(f"{source} needs {variable}" for source, variable in missing)
         if others:
             problems += f" (or skip it: set DATA_CORPORA={','.join(others)} for both --structured and --corpus)"

@@ -4,32 +4,36 @@
 /**
  * Research Page
  *
- * The chat experience. `?question=<id>` (from the landing page) places that
- * featured question of the active data pack in the composer.
+ * The chat experience. In live mode the active data pack's questions are the
+ * composer's demo scenarios, and `?question=<id>` (from the landing page)
+ * places that question in the composer.
  */
 
 import { type ReactNode, Suspense } from 'react'
 import { fetchPack } from '@/adapters/api/pack-client'
-import { MainLayout, type InitialQuestion } from '@/features/layout'
+import { MainLayout, toDemoScenarios, type InitialQuestion } from '@/features/layout'
 import { readUiMode } from '@/shared/config/env'
 
 interface ResearchPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const loadInitialQuestion = async (questionId: unknown): Promise<InitialQuestion | null> => {
-  if (typeof questionId !== 'string' || readUiMode() !== 'live') return null
-  const question = (await fetchPack())?.questions.find((q) => q.id === questionId)
-  return question ? { question: question.question, sourceIds: question.sources } : null
-}
-
 const ResearchPage = async ({ searchParams }: ResearchPageProps): Promise<ReactNode> => {
-  const initialQuestion = await loadInitialQuestion((await searchParams).question)
+  const pack = readUiMode() === 'live' ? await fetchPack() : null
+  const questionId = (await searchParams).question
+  const question =
+    typeof questionId === 'string' ? pack?.questions.find((q) => q.id === questionId) : undefined
+  const initialQuestion: InitialQuestion | null = question
+    ? { question: question.question, sourceIds: question.sources }
+    : null
 
   // MainLayout reads the ?session= parameter, which needs a Suspense boundary.
   return (
     <Suspense fallback={null}>
-      <MainLayout initialQuestion={initialQuestion} />
+      <MainLayout
+        initialQuestion={initialQuestion}
+        demoScenarios={toDemoScenarios(pack?.questions ?? [])}
+      />
     </Suspense>
   )
 }

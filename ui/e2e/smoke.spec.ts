@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { LIVE_URL, REPLAY_URL } from '../playwright.config'
 
 /** The chat store's saved state: a live session whose job was running when the page closed. */
@@ -34,11 +34,25 @@ const SAVED_LIVE_SESSION = JSON.stringify({
   version: 0,
 })
 
+/**
+ * Opens the live landing page with its featured questions. The server renders them only when the
+ * API answers `GET /v1/pack` within 3 s, which a busy test run can miss now and then: reload until
+ * they are there.
+ */
+const gotoLanding = async (page: Page) => {
+  await expect(async () => {
+    await page.goto('/')
+    await expect(
+      page.getByRole('region', { name: 'Featured questions' }).getByRole('link')
+    ).toHaveCount(6, { timeout: 2_000 })
+  }).toPass({ timeout: 20_000 })
+}
+
 test.describe('live mode', () => {
   test.use({ baseURL: LIVE_URL })
 
   test('a featured question is asked and answered with its cited evidence', async ({ page }) => {
-    await page.goto('/')
+    await gotoLanding(page)
     await expect(page).toHaveTitle('Enterprise Research')
 
     await page.getByRole('link', { name: /Market Leaders/ }).click()
@@ -55,6 +69,70 @@ test.describe('live mode', () => {
     await expect(composer).toBeEnabled()
   })
 
+  test('the composer offers the pack questions as demo scenarios', async ({ page }) => {
+    await page.goto('/research')
+    const composer = page.getByRole('textbox', { name: 'Chat message input' })
+
+    await page.getByTestId('demo-scenario-select').click()
+    // Only the questions whose data sources the API offers
+    await expect(page.getByRole('option')).toHaveCount(5)
+    // Each with pills for the tools it is expected to use
+    const peers = page.getByRole('option', { name: /Peer Network/ })
+    await expect(peers.locator('.tool-pill')).toHaveText(['cuDF', 'cuGraph'])
+    await expect(
+      page.getByRole('option', { name: /Unusual Sessions/ }).locator('.tool-pill')
+    ).toHaveText(['cuDF', 'cuML'])
+    await peers.click()
+
+    await expect(composer).toHaveValue(/^In the return-correlation network/)
+    await expect(page.getByTestId('demo-scenario-select')).toContainText('Peer Network')
+  })
+
+  test('recorded sessions are listed beside My sessions and replay without the API', async ({
+    page,
+  }) => {
+    const exports: string[] = []
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/v1/jobs/')) exports.push(request.url())
+    })
+    await page.goto('/research')
+    await expect(page.getByRole('tab', { name: 'My sessions' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+
+    await page.getByRole('tab', { name: /^Recorded \(\d+\)$/ }).click()
+    await page
+      .getByRole('button', { name: /^Recorded session: / })
+      .first()
+      .click()
+
+    const composer = page.getByRole('textbox', { name: 'Chat message input' })
+    await expect(composer).toBeDisabled()
+    await expect(page.getByText('Recorded test session · read only')).toBeVisible()
+    await page.getByRole('button', { name: 'View execution for this response' }).first().click()
+    const workspace = page.getByRole('region', { name: 'Execution workspace' })
+    await expect(workspace.getByText('Hermes Recorded')).toBeVisible()
+    await expect(workspace.getByText(/^Step (\d+) of \1$/)).toBeVisible()
+    expect(exports).toEqual([])
+  })
+
+  test('voice input records a question and puts its transcript in the composer', async ({
+    page,
+  }) => {
+    await page.goto('/research')
+    const composer = page.getByRole('textbox', { name: 'Chat message input' })
+
+    await page.getByRole('button', { name: 'Start voice input' }).click()
+    await expect(page.getByRole('button', { name: 'Stop voice recording' })).toBeVisible()
+    await page.waitForTimeout(800)
+    await page.getByRole('button', { name: 'Stop voice recording' }).click()
+
+    // The fake API transcribes any valid WAV recording to the same question
+    await expect(composer).toHaveValue('Which assets led the market?')
+    await expect(page.getByRole('button', { name: 'Start voice input' })).toBeEnabled()
+  })
+
   test('the landing page fits a 1280x800, 1440x900 or 1920x1080 screen without scrolling, and its logos load', async ({
     page,
   }) => {
@@ -67,7 +145,7 @@ test.describe('live mode', () => {
       for (const colorScheme of ['light', 'dark'] as const) {
         const where = `${viewport.width}x${viewport.height} ${colorScheme}`
         await page.emulateMedia({ colorScheme })
-        await page.goto('/')
+        await gotoLanding(page)
         const featured = page.getByRole('region', { name: 'Featured questions' })
         await expect(featured.getByRole('link')).toHaveCount(6)
 
@@ -99,7 +177,7 @@ test.describe('live mode', () => {
 test.describe('replay mode', () => {
   test.use({ baseURL: REPLAY_URL })
 
-  test('the research view never calls the API and offers no composer', async ({ page }) => {
+  test('the research view never calls the API and its composer is read only', async ({ page }) => {
     const apiCalls: string[] = []
     page.on('request', (request) => {
       if (new URL(request.url()).pathname.startsWith('/api/v1/')) apiCalls.push(request.url())
@@ -112,7 +190,12 @@ test.describe('replay mode', () => {
     await page.getByRole('link', { name: /Enter market analysis/ }).click()
 
     await expect(page.getByText('What do you want to know?')).toBeVisible()
-    await expect(page.getByRole('textbox', { name: 'Chat message input' })).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Chat message input' })).toBeDisabled()
+    await expect(page.getByText('Recorded test session · read only')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add data sources' })).toBeDisabled()
+    // The saved live session stays out of the replay's lists
+    await page.getByRole('tab', { name: 'My sessions' }).click()
+    await expect(page.getByText('Replay mode shows the recorded sessions only.')).toBeVisible()
     expect(apiCalls).toEqual([])
     const saved = await page.evaluate(() => localStorage.getItem('aiq-chat-store'))
     expect(JSON.parse(saved!).state.conversations[0].messages[0].deepResearchJobStatus).toBe(

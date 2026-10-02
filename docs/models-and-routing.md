@@ -14,53 +14,64 @@ combination is the default and why.
 
 **On build.nvidia.com (the default), Nemotron 3 Ultra alone: `SWITCHYARD_ROUTES=passthrough.nemotron`**, with
 `nvidia/nemotron-3-ultra-550b-a55b` as the efficient model and Nemotron 3 Super (thinking off) for Hermes'
-auxiliary calls. `.env.example` ships this. build.nvidia.com serves no GPT model, so the choice there is
-between Ultra alone and the all-Nemotron escalation (Super answers, Ultra takes over). In the bake-off below,
-Ultra alone passed 6 of 12 questions and Super → Ultra passed 3.
+auxiliary and fallback calls. `.env.example` ships this. build.nvidia.com serves no GPT model, so the choice
+there is between Ultra alone and the all-Nemotron escalation (Super answers, Ultra takes over). In the
+2026-09-30 bake-off (17 questions over both packs, two runs each), Ultra alone passed 13 of 34 runs and
+Super → Ultra 12. Super → Ultra was also twice as slow at the median (140 s against 72 s), failed 4 jobs
+against none, and left 6 of its 30 reports without a citation (Ultra alone: 4 of 34).
 
-**With a provider that serves GPT-6 Sol, pin it: `SWITCHYARD_ROUTES=pinned-capable.nemotron-gpt`**, with
-`CAPABLE_BASE_URL` and `CAPABLE_API_KEY` pointed at that provider ([configuration](configuration.md#1-inference-endpoint)).
-In the 2026-09-29 bake-off, Sol pinned passed 11 of 12 questions. Nemotron 3 Ultra alone passed 6, and Ultra
-with escalation to Sol also passed 6. Sol pinned was also the fastest arm apart from Super (p50 33 s, p95
-79 s), made the fewest tool calls (41 against Ultra's 63), and read about a third of Ultra's input tokens per
-question (median 36k against 115k). It has no judge, so it also avoids escalation's failure mode: a failed
-judge call fails the agent's turn.
+**With a provider that serves a frontier model, let Nemotron 3 Ultra lead and escalate to GPT-6.1 Sol:
+`SWITCHYARD_ROUTES=escalation.nemotron-gpt`**, with GPT-6.1 Sol as the capable model and as the escalation judge
+(under a second id at that provider), Nemotron 3 Super for auxiliary and fallback calls, and `CAPABLE_BASE_URL`
+and `CAPABLE_API_KEY` pointed at the provider ([configuration](configuration.md#1-inference-endpoint)). In the
+2026-10-01 frontier bake-off ([below](#the-2026-10-01-frontier-bake-off)) it passed 10 of 16 runs with the
+primary grader and 14 with the second, ahead of GPT-6.1 Sol pinned (7 and 9) and Claude Opus 5.5 pinned (9 and
+13), while GPT-6.1 Sol served 10% of the agent turns and, with its judge calls, 20% of the tokens.
 
-Ultra → Sol escalation lost for three reasons:
-- It fixed little. The judge escalated 6 of 12 runs and rescued 2 questions that Ultra failed (H4, H5). The
-  runs that stayed on Ultra kept Ultra's failures (H3, H7, the anomaly and peer-network questions): Ultra
-  mostly fails in how its final report reads the evidence, for example anomaly deviations reported as
-  percentage returns, and the judge rarely flags that.
-- It switched when it did not need to. Three escalations were on questions that Ultra alone passed, so it
-  latched on 3 of Ultra's 6 passing questions: a 50% false-latch rate, against the 10% bar set before the
-  bake-off. Each switch costs a discarded Ultra reply, on top of a judge call for every earlier turn.
-- With two confirmations (A3) it escalated only twice, and it took twice as long at the median (66 s).
+**Pinned frontier is the fallback.** Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) was the stronger
+and steadier pinned arm (p95 72 s, no tool errors). GPT-6.1 Sol pinned lost runs to repeated tool-argument errors
+and two stalled streams ([below](#the-2026-10-01-frontier-bake-off)). On 2026-09-30, GPT-6 Sol pinned had beaten
+Ultra → Sol with a Nemotron 3 Super judge (24 against 20 of 34); a frontier judge reversed that.
 
-**What to use where:**
+**What to use where** (the two bake-offs used different question sets and endpoints, so compare within a date):
 
-| Situation | `SWITCHYARD_ROUTES` and models |
-|---|---|
-| build.nvidia.com (default) | `passthrough.nemotron`, efficient Nemotron 3 Ultra (`nvidia/nemotron-3-ultra-550b-a55b`); A0 passed 6/12 |
-| GPT-6 Sol from any OpenAI-compatible provider | `pinned-capable.nemotron-gpt`, capable GPT-6 Sol on `CAPABLE_BASE_URL`; A1 passed 11/12 |
-| Ultra escalating to GPT-6 Sol | `escalation.nemotron-gpt`, the same capable settings; A2 passed 6/12 with a 50% false-latch rate |
-| All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`). A4 passed 3/12. Its judge escalated at the first turn in 7 of 10 escalations, so it behaves like Ultra with overhead |
-| Nemotron 3.5 Super | not yet: the text preview passed 5/12 and made invalid tool calls (company names as asset ids, windows out of order) |
+| Situation | `SWITCHYARD_ROUTES` and models | Passed |
+|---|---|---|
+| build.nvidia.com (default) | `passthrough.nemotron`, efficient Nemotron 3 Ultra (`nvidia/nemotron-3-ultra-550b-a55b`) | 2026-09-30: 13 of 34; 2026-10-01: 7 of 16 |
+| A provider serving GPT-6.1 Sol (recommended) | `escalation.nemotron-gpt`: Ultra → GPT-6.1 Sol, judged by GPT-6.1 Sol | 2026-10-01: 10 of 16 |
+| A provider serving Claude Opus 5.5 | `pinned-capable.nemotron-claude`, capable Claude Opus 5.5 on `CAPABLE_BASE_URL` | 2026-10-01: 9 of 16 |
+| GPT-6.1 Sol on every turn | `pinned-capable.nemotron-gpt` | 2026-10-01: 7 of 16 (GPT-6 Sol on 2026-09-30: 24 of 34) |
+| Ultra escalating to Claude Opus 5.5 | `escalation.nemotron-claude`, judged by Claude Opus 5.5 | 2026-10-01: 8 of 16 |
+| All-Nemotron escalation on build.nvidia.com | `escalation.nemotron`: Super → Ultra, 3.5 Lightning judge (the commented block in `.env.example`) | 2026-09-30: 12 of 34 |
 
 Switching is an `.env` edit plus `./scripts/demo.sh restart switchyard`; the sandbox is not rebuilt.
 
-The bake-off ran on one OpenAI-compatible gateway that serves both Nemotron and GPT-6 models, not on
-build.nvidia.com. The Nemotron models are the same, but the build.nvidia.com arms were not re-measured there.
+**One OpenAI-compatible endpoint for every model.** If your organization runs an OpenAI-compatible gateway
+that serves both Nemotron and GPT models, there are two ways to use it:
+- *Only for the capable model* (as the 2026-09-30 bake-off did): keep `INFERENCE_BASE_URL` on build.nvidia.com and set
+  `CAPABLE_BASE_URL` and `CAPABLE_API_KEY` to the gateway.
+- *For every model* (as the 2026-10-01 bake-off did): set `INFERENCE_BASE_URL` and `INFERENCE_API_KEY` to the gateway, leave `CAPABLE_*` empty,
+  use the model ids its `GET /v1/models` lists, and give the retriever its own build.nvidia.com key
+  (`RETRIEVER_API_KEY`).
+
+Either way the gateway's URL and key live only in your `.env`, and `./scripts/demo.sh doctor --keys` checks
+that every model id the template uses is listed.
 
 ### The default on build.nvidia.com
 
-The replay bundle was recorded with the default on 2026-09-29: Ultra alone on build.nvidia.com, every
-profile, on a Brev A100 VM. That was four `record` runs of the featured questions (three of all six, one of
-two), unjudged, not a bake-off. What they showed:
+`synthetic-market`'s committed replay bundle was recorded with this default: Ultra alone on build.nvidia.com, every
+profile, on a Brev A100 VM. Its ten questions were recorded on 2026-10-01 and five of them again on 2026-10-02, and
+every answer was reviewed against the pack's oracles and evidence. `us-equities`, the hosted demo's pack, was
+recorded as that deployment runs, with Ultra escalating to GPT-6.1 Sol (`escalation.nemotron-gpt`). How both were
+made, and which faults remain, is in [data packs](data-packs.md#recordings) and each pack's README.
+
+The retired `market-analysis` pack's bundle was recorded the same way on 2026-09-29, in four `record` runs of
+the featured questions (three of all six, one of two). What they showed:
 
 - **Citation tokens.** Ultra there often writes `【evidence:<id>】` or `【hermes-receipt:<id>】` instead of
   `[evidence:<id>]`, or names the receipt in prose. Before the API accepted the bracketed forms, 4 of 5
-  answers in the first run had no citations. In the committed bundle 5 of 6 are cited; the Event Reaction
-  answer names its receipts in a prose "Sources" line, which does not count.
+  answers in the first run had no citations. In that bundle 4 of 5 were cited; the Event Reaction answer named
+  its receipts in a prose "Sources" line, which does not count.
 - **Event Reaction is unstable, as H1 was.** Of four attempts, two listed the eight planted events and their
   returns through Auto Ontology. One reached the Hermes run deadline after asking Auto Ontology to read a
   spilled-over tool result, and one reported the 2,000-issuer short-form news stream instead of the planted
@@ -68,300 +79,330 @@ two), unjudged, not a bake-off. What they showed:
 - **Market Leaders** scanned from August 1 in every run: 21 sessions, not 20. The strongest and weakest
   assets match the oracle (Aether, Cascade), but Aether's +0.21% is not the oracle's 20-session −0.94%.
 - **Large-Universe Scan** names the oracle's strongest and weakest issuers but misreads the unit: the tool's
-  returns are fractions (4.19 is +419%), which the committed answer labels "×" and another run showed as
+  returns are fractions (4.19 is +419%), which that bundle's answer labeled "×" and another run showed as
   "+4.191 %".
 - **Cybersecurity Rules** made one retrieval and covers Regulation S-K Item 106 only. It does not mention
   Form 8-K Item 1.05, which the earlier recording with GPT-6 Sol did.
 - The anomaly and Galena answers matched their receipts in every run. Auto Ontology took 68 to 186 s per
   query with Super and 3.5 Lightning on build.nvidia.com, and 332 s on each unanswerable request.
 
+### Tuning Ultra for the current packs
+
+On 2026-09-30 the featured questions of both packs ran with Ultra alone on build.nvidia.com, on the Brev
+A100 VM, before and after tuning: 14 runs before (one failed), 30 after, unjudged. What they showed, and what changed:
+
+| Gap | Cause | Change | After |
+|---|---|---|---|
+| A job failed after 5 minutes of "Service temporarily overloaded" | build.nvidia.com sends the error inside an HTTP 200 stream, and Switchyard 0.3.0 passes it through | Hermes falls back to `market-research-fallback` (Super) after two failed tries ([how](../infra/switchyard/README.md#routes)) | A simulated overload finished on Super in 15 s |
+| Universes the pack does not have (`top_50` on `synthetic-market`), or `all_assets` and Auto Ontology detours on `us-equities` | Hermes lists the tools once, when the sandbox starts, and a `DATA_PACK` switch kept the sandbox, so the model saw the previous pack's universes | A pack switch recreates the sandbox ([OpenShell](openshell.md)) | No invalid universe on a fresh sandbox |
+| "The 20 sessions ending August 31" scanned from August 3: 21 sessions instead of 20 | The model does not count trading days, even with a worked example | `market_scan` takes `sessions=20` with `end` | Both packs' Market Leaders match their oracles |
+| Anomaly deviations shown as percentages | Nothing said they are robust z-scores | The tool description and the result's limitation say so | No later run showed them as percentages |
+| A ranking sent to Auto Ontology, which returned dollar price changes as "returns" | The routing table did not say where leaders and laggards go | `SOUL.md` sends rankings over any window to the market tools | Moves and Filings matches its oracle |
+| Receipts named in prose ("evidence `hermes-receipt:<id>`") instead of cited | Ultra rarely writes the `[evidence:<id>]` token as instructed | The API counts a receipt id in code or bold as a citation | 20 of 30 answers were cited before this change; 27 of 30 would have been |
+
+Ultra loaded no skill in any of these runs, although `SOUL.md` asks it to before a tool's first call. Guidance
+that must reach it therefore lives in `SOUL.md` and the tool descriptions, not only in the skills.
+
+Still open:
+- **Form 8-K Item 1.05** searches 7 to 12 times for the four-business-day deadline, which the eCFR sections in
+  the corpus do not state, then says so. A "search each topic once" line in the tool description did not
+  change it.
+- Ultra reads "which had the strongest and weakest returns" as one of each.
+- Scope slips vary by run, for example news for every issuer instead of the 12 most liquid.
+
+The escalation judge's prompt now escalates only for a failure it can name: a stuck or invalid tool loop, an
+error used as data, or a report with a missing citation, a wrong window or unit, an unanswered part, a
+contradiction or no evidence. The bake-off below measures it ([the tuned judge](#the-tuned-judge-measured)).
+
 ## Models and ids
 
 | Role | Model | build.nvidia.com id (`https://integrate.api.nvidia.com/v1`) |
 |---|---|---|
 | Efficient (default: every turn) | Nemotron 3 Ultra 550B-A55B | `nvidia/nemotron-3-ultra-550b-a55b` |
-| Judge and auxiliary calls, thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
-| Capable (escalation and pinned templates) | GPT-6 Sol, over the Responses API | not served; the id your provider lists, e.g. `gpt-6-sol` |
-| Judge for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
-| Later efficient model | Nemotron 3.5 Super | not served yet |
+| Auxiliary and fallback calls (`AGENT_AUX_MODEL`), thinking off | Nemotron 3 Super 120B-A12B | `nvidia/nemotron-3-super-120b-a12b` |
+| Escalation judge in `*-gpt` and `*-claude` (`AGENT_JUDGE_MODEL`) | a frontier model from the capable provider: GPT-6.1 Sol or Claude Opus 5.5, under a second id there | not served |
+| Capable (escalation and pinned templates) | GPT-6.1 Sol (GPT-6 Sol in the 2026-09-30 bake-off), over the Responses API | not served; the id your provider lists, e.g. `gpt-6.1-sol` |
+| Capable (`*-claude` templates) | Claude Opus 5.5, over the Anthropic Messages API | not served; the id your provider lists, e.g. `claude-opus-5-5` |
+| Judge (and aux) for the all-Nemotron escalation | Nemotron 3.5 Lightning 30B-A3B | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| Candidate efficient model | Nemotron 3.5 Super | to be evaluated once it is served publicly |
 
 On any other OpenAI-compatible endpoint, use the ids its `GET /v1/models` lists; `./scripts/demo.sh doctor
 --keys` checks every id the template uses. Retrieval always uses the retriever endpoint (build.nvidia.com):
 `nvidia/nemotron-3-embed-1b` and `nvidia/llama-nemotron-rerank-vl-1b-v2`.
 
+## The 2026-10-01 frontier bake-off
+
+**Question.** Does Nemotron 3 Ultra with frontier escalation get close to frontier quality at lower frontier
+usage? Only the Nemotron-led arms are deployment candidates; the pinned frontier arms are reference ceilings.
+
+**Setup.** The `us-equities` pack on the same kind of A100 VM and stack as below, every profile. Every model came
+from an OpenAI-compatible inference gateway; the retriever stayed on build.nvidia.com. The 8 `us-equities`
+questions of the 2026-09-30 bake-off ran twice per arm (pass 2 in reverse arm order): 80 runs, one at a time, in
+1 h 34 min. `SWITCHYARD_CONFIRMATIONS=1`; the tuned judge prompt; Nemotron 3 Super for auxiliary and fallback
+calls. Each escalation arm was judged by its own frontier model under a second id at the gateway (Switchyard keys
+a route's targets by model id; [why](../infra/switchyard/README.md#routes)).
+
+**Scoring.** The deterministic checks below, with the oracles recomputed for the window-return change, and two
+answer graders on every run, three samples each with a majority vote: GPT-6 Sol (the 2026-09-30 grader and
+prompt) and Claude Opus 5.5 (the same prompt). A run passes when its deterministic check passes and the
+grader's majority says pass. The first scoring failed three Claude-written Form 8-K reports that said, in words
+the check did not know ("can't cite ... the filing deadline", "neither is stated here"), that the evidence lacks
+the deadline. The check now accepts any such flag about the deadline and still fails any other deadline; the
+results below are the re-scored ones (one more pass for Claude Opus 5.5 pinned, two for Ultra → Claude Opus 5.5).
+
+| Arm | Role | Pass, GPT-6 Sol grader | Pass, Claude Opus 5.5 grader | Frontier share of agent turns | Frontier share of tokens, without / with judge calls | Escalated (false latches, rescues) | p50 / p95 s | Failed jobs, stalled runs |
+|---|---|---|---|---|---|---|---|---|
+| Ultra alone (`passthrough.nemotron`) | candidate | 7/16 | 10/16 | 0% | 0% | – | 16 / 120 | 0, 0 |
+| GPT-6.1 Sol pinned (`pinned-capable.nemotron-gpt`) | ceiling | 7/16 | 9/16 | 100% | 100% | – | 32 / 617 | 2, 2 |
+| Claude Opus 5.5 pinned (`pinned-capable.nemotron-claude`) | ceiling | 9/16 | 13/16 | 100% | 100% | – | 28 / 72 | 0, 0 |
+| **Ultra → GPT-6.1 Sol (`escalation.nemotron-gpt`)** | candidate | **10/16** | **14/16** | 10% | 10% / 20% | 5/16 (1, 2) | 52 / 104 | 0, 0 |
+| Ultra → Claude Opus 5.5 (`escalation.nemotron-claude`) | candidate | 8/16 | 9/16 | 13% | 23% / 35% | 5/16 (1, 3) | 56 / 156 | 0, 1 |
+
+Tokens are Switchyard's per-session counts over every upstream call. A false latch is an escalated run of a
+question Ultra alone passed both times; a rescue is an escalated run that passed on one it did not.
+
+What it shows:
+- **Ultra → GPT-6.1 Sol was the best arm with both graders**, above both pinned ceilings, with every deterministic
+  check passed and no failed or stalled job. Its GPT-6.1 Sol calls, capable and judge together, used 255k input
+  tokens over the 16 runs, half of Sol pinned's 511k. The judge's own share was 124k input and 3.6k output tokens.
+- **The judge adds seconds, not minutes.** The GPT-6.1 Sol judge took 2.9 s per verdict at the median and 6.0 s
+  at p95, about 10 s per run. The Claude Opus 5.5 judge took 4.5 s and 11.5 s; one verdict hit its 120 s deadline
+  and the turn was retried.
+- **GPT-6.1 Sol pinned was held back by the tools and the stream, not by its answers.** It sent `market_scan` a
+  `start` and a `sessions` together, which the tool rejects, and repeated the call (23 tool errors; the rejection
+  now names the argument to drop and gives the call to make), and 2 of its 16
+  runs failed on a stalled stream at 617 s, as on 2026-09-30. With escalation, Ultra drives the market tools and
+  GPT-6.1 Sol joins late, so neither happened.
+- **Ultra → Claude Opus 5.5 did no better than Ultra alone** (8 and 9 against 7 and 10). The handoff to Claude
+  worked in every escalated run, but the Claude judge left more of Ultra's flawed reports alone (rankings out of
+  order, wrong dates).
+- **The graders agreed on 66 of 80 runs.** The Claude grader passed more runs in every arm (1 to 4 more). Both
+  ranked Claude Opus 5.5 pinned above GPT-6.1 Sol pinned, so the GPT-6 Sol grader showed no preference for its
+  own model family.
+
+Limits: 16 runs per arm on one pack, so a difference of one or two runs is noise; the gateway's Ultra rather than
+build.nvidia.com's; the pinned Sol arm's result depends on the `market_scan` argument rule above.
+
 ## How the bake-off was run
 
-**When and where.** 2026-09-29, on an OpenAI-compatible gateway serving Nemotron and GPT-6 models, with the full
-stack running locally on colima (arm64, 4 CPU, 9 GB): profiles `core,retrieval,analytics` plus the hosted
-Kumo endpoint, the `market-analysis` pack at its default `qualification` profile, OpenShell 0.1.2, Hermes
-v2026.9.24 and Switchyard 0.3.0. Auto Ontology was off, as it is by default, so `ask_question` was not
-available and "company announcements" meant the pack's short-form `market_news` stream.
+**When and where.** 2026-09-30, after the tuning above, on a Brev VM with one A100 (40 GB) and every profile
+(`core,retrieval,analytics-gpu,kumo,ontology`: the GPU market tools, the local Kumo NIM and Auto Ontology),
+OpenShell 0.1.2, Hermes v2026.9.24 and Switchyard 0.3.0. First `synthetic-market`, then `us-equities`, each
+with a sandbox started for that pack.
+
+**Endpoints.** The Nemotron arms ran on build.nvidia.com, as the default does. GPT-6 Sol came from an
+OpenAI-compatible gateway through `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`, while the Nemotron side of those
+arms stayed on build.nvidia.com.
+
+**Arms.** Models: Ultra is Nemotron 3 Ultra 550B-A55B, Sol is GPT-6 Sol, Super is Nemotron 3 Super
+120B-A12B, and Lightning is Nemotron 3.5 Lightning 30B-A3B.
+Every arm used `SWITCHYARD_CONFIRMATIONS=1`.
+
+| Arm | `SWITCHYARD_ROUTES` | Efficient | Capable | Judge and auxiliary calls | Endpoints |
+|---|---|---|---|---|---|
+| A0 Ultra alone | `passthrough.nemotron` | Ultra | – | Super (auxiliary only) | build.nvidia.com |
+| A1 Sol pinned | `pinned-capable.nemotron-gpt` | – | Sol | Super (auxiliary only) | Sol on the gateway, Super on build.nvidia.com |
+| A2 Ultra → Sol | `escalation.nemotron-gpt` | Ultra | Sol | Super, with the tuned judge prompt | Sol on the gateway, the rest on build.nvidia.com |
+| A4 Super → Ultra | `escalation.nemotron` | Super | Ultra | Lightning, with the tuned judge prompt | build.nvidia.com |
+
+**Questions.** Each pack's six featured questions plus `outcome-prediction` and `large-universe-scan`, and on
+`synthetic-market` also `story-event-context` ([data packs](data-packs.md)): 9 and 8 questions, each sent
+with its own `sources`, as the UI's cards send them. Every question ran twice per arm: pass 1 in the order
+A0, A1, A2, A4 and pass 2 in reverse, so a busy hour on an endpoint does not land on one arm. That is
+17 questions × 4 arms × 2 = 136 runs, one at a time.
 
 **Procedure.**
-1. Point `.env` at the arm (the table below) and run `./scripts/demo.sh restart switchyard`. That re-renders
+1. Point `.env` at the arm (the table above) and run `./scripts/demo.sh restart switchyard`. That re-renders
    the routes, clears latches and `/v1/stats`, and refreshes the API's model ids. The sandbox is untouched.
-2. Submit each question through `POST /v1/jobs/async/submit`, one at a time (the API runs one job at a
-   time), and wait for it to finish. Every job is a fresh Hermes session, so every question starts on the
-   efficient model.
-3. Save the job's export (`GET /v1/jobs/async/job/{id}/export`: report, `execution.v2` events, receipts),
+2. Submit each question through `POST /v1/jobs/async/submit` and wait for it to finish. Every job is a fresh
+   Hermes session, so every question starts on the efficient model.
+3. Save the job's export (`GET /v1/jobs/async/job/{id}/export`: report, `execution.v2` events, receipts) and
    Switchyard's per-session stats (`GET /v1/routing/session-stats?session_id=<job id>`, which include the
-   judge's calls) and, per arm, `/v1/stats` and the `libsy.run` spans from Phoenix (escalation verdicts).
-4. Score every run (below). One run per question and arm (k = 1): 12 questions × 6 arms = 72 runs.
+   judge's calls).
+4. Score every run: a deterministic check and an LLM judge (below).
 
-**Arms.** All on that gateway. Models: Ultra is Nemotron 3 Ultra 550B-A55B, Sol is GPT-6 Sol, Super is
-Nemotron 3 Super 120B-A12B, Lightning is Nemotron 3.5 Lightning 30B-A3B, and 3.5 Super is the Nemotron 3.5 Super
-text preview.
+**Deterministic checks.** The reference values come from each pack's `eval/oracles/`, computed read-only
+against the active DuckDB. Every check also needs the job to succeed, the question's tool to be called, and
+at least one citation. These runs predate the change that measures a window's return from the close before
+it: then `market_scan`, `price_context` and the oracles all started from the window's first close, so the
+checks compared like with like. With the change, the oracles' strongest and weakest stay the same for
+`synthetic-market`'s Market Leaders and both packs' Large-Universe Scan; on `us-equities`, Market Leaders'
+weakest and two of February's weakest three change.
 
-| Arm | `SWITCHYARD_ROUTES` | Efficient | Capable | Judge | Confirmations |
-|---|---|---|---|---|---|
-| A0 Ultra alone | `passthrough.nemotron` | Ultra | (unused) | (aux calls only) | – |
-| A1 Sol pinned | `pinned-capable.nemotron-gpt` | (unused) | Sol | (aux calls only) | – |
-| A2 Ultra → Sol, c1 | `escalation.nemotron-gpt` | Ultra | Sol | Super | 1 |
-| A3 Ultra → Sol, c2 | `escalation.nemotron-gpt` | Ultra | Sol | Super | 2 |
-| A4 Super → Ultra | `escalation.nemotron` | Super | Ultra | Lightning | 1 |
-| A5 3.5 Super → Sol | `escalation.nemotron-gpt` | 3.5 Super | Sol | Super | 1 |
+| Question | Check |
+|---|---|
+| `market-leaders` | names the oracle's strongest and weakest; the strongest's return matches within display rounding |
+| `news-sentiment-reaction` | gives the oracle's mean five-session return for each sentiment label (12 most liquid issuers); addresses causation |
+| `unusual-sessions` | says the scores are neither forecasts nor explanations |
+| `peer-network` | names the oracle's most correlated declared-peer pair |
+| `cyber-disclosure-rules` | cites Form 8-K Item 1.05, gives the four-business-day deadline or says, in any words, that the evidence does not state it (and gives no other deadline), and names a company whose 8-K in the corpus reports Item 1.05 |
+| `news-and-filings` | names the issuer with the most negative news; retrieved from the SEC filings |
+| `moves-and-filings` | names the oracle's three strongest and three weakest stocks of February; retrieved from the SEC filings |
+| `story-event-context` | names at least 10 of the 12 story issuers; at least 90% of its percentages match a receipt |
+| `outcome-prediction` | names the model's top three, its top stock first |
+| `large-universe-scan` | names the oracle's strongest and weakest |
+| `intraday-ranges` | names the stock with the widest range |
 
-**Questions.** The seven hero questions and five questions from `data/packs/market-analysis/questions.yaml`,
-one per remaining tag, skipping those a hero question already covers. Questions from `questions.yaml` use
-their own `sources`; hero questions use every default source. The hero questions, verbatim:
-
-- **H1:** For each company announcement published August 18-28, 2026, show the stock's return on the
-  announcement day and over the next two trading sessions.
-- **H2:** Across all 2,000 companies in the large universe, which had the strongest and weakest returns from
-  January 2, 2024 to August 31, 2026, and how did their volatility compare?
-- **H3:** At the August 24, 2026 close, which companies are most likely to lose more than 5% over the next 5
-  calendar days?
-- **H4:** What does Title 17 require a public company to disclose about a material cybersecurity incident, and
-  by when? Cite the sections.
-- **H5:** What did Galena Semiconductor say about export-license exposure, and which mitigations did it
-  mention?
-- **H6:** Which companies had the most unusual trading sessions in late August 2026, what did each company
-  announce that day, and which Form 8-K provisions in Title 17 would govern that kind of announcement?
-- **H7:** At the August 24, 2026 close, which three companies does the model rate most likely to fall more
-  than 5% over the next 5 calendar days? For each, how has it traded over the last 20 sessions, and what had it
-  announced before the anchor?
-
-| Id | Kind | Deterministic check (besides: job succeeded, required tools called, at least one citation) |
-|---|---|---|
-| H1 | event returns (analytics) | ≥ 90% of the report's percentages match a receipt value; ≥ 5 event rows |
-| H2 | 2,000-issuer scan | names the oracle's strongest (`asset-qualification-0646`) and weakest (`…-0802`) |
-| H3 | Kumo prediction | names the model's top three, and its top company first |
-| H4 | Title 17 retrieval | cites Form 8-K Item 1.05 and "four business days" |
-| H5 | missing evidence | invents no mitigations and says the statement was not found (no citation needed) |
-| H6 | anomalies + news + rules | mentions Form 8-K and an Item or § 249.308; ≥ 2 citations |
-| H7 | prediction + prices + news | names the model's top three, top company first |
-| market-leaders | 20-session scan | oracle strongest (Aether, −0.94%) and weakest (Cascade), within 0.1 pp |
-| market-multivariate-anomalies | anomaly scan | says the scores are not forecasts and not causal |
-| market-news-cybersecurity-disclosures | SEC retrieval | ≥ 2 citations |
-| market-peer-network | relationship graph | calls `analyze_market_relationships` |
-| market-comparison-cybersecurity | filings vs. rules | retrieved from both corpora; cites Item 1.05 or Item 106 |
-
-The oracle values come from the pack's `eval/oracles/*.sql` (`recent_adjusted_returns.sql`) and the same
-adjusted-close arithmetic over the 2,000-issuer universe, computed read-only against the active DuckDB.
-H5's premise was deliberately unanswerable: the Galena brief (`market_briefs`) was opt-in and not in the
-default build, so the honest answer was "not found".
-
-> **Note.** The bake-off ran before `market_briefs` became a default corpus, so the H5 check and reference
-> facts here describe that earlier build, where H5 was unanswerable. The default build now includes the eight
-> fictional briefs, so H5 is answerable by default (the Galena brief names the export-license review and its
-> possible mitigations). These results were not re-measured against that build.
->
-> A single spot check on that build (all profiles, including `ontology` and the local Kumo NIM, on a Brev A100
-> VM with Sol pinned): all seven hero questions completed with citations, in 18 to 183 s each (H1 was the
-> slowest: two Auto Ontology queries of 50 and 96 s). H5 now quotes the Galena brief's export-license review and
-> its two possible mitigations. This was one unjudged run, not a repeat of the bake-off.
-
-**Metrics.**
-- *Pass*: the deterministic check passes **and** a majority of three blinded LLM-judge samples say pass.
-- *Judge mean*: the mean of the three samples' overall score (1–5).
-- *Grounded %*: the share of percentages in the report that match a number in the run's receipts, as given
-  or × 100, within display rounding. It is computed over the runs that report percentages.
-- *Tool validity*: tool calls, calls that reported an error or produced a failed receipt, and duplicate calls
-  (same tool, same arguments).
-- *Escalation*: a run escalated when any agent turn was served by the capable model. The latch turn is the
-  index of the first capable turn (0 means the judge escalated the first turn). A *false latch* is an
-  escalated run whose question A0 (Ultra alone) passed; a *rescue* is an escalated run that passed where A0
-  failed.
-- *Latency*: submit to completion, as the API records it (no queueing: one job at a time).
-- *Served models*: the `served_model` of every agent turn (the `llm.call` events the UI shows), plus every
-  upstream call Switchyard made for the session, judge calls and discarded efficient replies included.
-- *Errors*: failed jobs and Switchyard's upstream errors (answer and judge clients).
-
-**The answer judge.** GPT-6 Sol on the same gateway (Responses API, `reasoning.effort = "medium"`, `store = false`,
-JSON-schema output), three independent samples per run, majority vote. It sees the question, short reference
-facts written from the oracles and the pack, a digest of the run's receipts (each capped at 40,000 characters)
-and the report. It never sees the arm or the model. System prompt, verbatim:
+**The answer judge.** GPT-6 Sol on the gateway (Responses API, `reasoning.effort = "medium"`,
+`store = false`, JSON-schema output), three independent samples per run, majority vote. It sees whether the
+pack is synthetic or real, the question, short reference facts written from the oracles and the pack, a
+digest of the run's receipts (each capped at 40,000 characters) and the report. It never sees the arm or the
+model. System prompt, verbatim:
 
 ```text
-You grade reports written by a financial market-research agent in a software demo. The agent answers one analyst question by calling read-only tools (market analytics over a synthetic market dataset, a Kumo prediction model, and retrieval over real SEC filings and eCFR Title 17) and then writes a cited report. All issuers, prices and events in the market dataset are fictional; the filings and regulations are real.
+You grade reports written by a financial market-research agent in a software demo. The agent answers one analyst question by calling read-only tools (market analytics over a market dataset, a Kumo prediction model, Auto Ontology over the same database, and retrieval over real SEC filings and eCFR Title 17) and then writes a cited report. The DATASET line says whether the market dataset is synthetic (fictional issuers) or real; the filings and regulations are always real.
 
-You receive the question, reference facts written by the evaluator, a digest of the tool evidence the agent actually received, and the agent's final report. Grade against the evidence and the reference facts, not your own knowledge. Do not penalize the report for omitting something the evidence does not contain, but do penalize any claim, number, date or entity that the evidence does not support. The evidence is the receipt the agent's tools recorded: retrieved passages are cut at 1,500 characters there, while the agent read them in full. A detail attributed to a retrieved document whose snippet is cut off is unverifiable rather than fabricated: lower grounding by at most one point for it. Fail a report for claims the evidence contradicts or that no evidence could plausibly support.
+You receive the question, reference facts written by the evaluator, a digest of the tool evidence the agent actually received, and the agent's final report. Grade against the evidence and the reference facts, not your own knowledge. Do not penalize the report for omitting something the evidence does not contain, but do penalize any claim, number, date or entity that the evidence does not support. The tools return returns and volatilities as fractions (0.22 is 22%) and anomaly deviations as robust z-scores: a fraction shown as a percentage without scaling, or a z-score shown as a percentage, is a wrong number. The evidence is the receipt the agent's tools recorded: retrieved passages are cut at 1,500 characters there, while the agent read them in full. A detail attributed to a retrieved document whose snippet is cut off is unverifiable rather than fabricated: lower grounding by at most one point for it. Fail a report for claims the evidence contradicts or that no evidence could plausibly support.
 
 Score each criterion from 1 (very poor) to 5 (excellent):
-- correctness: agrees with the reference facts and the evidence; numbers and rankings are right.
+- correctness: agrees with the reference facts and the evidence; numbers, windows, units and rankings are right.
 - grounding: every factual claim is traceable to the evidence; fabrication scores 1.
 - completeness: answers every part of the question that the evidence can support.
 - honesty: states real limits (missing data, truncated results, synthetic data, no causality or forecasting where relevant) without refusing what the evidence supports.
 Then give overall (1-5) and pass: true only if you would show this report to a customer at a product demo (no fabricated facts, the main parts of the question answered or honestly declared unavailable).
 ```
 
-Each run's user message is `QUESTION`, `REFERENCE FACTS`, `JOB STATUS`, `TOOL EVIDENCE` (the receipts as JSON)
-and `REPORT`. The reference facts per question:
-
-- **H1:** In this deployment (no Auto Ontology), company announcements are the synthetic short-form market_news
-  stream (headline-level 'market-pulse' items). Between August 18 and 28, 2026 it holds 2,000 items, one per issuer,
-  all published on August 26 after the close (21:15-21:54 UTC), so the aligned session is August 27 and the
-  two-session outcome session is August 31. analyze_news_price_relationship returns the two-session forward return
-  and caps the event list; an announcement-day return needs price_context. A good answer reports how many
-  announcements match, that the list is a subset, gives returns that match the evidence, and either gives or
-  honestly explains the missing day return.
-- **H2:** Over the 2,000-issuer universe, strongest: [{'asset_id': 'asset-qualification-0646', 'ret':
-  4.1913585964367135, 'vol': 0.015523845908692319}, {'asset_id': 'asset-qualification-1570', 'ret':
-  3.9406756511816106, 'vol': 0.012740247669611782}, {'asset_id': 'asset-qualification-0230', 'ret':
-  3.3287885896718503, 'vol': 0.010755589937117293}]; weakest: [{'asset_id': 'asset-qualification-1553', 'ret':
-  -0.6603970184297887, 'vol': 0.017218744363522477}, {'asset_id': 'asset-qualification-1618', 'ret':
-  -0.6679966060893072, 'vol': 0.01880120130216647}, {'asset_id': 'asset-qualification-0802', 'ret':
-  -0.7262989082385838, 'vol': 0.017556638464608722}] (ret = adjusted-close return as a fraction; vol = daily return
-  std).
-- **H3:** The Kumo prediction in the evidence is the answer: the report must rank companies by the model's
-  probabilities exactly as the evidence gives them, state the anchor and horizon, and not present model
-  probabilities as certainties.
-- **H4:** Form 8-K Item 1.05 requires disclosing a material cybersecurity incident (nature, scope, timing, material
-  impact or reasonably likely impact) within four business days of determining the incident is material; materiality
-  is determined without unreasonable delay; a delay is possible when the US Attorney General finds a substantial
-  risk to national security or public safety. Regulation S-K Item 106 (17 CFR 229.106) covers annual
-  risk-management, strategy and governance disclosure. The Title 17 corpus does not contain Form 8-K's Item 1.05
-  instructions, so no retrieved passage states the four-business-day deadline. Stating the deadline while flagging
-  that the retrieved text does not contain it, or saying it cannot be verified, are both acceptable; presenting it
-  as a fact the citations support is an unsupported claim. Credit only sections that appear in the evidence.
-- **H5:** No document or tool in this deployment contains Galena Semiconductor's statements about export-license
-  exposure or any mitigations (the Galena brief is not in this build). Galena's market_news items are headline-level
-  only. A correct answer says it could not find the statement or mitigations; naming specific mitigations is
-  fabrication and fails.
-- **H6:** In this deployment (no Auto Ontology), company announcements are the synthetic short-form market_news
-  stream (headline-level 'market-pulse' items). Between August 18 and 28, 2026 it holds 2,000 items, one per issuer,
-  all published on August 26 after the close (21:15-21:54 UTC), so the aligned session is August 27 and the
-  two-session outcome session is August 31. analyze_news_price_relationship returns the two-session forward return
-  and caps the event list; an announcement-day return needs price_context. Same-day announcements for anomalous
-  sessions may not exist; saying none were found is correct when the evidence shows none. Form 8-K items (e.g. 1.01,
-  2.02, 7.01, 8.01, 1.05 under 17 CFR 249.308) may be cited only if retrieved. The report must not claim the
-  fictional companies filed 8-Ks or that announcements caused the anomalies.
-- **H7:** The Kumo prediction in the evidence gives the three most likely decliners. The anchor is August 24, 2026
-  21:00 UTC: announcements published after it (including every market_news item dated August 26) must not be
-  presented as made before the anchor. Trading over the last 20 sessions must come from price_context or market_scan
-  evidence.
-- **market-leaders:** The question names no universe; the pack's story universe is the 12 reviewed assets. A report
-  that scans the 2,000-issuer universe instead is acceptable if it says so and matches its evidence. Reviewed
-  universe, 20 sessions ending 2026-08-31, adjusted-close return: top [{'asset_id': 'asset-aether', 'ticker':
-  'AETH', 'company_name': 'Aether Compute', 'adjusted_return': -0.00942937136442823, 'daily_volatility':
-  0.01606015330748355}, {'asset_id': 'asset-fathom', 'ticker': 'FTHM', 'company_name': 'Fathom Data Systems',
-  'adjusted_return': -0.026237153617632458, 'daily_volatility': 0.013132972527089332}, {'asset_id': 'asset-delta',
-  'ticker': 'DLTP', 'company_name': 'Delta Power Systems', 'adjusted_return': -0.048853352363034785,
-  'daily_volatility': 0.013084621788446512}]; bottom [{'asset_id': 'asset-galena', 'ticker': 'GLNA', 'company_name':
-  'Galena Semiconductor', 'adjusted_return': -0.1248309637601911, 'daily_volatility': 0.01760099933185831},
-  {'asset_id': 'asset-kestrel', 'ticker': 'KSTR', 'company_name': 'Kestrel Mobility', 'adjusted_return':
-  -0.12947948343272397, 'daily_volatility': 0.011511771453288872}, {'asset_id': 'asset-cascade', 'ticker': 'CASC',
-  'company_name': 'Cascade Networks', 'adjusted_return': -0.1443768510100536, 'daily_volatility':
-  0.011849928870307285}] (fractions).
-- **market-multivariate-anomalies:** The ranked sessions and feature explanations must come from the
-  market_anomaly_scan evidence; the report must say anomaly scores are neither forecasts nor causal explanations.
-- **market-news-cybersecurity-disclosures:** Companies, filing dates and described effects must come from the
-  retrieved SEC filings; say what the filings do not state.
-- **market-peer-network:** Centrality, strongest relationships and unusual-return comparisons must come from the
-  analyze_market_relationships (and any market_scan) evidence.
-- **market-comparison-cybersecurity:** Map facts from retrieved issuer filings to retrieved Title 17 requirements
-  (e.g. Form 8-K Item 1.05, Regulation S-K Item 106) and say which conclusions the evidence cannot support.
+**Metrics.**
+- *Pass*: the deterministic check passes **and** at least two of the three judge samples say pass.
+- *Judge mean*: the mean of the samples' overall score (1–5).
+- *Grounded %*: the share of percentages in the report that match a number in the run's receipts, as given
+  or × 100, within display rounding.
+- *Tool calls, errors, duplicates*: calls that reported an error or produced a failed receipt; duplicates
+  repeat the same tool with the same arguments.
+- *Escalated*: any agent turn was served by the capable model. A *false latch* is an escalated run of a
+  question that Ultra alone (A0) passed both times; a *rescue* is an escalated run that passed on a question
+  A0 did not pass both times.
+- *Fallback turns*: agent turns served by `market-research-fallback` after the agent's model was overloaded.
+- *Latency*: submit to completion, as the API records it (one job at a time, so no queueing).
 
 ## Results
 
-One run per question and arm. Pass = the deterministic check and the judge majority both pass.
+| Arm | Pass | synthetic | us-equities | Deterministic | Judge pass | Judge mean | Grounded % | Tool calls / errors / duplicates | Escalated | False latch | Rescue | p50 s | p95 s | Failed jobs | Median input tokens |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| A0 Ultra alone | 13/34 | 7/18 | 6/16 | 28/34 | 16/34 | 3.31 | 97 | 108 / 5 / 0 | – | – | – | 72 | 329 | 0 | 29,841 |
+| **A1 Sol pinned** | **24/34** | **13/18** | **11/16** | 25/34 | **28/34** | **3.93** | 97 | 260 / 12 / 96 | – | – | – | **60** | 617 | 4 | 25,404 |
+| A2 Ultra → Sol | 20/34 | 11/18 | 9/16 | 24/34 | 23/34 | 3.68 | 97 | 180 / 5 / 55 | 10/34 | 2 | 5 | 80 | 409 | 1 | 35,222 |
+| A4 Super → Ultra | 12/34 | 8/18 | 4/16 | 23/34 | 13/34 | 2.85 | 100 | 95 / 4 / 0 | 18/34 | 2 | 6 | 140 | 489 | 4 | 28,442 |
 
-| Arm | Pass | Deterministic | Judge pass | Judge mean (1–5) | Grounded % | Tool calls / errors / duplicates | Escalated | False latch | Rescue | p50 s | p95 s | Failed jobs | Router errors |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A0 Ultra alone | 6/12 | 12/12 | 6/12 | 3.17 | 98 | 63 / 0 / 1 | – | – | – | 36 | 107 | 0 | 0 |
-| **A1 Sol pinned** | **11/12** | 11/12 | **11/12** | **4.22** | 100 | 41 / 2 / 0 | – | – | – | **33** | **79** | 0 | 0 |
-| A2 Ultra → Sol, c1 | 6/12 | 10/12 | 6/12 | 3.58 | 99 | 53 / 1 / 0 | 6/12 | 3 | 2 | 36 | 101 | 1 | 0 |
-| A3 Ultra → Sol, c2 | 6/12 | 11/12 | 7/12 | 3.44 | 100 | 74 / 0 / 2 | 2/12 | 1 | 1 | 66 | 135 | 0 | 0 |
-| A4 Super → Ultra, c1 | 3/12 | 8/12 | 5/12 | 2.86 | 86 | 63 / 0 / 2 | 10/12 | 5 | 1 | 25 | 106 | 0 | 0 |
-| A5 3.5 Super → Sol, c1 | 5/12 | 9/12 | 5/12 | 3.00 | 92 | 71 / 8 / 0 | 4/12 | 1 | 2 | 41 | 109 | 0 | 0 |
+Served models (agent turns over the arm's 34 runs; Switchyard's upstream calls add the judge's):
 
-Served models and routing overhead (counts over the arm's 12 runs):
+| Arm | Agent turns served by | Upstream calls, judge included | Latch turn (escalated runs) |
+|---|---|---|---|
+| A0 | Ultra 145, Super 2 (fallback) | Ultra 145, Super 2 | – |
+| A1 | Sol 219 | Sol 219, Super 1 | – |
+| A2 | Ultra 91, Sol 93, Super 2 (fallback) | Super 100, Sol 93, Ultra 91 | turn 1 in 5 runs, 2 in 1, 3 in 2, 6 in 1, 7 in 1 |
+| A4 | Ultra 64, Super 41, Lightning 16 (fallback) | Lightning 77, Ultra 64, Super 41 | turn 0 in 8 runs, 1 in 5, 2 in 5 |
 
-| Arm | Agent turns served by | All upstream calls, judge included | Escalation verdicts (Phoenix) | Latch turn per escalated run | Median input tokens per run |
+Per question, one letter per run: `P` pass, `f` fail, `d` the deterministic check failed, `*` escalated,
+`~` at least one turn on the fallback route.
+
+| Pack | Question | A0 | A1 | A2 | A4 |
 |---|---|---|---|---|---|
-| A0 | Ultra 72 | Ultra 72 | – | – | 114,853 |
-| A1 | Sol 59 | Sol 59 | – | – | 35,860 |
-| A2 | Ultra 42, Sol 21 | Super 48, Ultra 42, Sol 21 | continue 42, escalate 6, latched 15 | 4, 5, 3, 0, 5, 2 | 109,278 |
-| A3 | Ultra 87, Sol 5 | Super 89, Ultra 87, Sol 5 | continue 74, pending 13, escalate 2, latched 3 | 8, 4 | 281,837 |
-| A4 | Ultra 61, Super 10 | Ultra 61, Lightning 20, Super 10 | continue 10, escalate 10, latched 51 | 0, 2, 0, 0, 0, 0, 1, 0, 2, 1 | 30,160 |
-| A5 | 3.5 Super 67, Sol 9 | Super 71, 3.5 Super 67, Sol 9 | continue 67, escalate 4, latched 5 | 10, 2, 16, 10 | 114,817 |
-
-No arm had a Switchyard upstream error, a judge parse failure or a rejected handoff to Sol. Per question
-(judge mean; `*` = escalated; `[det]` = deterministic check failed):
-
-| Question | A0 | A1 | A2 | A3 | A4 | A5 |
-|---|---|---|---|---|---|---|
-| H1 | fail 2.0 | fail 1.0 [det] | fail 2.0* [det] | PASS 4.0 | fail 2.0* | fail 2.0* [det] |
-| H2 | PASS 3.7 | PASS 5.0 | PASS 5.0 | PASS 5.0 | PASS 5.0* | PASS 4.0 |
-| H3 | fail 3.7 | PASS 3.7 | fail 3.7 | fail 2.3 | fail 3.3* | fail 3.0 |
-| H4 | fail 2.0 | PASS 3.7 | PASS 4.0* | PASS 4.0* | fail 1.0 [det] | fail 2.0 |
-| H5 | fail 2.0 | PASS 5.0 | PASS 5.0* | fail 2.0 | PASS 4.7* | PASS 5.0* |
-| H6 | fail 1.0 | PASS 4.7 | job failed | fail 2.0 | fail 2.0* | PASS 4.3* |
-| H7 | PASS 3.7 | PASS 4.7 | fail 3.0 | PASS 4.0 | fail 1.0 [det] | PASS 3.3 |
-| market-leaders | PASS 5.0 | PASS 5.0 | PASS 5.0* | PASS 4.0 | fail 2.0* | fail 2.0 |
-| market-multivariate-anomalies | PASS 4.3 | PASS 5.0 | fail 3.0 | fail 4.0 [det] | fail 4.0* [det] | fail 2.3 [det] |
-| market-news-cybersecurity-disclosures | PASS 5.0 | PASS 5.0 | PASS 4.3* | fail 3.3 | PASS 3.3* | PASS 4.0* |
-| market-peer-network | fail 1.7 | PASS 4.0 | fail 2.3 | fail 2.0 | fail 4.0* [det] | fail 2.0 [det] |
-| market-comparison-cybersecurity | PASS 4.0 | PASS 4.0 | PASS 4.7* | PASS 4.7* | fail 2.0* | fail 2.0 |
+| synthetic | market-leaders | P~ P | P P | P P | fd~ P |
+| synthetic | news-sentiment-reaction | fd fd | fd P | fd P* | fd* fd |
+| synthetic | unusual-sessions | fd P | P P | fd P | fd* f* |
+| synthetic | peer-network | P P | P P | P P | P P* |
+| synthetic | cyber-disclosure-rules | f~ f | fd P | fd* P* | f* P* |
+| synthetic | news-and-filings | f f | fd P | fd* fd~ | fd~ P* |
+| synthetic | story-event-context | fd f | fd P | fd fd | f* fd |
+| synthetic | outcome-prediction | f P | P P | P P | f* P |
+| synthetic | large-universe-scan | f P | fd P | P P | P P |
+| us | market-leaders | fd P | fd P | P P | fd~ fd~ |
+| us | intraday-ranges | f P | P P | f f | fd P* |
+| us | unusual-sessions | fd f | P P | P* P* | P* P* |
+| us | peer-network | f f | f fd | fd P | fd P* |
+| us | cyber-disclosure-rules | f f | fd P | fd* P* | fd f~ |
+| us | moves-and-filings | P P | fd P | P* P* | f* f |
+| us | outcome-prediction | f P | P P | f f | f* f* |
+| us | large-universe-scan | f P | P P | fd P | f* f* |
 
 What the numbers show:
-- **Ultra's failures are in reading evidence, not in calling tools.** Its tool calls were valid, and 98% of its
-  percentages match a receipt, yet the judge failed half its reports. Typical faults: anomaly-scan deviations
-  reported as percentage returns (H6, the peer network), announcement-day returns silently dropped (H1), and
-  the Form 8-K four-business-day deadline stated as if the retrieved Title 17 text said so (H4; it does not).
-- **Sol refuses rather than guesses.** It declined H1 without calling a tool (its only failure), and it
-  flags what the evidence does not contain (H4, H5).
-- **Escalation rarely triggers where it would help.** The judge sees each message cut to about 900
-  characters, so it catches loops and missing citations, not a misread table. Latches mostly came late (A2:
-  median turn 3.5; A3: turns 4 and 8), so escalated runs paid for Ultra's turns and then Sol's.
-- **Lightning escalates Super almost at once** (7 of 10 at the first turn), so A4 is Ultra with a judge's
-  overhead, and its reports often lacked citations.
-- **Nemotron 3.5 Super (text preview)** made 8 invalid tool calls: company names and `reviewed_assets` passed
-  as asset ids, and an anomaly scoring window that started before its training window ended.
+- **Sol pinned is still the strongest arm**, as on 2026-09-29, and the margin held on both packs. Its
+  failures were mostly bugs, not the model: of its 4 failed jobs, one ran out of tool calls because
+  `market_scan` ignored `start` when `sessions` was also given, two lost a receipt to an Auto Ontology phrase
+  longer than the receipt allows, and one waited on a stalled stream. Both bugs are fixed. The same
+  `market_scan` bug is behind 87 of its 96 duplicate calls.
+- **Ultra alone is the better build.nvidia.com choice.** It never failed a job, and its misses are in the
+  report, not the tools: 4 of 34 reports had no citation, and the judge failed most of the rest for a wrong
+  scope, window or claim, for example calling a strongly negative correlation a pair that "moved together".
+- **Super → Ultra is slower and less reliable than Ultra alone.** Its judge escalated 18 of 34 runs, 8 of
+  them at the first turn, so it mostly runs Ultra with extra calls; 6 of its 30 reports had no citation. Its
+  fallback route serves 3.5 Lightning, and 2 of its 4 failed jobs ended on HTTP 404 errors from its model
+  calls during a nine-minute burst.
+- **Two questions were held back by the tools in every arm**, and both are fixed since ([after the
+  fixes](#after-the-tool-fixes)). The news tools had no universe filter, so `news-sentiment-reaction` got all
+  545 news items instead of the 12 most liquid issuers' 13; only three runs on Sol answered or flagged it
+  correctly. The relationship tool did not say that its graph links declared same-industry peers or that a
+  negative correlation means opposite moves, so on `us-equities` most reports called it a whole-market graph
+  or listed an opposite-moving pair among those that "moved together".
 
-### Checked against the criteria set before the run
+### The tuned judge, measured
 
-These are the adoption criteria for A2, set before the bake-off and measured against A0 and A1.
+The tuned judge prompt ([above](#tuning-ultra-for-the-current-packs)) against the 2026-09-29 one (on the
+retired `market-analysis` pack, one run per question), in A2:
 
-| Criterion | A2 result | Met |
+| | 2026-09-29 | 2026-09-30, tuned |
 |---|---|---|
-| No question that A0 passes regresses | H7 and the anomaly question stayed on Ultra and failed; H6 failed on a receipt bug (below) | no (run-to-run noise at k = 1) |
-| Passes within one question of A1 | 6 against 11 | no |
-| False latches ≤ 10% of A0's passing runs | 3 of 6 (50%) | no |
-| Judge parse failures ≤ 2%, no user-visible failure caused by the judge | no judge errors; every verdict was continue, pending, escalate or latched | yes |
-| p50 ≤ A0 + 15%, p95 ≤ A0 + 25% | 36 s against 36 s; 101 s against 107 s | yes |
-| No 400 on the handoff to Sol | none | yes |
+| Runs escalated | 6 of 12 (50%) | 10 of 34 (29%) |
+| Escalated runs that passed | 5 of 6 | 7 of 10 |
+| Rescues | 2 | 5 |
+| False latches, of A2's runs on questions A0 always passed | 3 of 6 (50%) | 2 of 6 (33%) |
+| A2 passes against A1's | 6 against 11 | 20 against 24 |
 
-The "Ultra is not good enough" trigger (A0 fails at least two questions that A1 passes) fired: H3, H4, H5, H6
-and the peer network.
+The tuned prompt is more selective, and most of its escalations are worth it. It still escalates late in some
+runs (turns 6 and 7, after Ultra had already searched or scanned several times), and 11 of the 24 runs it left
+on Ultra still failed, mostly for report-level faults (a scope, a window, a misread number) that the judge,
+which sees each message cut to 900 characters, rarely catches. The rule set before the first bake-off was to
+adopt escalation only if it passes within one question of Sol pinned with false latches at 10% or less; it
+meets neither.
+
+### After the tool fixes
+
+The news-universe, `market_scan` window and relationship-description fixes reached the box after the
+bake-off. The two questions they change then ran twice more on the two build.nvidia.com arms, graded the same
+way (the tables above keep the bake-off's own runs):
+
+| Pack | Question | A0 Ultra alone | A4 Super → Ultra |
+|---|---|---|---|
+| synthetic | news-sentiment-reaction | P P (was fd fd) | fd~ P* (was fd* fd) |
+| synthetic | peer-network | P P (was P P) | P* P (was P P*) |
+| us | peer-network | fd P (was f f) | P* P* (was fd P*) |
+
+Each arm passed 5 of 6. Ultra's miss had no citation; Super → Ultra's was an overloaded turn that fell back
+to Lightning, which replied with a plan instead of calling the tool. The other news runs reported the 12
+issuers' 13 news items, and every `us-equities` report said the graph links declared peers and kept the
+opposite-moving pair apart from the pairs that moved together.
 
 ### Limits of this bake-off
 
-- **Small sample.** k = 1 and 12 questions, so a one-question difference is noise: A0 and A2 swapped several
-  Ultra-only results between runs. The Sol-pinned margin (11 against 6) is well outside that noise.
-- **Sol judged Sol.** The judge is the A1 model. The judge was blind to the arm, graded against reference
-  facts and the receipts, and voted over three samples, but self-preference cannot be ruled out. The
-  deterministic checks do not favour Sol (A0 12/12, A1 11/12); the gap comes from the judge's grounding
-  checks. The judge's notes on Ultra's failures name concrete, verifiable errors, such as the percentage
-  returns above.
+- **Two runs per question.** A one-run difference on a question is noise: A0 passed 7 of its 17 questions
+  once and failed them once. Across 34 runs the gaps between A1, A2 and A0 (24, 20, 13) are larger than that.
+- **Sol judged Sol.** The judge is the A1 model. It was blind to the arm, graded against reference facts and
+  the receipts, and voted over three samples, but self-preference cannot be ruled out. The deterministic
+  checks do not favour Sol (A0 28/34, A1 25/34); the gap comes from the judge.
 - **Receipts, not full passages.** The judge read the receipts, which cut retrieved passages at 1,500
   characters, and it was told so.
-- **One deployment shape.** Auto Ontology was off, so the 8 synthetic news events and `ask_question` were not
-  in play. The judge ran on the gateway while A1, A4 and A5 were running; no arm saw a gateway error.
-- **One unrelated failure.** A2's H6 failed because a retrieved SEC exhibit contains a `\x03` control character
-  from PDF extraction. The API rejects that receipt (422), and the job then fails with "the evidence for its
-  tool calls was not recorded". Any arm could hit this, and it is unrelated to routing. It has since been fixed:
-  the corpus builder drops such characters, and the receipts plugin replaces any a tool still returns.
+- **Receipts, not tool descriptions.** The judge never sees what the tools tell the model. On `peer-network`
+  it first counted "PageRank" and "daily-return correlations", which the relationship tool's description
+  states, as unsupported, in every arm. That question's reference facts now quote the description, and its runs were
+  graded again; the tables use the second grades, which added 2 passes to A2 and 1 to A4.
+- **Stalled streams.** Model streams sometimes ended early, from the gateway's Sol and from build.nvidia.com's
+  Nemotron models alike. Switchyard logged the early end within a second, but in at least four runs Hermes,
+  behind the OpenShell proxy, saw the connection close only 5 to 10 minutes later and retried (three on Sol in
+  A1, one on Lightning in A4). This inflates the p95 of the affected arms more than their pass rates.
+- **Endpoint load.** build.nvidia.com answered with "Service temporarily overloaded" often enough that A0,
+  A2 and A4 served 20 turns on their fallback route. During A4's second pass, Switchyard's model calls failed
+  with HTTP 404 for nine minutes.
+- **Fixes during the run.** The receipt fix reached the box between the two packs, and the news-universe,
+  `market_scan` window and relationship-graph fixes only after the run ([after the tool
+  fixes](#after-the-tool-fixes)).
+
+## The earlier bake-off (2026-09-29)
+
+The first bake-off ran on the retired `market-analysis` pack: its seven hero questions (H1 to H7) and five
+more, once per arm, on the same kind of gateway for every model, with the stack on a laptop and Auto
+Ontology off. Sol pinned passed 11 of 12; Ultra alone and Ultra → Sol 6 each (the old judge latched falsely on
+half of Ultra's passes); Ultra → Sol with two confirmations 6; and Super → Ultra 3. Those results set today's defaults, and the 2026-09-30 bake-off confirms them.
 
 ## Repeating the bake-off
 
@@ -370,12 +411,12 @@ Repeat it when a model id, a template, the judge prompt or the endpoint's model 
 1. `./scripts/demo.sh up` with the profiles to measure, then `./scripts/demo.sh check`.
 2. For each arm: set the arm's lines in `.env` (table above), run `./scripts/demo.sh restart switchyard`, and
    confirm the rendered line in `./scripts/demo.sh logs switchyard` (`switchyard: <template> on <endpoint> …`).
-3. Submit the 12 questions one at a time through the API (`POST /v1/jobs/async/submit`, with each
-   `questions.yaml` question's `sources` as `data_sources`), wait for each to finish, and save
+3. Submit each question one at a time through the API (`POST /v1/jobs/async/submit`, with the question's
+   `sources` from `questions.yaml` as `data_sources`), wait for it to finish, and save
    `GET /v1/jobs/async/job/{id}/export` and `GET 127.0.0.1:4000/v1/routing/session-stats?session_id={id}`.
-4. After the arm, save `GET 127.0.0.1:4000/v1/stats`, and read the `libsy.run` spans (`evidence.verdict`) from
-   Phoenix for the arm's time window.
+4. Run every arm twice, the second pass in reverse arm order.
 5. Score each run with the checks and the judge prompt above, and fill in the tables.
 6. Put `.env` back on the winner and restart Switchyard.
 
-One pass (72 runs, one at a time) took 63 minutes, plus about 20 minutes for the judge.
+The bake-off took about 8 hours, one run at a time; the Sol arms' stalls and build.nvidia.com's overloads took
+a large share of it.

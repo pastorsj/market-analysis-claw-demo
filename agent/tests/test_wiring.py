@@ -13,7 +13,6 @@ import tomllib
 from urllib.parse import SplitResult
 from urllib.parse import urlsplit
 
-import pytest
 from common import AGENT
 from common import ROOT
 from common import exposed_tools
@@ -116,7 +115,6 @@ def test_no_model_keys_reach_the_agent():
         assert not re.search(r"\b(NVIDIA|OPENAI)_[A-Z_]+", path.read_text(encoding="utf-8")), path.name
 
 
-@pytest.mark.skipif(not REGISTRY.exists(), reason="contracts/tool-registry.json not present")
 def test_tool_registry_matches_the_config_and_policy(config, policy, providers):
     tools = json.loads(REGISTRY.read_text(encoding="utf-8"))["tools"]
     assert {tool["hermes_name"] for tool in tools} == exposed_tools(config)
@@ -130,8 +128,7 @@ def test_tool_registry_matches_the_config_and_policy(config, policy, providers):
 
 def test_switchyard_serves_every_configured_model(config):
     routes = sorted((ROOT / "infra" / "switchyard" / "routes").glob("*.toml.tmpl"))
-    if not routes:
-        pytest.skip("infra/switchyard/routes not present")
+    assert routes, "no infra/switchyard/routes/*.toml.tmpl"
     models = set(config["providers"]["switchyard"]["models"])
     for template in routes:
         text = template.read_text(encoding="utf-8")
@@ -141,7 +138,6 @@ def test_switchyard_serves_every_configured_model(config):
         assert expected <= route_ids, template.name
 
 
-@pytest.mark.skipif(not COMPOSE.exists(), reason="compose.yaml not present")
 def test_compose_publishes_every_sandbox_port_on_loopback(config):
     # The supervisor maps host.openshell.internal to 127.0.0.1 on the Docker host.
     published = set()
@@ -152,3 +148,18 @@ def test_compose_publishes_every_sandbox_port_on_loopback(config):
             elif match := re.match(r"127\.0\.0\.1:(\d+):", str(port)):
                 published.add(int(match.group(1)))
     assert {url.port for url in sandbox_urls(config).values()} <= published
+
+
+def test_no_service_waits_on_the_gpu_milvus_comparison():
+    """The Benchmark tab's GPU Milvus and its one-shot are optional: `demo.sh up` runs them after the stack, so a GPU
+    Milvus that never turns healthy cannot hold back the retrieval server, the API or `up --wait`."""
+    services = load_yaml(COMPOSE)["services"]
+    optional = {"milvus-gpu", "retrieval-benchmark"}
+
+    def needs(name: str, seen: frozenset[str] = frozenset()) -> set[str]:
+        direct = set(services[name].get("depends_on") or {})
+        return direct | {found for dep in direct - seen if dep in services for found in needs(dep, seen | {name})}
+
+    waiting = {name: needs(name) & optional for name in services.keys() - optional}
+    assert {name: deps for name, deps in waiting.items() if deps} == {}
+    assert needs("retrieval-benchmark") >= {"milvus-gpu"}  # the one-shot itself still waits for it

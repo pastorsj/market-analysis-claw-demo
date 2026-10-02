@@ -4,13 +4,13 @@
 import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, test, expect, beforeEach } from 'vitest'
-import { SessionsPanel } from './SessionsPanel'
+import { SessionsPanel, type RecordedCollection } from './SessionsPanel'
 
 const mockToggleSessionsSidebar = vi.fn()
 const mockSetSessionsCollapsed = vi.fn()
 
 vi.mock('../store', () => ({
-  useLayoutStore: vi.fn((selector?: (s: any) => any) => {
+  useLayoutStore: vi.fn((selector?: (s: object) => unknown) => {
     const state = {
       sessionsCollapsed: false,
       sessionsAutoCollapsed: false,
@@ -45,6 +45,8 @@ vi.mock('./DeleteSessionConfirmationModal', () => ({
 
 import { useLayoutStore } from '../store'
 import { useChatStore } from '@/features/chat'
+import type { ChatStore } from '@/features/chat/types'
+import type { LayoutStore } from '../types'
 
 /**
  * Helper to create a mock chat store state.
@@ -66,23 +68,23 @@ const createMockChatState = (
 
 const setupChatStoreMock = (overrides: Parameters<typeof createMockChatState>[0] = {}) => {
   const state = createMockChatState(overrides)
-  vi.mocked(useChatStore).mockImplementation((selector: (s: any) => any) => {
+  vi.mocked(useChatStore).mockImplementation((selector: (s: ChatStore) => unknown) => {
     if (typeof selector === 'function') {
-      return selector(state)
+      return selector(state as ChatStore)
     }
     return undefined
   })
 }
 
 const setupLayoutStoreMock = (collapsed = false) => {
-  vi.mocked(useLayoutStore).mockImplementation((selector?: (s: any) => any) => {
-    const state = {
+  vi.mocked(useLayoutStore).mockImplementation((selector?: (s: LayoutStore) => unknown) => {
+    const state: Partial<LayoutStore> = {
       sessionsCollapsed: collapsed,
       sessionsAutoCollapsed: false,
       toggleSessionsSidebar: mockToggleSessionsSidebar,
       setSessionsCollapsed: mockSetSessionsCollapsed,
     }
-    return selector ? selector(state) : state
+    return selector ? selector(state as LayoutStore) : state
   })
 }
 
@@ -243,14 +245,14 @@ describe('SessionsPanel', () => {
         })
     )
     setupChatStoreMock({ refreshDeepResearchSessionStatuses })
-    vi.mocked(useLayoutStore).mockImplementation((selector?: (s: any) => any) => {
-      const state = {
+    vi.mocked(useLayoutStore).mockImplementation((selector?: (s: LayoutStore) => unknown) => {
+      const state: Partial<LayoutStore> = {
         sessionsCollapsed: collapsed,
         sessionsAutoCollapsed: false,
         toggleSessionsSidebar: mockToggleSessionsSidebar,
         setSessionsCollapsed: mockSetSessionsCollapsed,
       }
-      return selector ? selector(state) : state
+      return selector ? selector(state as LayoutStore) : state
     })
 
     const { rerender } = render(<SessionsPanel sessions={mockSessions} />)
@@ -583,7 +585,7 @@ describe('SessionsPanel - Delete Button States', () => {
       const onSelectSession = vi.fn()
       render(<SessionsPanel sessions={mockSessions} onSelectSession={onSelectSession} readOnly />)
 
-      expect(screen.queryByRole('button', { name: /start new session/i })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /start new session/i })).toBeDisabled()
       expect(screen.queryByRole('button', { name: /delete all sessions/i })).not.toBeInTheDocument()
 
       await user.hover(screen.getByText('First Session'))
@@ -591,6 +593,117 @@ describe('SessionsPanel - Delete Button States', () => {
 
       await user.click(screen.getByText('First Session'))
       expect(onSelectSession).toHaveBeenCalledWith('session-1')
+    })
+  })
+
+  describe('recorded collection', () => {
+    const recordedSessions = [
+      {
+        id: 'leaders',
+        title: 'Market Leaders',
+        recordedAt: '2026-09-29T06:00:00Z',
+        questions: ['Which assets led over the last 20 sessions?'],
+        tools: [{ pill: 'cudf' as const, device: 'gpu' as const, tools: ['market_scan'] }],
+      },
+      {
+        id: 'filings',
+        title: 'Moves and Filings',
+        recordedAt: '2026-09-29T06:00:00Z',
+        questions: ['Which assets moved most?', 'What did their 8-K filings say?'],
+        tools: [
+          { pill: 'retrieval' as const, device: null, tools: ['retrieve_evidence'] },
+          {
+            pill: 'cudf' as const,
+            device: 'cpu' as const,
+            tools: ['market_scan', 'price_context'],
+          },
+        ],
+      },
+    ]
+    const collection = (overrides: Partial<RecordedCollection> = {}): RecordedCollection => ({
+      sessions: recordedSessions,
+      status: 'ready',
+      error: null,
+      selectedId: null,
+      loadingId: null,
+      onSelect: vi.fn(),
+      onRetry: vi.fn(),
+      ...overrides,
+    })
+
+    test('lists the recordings as the original demo UI did, and searches their questions', async () => {
+      const user = userEvent.setup()
+      const recorded = collection()
+      render(<SessionsPanel sessions={[]} recorded={recorded} readOnly />)
+
+      expect(screen.getByRole('tab', { name: 'Recorded (2)' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
+      expect(screen.getByText('Showing 2 of 2 sessions · 3 of 3 questions')).toBeInTheDocument()
+      expect(screen.getByText('1 turn')).toBeInTheDocument()
+      expect(screen.getByText('2 turns')).toBeInTheDocument()
+      // The tools each run used, a CPU run named for its CPU library
+      const pills = (title: string) =>
+        [
+          ...screen
+            .getByRole('button', { name: `Recorded session: ${title}; Completed` })
+            .querySelectorAll('.tool-pill'),
+        ].map((pill) => pill.textContent)
+      expect(pills('Market Leaders')).toEqual(['cuDF'])
+      expect(pills('Moves and Filings')).toEqual(['pandas', 'Retrieval'])
+      // The label names the session; its turns and tools reach a screen reader as the description
+      expect(
+        screen.getByRole('button', { name: 'Recorded session: Market Leaders; Completed' })
+      ).toHaveAccessibleDescription('1 turn. Tools: cuDF (Market Scan).')
+      expect(
+        screen.getByRole('button', { name: 'Recorded session: Moves and Filings; Completed' })
+      ).toHaveAccessibleDescription(
+        '2 turns. Tools: pandas (Market Scan, Price Context), Retrieval (Unstructured Retrieval).'
+      )
+      expect(
+        screen.getByText(
+          'Read-only test runs. Answers load on selection; execution data loads only when requested.'
+        )
+      ).toBeInTheDocument()
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search recorded sessions' }), '8-K')
+      expect(screen.getByText('Showing 1 of 2 sessions · 2 of 3 questions')).toBeInTheDocument()
+      await user.click(
+        screen.getByRole('button', { name: 'Recorded session: Moves and Filings; Completed' })
+      )
+      expect(recorded.onSelect).toHaveBeenCalledWith('filings')
+
+      await user.click(screen.getByRole('tab', { name: 'My sessions' }))
+      expect(screen.getByText('Replay mode shows the recorded sessions only.')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /start a new session/i })).not.toBeInTheDocument()
+    })
+
+    test('shows loading, then a failure with a retry', async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(
+        <SessionsPanel recorded={collection({ status: 'loading' })} readOnly />
+      )
+      expect(screen.getByText('Loading recorded sessions…')).toBeInTheDocument()
+
+      const failed = collection({ status: 'error', error: 'index.json returned 404' })
+      rerender(<SessionsPanel recorded={failed} readOnly />)
+      expect(screen.getByText('index.json returned 404')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Retry' }))
+      expect(failed.onRetry).toHaveBeenCalled()
+    })
+
+    test('the collapsed rail holds saved sessions only, as the original demo UI did', () => {
+      setupLayoutStoreMock(true)
+      render(<SessionsPanel sessions={[]} recorded={collection()} readOnly />)
+
+      expect(screen.getByRole('button', { name: /expand sessions sidebar/i })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Session: / })).not.toBeInTheDocument()
+    })
+
+    test('without recordings there are no collection tabs', () => {
+      render(<SessionsPanel sessions={mockSessions} />)
+      expect(screen.queryByRole('tablist', { name: 'Session collections' })).not.toBeInTheDocument()
     })
   })
 })

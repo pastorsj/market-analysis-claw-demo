@@ -4,15 +4,17 @@
 /**
  * Where a run's events and receipts come from outside the live stream:
  *
- * - replay mode reads the data pack's recordings bundle (v2) through
- *   `/api/recordings/…`: `index.json` lists the sessions and
- *   `sessions/<id>.json` holds each turn with its events and receipts;
- * - live mode reads a job's export, `GET /v1/jobs/async/job/{id}/export`,
- *   which returns one turn in the same shape.
+ * - a recorded session (in either mode) comes from the data pack's
+ *   recordings bundle (v2) through `/api/recordings/…`: `index.json` lists
+ *   the sessions and `sessions/<id>.json` holds each turn with its events and
+ *   receipts;
+ * - a live job reads its export, `GET /v1/jobs/async/job/{id}/export`, which
+ *   returns one turn in the same shape.
  *
  * Either way the turn lands in the execution store.
  */
 
+import { isPill, orderPills, type ToolPillUse } from '@/shared/components/ToolPills'
 import type { RecordedSession, RecordingsSource } from '@/shared/context'
 import { useExecutionStore } from '../store'
 
@@ -30,6 +32,10 @@ export interface RecordedTurn {
   receipts: unknown[]
   /** The job's data sources, when the recording has them */
   sourceIds?: string[]
+  /** The CPU/GPU comparison of its market calls (`Benchmark`), when one ran */
+  benchmark?: unknown
+  /** The Milvus CPU/GPU index comparison for its retrieval calls (`RetrievalBenchmark`), on a GPU stack */
+  retrievalBenchmark?: unknown
 }
 
 export interface RecordingIndex {
@@ -41,6 +47,8 @@ export interface RecordingIndex {
     title: string
     featured: boolean
     turns: { jobId: string; question: string }[]
+    /** The tools its runs used (`demo-api record`; the recordings route derives them for older bundles) */
+    tools?: unknown
   }[]
 }
 
@@ -84,6 +92,37 @@ const parseTurn = (value: unknown): RecordedTurn => {
   return value
 }
 
+/** An index session's `tools`: the well-formed pills, in display order. */
+const toToolPills = (value: unknown): ToolPillUse[] =>
+  orderPills(
+    (Array.isArray(value) ? value : []).flatMap((entry): ToolPillUse[] =>
+      isRecord(entry) && isPill(entry.pill)
+        ? [
+            {
+              pill: entry.pill,
+              device: entry.device === 'gpu' || entry.device === 'cpu' ? entry.device : null,
+              tools: Array.isArray(entry.tools)
+                ? entry.tools.filter((tool): tool is string => typeof tool === 'string')
+                : [],
+            },
+          ]
+        : []
+    )
+  )
+
+/**
+ * The recordings archive a recorded run belongs to, as the original keyed its runs
+ * ("recorded:<archive>:<job id>"): when the bundle was recorded, then its pack, e.g.
+ * `20261001T045512Z-us-equities`.
+ */
+export const archiveId = (index: RecordingIndex): string => {
+  const recordedAt = index.recordedAt
+    .replace(/\.\d+/, '')
+    .replace(/[-:]/g, '')
+    .replace(/\+0000$/, 'Z')
+  return `${recordedAt}-${index.pack.id}`
+}
+
 /** The chat's view of a recorded session. */
 const toRecordedSession = (session: RecordingSession): RecordedSession => ({
   id: session.id,
@@ -103,18 +142,28 @@ const getJson = async (url: string): Promise<unknown> => {
   return response.json()
 }
 
-/** Recorded sessions of the active data pack (replay mode). */
+/** Recorded sessions of the active data pack. */
 export const recordings: RecordingsSource = {
   list: async () => {
     const index = parseIndex(await getJson('/api/recordings/index.json'))
-    return index.sessions.map(({ id, title }) => ({ id, title, recordedAt: index.recordedAt }))
+    return index.sessions.map(({ id, title, turns, tools }) => ({
+      id,
+      title,
+      recordedAt: index.recordedAt,
+      questions: turns.map((turn) => turn.question),
+      tools: toToolPills(tools),
+    }))
   },
   load: async (sessionId) => {
-    const session = parseSession(
-      await getJson(`/api/recordings/sessions/${encodeURIComponent(sessionId)}.json`)
-    )
+    const [session, archive] = await Promise.all([
+      getJson(`/api/recordings/sessions/${encodeURIComponent(sessionId)}.json`).then(parseSession),
+      // Only the run's label needs it: without the index, the run shows its job id alone
+      getJson('/api/recordings/index.json')
+        .then((index) => archiveId(parseIndex(index)))
+        .catch(() => null),
+    ])
     const { addRecord } = useExecutionStore.getState()
-    for (const turn of session.turns) addRecord(turn)
+    for (const turn of session.turns) addRecord({ ...turn, recorded: true, archive })
     return toRecordedSession(session)
   },
 }

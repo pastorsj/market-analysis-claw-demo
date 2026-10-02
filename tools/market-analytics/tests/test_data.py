@@ -15,6 +15,8 @@ from market_analytics.data import FEATURES
 from market_analytics.data import ContractError
 from market_analytics.data import MarketData
 from market_analytics.data import Pack
+from market_analytics.data import _peer_correlations
+from market_analytics.data import footprint
 from market_analytics.data import validate
 from market_analytics.models import InvalidRequest
 
@@ -26,6 +28,21 @@ def utc(day: int, hour: int) -> datetime:
 
 def test_fixture_pack_satisfies_the_contract(pack: Pack) -> None:
     validate(pack)
+
+
+def test_a_pack_without_news_or_minute_bars_satisfies_the_contract(daily_only: MarketData) -> None:
+    validate(daily_only.pack)
+
+    assert (daily_only.pack.news_table, daily_only.pack.minute_bars) == (None, None)
+    assert daily_only.news.empty
+    assert list(daily_only.news.columns) == [
+        "news_id",
+        "asset_id",
+        "published_at",
+        "source_name",
+        "sentiment_label",
+        "session",
+    ]
 
 
 def test_contract_violations_are_all_listed(pack_root: Path, tmp_path: Path) -> None:
@@ -85,6 +102,19 @@ def test_an_ambiguous_reference_names_only_a_few_of_its_matches(pack_root: Path,
     )
 
 
+def test_an_id_or_ticker_wins_over_another_companys_name(pack_root: Path, tmp_path: Path) -> None:
+    """Real tickers are often another company's first word: ACI is Albertsons, and ACI Worldwide is ACIW."""
+    root = tmp_path / "active"
+    shutil.copytree(pack_root, root)
+    assets = pd.read_parquet(root / "tables" / "assets.parquet")
+    lookalike = pd.DataFrame({"asset_id": ["asset-beta-grid"], "company_name": ["Beta Grid Co"], "is_reviewed": False})
+    pd.concat([assets, lookalike]).to_parquet(root / "tables" / "assets.parquet", index=False)
+    data = MarketData.load(Pack.load(root))
+
+    assert data.resolve_assets(["BETA", "asset-beta"]) == ["asset-beta"]  # the ticker, not "Beta Grid Co"
+    assert data.resolve_assets(["beta grid"]) == ["asset-beta-grid"]
+
+
 def test_news_aligns_to_the_first_session_at_or_after_publication(data: MarketData) -> None:
     sessions = data.news.set_index("news_id")["session"]
     assert sessions["n-01"] == 41  # published before the 21:00 close of SESSIONS[40]
@@ -128,6 +158,35 @@ def test_relationship_graph_links_every_pair_or_only_declared_peers(pack: Pack, 
         ("asset-beta", "asset-gamma"),
         ("asset-gamma", "asset-beta"),
     ]
+    # Computed from the declared pairs alone, the correlations equal the full matrix's.
+    peers = sparse.edges.set_index(["source", "target"])["correlation"]
+    full = data.edges.set_index(["source", "target"])["correlation"]
+    pd.testing.assert_series_equal(peers, full.loc[peers.index], rtol=1e-12)
+
+
+def test_peer_correlations_use_the_sessions_both_assets_traded(pack: Pack) -> None:
+    """As DataFrame.corr does: pairwise complete sessions, and no edge for a flat series."""
+    dates = pd.date_range("2026-06-01", periods=6)
+    returns = {
+        "asset-alpha": [0.01, np.nan, -0.02, 0.03, np.nan, 0.01],
+        "asset-beta": [0.02, 0.01, -0.01, 0.02, -0.03, np.nan],
+        "asset-gamma": [0.0] * 6,
+    }
+    window = pd.DataFrame(
+        [(day, asset, value) for asset, values in returns.items() for day, value in zip(dates, values, strict=True)],
+        columns=["trading_date", "asset_id", "total_return_1d"],
+    )
+
+    edges = _peer_correlations(pack, window).set_index(["source", "target"])["correlation"]
+
+    expected = window.pivot(index="trading_date", columns="asset_id", values="total_return_1d").corr()
+    assert edges.to_dict() == pytest.approx(
+        {
+            ("asset-alpha", "asset-beta"): expected.loc["asset-alpha", "asset-beta"],
+            ("asset-beta", "asset-alpha"): expected.loc["asset-beta", "asset-alpha"],
+        },
+        rel=1e-12,
+    )
 
 
 def test_price_bars_are_stamped_at_the_session_close(data: MarketData) -> None:
@@ -136,6 +195,11 @@ def test_price_bars_are_stamped_at_the_session_close(data: MarketData) -> None:
     assert first["session"] == 1
     assert pd.isna(first["adjusted_return_1d"])
     assert len(data.prices) == 4 * len(SESSIONS)
+
+
+def test_the_footprint_comes_from_the_parquet_footers(pack: Pack) -> None:
+    assert footprint(pack, "gpu") == "280 price rows and 8 news rows: about 0.0 GB on the gpu"
+    assert footprint(replace(pack, news_table=None), "cpu").startswith("280 price rows: ")
 
 
 def test_every_timestamp_is_naive_utc_nanoseconds(data: MarketData) -> None:

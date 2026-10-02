@@ -15,6 +15,7 @@ from collections import Counter
 from collections.abc import Iterable
 from collections.abc import Mapping
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,12 @@ from jsonschema import FormatChecker
 DATA_ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = DATA_ROOT / "schemas"
 DIGEST_EXCLUDES = {"README.md", "eval", "recordings", "tests"}
+# Directories skipped at any depth: caches, and `data generate`'s resumable work directory (text/.work).
+DIGEST_SKIPPED_DIRS = {"__pycache__", ".work"}
+# Corpus formats read in place from an external dataset (`files`) rather than pinned by a manifest in the pack.
+IN_PLACE_FORMATS = ("gdelt-parquet",)
+# The tables the market importer (market.py) writes from an external dataset, besides an optional news table.
+MARKET_TABLES = ("assets", "ticker_history", "trading_sessions", "daily_prices", "asset_relationships")
 # How contract types map to DuckDB types, unless the contract carries its own `logical_types`.
 LOGICAL_TYPES = {
     "string": ["VARCHAR"],
@@ -50,6 +57,7 @@ class Pack:
     directory: Path
     manifest: dict[str, Any]
     questions: list[dict[str, Any]]
+    conversations: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def id(self) -> str:
@@ -107,19 +115,32 @@ class Pack:
             raise PackError(self.id, [f"no corpus for {sorted(unknown)}; choose from the pack's documents.corpora"])
         return [corpus for corpus in corpora if corpus["source"] in wanted]
 
-    def digest(self, profile: str, corpora: list[dict[str, Any]], builder_version: str) -> str:
-        """Content digest of everything a build depends on (README, eval/, recordings/ and tests/ excluded)."""
+    def digest(
+        self, profile: str, corpora: list[dict[str, Any]], builder_version: str, inputs: Iterable[str] = ()
+    ) -> str:
+        """Content digest of everything a build depends on (README, eval/, recordings/, tests/ and the
+        DIGEST_SKIPPED_DIRS excluded).
+
+        `inputs` identify what the build reads from outside the pack, such as an SEC snapshot. External datasets
+        need nothing here: pack.yaml pins their fingerprints.
+        """
         sha = hashlib.sha256(f"{builder_version}\0{profile}\0".encode())
-        sha.update(",".join(sorted(corpus["source"] for corpus in corpora)).encode())
+        sha.update(",".join(sorted({corpus["source"] for corpus in corpora})).encode())
+        for value in inputs:
+            sha.update(f"\0{value}".encode())
         for file in sorted(self.directory.rglob("*")):
             relative = file.relative_to(self.directory)
-            if file.is_file() and relative.parts[0] not in DIGEST_EXCLUDES and "__pycache__" not in relative.parts:
+            skipped = relative.parts[0] in DIGEST_EXCLUDES or not DIGEST_SKIPPED_DIRS.isdisjoint(relative.parts)
+            if file.is_file() and not skipped:
                 sha.update(f"\0{relative.as_posix()}\0".encode())
                 sha.update(file.read_bytes())
         return sha.hexdigest()
 
-    def resolve(self, profile: str, corpora: list[dict[str, Any]]) -> dict[str, Any]:
-        """The pack as one build sees it: only the sources and questions that the build can serve."""
+    def resolve(self, profile: str, corpora: list[dict[str, Any]], market_root: Path | None = None) -> dict[str, Any]:
+        """The pack as one build sees it: only the sources and questions that the build can serve.
+
+        `market_root` is the raw market dataset's directory, for readers of the raw bars (the minute-bar tools).
+        """
         m = self.manifest
         served = ({self.structured["source"]} if self.structured else set()) | {c["source"] for c in corpora}
         resolved: dict[str, Any] = {
@@ -134,6 +155,11 @@ class Pack:
                 question
                 for question in self.questions
                 if set(question["sources"]) <= served and profile in question.get("profiles", [profile])
+            ],
+            "conversations": [
+                conversation
+                for conversation in self.conversations
+                if set(conversation["sources"]) <= served and profile in conversation.get("profiles", [profile])
             ],
         }
         if self.structured:
@@ -163,12 +189,21 @@ class Pack:
             }
         if "prediction" in m:
             resolved["prediction"] = m["prediction"]
+        if "market" in m and market_root is not None:
+            bars = m["market"]["bars"] | {"root": str(market_root)}
+            # A generator profile's `frequency` is the bars it writes: 1d profiles write one bar per session.
+            frequency = self.profiles.get(profile, {}).get("params", {}).get("frequency")
+            resolved["market"] = {"bars": bars | ({"frequency": frequency} if frequency else {})}
         if corpora:
+            built = {corpus["source"] for corpus in corpora}
             resolved["documents"] = {
                 "collection": m["documents"].get("collection", f"{self.id.replace('-', '_')}_documents"),
-                "sources": [corpus["source"] for corpus in corpora],
+                "sources": list(dict.fromkeys(corpus["source"] for corpus in corpora)),
                 "path": "corpus/documents.jsonl",
             }
+            queries = [q for q in m["documents"].get("benchmark_queries", []) if set(q["sources"]) <= built]
+            if queries:
+                resolved["documents"]["benchmark_queries"] = queries
         return resolved
 
 
@@ -188,7 +223,7 @@ def load_pack(directory: Path) -> Pack:
     errors = _schema_errors("questions.schema.json", questions, manifest["questions"])
     if errors:
         raise PackError(manifest["id"], errors)
-    pack = Pack(directory, manifest, questions["questions"])
+    pack = Pack(directory, manifest, questions["questions"], questions.get("conversations", []))
     errors = cross_reference_errors(pack)
     if errors:
         raise PackError(pack.id, errors)
@@ -221,7 +256,25 @@ def cross_reference_errors(pack: Pack) -> list[str]:
     for origin in m["provenance"]:
         if origin["license"] not in licenses:
             errors.append(f"origin {origin['id']}: unknown license {origin['license']!r}")
+        if origin["kind"] == "external" and origin["id"] not in m.get("external", {}):
+            errors.append(f"origin {origin['id']} is external, but `external` does not declare it")
     errors += [f"origin {name} is declared twice" for name in _duplicates(o["id"] for o in m["provenance"])]
+
+    if ("external" in m or "market" in m) and m["schema_version"] != "2":
+        errors.append('`external` and `market` need schema_version "2"')
+    if "market" in m:
+        dataset = m["market"]["bars"]["dataset"]
+        if pack.origins.get(dataset, {}).get("kind") not in ("external", "generated"):
+            errors.append(f"market.bars.dataset {dataset!r} must be an external or generated origin")
+        elif pack.origins[dataset]["kind"] == "generated" and "generator" not in m:
+            errors.append(f"market.bars.dataset {dataset!r} is generated, but there is no generator")
+        imported = {table["name"] for table in m.get("structured", {}).get("tables", []) if table["origin"] == dataset}
+        news_table = m.get("analytics", {}).get("news_table")
+        expected = set(MARKET_TABLES) | ({news_table} if m["market"]["news"] and news_table else set())
+        if imported != expected:
+            errors.append(f"the tables with origin {dataset} must be exactly {sorted(expected)}")
+        if "analytics" in m and bool(m["market"]["news"]) != bool(m["analytics"]["news_table"]):
+            errors.append("analytics.news_table must be set exactly when market.news is")
 
     if "generator" in m:
         require_file(m["generator"]["entrypoint"], "generator entrypoint")
@@ -242,16 +295,11 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         else:
             errors.append("a structured pack needs `ontology` (table and column descriptions)")
         errors += [f"table {name} is declared twice" for name in _duplicates(pack.tables)]
+        if "market" not in m:
+            errors.append("a structured pack needs `market`: the market importer writes its tables")
         for table in structured["tables"]:
-            kind = pack.origins.get(table["origin"], {}).get("kind")
-            if kind == "generated" and "generator" not in m:
-                errors.append(
-                    f"table {table['name']}: origin {table['origin']} is generated, but there is no generator"
-                )
-            elif kind == "committed":
-                require_file(f"tables/{table['name']}.parquet", f"table {table['name']}:")
-            elif kind not in ("generated", "committed"):
-                errors.append(f"table {table['name']}: origin must be a generated or committed origin")
+            if m.get("market", {}).get("bars", {}).get("dataset") != table["origin"]:
+                errors.append(f"table {table['name']}: origin {table['origin']} is not market.bars.dataset")
         for profile, spec in pack.profiles.items():
             for table in sorted(set(spec.get("expected_rows", {})) - set(pack.tables)):
                 errors.append(f"profile {profile}: expected_rows names unknown table {table}")
@@ -262,12 +310,27 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         require_source(corpus["source"], "documents", label)
         if corpus["origin"] not in pack.origins:
             errors.append(f"{label}: unknown origin {corpus['origin']!r}")
+        in_place = corpus["format"] in IN_PLACE_FORMATS
+        if in_place != ("files" in corpus):
+            errors.append(f"{label}: format {corpus['format']} takes {'files' if in_place else 'a manifest'}")
+        if "files" in corpus:
+            if pack.origins.get(corpus["origin"], {}).get("kind") != "external":
+                errors.append(f"{label}: files are read from an external dataset, so the origin must be external")
+            continue
         manifest_path = pack.path(corpus["manifest"])
         if not manifest_path.is_file():
             errors.append(f"{label}: manifest {corpus['manifest']} not found")
         elif _json_object(manifest_path).get("source_id") != corpus["source"]:
             errors.append(f"{label}: manifest {corpus['manifest']} does not declare source_id {corpus['source']!r}")
-    errors += [f"source {name} has more than one corpus" for name in _duplicates(c["source"] for c in corpora)]
+    # A source may draw on several corpora (market_regulations: the eCFR and a Federal Register rule); DATA_CORPORA
+    # names sources, so all of a source's corpora are opt-in or none are.
+    for name in sorted({c["source"] for c in corpora}):
+        if len({bool(c.get("opt_in", False)) for c in corpora if c["source"] == name}) > 1:
+            errors.append(f"source {name} has opt-in and default corpora")
+    corpus_sources = {corpus["source"] for corpus in corpora}
+    for number, query in enumerate(m.get("documents", {}).get("benchmark_queries", []), start=1):
+        if unknown := sorted(set(query["sources"]) - corpus_sources):
+            errors.append(f"benchmark query {number}: {unknown} have no corpus")
     served = {corpus["source"] for corpus in corpora} | ({structured["source"]} if structured else set())
     errors += [f"source {source_id} has no corpus or structured data" for source_id in sorted(set(sources) - served)]
 
@@ -275,7 +338,7 @@ def cross_reference_errors(pack: Pack) -> list[str]:
         analytics = m["analytics"]
         if not structured or "market_analytics" not in sources.get(structured["source"], {}).get("capabilities", []):
             errors.append("analytics needs a structured source with the market_analytics capability")
-        if analytics["news_table"] not in pack.tables:
+        if analytics["news_table"] is not None and analytics["news_table"] not in pack.tables:
             errors.append(f"analytics.news_table {analytics['news_table']!r} is not a table")
         if set(analytics["relationship_graph"]["mode_by_profile"]) != (profiles or {"default"}):
             errors.append("analytics.relationship_graph.mode_by_profile must name every profile")
@@ -296,12 +359,15 @@ def cross_reference_errors(pack: Pack) -> list[str]:
             f"template {name} is declared twice" for name in _duplicates(t["id"] for t in prediction["templates"])
         ]
 
-    errors += [f"question {name} is declared twice" for name in _duplicates(q["id"] for q in pack.questions)]
-    for question in pack.questions:
-        for source_id in sorted(set(question["sources"]) - set(sources)):
-            errors.append(f"question {question['id']}: unknown source {source_id!r}")
-        for profile in sorted(set(question.get("profiles", [])) - profiles):
-            errors.append(f"question {question['id']}: unknown profile {profile!r}")
+    # Questions and conversations share one id space: each is one replay session, recordings/sessions/<id>.json
+    asked = [("question", question) for question in pack.questions]
+    asked += [("conversation", conversation) for conversation in pack.conversations]
+    errors += [f"question {name} is declared twice" for name in _duplicates(entry["id"] for _, entry in asked)]
+    for kind, entry in asked:
+        for source_id in sorted(set(entry["sources"]) - set(sources)):
+            errors.append(f"{kind} {entry['id']}: unknown source {source_id!r}")
+        for profile in sorted(set(entry.get("profiles", [])) - profiles):
+            errors.append(f"{kind} {entry['id']}: unknown profile {profile!r}")
     if not any(question.get("featured") for question in pack.questions):
         errors.append("at least one question must be featured")
     return errors
@@ -344,6 +410,8 @@ def contract_errors(
     errors: list[str] = []
     for name, spec in contract["tables"].items():
         table = pack.manifest["analytics"]["news_table"] if name == "$news_table" else name
+        if table is None:  # a pack without ticker-linked news; the news tools report that they are unavailable
+            continue
         if table not in pack.tables:
             errors.append(f"{contract_id}: table {table} is missing")
             continue
@@ -352,10 +420,7 @@ def contract_errors(
             continue
         described = connection.execute(f"SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM {relation})")
         columns = dict(described.fetchall())
-        optional = {
-            column: logical for column, logical in spec.get("optional_columns", {}).items() if column in columns
-        }
-        for column, logical in (spec.get("columns", {}) | optional).items():
+        for column, logical in spec.get("columns", {}).items():
             if column not in columns:
                 errors.append(f"{contract_id}: {table}.{column} is missing")
             elif columns[column] not in logical_types.get(logical, ()):

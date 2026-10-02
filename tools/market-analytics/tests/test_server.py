@@ -35,6 +35,7 @@ TOOLS = [
     "sentiment_timeline",
     "analyze_news_price_relationship",
     "analyze_market_relationships",
+    "intraday_scan",
 ]
 
 
@@ -70,7 +71,23 @@ async def test_tools_are_listed_read_only_with_typed_schemas(pack: Pack, data: M
         assert "scope_grant" not in tool.input_schema["properties"]
         assert {"status", "payload", "engine", "timing", "rows_scanned"} <= set(tool.output_schema["properties"])
     assert listed["market_scan"].input_schema["properties"]["universe_id"]["enum"] == ["reviewed_assets", "all_assets"]
-    assert "from 2026-06-01 to 2026-08-06" in listed["analyze_market_relationships"].description
+    assert (
+        "from 2026-06-01 to 2026-08-06, whose links join every pair"
+        in listed["analyze_market_relationships"].description
+    )
+
+
+async def test_tools_without_their_data_say_so_in_their_descriptions(pack: Pack, daily_only: MarketData) -> None:
+    async with Client(create_server(daily_only.pack, FakeWorker(daily_only))) as client:
+        descriptions = {tool.name: tool.description for tool in (await client.list_tools()).tools}
+    async with Client(create_server(pack, FakeWorker(daily_only))) as client:
+        full = {tool.name: tool.description for tool in (await client.list_tools()).tools}
+
+    unavailable = {
+        name for name, text in descriptions.items() if text.startswith("Unavailable in the active data pack")
+    }
+    assert unavailable == {"sentiment_timeline", "analyze_news_price_relationship", "intraday_scan"}
+    assert not any(text.startswith("Unavailable") for text in full.values())
 
 
 async def test_a_call_returns_the_result_as_structured_content(pack: Pack, data: MarketData) -> None:

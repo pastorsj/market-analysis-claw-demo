@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, expect, test } from 'vitest'
-import { inferSourceKind, mapCitationSource, prettyDomain, sourceLabel } from './source-utils'
+import { inferSourceKind, prettyDomain, sourceLabel } from './source-utils'
 
 describe('inferSourceKind', () => {
   test('classifies web urls as web', () => {
@@ -33,25 +33,5 @@ describe('sourceLabel', () => {
     expect(sourceLabel('https://www.example.com', 'web')).toBe('example.com')
     expect(sourceLabel('knowledge_search', 'doc')).toBe('knowledge_search')
     expect(sourceLabel(undefined, 'doc')).toBe('Document')
-  })
-})
-
-describe('mapCitationSource', () => {
-  test('maps a web citation', () => {
-    const ref = mapCitationSource({ id: 'c1', url: 'https://www.nvidia.com', content: 'NVIDIA news\nmore' }, 0)
-    expect(ref).toMatchObject({ id: 'c1', kind: 'web', label: 'nvidia.com', title: 'NVIDIA news', url: 'https://www.nvidia.com' })
-    expect(ref.snippet).toContain('NVIDIA news')
-  })
-  test('maps a document citation with no real url', () => {
-    const ref = mapCitationSource({ id: 'c2', url: 'knowledge_search', content: 'There are 11,463 users.' }, 1)
-    expect(ref.kind).toBe('doc')
-    expect(ref.label).toBe('knowledge_search')
-    expect(ref.url).toBeUndefined()
-    expect(ref.title).toBe('There are 11,463 users.')
-  })
-  test('synthesises an id and title when missing', () => {
-    const ref = mapCitationSource({ id: '', url: 'knowledge_search', content: '' }, 2)
-    expect(ref.id).toBe('src-2')
-    expect(ref.title).toBe('knowledge_search')
   })
 })

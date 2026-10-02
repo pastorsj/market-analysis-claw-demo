@@ -13,12 +13,13 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - `data/`: data packs (`data/packs/<id>/`) and the `demo-data` builder.
 - `contracts/`: tool registry, JSON Schemas and golden fixtures shared across languages.
 - `scripts/`: `demo.sh` (lifecycle) and `gen-contracts.sh` (codegen).
+- `eval/`: on-demand checks of a running deployment (`demo.sh eval`, `demo.sh test gpu --perf`); never run in CI.
 - `docs/`: guides. `architecture.md` for the design, `customize.md` for the files a new tool or skill touches.
 
 ## Commands
 
 - Stack: `scripts/demo.sh <command>`; run it with no arguments for the list.
-- Python tests, per project: `uv run --directory <dir> pytest` (dirs: `api`, `data`, `agent`, `tools/*`).
+- Python tests, per project: `uv run --directory <dir> pytest` (dirs: `api`, `agent`, `data`, `data/generate`, `eval`, `tools/*`).
 - Lint: `ruff check . && ruff format --check .` (one `ruff.toml` for the repo).
 - UI: `npm --prefix ui run lint`, `type-check`, `test:ci`.
 - Contracts: `scripts/gen-contracts.sh` to regenerate, `scripts/gen-contracts.sh --check` to verify.
@@ -33,7 +34,8 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - Services share JSON contracts only; no service imports another service's Python code.
 - One `uv` project and `uv.lock` per service directory; Python 3.12.
 - Secrets live only in `.env` (never committed). Never use `NVIDIA_API_KEY` or `NVIDIA_BASE_URL`.
-- Host ports bind to 127.0.0.1 only. All Docker resources belong to the Compose project `market-demo`.
+- Host ports bind to 127.0.0.1, except the UI's via `UI_BIND_HOST`. All Docker resources belong to the
+  Compose project `market-demo`.
 - A cached rebuild must give the same image ID, or `demo.sh up` recreates the container (and, for the
   agent image, the sandbox). So no `EXPOSE`: Docker Engine 28's BuildKit writes a pointer into its
   history line. `demo.sh` also builds without provenance attestations.

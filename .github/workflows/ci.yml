@@ -8,8 +8,7 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  pull_request: # into any branch, so a pull request stacked on another is checked too
   workflow_dispatch:
 
 permissions:
@@ -18,6 +17,8 @@ permissions:
 env:
   RUFF: ruff@0.16.9 # the version in .pre-commit-config.yaml
   SHELLCHECK: shellcheck-py==0.11.0.1
+  GITLEAKS: 8.30.1 # the version in .pre-commit-config.yaml, whose hook checks each commit's staged changes
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb # gitleaks_8.30.1_linux_x64.tar.gz
 
 jobs:
   guards:
@@ -29,8 +30,26 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: shellcheck
         run: git ls-files -z '*.sh' | xargs -0 uvx --from "$SHELLCHECK" shellcheck -x
+      - name: ruff (infra/phoenix, the one Python file outside the uv projects)
+        run: |
+          uvx "$RUFF" check infra/phoenix
+          uvx "$RUFF" format --check infra/phoenix
       - name: Compose config for every profile set, with no .env
         run: scripts/demo.sh test compose
+      - name: gitleaks (every tracked file)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS/gitleaks_${GITLEAKS}_linux_x64.tar.gz"
+          echo "$GITLEAKS_SHA256  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" dir --redact --no-banner .
+      - name: No data files outside the synthetic text and the test fixtures
+        run: |
+          if git ls-files '*.parquet' '*.arrow' '*.feather' '*.duckdb' |
+            grep -Ev '^(data/packs/[^/]+/text|(.+/)?tests/fixtures)/'; then
+            echo "Real market data is never committed; see docs/data-platform.md." >&2
+            exit 1
+          fi
       - name: No Makefile, no Git LFS
         run: |
           if git ls-files | grep -E '(^|/)(GNUm|M|m)akefile$'; then
@@ -47,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [agent, api, data, tools/retrieval, tools/market-analytics, tools/auto-ontology]
+        project: [agent, api, data, data/generate, eval, tools/retrieval, tools/market-analytics, tools/auto-ontology]
     defaults:
       run:
         working-directory: ${{ matrix.project }}
@@ -66,15 +85,12 @@ jobs:
           uvx "$RUFF" format --check .
       - name: pytest
         run: uv run --locked pytest -m "not gpu and not slow and not live"
-      - name: pytest (slow; builds the interactive data pack in seconds)
+      - name: pytest (slow; builds synthetic-market's ci profile in seconds)
         if: matrix.project == 'data'
         run: uv run --locked pytest -m slow
-      - name: Skills lint
-        if: matrix.project == 'agent'
-        run: |
-          for skill in profile/skills/*/; do
-            uv run --locked agentskills validate "$skill"
-          done
+      - name: pytest (fetch from a local web server, with the remote extra)
+        if: matrix.project == 'data'
+        run: uv run --locked --extra remote pytest tests/test_external.py
 
   contracts:
     runs-on: ubuntu-24.04
@@ -119,5 +135,17 @@ jobs:
       - run: npm run test:ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - name: e2e (live smoke; replay of the synthetic bundle and the pack's recordings)
+      - name: e2e (live smoke; replay of the fixture pack and of every recorded session of each pack)
         run: npm run e2e
+      - name: Visual baselines, in the Playwright image (ui/e2e/visual/README.md)
+        id: visual
+        run: e2e/visual/run.sh --reuse-build
+      # Only the visual project's output (the fixture pack): the smoke step's traces can hold replays of every pack
+      - name: Upload the visual diffs
+        if: failure() && steps.visual.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-diffs
+          path: ui/test-results/visual/
+          retention-days: 7
+          if-no-files-found: ignore

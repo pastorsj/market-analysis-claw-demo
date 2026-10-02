@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""SQLite job store: one row per job, its append-only events, and its tool receipts.
+"""SQLite job store: one row per job, its append-only events, its tool receipts and its benchmark.
 
 Every method is async and runs its SQLite work in a thread, so the API event loop (SSE,
 receipts, /health) never waits on disk. Status changes are compare-and-set, so a late writer
@@ -83,6 +83,11 @@ CREATE TABLE IF NOT EXISTS receipts (
     receipt       TEXT NOT NULL,
     created_at    REAL NOT NULL,
     PRIMARY KEY (job_id, receipt_id)
+);
+CREATE TABLE IF NOT EXISTS benchmarks (
+    job_id     TEXT PRIMARY KEY REFERENCES jobs(job_id) ON DELETE CASCADE,
+    benchmark  TEXT NOT NULL,
+    created_at REAL NOT NULL
 );
 """
 
@@ -232,8 +237,28 @@ class JobStore:
 
         return await self._run(select)
 
+    async def save_benchmark(self, job_id: str, benchmark: dict[str, Any]) -> None:
+        """Store (or replace) the job's CPU/GPU comparison (camelCase wire form)."""
+
+        def upsert(connection: sqlite3.Connection) -> None:
+            connection.execute(
+                "INSERT OR REPLACE INTO benchmarks (job_id, benchmark, created_at) VALUES (?, ?, ?)",
+                (job_id, json.dumps(benchmark), time.time()),
+            )
+
+        await self._run(upsert)
+
+    async def benchmark(self, job_id: str) -> dict[str, Any] | None:
+        """The job's stored CPU/GPU comparison, or None."""
+
+        def select(connection: sqlite3.Connection) -> dict[str, Any] | None:
+            row = connection.execute("SELECT benchmark FROM benchmarks WHERE job_id = ?", (job_id,)).fetchone()
+            return json.loads(row["benchmark"]) if row else None
+
+        return await self._run(select)
+
     async def delete_finished_before(self, cutoff: float) -> int:
-        """Retention: drop finished jobs (and, by cascade, their events and receipts) last updated before ``cutoff``."""
+        """Retention: drop finished jobs (and, by cascade, all they hold) last updated before ``cutoff``."""
         placeholders = ", ".join("?" * len(ACTIVE_STATUSES))
 
         def delete(connection: sqlite3.Connection) -> int:

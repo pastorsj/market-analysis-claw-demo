@@ -34,16 +34,24 @@ run_entrypoint() {
   case $template in
     *.nemotron-gpt)
       set -- INFERENCE_BASE_URL=https://integrate.api.nvidia.com/v1 \
-        CAPABLE_BASE_URL=https://capable.example.com/v1 \
+        CAPABLE_BASE_URL=https://capable.example.com/v1 CAPABLE_API_KEY=dummy-capable-not-a-key \
         AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-ultra-550b-a55b \
-        AGENT_CAPABLE_MODEL=gpt-6-sol \
-        AGENT_JUDGE_MODEL=nvidia/nemotron-3-super-120b-a12b "$@"
+        AGENT_CAPABLE_MODEL=gpt-6-sol AGENT_JUDGE_MODEL=judge/gpt-6-sol \
+        AGENT_AUX_MODEL=nvidia/nemotron-3-super-120b-a12b "$@"
+      ;;
+    *.nemotron-claude)
+      set -- INFERENCE_BASE_URL=https://integrate.api.nvidia.com/v1 \
+        CAPABLE_BASE_URL=https://capable.example.com/v1 CAPABLE_API_KEY=dummy-capable-not-a-key \
+        AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-ultra-550b-a55b \
+        AGENT_CAPABLE_MODEL=claude-opus-5-5 AGENT_JUDGE_MODEL=judge/claude-opus-5-5 \
+        AGENT_AUX_MODEL=nvidia/nemotron-3-super-120b-a12b "$@"
       ;;
     *)
       set -- INFERENCE_BASE_URL=https://integrate.api.nvidia.com/v1 \
         AGENT_EFFICIENT_MODEL=nvidia/nemotron-3-super-120b-a12b \
         AGENT_CAPABLE_MODEL=nvidia/nemotron-3-ultra-550b-a55b \
-        AGENT_JUDGE_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b "$@"
+        AGENT_JUDGE_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b \
+        AGENT_AUX_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b "$@"
       ;;
   esac
   env -i PATH="$PATH" TMPDIR="$work" SWITCHYARD_STATE_DIR="$state_dir" \
@@ -78,7 +86,8 @@ expect() {
 
 not() { ! "$@"; }
 
-all_routes=$(printf '%s\n' market-research market-research-aux market-research-capable market-research-efficient)
+all_routes=$(printf '%s\n' market-research market-research-aux market-research-capable market-research-efficient \
+  market-research-fallback)
 
 for path in "$root"/routes/*.toml.tmpl; do
   name=$(basename "$path" .toml.tmpl)
@@ -111,25 +120,68 @@ expect "the key is read from the secret file" exits 0 escalation.nemotron-gpt IN
 expect "the secret file wins over the environment" exits 64 escalation.nemotron-gpt
 rm "$work/secret"
 
-# The capable model's endpoint and key default to the inference ones.
+# The capable model's endpoint defaults to the inference endpoint, and its key to the inference
+# key on that endpoint only.
 expect "the capable endpoint defaults to the inference endpoint" exits 0 escalation.nemotron CAPABLE_BASE_URL=
 expect "  ...in the capable client" [ "$(grep -c 'base_url = "https://integrate.api.nvidia.com/v1"' "$work/routes.toml")" = 3 ]
 expect "  ...and with the inference key" grep -q 'on the inference endpoint with the inference key' "$work/out"
 expect "a separate capable endpoint is rendered" exits 0 escalation.nemotron-gpt
-expect "  ...into the Responses client only" [ "$(grep -c 'base_url = "https://capable.example.com/v1"' "$work/routes.toml")" = 1 ]
+expect "  ...into the Responses and judge clients only" \
+  [ "$(grep -c 'base_url = "https://capable.example.com/v1"' "$work/routes.toml")" = 2 ]
 expect "  ...which reads CAPABLE_API_KEY" grep -q 'api_key_env = "CAPABLE_API_KEY"' "$work/routes.toml"
 printf dummy-capable-key >"$work/capable-secret"
 expect "the capable key is read from its secret file" exits 0 pinned-capable.nemotron-gpt
 expect "  ...and reported as its own" grep -q 'with its own key' "$work/out"
 : >"$work/capable-secret"
-expect "an empty capable secret file means the inference key" exits 0 pinned-capable.nemotron-gpt
-expect "  ...and is reported so" grep -q 'with the inference key' "$work/out"
+expect "an empty capable secret file for another endpoint exits 64" exits 64 pinned-capable.nemotron-gpt
+expect "  ...rather than send the inference key there" grep -q 'set CAPABLE_API_KEY' "$work/out"
+expect "an empty capable secret file on the inference endpoint means the inference key" \
+  exits 0 pinned-capable.nemotron-gpt CAPABLE_BASE_URL=
+expect "  ...and is reported so" grep -q 'on the inference endpoint with the inference key' "$work/out"
+expect "a capable endpoint equal to the inference endpoint also takes the inference key" \
+  exits 0 pinned-capable.nemotron-gpt CAPABLE_BASE_URL=https://integrate.api.nvidia.com/v1
+expect "passthrough needs no capable key, whatever the capable endpoint" \
+  exits 0 passthrough.nemotron CAPABLE_BASE_URL=https://capable.example.com/v1
 rm "$work/capable-secret"
+expect "an empty CAPABLE_API_KEY for another endpoint exits 64" exits 64 escalation.nemotron-gpt CAPABLE_API_KEY=
+
+# Claude speaks the Anthropic Messages API: its clients have that format, and its targets carry no
+# Responses-only option (Switchyard rejects reasoning_effort on that client).
+messages_client_on_capable_endpoint() {
+  grep -A1 '^format = "anthropic_messages"' "$work/routes.toml" | grep -q 'base_url = "https://capable.example.com/v1"'
+}
+# section NAME: the rendered TOML section [NAME], up to the next section.
+section() {
+  awk -v want="[$1]" '$1 == want { on = 1; print; next } /^\[/ { on = 0 } on' "$work/routes.toml"
+}
+# has SECTION TEXT: the rendered section [SECTION] contains TEXT.
+has() { section "$1" | grep -qF "$2"; }
+# The frontier escalation templates judge with a model from the capable endpoint, on a client of its own.
+for name in escalation.nemotron-gpt escalation.nemotron-claude; do
+  expect "$name: the judge is AGENT_JUDGE_MODEL" exits 0 "$name"
+  expect "  ...on its own client" has targets.judge 'llm_client = "judge"'
+  expect "  ...which is on the capable endpoint" has llm_clients.judge 'base_url = "https://capable.example.com/v1"'
+  expect "  ...with the capable key" has llm_clients.judge 'api_key_env = "CAPABLE_API_KEY"'
+  expect "  ...without Nemotron's chat_template_kwargs" not has targets.judge chat_template_kwargs
+  expect "  ...and a Nemotron aux model serves auxiliary and fallback calls" \
+    has targets.aux 'id = "nvidia/nemotron-3-super-120b-a12b"'
+done
+expect "escalation.nemotron-gpt: the judge uses the Responses API" exits 0 escalation.nemotron-gpt
+expect "  ...with low effort" has targets.judge 'reasoning_effort = "low"'
+expect "  ...in the Responses format" has llm_clients.judge 'format = "openai_responses"'
+expect "escalation.nemotron-claude: the judge uses the Anthropic Messages API" exits 0 escalation.nemotron-claude
+expect "  ...in the Messages format" has llm_clients.judge 'format = "anthropic_messages"'
+for name in escalation.nemotron-claude pinned-capable.nemotron-claude; do
+  expect "$name: the capable model uses the Anthropic Messages client" exits 0 "$name"
+  expect "  ...on the capable endpoint" messages_client_on_capable_endpoint
+  expect "  ...without reasoning_effort or store" not grep -q -e '^reasoning_effort' -e 'store = ' "$work/routes.toml"
+  expect "  ...with an empty CAPABLE_API_KEY for another endpoint, exits 64" exits 64 "$name" CAPABLE_API_KEY=
+done
 expect "passthrough needs no capable model" exits 0 passthrough.nemotron AGENT_CAPABLE_MODEL=
 expect "  ...and renders none" not grep -q -e 'CAPABLE' -e 'targets.capable' "$work/routes.toml"
 
 for name in SWITCHYARD_ROUTES INFERENCE_BASE_URL INFERENCE_API_KEY AGENT_EFFICIENT_MODEL \
-  AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL SWITCHYARD_CONFIRMATIONS; do
+  AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL AGENT_AUX_MODEL SWITCHYARD_CONFIRMATIONS; do
   expect "empty $name exits 64" exits 64 escalation.nemotron-gpt "$name="
 done
 expect "empty INFERENCE_BASE_URL exits 64 even with CAPABLE_BASE_URL set" \
@@ -140,8 +192,13 @@ expect "efficient = capable exits 64" \
 expect "efficient = judge exits 64" \
   exits 64 escalation.nemotron-gpt AGENT_JUDGE_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 expect "capable = judge exits 64" exits 64 escalation.nemotron AGENT_JUDGE_MODEL=nvidia/nemotron-3-ultra-550b-a55b
-expect "passthrough: efficient = judge exits 64" \
-  exits 64 passthrough.nemotron AGENT_JUDGE_MODEL=nvidia/nemotron-3-super-120b-a12b
+expect "passthrough: efficient = aux exits 64" \
+  exits 64 passthrough.nemotron AGENT_AUX_MODEL=nvidia/nemotron-3-super-120b-a12b
+expect "escalation.nemotron-gpt: efficient = aux exits 64" \
+  exits 64 escalation.nemotron-gpt AGENT_AUX_MODEL=nvidia/nemotron-3-ultra-550b-a55b
+expect "passthrough needs no judge model" exits 0 passthrough.nemotron AGENT_JUDGE_MODEL=
+expect "the aux model may be the judge model (the all-Nemotron default)" exits 0 escalation.nemotron
+expect "  ...which serves the aux route" grep -q 'id = "nvidia/nemotron-3.5-lightning-30b-a3b"' "$work/routes.toml"
 expect "passthrough ignores the unused capable model" \
   exits 0 passthrough.nemotron AGENT_CAPABLE_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
 for value in 0 3 two; do

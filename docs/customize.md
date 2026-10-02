@@ -23,7 +23,8 @@ endpoint and key (`CAPABLE_BASE_URL`, `CAPABLE_API_KEY`). Which template to use,
 before adopting it, is in [models and routing](models-and-routing.md).
 
 A new routing template is a new `infra/switchyard/routes/<name>.toml.tmpl` serving `market-research`,
-`market-research-aux` and `market-research-efficient` (plus `market-research-capable` if it has a capable model),
+`market-research-aux`, `market-research-fallback` and `market-research-efficient` (plus `market-research-capable`
+if it has a capable model),
 with a `# requires:` line naming every setting it substitutes. Templates are baked into the image, so rebuild it
 and dry-run every template:
 
@@ -40,9 +41,9 @@ evidence and citation rules, and the answer format. Keep it free of tool details
 ## Add or change a skill
 
 Skills live in `agent/profile/skills/<name>/SKILL.md` in the Agent Skills format, which
-`agentskills validate` checks: YAML front matter (`name` matching the directory, a `description` of at most 60
-characters, since Hermes truncates longer ones in its skill index, `license`, `compatibility`, `metadata`),
-then *When to Use*, *Tool*, *Procedure*, *Pitfalls* and an *Example*. A skill teaches one tool family; `SOUL.md` loads it only when the run's sources grant that family.
+`uv run --directory agent pytest` checks (`tests/test_skills.py`): YAML front matter (`name` matching the
+directory, a `description` of at most 60 characters, since Hermes truncates longer ones in its skill index,
+`license`, `compatibility`, `metadata`), then *When to Use*, *Tool*, *Procedure*, *Pitfalls* and an *Example*. A skill teaches one tool family; `SOUL.md` loads it only when the run's sources grant that family.
 
 1. Write or edit the skill. Say what the application sets (for example `source_ids`) so the model does not
    pass it.
@@ -60,14 +61,14 @@ Skills are baked read-only; the agent cannot change them at run time.
 
 ## Add a tool to an existing MCP server
 
-For example, a seventh market tool on the `market_analytics` server:
+For example, an eighth market tool on the `market_analytics` server:
 
 1. Implement it in the server (`tools/market-analytics/src/market_analytics/`) with a typed result and the
    MCP annotation `read_only_hint=True` (Hermes replays read-only calls after a server restart). Add tests.
 2. Add an entry to `contracts/tool-registry.json`: `id` (the MCP tool name), `server`, `hermes_name`
-   (`mcp__<server>__<id>`), `family`, `label` and `description` for the UI, `explorer`, `receipt_kind` and
-   `profile` (the agent feature that ships it). Run `scripts/gen-contracts.sh`, which regenerates the UI's
-   `TOOL_REGISTRY`.
+   (`mcp__<server>__<id>`), `family`, `label` and `description` for the UI, `explorer`, `receipt_kind`,
+   `profile` (the agent feature that ships it) and `pills` (the technology pills of a run that uses it; a market
+   tool has `cudf`). Run `scripts/gen-contracts.sh`, which regenerates the UI's `TOOL_REGISTRY`.
 3. Add the tool to the server's `tools.include` in `agent/profile/config.yaml`.
 4. Add it to the server's `tools/call` allowlist in `agent/sandbox-policy.yaml`.
 5. Teach it in the family's skill.
@@ -90,7 +91,8 @@ Everything above, plus:
 | `agent/sandbox-policy.yaml` | A network policy for `host.openshell.internal:<port>`, `protocol: mcp`, the handshake rules and the tool allowlist, binaries `*hermes` |
 | `scripts/lib/env.sh` | `agent_features`: map the profile to the feature |
 | `scripts/lib/doctor.sh` | The profile in `KNOWN_PROFILES`, its port in `check_ports` |
-| `scripts/demo.sh` | The service in `backend_services`, and a profile set that includes it in `PROFILE_SETS` |
+| `scripts/lib/openshell.sh` | The server's image in `TOOL_IMAGES`, so a new image of it recreates the sandbox (Hermes lists a server's tools once, when the sandbox starts) |
+| `scripts/demo.sh` | The service in `backend_services`, a profile set that includes it in `PROFILE_SETS`, and the project in `PYTHON_PROJECTS`, so `demo.sh test unit` runs its tests and ruff |
 | `.env.example`, `.github/workflows/ci.yml` | The profile in section 3; the project in the Python matrix |
 
 ## Add a tool family or a receipt kind

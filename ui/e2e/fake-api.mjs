@@ -3,7 +3,8 @@
 
 /**
  * A stand-in for the demo API, just enough for the live-mode smoke test:
- * the pack, its data sources, and a job whose stream answers immediately.
+ * the pack, its data sources, a job whose stream answers immediately, and a
+ * transcription of any WAV recording.
  * Usage: FAKE_API_PORT=3990 node e2e/fake-api.mjs
  */
 
@@ -19,57 +20,69 @@ const PACK = {
       id: 'market-leaders',
       label: 'Market Leaders',
       question: 'Which assets led the market?',
-      sources: ['market_analysis_structured'],
+      sources: ['market_data'],
+      tools: ['cudf'],
       featured: true,
     },
-    // Five more featured questions of the pack's real length, so the landing page is laid out
-    // with a full set of six (see the no-scroll check in smoke.spec.ts).
+    // The default pack's other five featured questions, so the landing page is laid out with a
+    // full set of six at their real length (see the no-scroll check in smoke.spec.ts).
     {
-      id: 'market-event-reaction',
-      label: 'Event Reaction',
+      id: 'news-sentiment-reaction',
+      label: 'News & Price Reaction',
       question:
-        "For each synthetic market event published from August 18 through August 28, 2026, show the asset's adjusted-close price return on the publication session, excluding cash dividends, and over the following two sessions.",
-      sources: ['market_analysis_structured'],
-      featured: true,
-    },
-    {
-      id: 'market-multivariate-anomalies',
-      label: 'Unusual Market Sessions',
-      question:
-        'Treat January 2 through June 30, 2026 as the historical baseline for the reviewed assets. Score July 1 through August 31, 2026 and return the 10 asset sessions with the most unusual combined one-day return, five-day return, 20-session realized volatility, and trailing-volume behavior. Explain which observed features made each session unusual, and state clearly that anomaly scores are neither forecasts nor causal explanations.',
-      sources: ['market_analysis_structured'],
+        "For company news about the 12 most liquid issuers published from August 17 through August 24, 2026, how did the sentiment labels line up with the issuers' returns over the following five sessions? Describe the relationship without claiming causation.",
+      sources: ['market_data'],
+      tools: ['cudf'],
       featured: true,
     },
     {
-      id: 'market-regulations-cybersecurity',
-      label: 'Cybersecurity Rules',
+      id: 'unusual-sessions',
+      label: 'Unusual Sessions',
       question:
-        'What does Title 17 of the eCFR require public companies to disclose about material cybersecurity incidents and cybersecurity risk management, strategy, and governance? Cite the relevant sections.',
-      sources: ['market_regulations'],
+        'Treat January 2 through June 30, 2026 as the baseline for every issuer. Which 10 issuer sessions from July 1 through August 31, 2026 were the most unusual in return, volatility and volume, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations.',
+      sources: ['market_data'],
+      tools: ['cudf', 'cuml'],
       featured: true,
     },
     {
-      id: 'market-briefs-export-license',
-      label: 'Export-License Review',
+      id: 'peer-network',
+      label: 'Peer Network',
       question:
-        'What did Galena Semiconductor say about export-license exposure, and which mitigations did it mention?',
-      sources: ['market_briefs'],
+        'In the return-correlation network from June through August 2026, which issuers are the most central, and which pairs moved together most closely?',
+      sources: ['market_data'],
+      tools: ['cudf', 'cugraph'],
       featured: true,
     },
     {
-      id: 'market-qualification-universe-scan',
-      label: 'Large-Universe Scan',
+      id: 'cyber-disclosure-rules',
+      label: 'Cybersecurity Disclosures',
       question:
-        'Across the 2,000-issuer qualification universe, which assets had the strongest and weakest adjusted returns from January 2, 2024 through August 31, 2026, and how did their volatility compare?',
-      sources: ['market_analysis_structured'],
+        'What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any second-quarter 2026 filings in the corpus that report an incident.',
+      sources: ['sec_filings', 'market_regulations'],
+      tools: ['retrieval'],
+      featured: true,
+    },
+    {
+      id: 'news-and-filings',
+      label: 'News & Filings',
+      question:
+        'Which of the 12 most liquid issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real second-quarter 2026 SEC filings describe operational disruptions? The issuers are fictional and are not the filers: keep the two apart.',
+      sources: ['market_data', 'sec_filings'],
+      tools: ['cudf', 'retrieval'],
       featured: true,
     },
   ],
 }
 
 const DATA_SOURCES = [
-  { id: 'market_analysis_structured', name: 'Market data', description: 'Prices and volumes' },
-  { id: 'market_news', name: 'Market news', description: 'Reviewed news', default_enabled: false },
+  { id: 'market_data', name: 'Market data', description: 'Prices and volumes', kind: 'structured' },
+  {
+    id: 'sec_filings',
+    name: 'SEC filings',
+    description: 'Current reports',
+    default_enabled: false,
+    kind: 'documents',
+  },
 ]
 
 const ANSWER =
@@ -82,6 +95,9 @@ const json = (res, body) => {
   res.writeHead(200, { 'content-type': 'application/json' })
   res.end(JSON.stringify(body))
 }
+
+/** What the fake transcribes every recording to. */
+const TRANSCRIPT = 'Which assets led the market?'
 
 const readJson = async (req) => {
   let body = ''
@@ -96,6 +112,14 @@ createServer(async (req, res) => {
   if (req.method === 'POST' && pathname === '/v1/jobs/async/submit') {
     const { job_id: jobId } = await readJson(req)
     return json(res, { job_id: jobId, status: 'submitted' })
+  }
+  if (req.method === 'POST' && pathname === '/v1/speech/transcriptions') {
+    const chunks = []
+    for await (const chunk of req) chunks.push(chunk)
+    const audio = Buffer.concat(chunks)
+    const wav = audio.length > 44 && audio.subarray(0, 4).toString() === 'RIFF'
+    if (!wav || req.headers['content-type'] !== 'audio/wav') return res.writeHead(422).end()
+    return json(res, { text: TRANSCRIPT })
   }
   if (req.method === 'GET' && pathname.endsWith('/stream')) {
     res.writeHead(200, { 'content-type': 'text/event-stream' })

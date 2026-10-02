@@ -10,6 +10,8 @@ updates:
       - /agent
       - /api
       - /data
+      - /data/generate
+      - /eval
       - /tools/market-analytics
       - /tools/retrieval
     schedule:
@@ -21,7 +23,8 @@ updates:
       # DuckDB files written by one version cannot be read by an older one: bump the
       # writer (data) and every reader together, by hand.
       - dependency-name: duckdb
-      # RAPIDS moves as one release train (26.8.*); bump it by hand with the CUDA base image.
+      # RAPIDS moves as one release train (26.6.*); bump cudf, cuml, nx-cugraph, libcugraph and
+      # pylibcugraph together by hand.
       - dependency-name: "cudf*"
       - dependency-name: "cuml*"
       - dependency-name: "*cugraph*"

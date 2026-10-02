@@ -47,6 +47,7 @@ MarketOperation = Literal[
     "sentiment_timeline",
     "analyze_news_price_relationship",
     "analyze_market_relationships",
+    "intraday_scan",
 ]
 
 TraceId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{32}$")]
@@ -121,17 +122,28 @@ class RetrievalEvidence(ContractModel):
 
 
 class AnalyticsEngine(ContractModel):
-    """The device and library that computed a market analytics result."""
+    """The device and library that computed a market analytics result.
+
+    `engine_id` names the engine by method and device (`cudf-gpu.v1`, its CPU twin `pandas-cpu.v1`); results
+    recorded before it was added have none.
+    """
 
     device: Literal["cpu", "gpu"]
     library: str = Field(min_length=1, max_length=64)
     version: str = Field(min_length=1, max_length=64)
+    engine_id: OpenIdentifier | None = None
 
 
 class AnalyticsTiming(ContractModel):
-    """Milliseconds spent computing, and end to end including the wait for the worker."""
+    """Milliseconds, to the microsecond: the worker's calculation (`compute_ms`), its other work on the call
+    (`setup_ms`: the arguments before, the result after), the two together (`engine_ms`), and the call end to end
+    in the tool service, including the wait for the worker (`total_ms`). Results recorded before setup and engine
+    times were added have neither.
+    """
 
     compute_ms: float = Field(ge=0)
+    setup_ms: float | None = Field(default=None, ge=0)
+    engine_ms: float | None = Field(default=None, ge=0)
     total_ms: float = Field(ge=0)
 
 
@@ -145,7 +157,8 @@ class AnalyticsResult(ContractModel):
 
     The tool does not echo its arguments, so the plugin adds them, without the
     source ids, as the public parameters. `engine` is null when the operation
-    failed before it ran.
+    failed before it ran. `asset_count` is the number of distinct assets in the
+    rows scanned; results recorded before it was added have none.
     """
 
     operation_id: MarketOperation
@@ -158,6 +171,7 @@ class AnalyticsResult(ContractModel):
     engine: AnalyticsEngine | None = None
     timing: AnalyticsTiming
     rows_scanned: NonNegativeInt = 0
+    asset_count: NonNegativeInt | None = None
     warnings: tuple[str, ...] = Field(default=(), max_length=20)
     limitations: tuple[str, ...] = Field(default=(), max_length=20)
 

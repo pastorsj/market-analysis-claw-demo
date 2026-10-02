@@ -10,12 +10,13 @@ readonly GENERATED_SECRETS="HERMES_API_SERVER_KEY HERMES_RECEIPT_API_KEY
   AUTO_ONTOLOGY_ADMIN_PASSWORD AUTO_ONTOLOGY_AUTH_SECRET"
 
 # Every variable demo.sh reads. A shell value wins over .env, as in Compose.
-readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_CORPORA SEC_USER_AGENT
-  INFERENCE_BASE_URL INFERENCE_API_KEY CAPABLE_BASE_URL CAPABLE_API_KEY
+readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_PACK_PROFILE DATA_CORPORA SEC_USER_AGENT
+  DATA_SOURCE_DIR INFERENCE_BASE_URL INFERENCE_API_KEY CAPABLE_BASE_URL CAPABLE_API_KEY
   SWITCHYARD_ROUTES SWITCHYARD_CONFIRMATIONS
-  AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL
+  AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL AGENT_AUX_MODEL
   AUTO_ONTOLOGY_REASONING_MODEL AUTO_ONTOLOGY_NON_REASONING_MODEL
   RETRIEVER_BASE_URL RETRIEVER_API_KEY RETRIEVER_EMBED_MODEL KUMO_RELATIONAL_URL
+  SPEECH_INPUT_ENABLED SPEECH_API_KEY
   $GENERATED_SECRETS OPENSHELL_SUPERVISOR_IMAGE OPENSHELL_SANDBOX_IMAGE"
 
 # Read ENV_KEYS from Compose's own view of the environment (shell, versions.env, .env), then
@@ -26,19 +27,27 @@ readonly ENV_KEYS="COMPOSE_PROFILES UI_PORT UI_BIND_HOST DATA_PACK DATA_CORPORA 
 #   AUTO_ONTOLOGY_URL   the Auto Ontology web app under the ontology profile, for the API
 #   AGENT_FEATURES      the optional tools baked into the agent image
 #   RETRIEVER_API_KEY   INFERENCE_API_KEY when empty: one build.nvidia.com key serves both
-# CAPABLE_BASE_URL and CAPABLE_API_KEY also fall back to the inference ones, here for doctor and
-# in Switchyard's entrypoint for the stack.
+#   SPEECH_API_KEY      RETRIEVER_API_KEY when empty and the retriever is build.nvidia.com: the
+#                       ASR is on build.nvidia.com too, so no key goes to another host
+#   DATA_SOURCE_DIR     $HOME/market-demo-data when empty: external datasets, outside the repository
+#   CAPABLE_API_KEY     INFERENCE_API_KEY when empty and CAPABLE_BASE_URL is INFERENCE_BASE_URL (or empty),
+#                       never for another host; always exported, if empty, because Compose needs every
+#                       secret's variable set and .env.example leaves it commented out
+# CAPABLE_BASE_URL also falls back to INFERENCE_BASE_URL, here for doctor and in Switchyard's
+# entrypoint for the stack.
 load_env() {
-  local environment key
-  environment=$(dc config --environment) || die "$EXIT_CONFIG" "docker compose cannot read the configuration"
+  local key
+  COMPOSE_ENVIRONMENT=$(dc config --environment) ||
+    die "$EXIT_CONFIG" "docker compose cannot read the configuration"
   for key in $ENV_KEYS; do
-    printf -v "$key" '%s' "$(printf '%s\n' "$environment" | sed -n "s/^$key=//p")"
+    printf -v "$key" '%s' "$(env_value "$key")"
   done
   COMPOSE_PROFILES=${COMPOSE_PROFILES:-$DEFAULT_PROFILES}
   UI_PORT=${UI_PORT:-3100}
   UI_BIND_HOST=${UI_BIND_HOST:-127.0.0.1}
-  DATA_PACK=${DATA_PACK:-market-analysis}
+  DATA_PACK=${DATA_PACK:-synthetic-market}
   DATA_DATABASE_NAME=${DATA_PACK//-/_}
+  DATA_SOURCE_DIR=${DATA_SOURCE_DIR:-$HOME/market-demo-data}
   if has_profile kumo; then
     KUMO_RELATIONAL_URL=http://kumo-relational:8000
   fi
@@ -48,10 +57,30 @@ load_env() {
   fi
   AGENT_FEATURES=$(agent_features)
   RETRIEVER_API_KEY=${RETRIEVER_API_KEY:-$INFERENCE_API_KEY}
+  if [ -z "$SPEECH_API_KEY" ] && [ "${RETRIEVER_BASE_URL:-https://$BUILD_NVIDIA_HOST/v1}" = "https://$BUILD_NVIDIA_HOST/v1" ]; then
+    SPEECH_API_KEY=$RETRIEVER_API_KEY
+  fi
   CAPABLE_BASE_URL=${CAPABLE_BASE_URL:-$INFERENCE_BASE_URL}
-  CAPABLE_API_KEY=${CAPABLE_API_KEY:-$INFERENCE_API_KEY}
-  export COMPOSE_PROFILES DATA_DATABASE_NAME KUMO_RELATIONAL_URL AUTO_ONTOLOGY_URL AGENT_FEATURES
-  export RETRIEVER_API_KEY
+  if [ "$CAPABLE_BASE_URL" = "$INFERENCE_BASE_URL" ]; then
+    CAPABLE_API_KEY=${CAPABLE_API_KEY:-$INFERENCE_API_KEY}
+  fi
+  export COMPOSE_PROFILES DATA_DATABASE_NAME DATA_SOURCE_DIR KUMO_RELATIONAL_URL AUTO_ONTOLOGY_URL AGENT_FEATURES
+  export RETRIEVER_API_KEY SPEECH_API_KEY CAPABLE_API_KEY
+}
+
+# env_value NAME: NAME as Compose sees it (shell, then .env), after load_env; empty when unset.
+env_value() {
+  printf '%s\n' "$COMPOSE_ENVIRONMENT" | sed -n "s/^$1=//p"
+}
+
+# The data pack's external datasets, one "id bytes" line each, from the `external:` section of its pack.yaml.
+pack_external() {
+  local pack=$ROOT/data/packs/$DATA_PACK/pack.yaml
+  [ -f "$pack" ] || return 0
+  awk '/^external:/ { on = 1; next }
+    /^[^ #]/ { on = 0 }
+    on && /^  [a-z0-9-]+:/ { id = $1; sub(/:$/, "", id) }
+    on && /^    bytes:/ { print id, $2 }' "$pack"
 }
 
 # Commands that run the live stack need .env, and always include the core profile.

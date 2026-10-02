@@ -13,3 +13,4 @@
 **/__pycache__
 data/packs/*/eval
 data/packs/*/recordings
+data/packs/**/.work

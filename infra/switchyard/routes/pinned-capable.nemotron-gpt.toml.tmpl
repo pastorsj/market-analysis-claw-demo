@@ -4,8 +4,8 @@
 # Every agent turn goes to the capable GPT model (Responses API), with no judge. Hermes still
 # sends "market-research", so switching to this template is an .env change. The GPT model can
 # come from its own endpoint: CAPABLE_BASE_URL and CAPABLE_API_KEY, which default to the
-# inference endpoint and key.
-# requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_JUDGE_MODEL
+# inference endpoint and key (the key only on that same endpoint).
+# requires: INFERENCE_BASE_URL CAPABLE_BASE_URL AGENT_EFFICIENT_MODEL AGENT_CAPABLE_MODEL AGENT_AUX_MODEL
 schema_version = 1
 
 [llm_clients.chat]
@@ -33,8 +33,8 @@ llm_client = "responses"
 reasoning_effort = "medium"           # Hermes sends no effort to a custom provider
 extra_body = { store = false }
 
-[targets.aux]
-id = "${AGENT_JUDGE_MODEL}"
+[targets.aux]                         # a Nemotron model: auxiliary and fallback calls
+id = "${AGENT_AUX_MODEL}"
 llm_client = "chat"
 extra_body = { chat_template_kwargs = { enable_thinking = false } }
 
@@ -55,5 +55,10 @@ target = "capable"
 
 [routes.aux]                          # Hermes auxiliary calls
 id = "market-research-aux"
+type = "passthrough"
+target = "aux"
+
+[routes.fallback]                     # Hermes moves a run here when its model is overloaded
+id = "market-research-fallback"
 type = "passthrough"
 target = "aux"

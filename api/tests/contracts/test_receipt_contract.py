@@ -161,6 +161,41 @@ def test_only_an_operation_that_never_ran_may_omit_its_engine(golden):
     assert RECEIPT.validate_python(receipt).content.engine is None
 
 
+def test_an_analytics_receipt_carries_what_its_receipt_card_shows(golden):
+    content = RECEIPT.validate_python(golden("analytics_result")).content
+    assert content.engine.engine_id == "cuml-pca-anomaly-gpu.v1"
+    assert content.asset_count == 12
+    assert (content.timing.setup_ms, content.timing.engine_ms) == (1.2584, 8.7481)
+    assert content.payload["policy_id"] == "pca-reconstruction-market-v1"
+
+
+def test_an_analytics_receipt_recorded_before_those_fields_still_validates(golden):
+    """Recordings made before the engine id, asset count and setup time keep validating, with the fields null."""
+    receipt = golden("analytics_result")
+    content = receipt["content"]
+    del content["engine"]["engineId"], content["assetCount"], content["timing"]["setupMs"]
+    del content["timing"]["engineMs"], content["payload"]["policy_id"]
+    parsed = RECEIPT.validate_python(receipt).content
+    assert (parsed.engine.engine_id, parsed.asset_count, parsed.timing.setup_ms, parsed.timing.engine_ms) == (
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("engine", {"engineId": "not an id"}), ("timing", {"setupMs": -0.5}), ("assetCount", -1)],
+)
+def test_analytics_receipt_card_fields_are_bounded(golden, field, value):
+    receipt = golden("analytics_result")
+    content = receipt["content"]
+    content[field] = content[field] | value if isinstance(value, dict) else value
+    with pytest.raises(ValidationError):
+        RECEIPT.validate_python(receipt)
+
+
 def test_an_unavailable_prediction_gives_its_reason(golden):
     receipt = golden("structured_prediction")
     receipt["content"] |= {"available": False, "rows": []}

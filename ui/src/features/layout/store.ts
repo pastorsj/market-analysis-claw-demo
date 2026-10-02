@@ -10,7 +10,7 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { fetchDataSources } from '@/adapters/api'
+import { fetchDataSources, fetchRecordedDataSources } from '@/adapters/api'
 import type { LayoutState, LayoutStore } from './types'
 
 const initialState: LayoutState = {
@@ -74,8 +74,9 @@ export const useLayoutStore = create<LayoutStore>()(
           'closeRightPanel'
         ),
 
+      // A new focus object per call, so citing the same source again reopens its node
       openExecution: (jobId, focus) =>
-        set({ execution: { jobId, focus: focus ?? null } }, false, 'openExecution'),
+        set({ execution: { jobId, focus: focus ? { ...focus } : null } }, false, 'openExecution'),
 
       closeExecution: () => set({ execution: null }, false, 'closeExecution'),
 
@@ -100,11 +101,12 @@ export const useLayoutStore = create<LayoutStore>()(
 
       setPromptDraft: (value) => set({ promptDraft: value }, false, 'setPromptDraft'),
 
-      fetchDataSources: async () => {
+      fetchDataSources: async (from = 'api') => {
         set({ dataSourcesLoading: true, dataSourcesError: null }, false, 'fetchDataSources/start')
 
         try {
-          const sources = await fetchDataSources()
+          const sources =
+            from === 'recordings' ? await fetchRecordedDataSources() : await fetchDataSources()
           set(
             {
               availableDataSources: sources,
@@ -132,3 +134,10 @@ export const useLayoutStore = create<LayoutStore>()(
     { name: 'LayoutStore' }
   )
 )
+
+/**
+ * The active pack's database: its structured source's (a pack has one). A Kumo prediction reads it,
+ * though its receipt does not name it.
+ */
+export const selectPackDatabaseName = (state: LayoutState): string | undefined =>
+  state.availableDataSources?.find((source) => source.database_name)?.database_name ?? undefined

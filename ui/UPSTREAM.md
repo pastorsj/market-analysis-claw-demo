@@ -22,18 +22,18 @@ chat, its deep-research panel and everything only they used are removed.
 
 ### Deleted
 
-| Area                                                                              | Files                                                                                                                                                                                                                                                                                                                                                                         |
-| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NAT WebSocket chat and HITL                                                       | `server.js`, `websocket-cookie.js`, `adapters/api/{websocket-client,chat-client,schemas}.ts`, `features/chat/hooks/{use-websocket-chat,use-chat,use-connection-recovery}.ts`, `features/chat/components/AgentPrompt.tsx`, `features/chat/lib/{intermediate-step-parser,transport-auth-signals}.ts`                                                                            |
-| NAT deep-research panel (agents, LLM steps, tool calls, todos, files, report tab) | `features/chat/components/ChatThinking.tsx`, `features/chat/hooks/use-load-job-data.ts`, `features/chat/lib/{deep-research-correlation,deep-research-progress,deep-research-trace,deep-research-todos,prune-message-for-storage}.ts`, `shared/components/research/*`, `shared/components/CollapsibleBlock/*`                                                                  |
-| Layout components (21) and copy                                                   | `AgentCard`, `AgentsTab`, `CitationCard`, `DataConnectionsTab`, `DeleteFileConfirmationModal`, `ExportFooter`, `FileCard`, `FileSourceCard`, `FileSourcesTab`, `FilesTab`, `ReportCard`, `ReportTab`, `SettingsPanel`, `SourceCard`, `TaskCard`, `TasksTab`, `ThinkingTab`, `ThoughtCard`, `ThoughtTracesTab`, `ToolCallCard`, `ToolCallsTab`, `research-empty-state-copy.ts` |
-| Documents and uploads                                                             | `features/documents/*`, `adapters/api/{documents-client,documents-schemas}.ts`, `shared/config/file-upload.ts`, `features/chat/components/FileUploadBanner.tsx`, `src/mocks/*` (MSW served only document mocks)                                                                                                                                                               |
-| PDF and Markdown export                                                           | `pages/api/generate-pdf.ts`, `lib/pdf/*`, `hooks/use-download-pdf.ts`, `utils/*`, `shared/utils/artifact-url.ts` (with the `artifact://` image support in `MarkdownRenderer`)                                                                                                                                                                                                 |
-| App auth (NextAuth, MCP OAuth)                                                    | `adapters/auth/*`, `app/api/auth/*`, `app/auth/*`, `proxy.ts`, `adapters/api/{authenticated-fetch,mcp-auth-client}.ts`, `shared/utils/rum.ts`                                                                                                                                                                                                                                 |
-| Proxies                                                                           | `app/api/chat`, `app/api/generate`, `app/api/generate/respond` (they bypassed the API's allowlist); `app/api/jobs/async` (folded into the allowlisted `/api/v1` proxy)                                                                                                                                                                                                        |
-| Other dead code                                                                   | `adapters/api/config.ts`, `shared/components/{Sources/SourceStrip,Surface/Card}.tsx`, `shared/hooks/use-backend-health.ts`, `shared/lib/humanize.ts`, `storage-logger` pruning loggers, `storage-manager` `getOldestSession` (deprecated), dead rules in `globals.css` (-632 lines)                                                                                           |
-| Build and tooling                                                                 | `deploy/*` (replaced by `Dockerfile`), `.husky`, `tailwind.config.ts` (unused by Tailwind 4), `config/vitest/{polyfills.ts,mocks/*}`                                                                                                                                                                                                                                          |
-| Specs                                                                             | 65 spec files of deleted code or of code rewritten with new specs                                                                                                                                                                                                                                                                                                             |
+| Area                                                                              | Files                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NAT WebSocket chat and HITL                                                       | `server.js`, `websocket-cookie.js`, `adapters/api/{websocket-client,chat-client,schemas}.ts`, `features/chat/hooks/{use-websocket-chat,use-chat,use-connection-recovery}.ts`, `features/chat/components/AgentPrompt.tsx`, `features/chat/lib/{intermediate-step-parser,transport-auth-signals}.ts`                                                                                        |
+| NAT deep-research panel (agents, LLM steps, tool calls, todos, files, report tab) | `features/chat/components/ChatThinking.tsx`, `features/chat/hooks/use-load-job-data.ts`, `features/chat/lib/{deep-research-correlation,deep-research-progress,deep-research-trace,deep-research-todos,prune-message-for-storage}.ts`, `shared/components/research/*`, `shared/components/CollapsibleBlock/*`                                                                              |
+| Layout components (21) and copy                                                   | `AgentCard`, `AgentsTab`, `CitationCard`, `DataConnectionsTab`, `DeleteFileConfirmationModal`, `ExportFooter`, `FileCard`, `FileSourceCard`, `FileSourcesTab`, `FilesTab`, `ReportCard`, `ReportTab`, `SettingsPanel`, `SourceCard`, `TaskCard`, `TasksTab`, `ThinkingTab`, `ThoughtCard`, `ThoughtTracesTab`, `ToolCallCard`, `ToolCallsTab`, `research-empty-state-copy.ts`             |
+| Documents and uploads                                                             | `features/documents/*`, `adapters/api/{documents-client,documents-schemas}.ts`, `shared/config/file-upload.ts`, `features/chat/components/FileUploadBanner.tsx`, `src/mocks/*` (MSW served only document mocks)                                                                                                                                                                           |
+| PDF and Markdown export                                                           | `pages/api/generate-pdf.ts`, `lib/pdf/*`, `hooks/use-download-pdf.ts`, `utils/*`, `shared/utils/artifact-url.ts` (with the `artifact://` image support in `MarkdownRenderer`)                                                                                                                                                                                                             |
+| App auth (NextAuth, MCP OAuth)                                                    | `adapters/auth/*`, `app/api/auth/*`, `app/auth/*`, `proxy.ts`, `adapters/api/{authenticated-fetch,mcp-auth-client}.ts`, `shared/utils/rum.ts`                                                                                                                                                                                                                                             |
+| Proxies                                                                           | `app/api/chat`, `app/api/generate`, `app/api/generate/respond` (they bypassed the API's allowlist); `app/api/jobs/async` (folded into the allowlisted `/api/v1` proxy)                                                                                                                                                                                                                    |
+| Other dead code                                                                   | `adapters/api/config.ts`, `shared/components/{Sources/SourceStrip,Surface/Card}.tsx`, `shared/hooks/use-backend-health.ts`, `shared/lib/humanize.ts`, `storage-logger` pruning loggers, `storage-manager` `getOldestSession` (deprecated) and `calculateChatStoreSize`, `source-utils` `mapCitationSource` (its only caller was the report tab), dead rules in `globals.css` (-632 lines) |
+| Build and tooling                                                                 | `deploy/*` (replaced by `Dockerfile`), `.husky`, `tailwind.config.ts` (unused by Tailwind 4), `config/vitest/{polyfills.ts,mocks/*}`                                                                                                                                                                                                                                                      |
+| Specs                                                                             | 65 spec files of deleted code or of code rewritten with new specs                                                                                                                                                                                                                                                                                                                         |
 
 The chat store keeps 27 of its 77 actions. 50 were removed: 12 that upstream
 never calls outside the store (of its 14 such actions, `restoreSessionState`
@@ -51,8 +51,11 @@ chat, panel, HITL and upload code used. Three were added: `finishDeepResearch`,
   statuses refresh from `app/providers.tsx` in live mode only, not on store
   rehydration, so replay mode never calls the API.
 - `features/layout`: `MainLayout` hosts the execution slots and replay mode;
-  `ResearchPanel` becomes the "Agent Activity" host; `ChatArea` adds "View
-  Execution"; `InputArea` submits jobs and stops them; `DataSourcesPanel` loses
+  `ResearchPanel` becomes the "Agent Activity" host, resizable as in the
+  prototype (`activity-panel-resize.ts`), following the running job or else the
+  conversation's last answer; `ChatArea` adds "View Execution"; `InputArea`
+  submits jobs and stops them, and gains the prototype's microphone when
+  `SPEECH_INPUT_ENABLED` is set; `DataSourcesPanel` loses
   its Files tab; `AppBar` loses sign-in and gains the Phoenix link;
   `SessionsPanel` gains a read-only mode for recordings.
 - `adapters/api`: the job client and data sources client call the same-origin
@@ -77,24 +80,23 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
 
 ### Added
 
-| File                                          | Purpose                                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `app/api/v1/[...path]/route.ts`               | Allowlisted API proxy (replaces the open upstream proxy)                             |
-| `app/api/recordings/[...path]/route.ts`       | Read-only replay bundle of the active data pack                                      |
-| `app/api/health/route.ts`                     | UI liveness (upstream proxied the backend's health)                                  |
-| `shared/config/env.ts`                        | Runtime configuration: `UI_MODE`, `API_URL`, `PACKS_DIR`, `DATA_PACK`, `PHOENIX_URL` |
-| `shared/context/ExecutionFeatureContext.tsx`  | The typed slot where `features/execution` plugs in                                   |
-| `features/chat/hooks/use-hermes-chat.ts`      | Submits a question as a job                                                          |
-| `features/landing/*`                          | Landing page with the pack's featured questions                                      |
-| `public/ecosystem-logos/*`                    | Technology logos on the landing page and the execution graph                         |
-| `features/layout/use-recorded-sessions.ts`    | Recorded sessions in replay mode                                                     |
-| `Dockerfile`, `playwright.config.ts`, `e2e/*` | Standalone image and the smoke test                                                  |
+| File                                                       | Purpose                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `app/api/v1/[...path]/route.ts`                            | Allowlisted API proxy (replaces the open upstream proxy)                             |
+| `app/api/recordings/[...path]/route.ts`                    | Read-only replay bundle of the active data pack                                      |
+| `app/api/health/route.ts`                                  | UI liveness (upstream proxied the backend's health)                                  |
+| `shared/config/env.ts`                                     | Runtime configuration: `UI_MODE`, `API_URL`, `PACKS_DIR`, `DATA_PACK`, `PHOENIX_URL` |
+| `shared/context/ExecutionFeatureContext.tsx`               | The typed slot where `features/execution` plugs in                                   |
+| `features/chat/hooks/use-hermes-chat.ts`                   | Submits a question as a job                                                          |
+| `features/landing/*`                                       | Landing page with the pack's featured questions                                      |
+| `public/ecosystem-logos/*`                                 | Technology logos on the landing page and the execution graph                         |
+| `features/layout/use-recorded-sessions.ts`                 | Recorded sessions in replay mode                                                     |
+| `features/speech-input/*`, `adapters/api/speech-client.ts` | The prototype's voice input: record in the browser, transcribe with the API          |
+| `Dockerfile`, `playwright.config.ts`, `e2e/*`              | Standalone image and the smoke test                                                  |
 
 ### Dependencies
 
-- Added: `uuid` (was imported but undeclared), `@playwright/test`, and
-  `@xyflow/react` 12.12.0 (exact pin, MIT) for the execution graph. Its CSS is
-  imported once in `globals.css`, and the React Flow attribution stays visible.
+- Added: `uuid` (was imported but undeclared) and `@playwright/test`.
 - Removed: `next-auth`, `@react-pdf/renderer`, `marked`, `http-proxy`,
   `concurrently`, `husky`, `msw`, `@mswjs/data`, `@faker-js/faker`,
   `@types/uuid`, `autoprefixer`.

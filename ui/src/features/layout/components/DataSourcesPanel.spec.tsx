@@ -36,6 +36,9 @@ describe('DataSourcesPanel', () => {
     render(<DataSourcesPanel />)
 
     expect(screen.getByText('Individual Connections (2)')).toBeInTheDocument()
+    expect(
+      screen.getByText(/one market database plus its document collections/)
+    ).toBeInTheDocument()
     expect(screen.getByText('Market news')).toBeInTheDocument()
     expect(screen.getByText(/1 of 2 available connections enabled/)).toBeInTheDocument()
   })
@@ -55,13 +58,19 @@ describe('DataSourcesPanel', () => {
     ])
   })
 
-  test('the master switch turns every source off', async () => {
+  test('the master switch turns every source off, then on again', async () => {
     render(<DataSourcesPanel />)
+    expect(screen.getByText('Disable Selected')).toBeInTheDocument()
 
     // KUI puts the switch's aria-label on its wrapper; the master switch comes first.
     await userEvent.click(screen.getAllByRole('switch')[0])
 
     expect(useLayoutStore.getState().enabledDataSourceIds).toEqual([])
+    expect(screen.getByText('Enable Compatible')).toBeInTheDocument()
+
+    await userEvent.click(screen.getAllByRole('switch')[0])
+
+    expect(useLayoutStore.getState().enabledDataSourceIds).toEqual(SOURCES.map((s) => s.id))
   })
 
   test('offers a retry when the sources could not be loaded', async () => {

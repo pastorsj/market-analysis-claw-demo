@@ -16,21 +16,25 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 | Service | Profile | Host port (127.0.0.1) | Role | Code |
 |---|---|---|---|---|
 | `ui` | core, replay | 3100 (`UI_PORT`) | Next.js web app; proxies an allowlisted `/api/v1/*` to the API; serves the replay bundle | [`ui/`](../ui/README.md) |
-| `api` | core | 8000 | FastAPI job service: queue, Hermes runs, `execution.v2` events, receipts, reports, data viewer | [`api/`](../api/README.md) |
+| `api` | core | 8000 | FastAPI job service: queue, Hermes runs, `execution.v2` events, receipts, reports, data viewer, CPU/GPU benchmark, voice transcription | [`api/`](../api/README.md) |
 | `openshell` | core | 18080 (gRPC/mTLS), 18081 (health) | OpenShell gateway with the Docker compute driver; creates the Hermes sandbox | [`infra/openshell/`](../infra/openshell/README.md) |
 | `hermes-gateway` | core | – | `openshell forward service`: the API's way in to Hermes on `127.0.0.1:8642` inside the sandbox | [`infra/openshell/`](../infra/openshell/README.md) |
 | Hermes sandbox | – | – | Hermes Agent 0.21.5 with its profile, skills and receipts plugin; created by `demo.sh`, not by Compose | [`agent/`](../agent/README.md) |
 | `switchyard` | core | 4000 | Model router; the only holder of `INFERENCE_API_KEY` on the agent path | [`infra/switchyard/`](../infra/switchyard/README.md) |
 | `phoenix` | core | 6006 | Arize Phoenix: trace UI and OTLP/HTTP collector | [`infra/phoenix/serve.py`](../infra/phoenix/serve.py) |
 | `data` (one-shot) | core | – | Builds the active data pack into the `demo-data` volume at `/data/active` | [`data/`](../data/README.md) |
+| `data-fetch` (one-shot) | tools | – | `demo.sh data fetch`: copies or downloads a pack's external datasets into `DATA_SOURCE_DIR`, the only writable mount of it, and verifies them against the pinned manifest | [`data/`](../data/README.md) |
 | `milvus`, `data-corpus`, `retrieval-index`, `retrieval` | retrieval | 8120 (`retrieval`) | Document corpus, vector index and the `retrieve_evidence` MCP server | [`tools/retrieval/`](../tools/retrieval/README.md) |
-| `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Six market tools on pandas or RAPIDS, plus `predict_asset_outcomes` when Kumo is configured | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
+| `milvus-gpu`, `retrieval-benchmark` (one-shot) | analytics-gpu, with retrieval | – | A GPU Milvus holding a `GPU_IVF_FLAT` copy of the index, and the one-shot that times the CPU and GPU indexes for the Benchmark tab, which `demo.sh up` runs after the stack; answers never use or wait on them ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)) | [`tools/retrieval/`](../tools/retrieval/README.md) |
+| `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured; the GPU service also runs the API's matched CPU/GPU comparisons (`POST /benchmark`) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `kumo-relational` | kumo | – | Kumo Relational NIM (x86_64 and an NVIDIA GPU) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `auto-ontology-*` | ontology | 3003 (`auto-ontology-mcp`) | NVIDIA Auto Ontology: `ask_question` answers structured questions with SQL | [`tools/auto-ontology/`](../tools/auto-ontology/README.md) |
 
-The `build` and `tools` profiles hold the agent image build and the OpenShell CLI that `demo.sh` runs. Named
-volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `switchyard-data`, `openshell-state`,
-`openshell-client` and `auto-ontology-db`.
+The `build` and `tools` profiles hold the agent image build, the OpenShell CLI and `data-fetch`, which `demo.sh`
+runs. `demo.sh data generate` runs NeMo Data Designer with uv on the host, not in Compose: it rewrites the
+`synthetic-market` pack's committed text ([data platform](data-platform.md#the-data-designer-pack)). Named
+volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `milvus-gpu-data`, `switchyard-data`, `openshell-state`,
+`openshell-client` and `auto-ontology-db` (one per data pack).
 
 ## How a question is answered
 
@@ -71,6 +75,22 @@ sequenceDiagram
 5. Every Hermes event, model call and receipt becomes one `execution.v2` event. The UI follows them over
    Server-Sent Events and draws the graph, the timeline and one explorer per tool call.
 
+### Tool result size
+
+Hermes (v2026.9.24) saves an MCP tool result longer than 50,000 characters to a file the sandboxed agent cannot
+read and gives the model a 1,500-character preview instead; when one turn's results together pass 200,000
+characters, it does the same to the largest of them. A cut result loses facts the answer needs. Hermes reads the
+first limit from `tool_budget.mcp_result_size_chars` in its config, but the stack leaves Hermes' defaults alone and
+keeps every result short instead, at most 30,000 characters as the agent reads it: the MCP text, inside Hermes'
+JSON envelope, with the plugin's `evidence_id`. Six such results, the most one recorded turn made at once, stay
+under the turn budget too.
+
+| Tool | How its result stays under 30,000 characters |
+|---|---|
+| `retrieve_evidence` | At most 8 whole passages (a passage is one 2,400-character chunk); a result still too long drops its lowest-ranked passages. Every passage it keeps has its full citation. |
+| Market tools | Each list is capped (50 `market_scan` assets, 25 anomalies, 30 intraday sessions, 50 news events and 50 assets' news summaries, 100 sentiment periods), then the least important list is shortened while the result is too long: a price series before the per-asset summaries, news events before their per-asset counts. The result's `warnings` summarize the rows left out, and its `*_truncated` flag is set. |
+| Any data tool, `ask_question` and `predict_asset_outcomes` included | The `execution-receipts` plugin measures the final string and, past 30,000 characters, drops rows from the end of the longest list (setting the result's own `truncated`), then cuts the longest text, and says what it left out in `shortened_to_fit`. The receipt is built from the whole result. |
+
 Relay, bundled with Hermes, exports the agent's OpenInference spans to Phoenix. Switchyard and the retrieval
 server export theirs to the same Phoenix project, so a job's trace shows the agent's turns, the router's
 decisions and the retrieval steps together.
@@ -78,14 +98,18 @@ decisions and the retrieval steps together.
 ## The data plane
 
 ```text
+DATA_SOURCE_DIR ──data-fetch──▶ /sources (read-only in data, data-corpus and market-analytics)
 data/packs/<pack>/ ──data (one-shot)──▶ /data/builds/<pack>@<version>+<profile>+<digest>/  ◀── /data/active
                      data-corpus ─────▶ corpus/documents.jsonl
                      retrieval-index ─▶ Milvus collection + collection-manifest.json
 ```
 
-Services read only `/data/active` (the `demo-data` volume): the API reads `pack.json` and the DuckDB file
+Services read `/data/active` (the `demo-data` volume): the API reads `pack.json` and the DuckDB file
 (read-only), market analytics reads the Parquet tables, Auto Ontology reads the DuckDB file, and retrieval
-reads the index. Swapping data means adding a pack, not changing code. See [data packs](data-packs.md).
+reads the index. External datasets, real data that is never committed, stay in `DATA_SOURCE_DIR` on the host:
+the builds read them from `/sources`, and `intraday_scan` reads a pack's minute bars there in place, batch by
+batch. Swapping data means adding a pack, not changing code. See [data packs](data-packs.md) and
+[data platform](data-platform.md).
 
 ## Contracts
 
@@ -94,10 +118,10 @@ Services share JSON contracts only; no service imports another's Python code.
 | Contract | Defined in | Shared by |
 |---|---|---|
 | Tool registry: one entry per MCP tool (server, family, label, explorer, receipt kind) | `contracts/tool-registry.json` | API, agent plugin, UI, wiring tests |
-| `execution.v2` events and the `ReceiptV2` union (by `artifactKind`) | Pydantic models in `api/src/demo_api/events/` and `receipts/`, exported to `contracts/schemas/` and `ui/src/generated/` by `scripts/gen-contracts.sh` | API, plugin tests, UI |
+| `execution.v2` events, the `ReceiptV2` union (by `artifactKind`) and the Benchmark tab's `Benchmark` and `RetrievalBenchmark` | Pydantic models in `api/src/demo_api/events/`, `receipts/` and `benchmark/`, exported to `contracts/schemas/` and `ui/src/generated/` by `scripts/gen-contracts.sh` | API, plugin tests, UI |
 | Data pack layout (`/data/active/pack.json` and friends) | [`data/README.md`](../data/README.md) | every service |
 | Market analytics table contract | `tools/market-analytics/contract/market-analytics.v1.json` | the tool and `demo-data validate` |
-| Recordings bundle v2 (`index.json`, `pack.json`, `sessions/<id>.json`) | [`api/README.md`](../api/README.md#recordings) | `demo-api record`, the UI's replay mode |
+| Recordings bundle v2 (`index.json`, `pack.json`, `sessions/<id>.json`, `database.json`) | [`api/README.md`](../api/README.md#recordings) | `demo-api record`, the UI's replay mode |
 
 [`contracts/README.md`](../contracts/README.md) describes the events, the receipts and the limits the API
 enforces on them.
@@ -105,12 +129,12 @@ enforces on them.
 ## Trust boundaries
 
 The demo is a single-user local application. It has no user accounts, so everything it serves stays on the
-host's loopback interface. Within that, the agent is treated as untrusted: it reads documents and tool results
-that could carry prompt injections.
+host's loopback interface, unless `UI_BIND_HOST` opens the UI to a link that requires sign-in. Within that, the agent is
+treated as untrusted: it reads documents and tool results that could carry prompt injections.
 
 | Boundary | What enforces it |
 |---|---|
-| Host network | Every Compose port is published on `127.0.0.1` only. Switchyard (no inbound authentication), Phoenix (full trace payloads) and the Auto Ontology MCP server (trusted service mode) must never be published further. On a remote host, use an SSH tunnel. |
+| Host network | Every port is published on `127.0.0.1`, except the UI's when `UI_BIND_HOST` is set for a link that requires sign-in (a Brev link with sign-in set in the Brev console). That exposes the UI and its `/api/v1` proxy (job submit, the data viewer's query) with no sign-in; `doctor` warns. Switchyard (no inbound authentication), Phoenix (trace payloads) and the Auto Ontology MCP server (trusted service mode) must never be published further. On a remote host, use an SSH tunnel. |
 | Browser → API | The UI proxies only `pack`, `data_sources/**`, job submit, job reads and cancel. `/internal/**` and everything else is a 404. In replay mode the proxy calls nothing. |
 | Sandbox network | The sandbox has no network interface. The host-networked OpenShell supervisor makes every connection after checking the policy: each MCP endpoint allows the handshake and an explicit tool list, Switchyard allows chat completions and the model list, the API allows only the three `/internal/hermes` routes, and Phoenix allows only `POST /v1/traces`. Only Hermes' interpreter may connect. |
 | Sandbox filesystem | Landlock (a hard requirement): Hermes and the skills are read-only, `HERMES_HOME` and the workspace are writable. The Hermes tools exposed to runs are the skills toolset and the MCP data tools only: no terminal, file, browser or web tools. |
