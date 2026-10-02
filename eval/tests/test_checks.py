@@ -105,7 +105,12 @@ def test_each_check_kind():
     text = "PEAX rose +24.74%; Viasent HomeDirect fell. These are not forecasts. Item 1.05 applies."
     turn = market_turn(text)
     turn["receipts"] += [
-        receipt("r2", "retrieval_evidence", "mcp__retrieval__retrieve_evidence", {"hits": [{"sourceId": "sec"}]}),
+        receipt(
+            "r2",
+            "retrieval_evidence",
+            "mcp__retrieval__retrieve_evidence",
+            {"hits": [{"sourceId": "sec", "documentId": "edgar:0000879764:0001104659-26-050851:ex99-1.htm"}]},
+        ),
         receipt(
             "r3",
             "structured_prediction",
@@ -130,6 +135,25 @@ def test_each_check_kind():
     assert not check("item_105_deadline", True)  # no deadline and no flag
     assert check("retrieved_source", "sec")
     assert not check("retrieved_source", "market_regulations")
+    assert check("retrieved_filing", ("0001429937:0001429937-26-000007", "0000879764:0001104659-26-050851"))
+    assert not check("retrieved_filing", ("0001429937:0001429937-26-000007",))
     assert check("prediction_named", 2)
     assert check("prediction_first", True)  # PEAX, the most probable, is named before VIAS
     assert not check("percent_grounding", 0.9)  # 24.74% is not in this run's receipts
+
+
+def test_a_filing_is_retrieved_only_by_a_hit_from_one_of_its_documents():
+    def turn(*document_ids):
+        hits = [{"sourceId": "sec_filings", "documentId": document_id} for document_id in document_ids]
+        return {"receipts": [receipt("r", "retrieval_evidence", "mcp__retrieval__retrieve_evidence", {"hits": hits})]}
+
+    listed = ("0000879764:0001104659-26-050851",)
+    check = Check("c", "retrieved_filing", listed)
+
+    # Cover pages of other 8-Ks: the source was searched, but no listed filing came back
+    covers = turn("edgar:0000720500:0001193125-26-211838:asys-20260507.htm", "ecfr-title17:229.106:24c220ed7a14")
+    assert evaluate(Check("s", "retrieved_source", "sec_filings"), "", covers, ORACLES, NAMES)
+    assert not evaluate(check, "", covers, ORACLES, NAMES)
+    assert evaluate(check, "", turn("edgar:0000879764:0001104659-26-050851:tm2612842d1_ex99-1.htm"), ORACLES, NAMES)
+    assert not evaluate(check, "", turn("edgar:0000879764:0001104659-26-050852:x.htm"), ORACLES, NAMES)
+    assert not evaluate(check, "", {"receipts": []}, ORACLES, NAMES)

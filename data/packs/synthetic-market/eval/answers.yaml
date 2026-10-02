@@ -97,14 +97,20 @@ questions:
       market_anomaly_scan, analyze_market_relationships, intraday_scan, ask_question]]
     checks:
       - {id: most_negative_named, named: "negative_news[max(negative_items)].asset_id", any: true}
-      - {id: filings_retrieved, retrieved_source: sec_filings}
+      # eval/retrieval.yaml lists the filings that report a disruption of the filer's own operations
+      - {id: disruption_filing_retrieved, retrieved_filing: true}
+      - {id: disruption_filer_named, pattern: ["(?i)TotalEnergies", "(?i)B2Gold", "(?i)Centerra", "(?i)Cactus"]}
     facts: >-
       Market half: company news about the 12 most liquid issuers (top_12) in July and August 2026, negative items per
       issuer with the issuer's return over the two months: {negative_news: asset_id, negative_items, items,
       total_return}. Price reaction may be given over the window or after the news; numbers must match the evidence.
       Filing half: real Q2 2026 SEC filings that describe operational disruptions, whose companies, dates and
-      descriptions must come from the retrieved evidence. The fictional issuers are not the filers: the report must
-      keep the two apart.
+      descriptions must come from the retrieved evidence. The sample has such filings, among them TotalEnergies (6-K,
+      2026-04-29: production shut down in Qatar, Iraq and UAE offshore), B2Gold (6-K, 2026-05-07: a fire at the Goose
+      Mine crushing circuit cut second-quarter output), Centerra Gold (6-K, 2026-04-29: Langeloth Facility operations
+      suspended after an explosion) and Cactus (8-K, 2026-05-07: Middle East logistics disruptions); an answer that
+      says no filing describes one is wrong. The fictional issuers are not the filers: the report must keep the two
+      apart.
 
   story-event-context:
     oracles:

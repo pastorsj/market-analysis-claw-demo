@@ -108,6 +108,7 @@ A check names oracle rows as `<oracle>[<rows>].<field>`, where rows is an index 
 | `pattern: REGEX` (or a list: any) | the report matches; `(?i)` for case-insensitive |
 | `item_105_deadline: true` | the four-business-day deadline is stated, or flagged as missing from the evidence, and no other deadline is given ([`deadline.py`](src/demo_eval/deadline.py)) |
 | `retrieved_source: ID` | a retrieval call returned hits from that source |
+| `retrieved_filing: true` | a retrieval call returned a passage of a filing that the pack's `eval/retrieval.yaml` lists for the question |
 | `percent_grounding: SHARE` | at least that share of the report's percentages match a number in the receipts |
 | `prediction_named: N` | the Kumo prediction's top N assets are named |
 | `prediction_first: true` | its most probable asset is the first of them the report names |
