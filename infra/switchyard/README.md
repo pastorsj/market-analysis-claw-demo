@@ -75,8 +75,9 @@ or a dated snapshot), or another strong model from that provider.
 The capable model's client reads `CAPABLE_BASE_URL` and `CAPABLE_API_KEY`. The endpoint defaults to
 the inference endpoint, and the key to the inference key on that endpoint only: the inference key
 never goes to another host, so with another endpoint and no `CAPABLE_API_KEY` the entrypoint exits 64.
-So GPT-6 Sol can come from any OpenAI-compatible provider while the efficient and judge models stay
-on build.nvidia.com.
+So GPT-6.1 Sol can come from any OpenAI-compatible provider while the efficient and auxiliary models stay
+on the inference endpoint (build.nvidia.com by default). In the frontier templates (`*-gpt`, `*-claude`)
+the judge is a frontier model on the capable endpoint too, so the turns it rates go to that provider.
 
 **How escalation works.** It uses Switchyard's `llm_classifier` router in `mode = "escalation"`.
 On each turn of a session that has not latched:

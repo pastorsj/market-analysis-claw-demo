@@ -112,7 +112,7 @@ evidence id, but each new first turn cited the director and officer certificatio
   Coinbase), saying the list may be incomplete.
 - `sector-sql` measures each stock's return from the close before the window, as the oracle does, but leaves out
   the 19 stocks with no close before it (the oracle measures them from their first close), so five divisions count
-  1 to 11 fewer stocks and three medians differ slightly (Finance, Insurance and Real Estate −1.54% against −1.50%).
+  1 to 11 fewer stocks and three medians differ slightly from the oracle's.
 - `large-universe-scan` matches the oracle's returns and volume z-scores, but calls the z-score one of dollar
   volume; the volume is shares traded.
 - Smaller slips, a figure or label a viewer is unlikely to notice: an open-to-close move called close-to-close
@@ -134,11 +134,11 @@ evidence id, but each new first turn cited the director and officer certificatio
   (ABPWW).
 - SEC's ticker list is today's, so issuers delisted or renamed after the price window are dropped as not listed.
 - The smallest stocks trade a few hundred dollars a day, and single trades give them extreme daily returns
-  (CYCL: +26,167% on 2025-02-20). Whole-market scans need a liquidity floor, such as the `liquid_500` universe.
+  (tens of thousands of percent). Whole-market scans need a liquidity floor, such as the `liquid_500` universe.
 - Two corporate actions show in the prices as the dataset has them. ASST's reverse-split adjustment misses
-  2026-02-05, its last session before the split, which stays unadjusted (a close of 0.50 between 11.97 and
-  11.87): -95.8% and then +2,274%, and ASST sessions then fill an anomaly scan of `liquid_500` in 2026. AZN
-  doubles on 2026-02-02, when its listing moved from American depositary shares (half a share each) to ordinary
+  2026-02-05, its last session before the split, which stays unadjusted between two adjusted closes: a fall of
+  almost all its price and a rise back, and ASST sessions then fill an anomaly scan of `liquid_500` in 2026. AZN
+  jumps on 2026-02-02, when its listing moved from American depositary shares (half a share each) to ordinary
   shares. The featured anomaly question scans `top_50`, which holds neither.
 - Prices are split-adjusted, not dividend-adjusted: `adjusted_close` equals `close`.
 

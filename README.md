@@ -113,9 +113,10 @@ is at <http://127.0.0.1:6006>.
 
 The first `up` builds every image, downloads about 1.4 GB of SEC EDGAR filings and embeds them, so it takes a
 while (about 45 minutes with every profile on a Brev A100); later runs reuse all of it. `.env.example` defaults to build.nvidia.com, with
-Nemotron 3 Ultra answering every turn. To use GPT-6 Sol from another OpenAI-compatible provider (pinned on every
-turn is recommended), or a different endpoint for every model, see
-[configuration](docs/configuration.md#1-inference-endpoint).
+Nemotron 3 Ultra answering every turn. With another OpenAI-compatible provider that serves GPT-6.1 Sol, Ultra
+escalating to GPT-6.1 Sol (`escalation.nemotron-gpt`) is recommended, and GPT-6.1 Sol pinned on every turn is the
+fallback ([models and routing](docs/models-and-routing.md#recommendation)); for that, or a different endpoint for
+every model, see [configuration](docs/configuration.md#1-inference-endpoint).
 
 ### Replay, with no keys
 
@@ -124,8 +125,8 @@ turn is recommended), or a different endpoint for every model, see
 ```
 
 This serves the UI alone on the sessions recorded with the data pack, at <http://127.0.0.1:3100>: the answers,
-their evidence and the execution graphs, with no `.env`, keys, API or GPU. `synthetic-market` ships its ten
-questions recorded, and `us-equities` all 45 of its sessions (30 questions and 15 two-turn conversations);
+their evidence and the execution graphs, with no `.env`, keys, API or GPU. `synthetic-market` ships ten of its
+eleven questions recorded (`intraday-ranges` needs a minute-bar profile), and `us-equities` all 45 of its sessions (30 questions and 15 two-turn conversations);
 `DATA_PACK=us-equities ./scripts/demo.sh replay` replays the other one
 ([data packs](docs/data-packs.md#recordings)). `./scripts/demo.sh up` returns to live mode.
 
@@ -267,16 +268,18 @@ Each component also has its own README with its environment and tests.
   government information, but not the official legal edition of the CFR.
 - **Hosted models, with their terms.** Every model call goes to a hosted endpoint and is subject to that
   provider's terms. The default endpoint, build.nvidia.com, is open to anyone with an NVIDIA account but
-  serves no GPT model; the `*-gpt` templates take GPT-6 Sol from a provider you configure.
+  serves no GPT model; the `*-gpt` templates take GPT-6.1 Sol from a provider you configure.
 - **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
   `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
   need exact rows or custom SQL, such as the per-sector counts and median returns (`sector-sql`). The replay bundle was recorded with it.
 - **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
 - **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
   person on one host.
-- **A small bake-off.** The routing bake-off ran each question twice (17 questions, 4 arms), judged by one of
-  the models it compares; its limits are in
-  [models and routing](docs/models-and-routing.md#limits-of-this-bake-off).
+- **Small bake-offs.** The recommendation rests on the 2026-10-01 bake-off: 8 `us-equities` questions run twice
+  for each of 5 arms (16 runs per arm), with two graders that are also among the models compared, so a difference
+  of one or two runs is noise. The 2026-09-30 bake-off ran 17 questions twice over 4 arms, with one grader. Their
+  limits are in models and routing ([2026-10-01](docs/models-and-routing.md#the-2026-10-01-frontier-bake-off),
+  [2026-09-30](docs/models-and-routing.md#limits-of-this-bake-off)).
 
 ## Security considerations
 

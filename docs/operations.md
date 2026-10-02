@@ -94,8 +94,9 @@ host; CI never runs them. Every question they ask runs live and costs model call
 | `./scripts/demo.sh test gpu [--perf]` | On an NVIDIA GPU host, the CPU/GPU parity tests; `--perf` also the running stack's GPU speedups against floors from the A100 recordings ([thresholds](../eval/README.md#thresholds)). Skips on a CPU host | uv; for `--perf`, the stack up with `analytics-gpu` |
 
 **The live test** opens the deployment the way a visitor does. The URL is the UI's, given on the command line and
-never stored: `http://127.0.0.1:3100` on the host, the same address through the SSH tunnel of
-[Brev VM mode](#brev-vm-mode) (step 8), or a link to the UI that opens without an interactive sign-in.
+never stored: `http://127.0.0.1:3100` on the host, or the same address through the SSH tunnel of
+[Brev VM mode](#brev-vm-mode) (step 8). The test cannot sign in, so do not point it at a public link: a link it
+could open would let anyone run the agent on the keys in `.env` ([below](#brev-vm-mode)).
 
 ```bash
 ./scripts/demo.sh test live --url http://127.0.0.1:3100
@@ -117,8 +118,8 @@ composer's scenario picker, sends it, and checks:
 | latency | the job finished within its budget |
 
 A question's budget is three times the duration of its recording in this checkout, rounded up to 30 s and kept
-between 2 and 10 minutes (5 minutes without a recording): on `synthetic-market`, 2 minutes for Market Leaders and 7
-for the cybersecurity question.
+between 2 and 10 minutes (5 minutes without a recording): with `synthetic-market`'s current recordings, 2 minutes
+for Market Leaders and 3 for the cybersecurity question.
 `--budget SECONDS` sets one for every question and `--budget ID=SECONDS` one for a question. A job still running
 21 minutes after it was sent is cancelled. The test prints a table and exits 1 if any check failed:
 
@@ -194,7 +195,7 @@ most of it embedding the corpus).
 | `doctor` reports a problem | Each message names the variable or host requirement; fix it and run `doctor --keys` again |
 | `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations` (skips the SEC download). `us-equities` also needs it for its SEC company data |
 | Milvus restarts or is unhealthy | Docker has less than 8 GiB of memory. Give it more, or drop the retrieval profile |
-| The Benchmark tab says Milvus runs its CPU index only, on a GPU host | The profiles lack `analytics-gpu` or `retrieval`, or `retrieval-benchmark` could not measure: `./scripts/demo.sh logs retrieval-benchmark milvus-gpu`. `./scripts/demo.sh data reindex` measures again. If GPU memory is tight, lower the pool in `tools/retrieval/milvus/gpu.yaml`, or stop `milvus-gpu` once it has measured: the comparison stays, and answers never use it |
+| The Benchmark tab says Milvus runs its CPU index only, on a GPU host | The profiles lack `analytics-gpu` or `retrieval`, or `retrieval-benchmark` could not measure (`up` then warns, and stops a `milvus-gpu` that did not turn healthy): `./scripts/demo.sh logs retrieval-benchmark milvus-gpu`. `./scripts/demo.sh data reindex` measures again. If GPU memory is tight, lower the pool in `tools/retrieval/milvus/gpu.yaml`, or stop `milvus-gpu` once it has measured: the comparison stays, and answers never use it |
 | `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `./scripts/demo.sh logs openshell-preflight openshell` |
 | `hermes-gateway` never turns healthy | The sandbox is not Ready, or `HERMES_API_SERVER_KEY` is shorter than 16 characters (run `init`) |
 | A tool call fails while the sandbox is Ready | `./scripts/demo.sh check`, then `./scripts/demo.sh logs agent`: `DENIED` lines name the binary, host and reason |
