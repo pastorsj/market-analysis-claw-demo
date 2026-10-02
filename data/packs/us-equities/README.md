@@ -96,19 +96,30 @@ the fixture's schema only, since the data is never in CI.
 `recordings/` holds all 45 sessions, recorded on 2026-10-01 as the hosted demo runs (every profile,
 `DATA_CORPORA=sec_filings,market_regulations,world_news`, Nemotron 3 Ultra escalating to GPT-6.1 Sol) and
 reviewed against `eval/oracles/` and the evidence. Eleven wrong answers were asked again, twice at most, and one
-question that failed outright (it ran out of Hermes' tool-call budget) succeeded the second time. What remains:
+question that failed outright (it ran out of Hermes' tool-call budget) succeeded the second time.
 
-- `large-universe-scan` keeps its first recording: the returns match the oracle, but it answers "how unusual was
-  their volume" with total volumes, saying that `market_scan` gives a z-score only for the metric it ranks by. Both
-  later attempts dropped their citations.
-- `cyber-disclosure-rules` (featured) names all six Item 1.05 filings and says the corpus holds neither Item 1.05's
-  text nor its deadline, which is true, rather than giving the four-business-day deadline.
-- `sector-sql` measures each division's median return from each stock's first close in the window (Auto Ontology's
-  SQL, which says so), where the oracle starts from the close before it, and counts the stocks with prices.
+On 2026-10-02 nine of them were recorded again the same way, once every tool result was short enough for Hermes to
+read whole (it had cut long retrieval results to a preview) and the regulations source held the SEC's 2023
+cybersecurity rule: `cyber-disclosure-rules`, `large-universe-scan`, `sector-sql`, `executive-changes`,
+`filings-to-regulations`, `incidents-and-prices`, `material-agreements`, `nvidia-results-and-prices` and
+`restructuring-costs`. Four of them were asked again, twice at most, and the bundle keeps the best attempt.
+`trading-plans-follow-up` was asked three more times to check its follow-up citations live: none left a raw
+evidence id, but each new first turn cited the director and officer certification as (c)(1)(i)(C) rather than
+(c)(1)(ii)(C), so it keeps its earlier recording. What remains:
+
+- `cyber-disclosure-rules` (featured) gives Item 1.05's content and its four-business-day deadline from Form 8-K
+  General Instruction B.1 in the 2023 rule, but names four of the six Item 1.05 filings (Data I/O twice, Coupang,
+  Coinbase), saying the list may be incomplete.
+- `sector-sql` measures each stock's return from the close before the window, as the oracle does, but leaves out
+  the 19 stocks with no close before it (the oracle measures them from their first close), so five divisions count
+  1 to 11 fewer stocks and three medians differ slightly (Finance, Insurance and Real Estate −1.54% against −1.50%).
+- `large-universe-scan` matches the oracle's returns and volume z-scores, but calls the z-score one of dollar
+  volume; the volume is shares traded.
 - Smaller slips, a figure or label a viewer is unlikely to notice: an open-to-close move called close-to-close
-  (`intraday-ranges`), "9 of 10" for 8 of 10 (`second-half-2025`), a start price called the prior close
-  (`nvidia-results-and-prices`), a few in-window filings left out of a "which filings" list (`material-agreements`,
-  `executive-changes`, `filings-to-regulations`).
+  (`intraday-ranges`), "9 of 10" for 8 of 10 (`second-half-2025`), and "which filings" lists that name only some
+  of the in-window filings (`executive-changes`, six companies; `restructuring-costs`, five of the six Item 2.05
+  filers; `filings-to-regulations`, the two it compares; `material-agreements`, eight, which it says came from "32
+  candidate filings", the passages its search ranked).
 
 ## Known issues
 
