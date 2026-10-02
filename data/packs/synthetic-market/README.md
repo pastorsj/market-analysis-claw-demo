@@ -54,18 +54,23 @@ On 2026-10-02 five were recorded again the same way, after the fixes to the news
 citations, to Auto Ontology's return convention and to the regulations source (which now holds the SEC's 2023
 cybersecurity rule): `news-and-filings`, `story-event-context`, `sector-sql`, `cyber-disclosure-rules` and
 `peer-network`. `story-event-context` (all 23 items, with the five of 2026-08-28 marked as having no two-session
-return), `sector-sql` and `peer-network` now match their oracles, and `cyber-disclosure-rules` gives the
-four-business-day deadline from Form 8-K General Instruction B.1. One is still wrong after two more attempts, and
-the bundle keeps the best of the three as Ultra answered:
+return) and `peer-network` now match their oracles.
 
-- `news-and-filings` (featured) names GIOR and KASI with four negative items each, as the oracle does, and gives
-  each issuer's mean five-session return after all its articles and the returns after GIOR's negative ones; it says
-  one of KASI's negative items is in its list where there are two. Its filing half finds no Q2 2026 filing about
-  an operational disruption, though the corpus holds some (a TotalEnergies 6-K on production shut down in the
-  Gulf, for one); one other attempt found them but named the wrong issuer as the most negative. Its searches
-  named the form ("... 8-K"), which returns 8-K cover pages only ([retrieval](../../../docs/retrieval.md)); the
-  `searching-documents` skill now keeps form names out of filing searches, and the eval fails an answer that
-  retrieves none of the filings `eval/retrieval.yaml` lists. This session is to be recorded again.
+Later that day three were recorded again the same way, once Auto Ontology's seed imported a changed model again
+(so the pack's return convention reached its catalog) and filing searches stopped naming the form:
+`sector-sql`, `cyber-disclosure-rules` and `news-and-filings`. `sector-sql` matches its oracle in every sector, and
+`cyber-disclosure-rules` gives Item 1.05's content and the four-business-day deadline from Form 8-K General
+Instruction B.1, with CB Financial's Item 1.05 filing. `news-and-filings` was asked three times, and the bundle
+keeps the third. What remains:
+
+- `news-and-filings` (featured) names GIOR and KASI with four negative items each, as the oracle does, but gives
+  each one's mean five-session return after all of its articles as the reaction to its negative ones. Its filing
+  searches now describe the event in a sentence and retrieve one of the filings `eval/retrieval.yaml` lists
+  (Centerra Gold's 6-K), which the answer names, so the eval passes it. The passages they return are the filings'
+  lists of risks, though, and the answer calls them all risk language and says the documents hold no filing that
+  announces a disruption, while the corpus holds some (a TotalEnergies 6-K on production shut down in the Gulf,
+  for one). Of the other two attempts, one named only a cybersecurity 8-K and the other searched for the category's
+  name alone.
 
 ## How it is made
 
