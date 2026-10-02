@@ -68,7 +68,7 @@ Development
   test [unit|ui|e2e|contracts|compose|switchyard|all]
                           default: unit ui contracts compose
 
-On demand (run by hand, never by CI)
+On demand (run by hand)
   test live --url URL [--questions ID,...] [--budget SECONDS|ID=SECONDS]...
                           ask the active pack's featured questions on a running deployment
                           through its UI and API, and check each answer, replay and latency
@@ -485,7 +485,7 @@ test_ui() {
   (cd "$ROOT/ui" && npm ci && npm run lint && npm run type-check && npm run test:ci)
 }
 
-# On Linux, Playwright also installs Chromium's system libraries (apt, through sudo), as CI does;
+# On Linux, Playwright also installs Chromium's system libraries (apt, through sudo);
 # a server image such as Ubuntu 22.04 on a cloud VM lacks them.
 test_e2e() {
   local install=(npx playwright install chromium)

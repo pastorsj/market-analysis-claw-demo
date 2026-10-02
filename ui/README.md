@@ -126,4 +126,4 @@ HOSTNAME=127.0.0.1 PORT=3998 UI_MODE=live API_URL=http://127.0.0.1:3997 node .ne
 
 The visual baselines (`e2e/visual`) are screenshots of the views that keep the original demo UI's
 look, on the fixture pack and the fake API only. They render in the official Playwright Docker
-image, as in CI; [e2e/visual/README.md](e2e/visual/README.md) says how to check and update them.
+image; [e2e/visual/README.md](e2e/visual/README.md) says how to check and update them.

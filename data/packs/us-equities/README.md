@@ -88,8 +88,8 @@ followed; SIC divisions then industries; 8-K incident filings then the Title 17 
 their figures; Regulation FD; Rule 10b5-1 trading plans; headlines that mention Nvidia then NVDA's prices; and
 Item 1.05 filers then their prices. With `DATA_CORPORA=sec_filings,market_regulations,world_news` and every
 profile, all 45 sessions can be recorded (`demo.sh record --all`). `eval/oracles/` computes the analytics answers
-from a build and `eval/retrieval.yaml` names the documents a retrieval answer should cite; CI runs the oracles on
-the fixture's schema only, since the data is never in CI.
+from a build and `eval/retrieval.yaml` names the documents a retrieval answer should cite; the tests run the
+oracles on the fixture's schema only, since the data is never in the repository.
 
 ### Recorded answers
 

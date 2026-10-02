@@ -84,7 +84,7 @@ flowchart LR
 - [Data packs](docs/data-packs.md): the pack contract, recordings, adding a pack
 - [Data platform](docs/data-platform.md): external data, fetch, import, the Data Designer pack, the questions
 - [Customize](docs/customize.md): adding a tool, a server, a skill or a model
-- [Development](docs/development.md): project structure, tests, CI
+- [Development](docs/development.md): project structure, tests, checks
 - [Decisions](docs/decisions.md): the decision log and its workarounds
 - Data packs: [synthetic-market](data/packs/synthetic-market/README.md), [us-equities](data/packs/us-equities/README.md)
 - Components: [API](api/README.md), [UI](ui/README.md), [retrieval](tools/retrieval/README.md),
