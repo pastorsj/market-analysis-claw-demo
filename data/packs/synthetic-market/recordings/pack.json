@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "build": "synthetic-market@1.0.0+standard+48a5be4f9685",
+  "build": "synthetic-market@1.0.0+standard+c842e1c3ab65",
   "id": "synthetic-market",
   "version": "1.0.0",
   "title": "Synthetic US Equities",
@@ -393,7 +393,7 @@
         "09:30",
         "16:00"
       ],
-      "root": "/data/cache/generated/461399dcf1c3703b"
+      "root": "/data/cache/generated/281b8ad7fbfe305b"
     }
   },
   "documents": {
@@ -538,8 +538,8 @@
         "tables/daily_prices.parquet": "a79befea158bdbe7b462ab54237c8d76ed4a1d5f4f0c40d5ad0cc9dbfaab7846",
         "tables/ticker_history.parquet": "8c59b071f6a75fea534523a984908a48179eb324adcdb18c3718342980366d41",
         "tables/trading_sessions.parquet": "88c3f650eb639cf9ec4ea9640aa90c60ff22d8e12689f0851510cd6922fe724b",
-        "structured/synthetic_market.duckdb": "806263e83dbd31b0d2db2dc7af80ddd32e5e00b53c26d16843e6944f713920eb",
-        "ontology/model.yaml": "705c5c76643a730611709ed06b79e591575647f5e2634283888f3d04806d3b45",
+        "structured/synthetic_market.duckdb": "abe078dd814acf01f41388d763340d07504aaf402922e31b06e46a23aac37ae6",
+        "ontology/model.yaml": "4812de99d4e6be7dc28abb78b8ab4ad517e082b4509b823cad9ea157dcea0895",
         "prediction/graph.json": "83cede57e89567148fc25a4f1cea7be439ae9560a977f8e9df7a993e271664ca",
         "prediction/templates.json": "26f6b451f85b59ee2172ccc714b4065e2ff3edacface974aeca305d9a649689d"
       }

@@ -4,7 +4,7 @@
     "id": "us-equities",
     "version": "0.1.0"
   },
-  "recordedAt": "2026-10-02T00:55:00.666741Z",
+  "recordedAt": "2026-10-02T17:39:25.004285Z",
   "sessions": [
     {
       "id": "market-leaders",
@@ -106,7 +106,7 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "541cbc4d-3f9e-4366-85cf-4b8c8c3f8fb2",
+          "jobId": "0d69351c-8275-4ef6-ae20-06f66fc7ba3d",
           "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05."
         }
       ],
@@ -126,7 +126,7 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "f5acf4bc-e623-418f-a6f0-be51bef3d065",
+          "jobId": "633012d5-0f6c-4bfe-860f-535bf750794a",
           "question": "Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-K filings from January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move."
         }
       ],
@@ -193,7 +193,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "1b2d590a-d4ae-427a-b234-51d55d4de78f",
+          "jobId": "8120bb8d-e660-48ea-a488-c2b3ef4ba25e",
           "question": "How many stocks are in each SIC division, and what was each division's median return from January 2 to March 12, 2026?"
         }
       ],
@@ -501,7 +501,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "1e389487-8d46-4cf3-a4da-0a454623d9af",
+          "jobId": "5cf3b467-c0b8-4fcf-8b4a-5c9ad88e6986",
           "question": "Which companies filed 8-Ks under Item 5.02 about executive or director changes in January and February 2026? Summarize three of them, and cite the filings."
         }
       ],
@@ -541,7 +541,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "ba7ac84a-f01b-4479-aff5-37a3c26009b4",
+          "jobId": "66ece0d3-553f-4c37-abbf-4936bd55aa5f",
           "question": "Which companies disclosed exit or restructuring costs under 8-K Item 2.05, and what charges did each expect? Cite the filings."
         }
       ],
@@ -621,7 +621,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "74846beb-c3c6-4416-b377-af3dfa0a4a86",
+          "jobId": "5407f917-5201-4441-bbcc-a0d542932f26",
           "question": "How did NVIDIA (NVDA) trade from February 2 through March 12, 2026? Separately, what did its 8-K filings in that period disclose? Report the prices and the filings apart, and do not claim that a filing caused a move."
         }
       ],
@@ -699,11 +699,11 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "d2dd4cdb-ca11-44cd-a3a0-a7c88159efa5",
+          "jobId": "3729d1d9-808c-4dcc-95c3-9c1d5d4b81ae",
           "question": "Among declared industry peers, which five stocks were the most central in the return-correlation network from December 2025 through March 12, 2026?"
         },
         {
-          "jobId": "3a069f15-b62c-4658-a6f7-7e73227ca5a8",
+          "jobId": "503a45a8-e7a3-41fa-8136-2b5123099dd4",
           "question": "For the three most central stocks in that result, compare their returns and daily volatility over the same window."
         }
       ],
@@ -712,9 +712,7 @@
           "pill": "cudf",
           "device": "gpu",
           "tools": [
-            "analyze_market_relationships",
-            "market_scan",
-            "price_context"
+            "analyze_market_relationships"
           ]
         },
         {
@@ -980,11 +978,11 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "58651812-e03c-4a7e-a80d-c66ecefbb1ef",
+          "jobId": "f645aa9f-73f3-4d24-ac99-30327f02d0f9",
           "question": "Which of NVIDIA, Apple, Microsoft, Amazon and Meta filed quarterly results 8-Ks under Item 2.02 in January or February 2026? List each company and filing date, and cite the filings."
         },
         {
-          "jobId": "8c99f28a-fc8e-4f99-b305-196676fdd9d4",
+          "jobId": "3b49491e-595c-498f-93b6-251f89b471dc",
           "question": "For the first two companies in that result, what revenue and earnings figures did their results releases report? Cite the exhibits."
         }
       ],
@@ -1059,11 +1057,11 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "adcabd03-4919-45b8-92dc-f1b0c6f3779c",
+          "jobId": "2f808ae9-adc2-4b8a-984f-3e48ae53a7da",
           "question": "Which companies reported a material cybersecurity incident on Form 8-K under Item 1.05, and when did each file? Cite the filings."
         },
         {
-          "jobId": "56224920-3e69-4564-8066-8dbcfdeee7ed",
+          "jobId": "a8dd7d74-6d3c-49d4-8a1e-d37ad92e752d",
           "question": "How did each of those companies' stocks trade over the five sessions after its filing? Report the prices separately from the filings, and do not claim that a filing caused a move."
         }
       ],

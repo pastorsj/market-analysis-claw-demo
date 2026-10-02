@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "build": "us-equities@0.1.0+default+9ea0959d2977",
+  "build": "us-equities@0.1.0+default+fca98737f9c1",
   "id": "us-equities",
   "version": "0.1.0",
   "title": "US Equities",
@@ -1046,8 +1046,8 @@
         "tables/daily_prices.parquet": "c1b9696ff2282abc7805583acadacc780d87391ca8aaf4b1565912079891d29e",
         "tables/ticker_history.parquet": "5e864a6ae70553621998e5a11ec0ceb7e29f3161c2b771f15265b194764eb749",
         "tables/trading_sessions.parquet": "b3e2723efa4f9c3f20d4a0440f12c7612d9207cf41507ded2e3e4e45f34dde99",
-        "structured/us_equities.duckdb": "f448a6ebfe35deaa335df64435d9beb3a06a0cf649879e331da8e328be692c52",
-        "ontology/model.yaml": "48f87c7ff5d36976e059573bccdcfff655858a472712a963526fb66bc6900544",
+        "structured/us_equities.duckdb": "da22a89ed1416db6517ec58aabf4d4b1632e3681e311457217e70547ecfb6376",
+        "ontology/model.yaml": "7d78bb634f5dfed96a8bae7b30d655285d9c10c01f084dc1db6c69fb40b294c0",
         "prediction/graph.json": "dc3fade0ea1a3174be0578449504fd4e4d77dcdcde4b9e6b1b030cc5393fc373",
         "prediction/templates.json": "16e4e4fc2c6197342f77e47bc3dafda40a6ab9e522ccaffd55d985ac3a27fdf1"
       }

@@ -4,7 +4,7 @@
     "id": "synthetic-market",
     "version": "1.0.0"
   },
-  "recordedAt": "2026-10-02T01:34:54.725558Z",
+  "recordedAt": "2026-10-02T18:37:06.759110Z",
   "sessions": [
     {
       "id": "market-leaders",
@@ -106,7 +106,7 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "933af70d-875f-4406-b73d-b3f7a76bbc53",
+          "jobId": "8ca23d60-5726-4245-b751-afc8a31f04ed",
           "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any second-quarter 2026 filings in the corpus that report an incident."
         }
       ],
@@ -126,7 +126,7 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "a5769211-43c6-46df-944f-ae0889df31a1",
+          "jobId": "9caeeb0d-a672-4552-af66-75cd6ff2fa66",
           "question": "Which of the 12 most liquid issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real second-quarter 2026 SEC filings describe operational disruptions? The issuers are fictional and are not the filers: keep the two apart."
         }
       ],
@@ -193,7 +193,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "d6208d46-9e2c-4cb0-a36d-a7a8c2e9c39d",
+          "jobId": "60333f13-db07-485c-a13d-63d156c9b816",
           "question": "How many issuers are in each sector, and what was each sector's median return over the 20 trading sessions ending August 31, 2026?"
         }
       ],

@@ -142,6 +142,18 @@ def test_each_check_kind():
     assert not check("percent_grounding", 0.9)  # 24.74% is not in this run's receipts
 
 
+def test_a_pattern_reads_through_markdown_emphasis():
+    pattern = "(?i)not (a |an )?(forecast|prediction)|neither\\b.{0,40}forecast|no(t)? .{0,20}forecast"
+    turn = market_turn("")
+
+    def check(text):
+        return evaluate(Check("c", "pattern", pattern), text, turn, ORACLES, NAMES)
+
+    assert check("Anomaly scores are **not** forecasts or causal explanations.")
+    assert check("They are *not* a ***forecast***.")
+    assert not check("Anomaly scores rank sessions by how unusual they were.")
+
+
 def test_a_filing_is_retrieved_only_by_a_hit_from_one_of_its_documents():
     def turn(*document_ids):
         hits = [{"sourceId": "sec_filings", "documentId": document_id} for document_id in document_ids]

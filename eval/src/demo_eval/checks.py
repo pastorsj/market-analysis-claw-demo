@@ -25,6 +25,8 @@ FALL = re.compile(
 )
 DASHES = re.compile("[‐-–−]")
 SOURCES = re.compile(r"\n#+\s*Sources")
+# Markdown emphasis: a pattern matches the words, so "**not** forecasts" reads as "not forecasts"
+EMPHASIS = re.compile(r"\*+")
 
 Oracles = dict[str, list[dict[str, Any]]]
 
@@ -150,7 +152,8 @@ def evaluate(check: Check, text: str, turn: dict[str, Any], oracles: Oracles, na
         return bool(values) and all(has_percent(text, value) for value in values)
     if check.kind == "pattern":
         patterns = check.value if isinstance(check.value, list) else [check.value]
-        return any(re.search(pattern, text) for pattern in patterns)
+        plain = EMPHASIS.sub("", text)
+        return any(re.search(pattern, plain) for pattern in patterns)
     if check.kind == "item_105_deadline":
         return deadline_ok(text)
     if check.kind == "retrieved_source":
