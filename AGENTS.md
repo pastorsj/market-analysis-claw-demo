@@ -14,7 +14,8 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - `contracts/`: tool registry, JSON Schemas and golden fixtures shared across languages.
 - `scripts/`: `demo.sh` (lifecycle) and `gen-contracts.sh` (codegen).
 - `eval/`: on-demand checks of a running deployment (`demo.sh eval`, `demo.sh test gpu --perf`); never run in CI.
-- `docs/`: guides. `architecture.md` for the design, `customize.md` for the files a new tool or skill touches.
+- `docs/`: guides. `architecture.md` for the design, `customize.md` for the files a new tool or skill touches,
+  `development.md` for the tests and CI.
 
 ## Commands
 

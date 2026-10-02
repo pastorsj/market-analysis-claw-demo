@@ -13,6 +13,37 @@ graph. Everything runs in one Docker Compose project, `market-demo`, driven by `
 
 ## Components
 
+```mermaid
+flowchart LR
+    browser(["Browser"]) --> ui["UI<br/>Next.js :3100"]
+    ui -->|"allowlisted /api/v1"| api["Job API<br/>FastAPI :8000"]
+    api -->|"Runs API"| fwd["hermes-gateway<br/>openshell forward"]
+    subgraph sandbox ["OpenShell sandbox: no network, policy-checked egress"]
+        hermes["Hermes Agent<br/>skills + receipts plugin"]
+    end
+    fwd --> hermes
+    hermes -->|"model calls"| switchyard["Switchyard :4000"]
+    switchyard -->|"INFERENCE_API_KEY"| inference[("Inference endpoint<br/>build.nvidia.com or OpenAI-compatible")]
+    hermes -->|"MCP"| retrieval["retrieval :8120"]
+    hermes -->|"MCP"| analytics["market-analytics :3010"]
+    hermes -.->|"MCP, ontology profile"| ontology["Auto Ontology :3003"]
+    retrieval --> milvus[("Milvus")]
+    retrieval -->|"RETRIEVER_API_KEY"| retriever[("Retriever endpoint<br/>build.nvidia.com")]
+    analytics -.->|"kumo profile or hosted"| kumo["Kumo Relational NIM"]
+    hermes -->|"receipts, model calls"| api
+    hermes -->|"traces"| phoenix["Phoenix :6006"]
+    switchyard -->|"traces"| phoenix
+    retrieval -->|"traces"| phoenix
+    pack[("Data pack<br/>/data/active")] --- api
+    pack --- analytics
+    pack --- ontology
+```
+
+Every port is published on 127.0.0.1 only (`UI_BIND_HOST` can open the UI's alone to a link that requires
+sign-in, such as a Brev link: [operations](operations.md#brev-vm-mode)). The sandbox reaches the services as
+`host.openshell.internal`, which the host-networked OpenShell supervisor maps to the host's loopback. The browser
+talks only to the UI, which proxies an allowlisted set of API routes.
+
 | Service | Profile | Host port (127.0.0.1) | Role | Code |
 |---|---|---|---|---|
 | `ui` | core, replay | 3100 (`UI_PORT`) | Next.js web app; proxies an allowlisted `/api/v1/*` to the API; serves the replay bundle | [`ui/`](../ui/README.md) |
@@ -145,6 +176,58 @@ treated as untrusted: it reads documents and tool results that could carry promp
 
 `./scripts/demo.sh check` proves the sandbox boundary on the running stack: the placeholder key, blocked
 egress, the allowed and denied Switchyard and API routes. [OpenShell](openshell.md) has the details.
+
+The UI has no sign-in and spends your inference credits: anyone who can open a link to it without sign-in can
+run the agent on the keys in `.env`. `.env` is created with mode 600 and is gitignored, and `doctor` never
+prints a key. A recorded bundle holds questions, answers, evidence excerpts and model names; review it before
+committing ([data packs](data-packs.md#recordings)). To report a security issue, use
+[NVIDIA's product security process](https://www.nvidia.com/en-us/security/) rather than a public issue.
+
+## Limitations
+
+- **Synthetic market data.** The issuers, prices, events and news are fictional and deterministic, generated
+  for a software demonstration. Nothing here is investment advice.
+- **Real documents, with their terms.** The SEC EDGAR filings fall under the SEC's reuse terms and may carry
+  issuers' own rights, so they are downloaded at build time and never committed. The eCFR is United States
+  government information, but not the official legal edition of the CFR ([licenses](data-packs.md#licenses)).
+- **Hosted models, with their terms.** Every model call goes to a hosted endpoint and is subject to that
+  provider's terms. The default endpoint, build.nvidia.com, is open to anyone with an NVIDIA account but
+  serves no GPT model; the `*-gpt` templates take GPT-6.1 Sol from a provider you configure.
+- **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
+  `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
+  need exact rows or custom SQL, such as the per-sector counts and median returns (`sector-sql`). The replay
+  bundle was recorded with it.
+- **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
+- **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
+  person on one host.
+- **Small bake-offs.** The recommendation rests on the 2026-10-01 bake-off: 8 `us-equities` questions run twice
+  for each of 5 arms (16 runs per arm), with two graders that are also among the models compared, so a difference
+  of one or two runs is noise. The 2026-09-30 bake-off ran 17 questions twice over 4 arms, with one grader. Their
+  limits are in models and routing ([2026-10-01](models-and-routing.md#the-2026-10-01-frontier-bake-off),
+  [2026-09-30](models-and-routing.md#limits-of-this-bake-off)).
+
+## Technologies
+
+| Layer | Technology | Version |
+|---|---|---|
+| Agent | Hermes Agent | 0.21.5 (image `nousresearch/hermes-agent:v2026.9.24`) |
+| Sandbox | NVIDIA OpenShell (gateway, supervisor, sandbox, CLI) | 0.1.2 |
+| Model router | NVIDIA Switchyard (`switchyard-server`) | 0.3.0 |
+| Models (default, build.nvidia.com) | Nemotron 3 Ultra 550B-A55B on every turn; Nemotron 3 Super 120B-A12B for auxiliary calls | hosted |
+| Models (with a frontier-model provider) | Nemotron 3 Ultra escalating to GPT-6.1 Sol, judged by GPT-6.1 Sol (`escalation.nemotron-gpt`); Nemotron 3 Super for auxiliary calls | hosted |
+| Retrieval models | Nemotron 3 Embed 1B, Llama Nemotron Rerank VL 1B v2 | hosted |
+| Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone; with analytics-gpu, a GPU standalone for the Benchmark tab's index comparison) | 1.4.3, 2.6.17, 2.6.25 |
+| Market analytics | pandas, scikit-learn, NetworkX; on GPU, RAPIDS cuDF, cuML and nx-cugraph | 2.3, 1.9, 3.6; 26.06 (CUDA 12) |
+| Prediction | Kumo Relational NIM, `kumo-relational-client` | 1.0.1, 1.0.2 |
+| Synthetic data | NeMo Data Designer (`data-designer`) | 0.9.3 |
+| Structured questions | NVIDIA Auto Ontology (`ontology` profile, required) | 1.0.0 |
+| Tool protocol | Model Context Protocol, Python SDK over streamable HTTP | `mcp` 2.2 |
+| Tracing | NeMo Relay (bundled with Hermes), Arize Phoenix | Relay < 0.9, Phoenix 20.16.0 |
+| Job API | Python, FastAPI, uvicorn, Pydantic, SQLite, DuckDB | 3.12, 0.141, 0.54, 2.13, –, 1.5.5 |
+| UI | Next.js, React, NVIDIA KUI, Zustand, Tailwind CSS | 16.3.7, 18.3, 0.600, 5, 4 |
+| Platform | Docker Engine, Docker Compose, uv, Node.js | 28+, 2.30+, 0.12, 22 |
+
+Each keeps its own license, and each model its provider's terms.
 
 ## Design rules
 
