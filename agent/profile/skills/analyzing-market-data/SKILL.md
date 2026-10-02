@@ -148,5 +148,14 @@ market_scan(universe_id="<same value>", start="2026-08-01T00:00:00Z",
 ```
 
 Answer with the three leaders and the three laggards, their returns and
-volatilities as percentages, and the window. Cite each row with the
-`evidence_id` of the call that produced it.
+volatilities as percentages, and the window. Every row ends with the token of
+the call that produced it: the `direction="highest"` call's `evidence_id` on
+each leader, the `direction="lowest"` call's on each laggard. A sentence after
+the table that repeats a figure cites it again. The rows look like this:
+
+| Rank | Asset | Return | Daily volatility | Evidence |
+| --- | --- | --- | --- | --- |
+| Strongest 1 | <ticker> | +12.40% | 2.10% | [evidence:<evidence_id of the highest call>] |
+| Weakest 1 | <ticker> | -9.80% | 1.75% | [evidence:<evidence_id of the lowest call>] |
+
+A table with no token in its rows is uncited, even when its figures are right.
