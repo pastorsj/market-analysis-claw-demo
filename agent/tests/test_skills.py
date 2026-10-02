@@ -53,3 +53,18 @@ def test_the_search_skill_keeps_form_names_out_of_queries():
     assert 'When you search filings, leave form names (8-K, 6-K) and words such as "SEC filing"' in procedure
     assert "never claim that a source contains no such document" in procedure
     assert len(EXAMPLE_QUERY.findall(skill)) >= 2  # a rule, and a kind of event in filings
+
+
+# Ultra left a leaders-and-laggards table uncited about one ask in three: the market skill's example shows the rows
+# themselves carrying the token of the call that produced them
+EVIDENCE_TOKEN = re.compile(r"\[evidence:<evidence_id of the (highest|lowest) call>\]")
+
+
+def test_the_market_skill_example_cites_every_table_row():
+    skill = next(path for path in SKILL_DIRS if path.name == "analyzing-market-data").joinpath("SKILL.md").read_text()
+    example = skill.split("## Example")[1]
+    rows = [line for line in example.splitlines() if line.startswith("| ") and not line.startswith("| Rank")]
+    rows = [row for row in rows if not set(row) <= set("|- ")]
+
+    assert rows and all(EVIDENCE_TOKEN.search(row) for row in rows)
+    assert {EVIDENCE_TOKEN.search(row).group(1) for row in rows} == {"highest", "lowest"}
