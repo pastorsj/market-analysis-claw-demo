@@ -48,15 +48,21 @@ Each question declares the `tools` it is expected to use, as the demo scenario p
 
 `recordings/` holds the ten questions of the `standard` profile, recorded on 2026-10-01 with the `.env.example`
 models (Nemotron 3 Ultra alone, on build.nvidia.com) and reviewed against `eval/oracles/` and the evidence. Four
-were wrong and asked again, twice at most. Three are still wrong, and the bundle keeps them as Ultra answered:
+were wrong and asked again, twice at most.
 
-- `news-and-filings` (featured) counts negative news only among the articles `analyze_news_price_relationship`
-  could align to a forward return, so it names GIOR, PRAL and KASI with three negative items each; the oracle has
-  GIOR and KASI with four. It also finds no Q2 2026 filing about an operational disruption.
-- `story-event-context` leaves out the stories published on 2026-08-28, whose two following sessions run past the
-  data, without saying so, and cites no evidence.
-- `sector-sql` gives each sector's median daily return over the 20 sessions (and says so), not the median of the
-  issuers' 20-session returns that the question asks for and the oracle computes.
+On 2026-10-02 five were recorded again the same way, after the fixes to the news tools' coverage, to evidence
+citations, to Auto Ontology's return convention and to the regulations source (which now holds the SEC's 2023
+cybersecurity rule): `news-and-filings`, `story-event-context`, `sector-sql`, `cyber-disclosure-rules` and
+`peer-network`. `story-event-context` (all 23 items, with the five of 2026-08-28 marked as having no two-session
+return), `sector-sql` and `peer-network` now match their oracles, and `cyber-disclosure-rules` gives the
+four-business-day deadline from Form 8-K General Instruction B.1. One is still wrong after two more attempts, and
+the bundle keeps the best of the three as Ultra answered:
+
+- `news-and-filings` (featured) names GIOR and KASI with four negative items each, as the oracle does, and gives
+  each issuer's mean five-session return after all its articles and the returns after GIOR's negative ones; it says
+  one of KASI's negative items is in its list where there are two. Its filing half finds no Q2 2026 filing about
+  an operational disruption, though the corpus holds some (a TotalEnergies 6-K on production shut down in the
+  Gulf, for one); one other attempt found them but named the wrong issuer as the most negative.
 
 ## How it is made
 

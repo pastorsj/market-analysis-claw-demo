@@ -153,7 +153,8 @@ bundle leaves it out.
 DATA_PACK=us-equities ./scripts/demo.sh replay
 ```
 
-Both were recorded on 2026-10-01 on a Brev A100 VM with every profile, including `ontology`, the local Kumo
+Both were recorded on 2026-10-01, and some of their sessions again on 2026-10-02 (each pack's README names
+them), on a Brev A100 VM with every profile, including `ontology`, the local Kumo
 NIM and the GPU Milvus, so every answer that called the market tools carries its CPU/GPU comparison for the
 Benchmark tab, and every answer that searched documents carries the Milvus CPU/GPU index comparison
 (`retrievalBenchmark`). `synthetic-market` was recorded with the `.env.example` models and corpora (Nemotron 3
