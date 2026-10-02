@@ -46,7 +46,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { checkStorageHealth } from '@/features/chat/lib/storage-manager'
 import { cn } from '@/shared/lib/cn'
 import type { RecordedSessionSummary } from '@/shared/context'
-import { ToolPills } from '@/shared/components/ToolPills'
+import { ToolPills, describePills } from '@/shared/components/ToolPills'
 import { DeleteSessionConfirmationModal } from './DeleteSessionConfirmationModal'
 import { DeleteAllSessionsConfirmationModal } from './DeleteAllSessionsConfirmationModal'
 
@@ -700,6 +700,10 @@ const RecordedSessionsList: FC<RecordedSessionsListProps> = ({
           const isSelected = selectedSessionId === session.id
           const isLoading = loadingSessionId === session.id
           const turnCount = session.questions.length
+          const turns = `${turnCount} ${turnCount === 1 ? 'turn' : 'turns'}`
+          const tools = describePills(session.tools)
+          // The label names the session; what the row shows besides, pills included, is its description
+          const descriptionId = `recorded-session-${session.id}-description`
           return (
             <button
               key={session.id}
@@ -707,6 +711,7 @@ const RecordedSessionsList: FC<RecordedSessionsListProps> = ({
               onClick={() => onSelect(session.id)}
               disabled={isNavigationBlocked || isLoading}
               aria-label={`Recorded session: ${session.title}; Completed`}
+              aria-describedby={descriptionId}
               className={cn(
                 'focus-visible:ring-brand mb-1.5 flex w-full gap-2 rounded-lg px-2.5 py-2.5 text-left outline-none focus-visible:ring-2',
                 isNavigationBlocked || isLoading
@@ -732,13 +737,16 @@ const RecordedSessionsList: FC<RecordedSessionsListProps> = ({
                 </Text>
                 <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <Text kind="body/regular/xs" className="text-subtle">
-                    {turnCount} {turnCount === 1 ? 'turn' : 'turns'}
+                    {turns}
                   </Text>
                   <Text kind="body/regular/xs" className="text-subtle">
                     Completed
                   </Text>
                 </span>
                 <ToolPills pills={session.tools} className="mt-1.5" />
+              </span>
+              <span id={descriptionId} className="sr-only">
+                {tools ? `${turns}. Tools: ${tools}.` : `${turns}.`}
               </span>
             </button>
           )

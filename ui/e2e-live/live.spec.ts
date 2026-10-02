@@ -25,6 +25,7 @@ import {
   checkSuccess,
   failed,
   formatTable,
+  HttpStatusError,
   parseBudgets,
   parseStream,
   recordedSeconds,
@@ -33,6 +34,7 @@ import {
   type LiveTurn,
   type PackQuestion,
   type QuestionResult,
+  withRetries,
 } from './checks'
 
 const BASE = (process.env.LIVE_URL ?? '').replace(/\/+$/, '')
@@ -59,11 +61,21 @@ const recorded = (pack: string, id: string): number | null => {
   }
 }
 
-const getJson = async (request: APIRequestContext, url: string): Promise<unknown> => {
-  const response = await request.get(url, { timeout: 120_000 })
-  if (!response.ok()) throw new Error(`GET ${new URL(url).pathname} answered ${response.status()}`)
-  return response.json()
-}
+/** A GET of the deployment's API, tried again after a transient status or a network error (checks.ts). */
+const getOk = (request: APIRequestContext, url: string) =>
+  withRetries(async () => {
+    const response = await request.get(url, { timeout: 120_000 })
+    if (!response.ok()) {
+      throw new HttpStatusError(
+        response.status(),
+        `GET ${new URL(url).pathname} answered ${response.status()}`
+      )
+    }
+    return response
+  })
+
+const getJson = async (request: APIRequestContext, url: string): Promise<unknown> =>
+  (await getOk(request, url)).json()
 
 /** Poll the job until it ends; past the hard cap it is cancelled and reported as stalled. */
 const waitForJob = async (request: APIRequestContext, jobId: string): Promise<string> => {
@@ -138,8 +150,8 @@ const askOne = async (
 
     const job = `${BASE}/api/v1/jobs/async/job/${encodeURIComponent(jobId)}`
     turn = (await getJson(request, `${job}/export`)) as LiveTurn
-    const events = await request.get(`${job}/stream`, { timeout: 120_000 })
-    stream = events.ok() ? parseStream(await events.text()) : null
+    const events = await getOk(request, `${job}/stream`).catch(() => null)
+    stream = events ? parseStream(await events.text()) : null
 
     if (status === 'success') {
       answered = await executionShowsClosing(page).catch((error) =>
@@ -161,8 +173,15 @@ const askOne = async (
     }
   } catch (error) {
     // Where it stopped: before the job ended, the job fails; after, the replay does
-    if (status === 'not asked') status = `error: ${message(error)}`
-    else if (!reopened.ok) reopened = bad(message(error))
+    if (status === 'not asked') {
+      status = `error: ${message(error)}`
+      // A job left running would still hold the deployment while the next question is timed
+      if (jobId) {
+        await request
+          .post(`${BASE}/api/v1/jobs/async/job/${encodeURIComponent(jobId)}/cancel`)
+          .catch(() => undefined)
+      }
+    } else if (!reopened.ok) reopened = bad(message(error))
   } finally {
     await context.close()
   }

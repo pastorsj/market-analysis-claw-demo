@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen, within } from '@/test-utils'
 import type { AnalyticsResultReceipt } from '../contract'
 import { receiptOf } from '../test-utils/fixtures'
-import { MarketToolInspector } from './MarketToolInspector'
+import { MarketToolInspector, packageVersion } from './MarketToolInspector'
 
 type Content = NonNullable<AnalyticsResultReceipt['content']>
 
@@ -42,6 +42,20 @@ describe('MarketToolInspector', () => {
     expect(timing).toHaveTextContent('Engine total8.75 ms')
     expect(within(card).getByText('market_analysis')).toBeVisible()
     expect(screen.getByTestId('market-tool-inspector')).toHaveAttribute('data-accelerated', 'true')
+  })
+
+  it('names a RAPIDS library version as its package does, as the original did', () => {
+    expect(packageVersion('26.06.00')).toBe('26.6.0')
+    expect(packageVersion('26.6.0')).toBe('26.6.0')
+    expect(packageVersion('2.3.10')).toBe('2.3.10')
+    expect(packageVersion('0.9.3')).toBe('0.9.3')
+    const receipt = receiptOf('analytics_result')
+    const content = receipt.content!
+    renderReceipt({
+      ...receipt,
+      content: { ...content, engine: { ...content.engine!, version: '26.06.00' } },
+    })
+    expect(within(screen.getByTestId('market-tool-receipt')).getByText('cuML 26.6.0')).toBeVisible()
   })
 
   it('shows a receipt recorded before the engine id, asset count and setup time as before', () => {
@@ -223,7 +237,8 @@ describe('MarketToolInspector', () => {
     expect(screen.getByTestId('market-relationship-network')).toBeVisible()
     expect(screen.getByText('12 nodes · 40 edges in source graph')).toBeVisible()
     expect(screen.getByLabelText('Ranked relationship assets')).toHaveTextContent('asset-a')
-    expect(screen.getByText('Return Correlation · Top 2')).toBeVisible()
+    expect(screen.getByText('Recent Return Correlation · Top 2')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Recent Return Correlation' })).toBeVisible()
   })
 
   it('shows why a call failed, and says when there is no receipt yet', () => {

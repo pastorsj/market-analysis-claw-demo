@@ -78,6 +78,20 @@ describe('summarizeReceipt', () => {
     expect(summary.output.rows.at(-1)?.[3]).toBe('false')
   })
 
+  it('lists a Kumo prediction’s entities by TRUE_PROB, the likeliest first, as the original did', () => {
+    const receipt = receiptOf('structured_prediction')
+    const content = receipt.content!
+    const rows = [...content.rows].reverse() // as a recording may hold them, in ticker order say
+    const summary = summarizeReceipt(
+      { ...receipt, content: { ...content, rows } },
+      { databaseName: 'market_analysis' }
+    )
+    if (summary.output?.kind !== 'table') throw new Error('no table')
+    const shown = summary.output.rows.map((row) => Number(row[4]))
+    expect(shown).toEqual([...shown].sort((a, b) => b - a))
+    expect(summary.output.rows[0]?.[1]).toBe('asset-delta')
+  })
+
   it('reports a failed call without its content', () => {
     const summary = summarizeReceipt(receiptOf('structured_prediction', 'failed'), {
       databaseName: 'market_analysis',

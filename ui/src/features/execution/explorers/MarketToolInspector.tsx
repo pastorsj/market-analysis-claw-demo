@@ -136,7 +136,8 @@ const requestSummary = (result: AnalyticsResult): string => {
         ? null
         : `${integer(parameters.return_horizon_sessions)}-session return horizon`,
     ],
-    analyze_market_relationships: ['Return Correlation', top(parameters.top_k)],
+    // The original showed the graph's id, recent_return_correlation, humanized
+    analyze_market_relationships: ['Recent Return Correlation', top(parameters.top_k)],
     intraday_scan: [
       humanize(text(parameters.rank_by) ?? 'intraday_range'),
       assets || universe,
@@ -146,6 +147,9 @@ const requestSummary = (result: AnalyticsResult): string => {
   }
   return parts[result.operationId].filter(Boolean).join(' · ')
 }
+
+/** A library version as its package names it, as the original showed it: RAPIDS' "26.06.00" is 26.6.0. */
+export const packageVersion = (version: string): string => version.replace(/(^|\.)0+(?=\d)/g, '$1')
 
 /** Rows the call returned: its ranked list, series, periods or events. */
 const outputRows = (result: AnalyticsResult): number => {
@@ -596,7 +600,7 @@ const RelationshipResult = ({ payload }: { payload: RecordValue }): ReactNode =>
       <header className={styles.nativeResultHeader}>
         <div>
           <span>Retained strongest relationships</span>
-          <h4>Return Correlation</h4>
+          <h4>Recent Return Correlation</h4>
         </div>
         <small>
           {formatCompact(integer(payload.node_count))} nodes ·{' '}
@@ -759,7 +763,7 @@ export const MarketToolInspector = ({
   const universe = text(result.publicParameters.universe_id)
   const warnings = [...result.warnings, ...result.limitations]
   const engineLabel = engine
-    ? `${acceleration?.label || engineLibraryLabel(engine.library)} ${engine.version}`
+    ? `${acceleration?.label || engineLibraryLabel(engine.library)} ${packageVersion(engine.version)}`
     : 'Engine not started'
   const { computeMs, totalMs } = result.timing
   // The engine's setup and whole time, as the tool recorded them; results recorded before those fields have
