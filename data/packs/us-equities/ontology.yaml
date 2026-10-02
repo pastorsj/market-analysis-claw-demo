@@ -38,7 +38,11 @@ tables:
       A return over a window is one number per stock: its last adjusted_close in the window over its adjusted_close
       on the session before the window's first session, minus 1 (the window's total_return_1d values compounded).
       It is not measured from the first close in the window, and it is not an average or median of
-      total_return_1d. A group's median return is the median of its stocks' window returns.
+      total_return_1d. Use each stock's own bars, never a join on the boundary dates: a stock with no bar on the
+      session before the window or on the window's last session is not dropped. Its return runs from its last
+      bar before the window to its last bar in the window, and a stock first listed inside the window, with no
+      earlier bar, is measured from its first close in the window. A group's stock count is every stock of the
+      group in assets, and its median return is the median of its stocks' window returns.
     columns:
       open: The first regular-session minute's open, in USD.
       high: The highest minute high of the regular session.
