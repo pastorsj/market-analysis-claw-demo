@@ -105,7 +105,7 @@ A check names oracle rows as `<oracle>[<rows>].<field>`, where rows is an index 
 |---|---|
 | `named: REF` | every referenced asset is named, by ticker or company name; `at_least: N` or `any: true` relaxes it |
 | `percent: REF` | every referenced fraction appears as a percentage, within display rounding |
-| `pattern: REGEX` (or a list: any) | the report matches; `(?i)` for case-insensitive |
+| `pattern: REGEX` (or a list: any) | the report matches, read without markdown emphasis (`**not**` as `not`); `(?i)` for case-insensitive |
 | `item_105_deadline: true` | the four-business-day deadline is stated, or flagged as missing from the evidence, and no other deadline is given ([`deadline.py`](src/demo_eval/deadline.py)) |
 | `retrieved_source: ID` | a retrieval call returned hits from that source |
 | `retrieved_filing: true` | a retrieval call returned a passage of a filing that the pack's `eval/retrieval.yaml` lists for the question |

@@ -22,7 +22,7 @@ CHECK_KINDS = frozenset(
     {
         "named",  # the rows' assets are named (ticker or company name); all, `at_least: N`, or `any: true`
         "percent",  # the rows' fractions appear as percentages, within display rounding
-        "pattern",  # the report matches a regular expression (or any of a list)
+        "pattern",  # the report, without markdown emphasis, matches a regular expression (or any of a list)
         "item_105_deadline",  # Form 8-K Item 1.05's deadline is right or flagged as missing (deadline.py)
         "retrieved_source",  # a retrieval call searched this source and returned hits
         "retrieved_filing",  # a retrieval call returned a passage of a filing that eval/retrieval.yaml lists
