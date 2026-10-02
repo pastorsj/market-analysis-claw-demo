@@ -252,6 +252,50 @@ for zeros with CuPy reductions that CuPy compiles once per array size class, abo
 `/`, the first featured question after a restart took 9.4 s instead of 0.3 s, and any request that reduced to a
 new number of rows could pay it again.
 
+### Daily tools on `us-equities`
+
+`us-equities` has a small daily table: 1,601 stocks and 452,837 daily rows, a third of the 2,000-issuer packs
+above. Its recorded questions name 50 stocks, so a 20-session `market_scan` ranks 1,000 rows and the anomaly scan
+scores 2,400. Measured through `POST /benchmark` (one untimed call on each engine, then five alternating pairs;
+medians of the compute timers) on the A100 with the stack running, on 2026-10-02, before and after
+`market_scan` and `market_anomaly_scan` moved their per-asset ranking to the host (three runs before, four
+after; the other tools did not change):
+
+| Call | Rows | CPU before | CPU after | GPU before | GPU after | CPU/GPU before | CPU/GPU after |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `market_scan`, 50 stocks, 20 sessions | 1,000 | 28 ms | 23 ms | 77 ms | 28 ms | 0.36x to 0.39x | 0.78x to 0.89x |
+| `market_scan`, every stock, 20 sessions | 31,398 | 62 ms | 56 ms | 83 ms | 36 ms | 0.75x, 0.76x | 1.53x to 1.58x |
+| `market_scan`, every stock, January 2025 to March 2026 | 452,837 | 88 ms | 81 ms | 90 ms | 31 ms | 0.97x to 1.06x | 2.49x to 2.69x |
+| `market_anomaly_scan`, 50 stocks | 13,630 | 28 ms | 23 ms | 49 ms | 33 ms | 0.57x to 0.59x | 0.69x to 0.73x |
+| `market_anomaly_scan`, every stock | 420,816 | 317 ms | 278 ms | 175 ms | 155 ms | 1.76x to 1.83x | 1.65x to 1.90x |
+| `price_context`, 5 stocks, 28 sessions | 140 | 33 ms | 31 ms | 39 ms | 37 ms | 0.86x | 0.83x |
+| `analyze_market_relationships`, top 10 | | 32 ms | 33 ms | 44 ms | 41 ms | 0.72x | 0.82x |
+| `intraday_scan`, the three cases of `eval/perf.yaml` | | 1.1 to 1.3 s | 1.1 to 1.3 s | 0.3 s | 0.3 s | 3.60x to 4.21x | 3.63x to 4.26x |
+
+No call fell back to pandas: cudf.pandas logged no fallback, its profiler counted no CPU call,
+`CUDF_PANDAS_FAIL_ON_FALLBACK=1` passed, and cuml.accel ran PCA's fit and transforms on the GPU. Before, the scan's
+GPU time hardly moved with its size (70 to 87 ms from 1,000 rows to 452,837): each of its 52 pandas calls cost 0.5
+to 1.5 ms on the GPU, nearly all of it fixed (dispatch, kernel launches, synchronization), while the CPU's time grew
+with the table, mostly the universe filter over every row (13 ms on this pack, 82 to 90 ms on the 1.34 million
+rows of `synthetic-market`). The z-scores added on 2026-10-01 were ten of those calls: 15 to 20 ms on the GPU and
+1 ms on the CPU. Now each tool filters, groups and runs PCA on its engine, then ranks its per-asset or top rows on
+the host in NumPy, which computes exactly what pandas computed (`tools/common.py`, checked against pandas by
+`tests/test_common.py`): over 44 argument shapes on both packs the CPU results did not change by a bit, and the GPU
+results matched them. The scan's GPU time fell to 25 to 36 ms at every size, and the 9 s that cudf took on the
+first scan of a new universe size (a column divisor, as with `ratio()` above) is gone. With the isolated method on
+`synthetic-market`'s standard profile, `market_scan` went from 3.2x to 7.0x over 2,000 issuers and from 1.4x to
+3.4x over 12, and `market_anomaly_scan` from 2.4x to 2.6x and from 2.2x to 3.2x.
+
+Over 50 stocks the CPU still wins: what is left on the GPU is about 25 pandas calls (the filter, the session
+choice and the groupby), against 23 ms of pandas. The anomaly scan's whole-market time is mostly NumPy work both
+engines share (standardizing, and the medians behind the robust z-scores). `eval/perf.yaml` guards the
+whole-market cases and only reports the 50-stock ones.
+
+The memory mode matters at this size too. In the isolated method the 50-stock scan took 29 ms on the GPU with
+`CUDF_PANDAS_RMM_MODE=managed_pool` and 15 ms with `async` (1.46x the CPU; the whole-market scan 4.6x), and the
+50-stock anomaly scan 30 and 22 ms (0.98x). The stack keeps the managed pool, which lets a pack larger than the
+GPU's memory page to host memory instead of failing ([scale](#scale)).
+
 ## Changing the contract
 
 A new optional column is a minor change. Renaming or removing a required column, or changing its type, needs
