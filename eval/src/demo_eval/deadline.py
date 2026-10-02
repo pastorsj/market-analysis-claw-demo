@@ -14,7 +14,8 @@ passage. Either answer is right:
 
 Wrong, whatever else the answer says:
 
-- another deadline: "within five business days", "no later than 30 days";
+- another deadline: "within five business days", "no later than 30 days" (the Attorney General's delay of up to 30
+  days, which the rule allows, is not one);
 - denying that there is one: "Item 1.05 has no deadline".
 
 The flag must be about the deadline: a negation in a sentence that names the deadline and the evidence. A negation
@@ -78,6 +79,10 @@ REQUIREMENT = re.compile(
 )
 # What a company did, not what the rule says
 OBSERVED = re.compile(r"\bfiled\b|\breported\b|\bdisclosed\b|\bafter (?:its|the|their) (?:incident|attack|event)", re.I)
+# The Attorney General's delay of the disclosure (Item 1.05(c)) and its extensions, not the filing deadline: "can be
+# delayed by up to 30 days", "for an additional period of up to 60 days"
+DELAY = re.compile(r"\bdelay|\bdefer|\bpostpone|\bextend|\bextension|\badditional\b|attorney general", re.I)
+DELAY_REACH = 60  # characters before a day count that can make it a delay
 DASHES = re.compile("[‐-–−]")
 
 
@@ -98,14 +103,19 @@ def wrong_deadlines(text: str) -> list[str]:
     """Deadlines other than four business days, or a denial that there is one.
 
     Only in a sentence that states a requirement and does not report what a company did: "Data I/O filed five days
-    after its ransomware event" describes a filing, not the rule.
+    after its ransomware event" describes a filing, not the rule. A day count right after a delay or an extension
+    ("the Attorney General can delay it by up to 30 days") is part of the rule, not another deadline.
     """
     wrong = [m.group(0) for m in DENIAL.finditer(text)]
     for sentence in sentences(text):
         if not REQUIREMENT.search(sentence) or OBSERVED.search(sentence):
             continue
         for pattern in (BUSINESS_DAYS, DAYS_DEADLINE):
-            wrong += [m.group(0) for m in pattern.finditer(sentence) if _number(m["n"]) != 4]
+            wrong += [
+                m.group(0)
+                for m in pattern.finditer(sentence)
+                if _number(m["n"]) != 4 and not DELAY.search(sentence[max(0, m.start() - DELAY_REACH) : m.start()])
+            ]
     return wrong
 
 

@@ -4,7 +4,7 @@
 
 import json
 import shutil
-from itertools import count
+import uuid
 from pathlib import Path
 
 import pytest
@@ -51,11 +51,18 @@ def repo(tmp_path: Path) -> Path:
 
 def deployment_routes(*, pack_id: str = "test-pack") -> dict:
     jobs: dict[str, str] = {}
-    ids = count(1)
 
     def submit(body, _headers):
-        job_id = f"job-{next(ids)}"
+        # As the API: the client's job id; the job's status and export routes exist from then on
+        job_id = body["job_id"]
+        if job_id in jobs:
+            return 409, {"detail": f"Job already exists: {job_id}"}
         jobs[job_id] = body["input"]
+        routes[("GET", f"/api/v1/jobs/async/job/{job_id}")] = ok({"job_id": job_id, "status": "success"})
+        routes[("GET", f"/api/v1/jobs/async/job/{job_id}/export")] = lambda _body, _headers: (
+            200,
+            market_turn(REPORTS[jobs[job_id]]),
+        )
         return 200, {"job_id": job_id, "status": "submitted"}
 
     def query(body, _headers):
@@ -73,13 +80,6 @@ def deployment_routes(*, pack_id: str = "test-pack") -> dict:
         ("POST", "/api/v1/data_sources/market_data/query"): query,
         ("POST", "/api/v1/jobs/async/submit"): submit,
     }
-    for n in range(1, 10):
-        job_id = f"job-{n}"
-        routes[("GET", f"/api/v1/jobs/async/job/{job_id}")] = ok({"job_id": job_id, "status": "success"})
-        routes[("GET", f"/api/v1/jobs/async/job/{job_id}/export")] = lambda _body, _headers, job_id=job_id: (
-            200,
-            market_turn(REPORTS[jobs[job_id]]),
-        )
     return routes
 
 
@@ -94,10 +94,11 @@ def test_a_run_asks_each_checked_question_scores_it_and_reports(repo, tmp_path, 
     [directory] = out.iterdir()
     assert directory.name.startswith("test-pack-")
     submitted = [body for method, path, body, _ in seen if path.endswith("/submit")]
-    assert submitted == [
+    assert [{key: value for key, value in body.items() if key != "job_id"} for body in submitted] == [
         {"input": "Who led?", "data_sources": ["market_data"]},
         {"input": "Who lagged?", "data_sources": ["market_data"]},
     ]
+    assert len({str(uuid.UUID(body["job_id"])) for body in submitted}) == 2  # each job's id, chosen by the client
     scores = {row["qid"]: row for row in json.loads((directory / "scores.json").read_text())}
     assert scores["leaders"]["det_pass"] is True  # Bee Corp is BBB's company name
     assert scores["laggards"]["det_pass"] is True
@@ -159,6 +160,24 @@ def test_an_unreachable_deployment_exits_69(repo, tmp_path, monkeypatch, capsys)
     monkeypatch.setattr("time.sleep", lambda _seconds: None)
     assert cli.main(["--repo", str(repo), "run", "--url", "http://127.0.0.1:9", "--out", str(tmp_path)]) == 69
     assert "did not answer" in capsys.readouterr().err
+
+
+def test_a_retried_submit_whose_first_try_was_accepted_starts_no_second_job(monkeypatch):
+    """The API took the first try but the proxy lost its answer (a 502): the retry gets a 409 for the same job id."""
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    jobs: list[str] = []
+
+    def submit(body, _headers):
+        if body["job_id"] in jobs:
+            return 409, {"detail": f"Job already exists: {body['job_id']}"}
+        jobs.append(body["job_id"])
+        return 502, {"detail": "Bad Gateway"}
+
+    with serve({("POST", "/api/v1/jobs/async/submit"): submit}) as (url, seen):
+        job_id = Deployment(url).submit("Who led?", ["market_data"])
+
+    assert jobs == [job_id]
+    assert [body["job_id"] for _, _, body, _ in seen] == [job_id, job_id]
 
 
 def test_a_job_past_its_wait_is_cancelled_and_reported_stalled():
