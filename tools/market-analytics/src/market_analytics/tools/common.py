@@ -1,6 +1,12 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""What every market tool returns, plus two small helpers they share."""
+"""What every market tool returns, plus the small helpers they share.
+
+`host`, `mean`, `population_std` and `rank` finish a tool on the host, in NumPy, once its rows are reduced to a
+few: on the GPU, each pandas call on a small frame costs more in fixed overhead (0.5 to 1.5 ms on an A100) than its
+arithmetic. They compute exactly what pandas computes (pandas.core.nanops, without bottleneck), so a CPU result is
+the same to the last bit as with the pandas calls they replace.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +14,7 @@ from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 
@@ -42,6 +49,46 @@ def period_start(timestamps: pd.Series, frequency: Frequency) -> pd.Series:
     if frequency == "monthly":
         return day - _days(day.dt.day - 1)
     return day
+
+
+def host(values: pd.Series | pd.Index) -> np.ndarray:
+    """A column as a plain NumPy array on the host: one copy from the GPU under cudf.pandas, whose own arrays would
+    send the NumPy work after it back through its proxy."""
+    return np.asarray(values.to_numpy())
+
+
+def mean(values: np.ndarray) -> float:
+    """Series.mean(): NaN skipped, the sum in float64 (pandas' nanmean)."""
+    missing = np.isnan(values) if values.dtype.kind == "f" else np.zeros(len(values), dtype=bool)
+    count = len(values) - int(missing.sum())
+    if count == 0:
+        return np.nan
+    total = np.where(missing, 0, values).sum(dtype=np.float64) if missing.any() else values.sum(dtype=np.float64)
+    return total / np.float64(count)
+
+
+def population_std(values: np.ndarray) -> float:
+    """Series.std(ddof=0): NaN skipped, two passes in float64 (pandas' nanvar, then its square root)."""
+    values = values.astype(np.float64)
+    missing = np.isnan(values)
+    count = np.float64(len(values) - int(missing.sum()))
+    if count <= 0:
+        return np.nan
+    if missing.any():
+        values = np.where(missing, 0.0, values)
+    average = values.sum(dtype=np.float64) / count
+    squares = (average - values) ** 2
+    if missing.any():
+        squares[missing] = 0.0
+    return np.sqrt(squares.sum(dtype=np.float64) / count)
+
+
+def rank(scores: np.ndarray, ids: np.ndarray, *, ascending: bool) -> np.ndarray:
+    """Positions ordered by score, then id, as DataFrame.sort_values([score, id], ascending=[ascending, True]) orders
+    rows: a missing score last either way."""
+    by_id = np.argsort(ids, kind="stable")
+    keys = scores[by_id] if ascending else -scores[by_id]
+    return by_id[np.argsort(keys, kind="stable")]
 
 
 def _days(counts: pd.Series) -> pd.Series:
