@@ -38,9 +38,10 @@ async def test_the_description_keeps_form_names_out_of_queries(server: MCPServer
         (tool,) = (await client.list_tools()).tools
 
     description = " ".join(tool.description.split())
-    assert "When you search filings, leave form names (8-K, 6-K)" in description and "cover page" in description
+    assert "When you search filings, write the query as one sentence the passage itself would contain" in description
+    assert "not as a list of keywords" in description
+    assert "Leave form names (8-K, 6-K)" in description and "cover page" in description
     assert "metadata gives its form and filing date" in description
-    assert "one sentence the passage itself would contain" in description and "not as a list of keywords" in description
     assert "for filings, no form names" in tool.input_schema["properties"]["query"]["description"]
 
 
