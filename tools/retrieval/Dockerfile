@@ -3,7 +3,7 @@
 #
 # One image, two commands: `serve` (default; MCP at :8120/mcp) and `ingest` (the retrieval-index one-shot).
 
-FROM python:3.12.14-slim-trixie@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f AS build
+FROM python:3.14.0-slim-trixie@sha256:0aecac02dc3d4c5dbb024b753af084cafe41f5416e02193f1ce345d671ec966e AS build
 COPY --from=ghcr.io/astral-sh/uv:0.12.20@sha256:100047e74f30778ab704942321a09750d6158739573ff58bf3924085cc6cd2d8 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /src
@@ -16,7 +16,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev --no-editable
 
-FROM python:3.12.14-slim-trixie@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+FROM python:3.14.0-slim-trixie@sha256:0aecac02dc3d4c5dbb024b753af084cafe41f5416e02193f1ce345d671ec966e
 RUN useradd --uid 1000 --user-group --no-create-home --shell /usr/sbin/nologin retrieval
 COPY --from=build /opt/venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 NVIDIA_USAGE_TELEMETRY_ENABLED=false
