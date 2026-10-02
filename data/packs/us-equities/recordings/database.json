@@ -543,7 +543,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 716
+          "duration_ms": 693
         },
         "assets": {
           "table": "assets",
@@ -710,7 +710,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 693
+          "duration_ms": 717
         },
         "daily_prices": {
           "table": "daily_prices",
@@ -857,7 +857,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 699
+          "duration_ms": 703
         },
         "ticker_history": {
           "table": "ticker_history",
@@ -934,7 +934,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 708
+          "duration_ms": 693
         },
         "trading_sessions": {
           "table": "trading_sessions",
@@ -1001,7 +1001,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 720
+          "duration_ms": 695
         },
         "prediction.asset_entities": {
           "table": "prediction.asset_entities",
@@ -1078,7 +1078,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 703
+          "duration_ms": 699
         },
         "prediction.price_events": {
           "table": "prediction.price_events",
@@ -1165,7 +1165,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 716
+          "duration_ms": 714
         },
         "prediction.return_outcomes": {
           "table": "prediction.return_outcomes",
@@ -1252,7 +1252,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 732
+          "duration_ms": 724
         },
         "prediction.top_50_population": {
           "table": "prediction.top_50_population",
@@ -1289,24 +1289,10 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 705
+          "duration_ms": 668
         }
       },
       "queries": [
-        {
-          "sql": "SELECT a.company_name FROM us_equities.main.assets AS a WHERE a.cik > '9999999999' AND a.first_session BETWEEN DATE '2025-01-01' AND DATE '2026-03-31';",
-          "result": {
-            "columns": [
-              "company_name"
-            ],
-            "types": [
-              "VARCHAR"
-            ],
-            "rows": [],
-            "truncated": false,
-            "duration_ms": 686
-          }
-        },
         {
           "sql": "SELECT a.exchange, COUNT(*) AS total_stocks, SUM(CASE WHEN a.liquidity_rank <= 500 THEN 1 ELSE 0 END) AS top_500_count, SUM(CASE WHEN a.liquidity_rank <= 50 THEN 1 ELSE 0 END) AS top_50_count FROM us_equities.main.assets AS a GROUP BY a.exchange ORDER BY a.exchange;",
           "result": {
@@ -1349,7 +1335,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 684
+            "duration_ms": 701
           }
         },
         {
@@ -1386,7 +1372,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 699
+            "duration_ms": 705
           }
         },
         {
@@ -1455,7 +1441,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 698
+            "duration_ms": 694
           }
         },
         {
@@ -1524,7 +1510,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 679
+            "duration_ms": 716
           }
         },
         {
@@ -1605,7 +1591,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 731
+            "duration_ms": 719
           }
         },
         {
@@ -1629,14 +1615,635 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 725
+            "duration_ms": 689
           }
         },
         {
-          "sql": "WITH price_range AS (SELECT asset_id, MIN(trading_date) AS start_date, MAX(trading_date) AS end_date FROM daily_prices WHERE trading_date BETWEEN DATE '2026-01-02' AND DATE '2026-03-12' GROUP BY asset_id), returns AS (SELECT a.asset_id, a.sector, (end_close.close - start_close.close) / NULLIF(start_close.close, 0) AS ret FROM price_range pr JOIN assets a ON a.asset_id = pr.asset_id JOIN daily_prices start_close ON start_close.asset_id = pr.asset_id AND start_close.trading_date = pr.start_date JOIN daily_prices end_close ON end_close.asset_id = pr.asset_id AND end_close.trading_date = pr.end_date) SELECT sector, COUNT(DISTINCT asset_id) AS stock_count, percentile_cont(0.5) WITHIN GROUP (ORDER BY ret) AS median_return FROM returns GROUP BY sector ORDER BY sector;",
+          "sql": "WITH params AS (SELECT (SELECT max(trading_date) FROM us_equities.main.trading_sessions WHERE trading_date < DATE '2026-01-02') AS start_date, (SELECT max(trading_date) FROM us_equities.main.trading_sessions WHERE trading_date <= DATE '2026-03-12') AS end_date), start_prices AS (SELECT dp.asset_id, dp.adjusted_close AS start_adj FROM us_equities.main.daily_prices dp JOIN params p ON dp.trading_date = p.start_date), end_prices AS (SELECT dp.asset_id, dp.adjusted_close AS end_adj FROM us_equities.main.daily_prices dp JOIN params p ON dp.trading_date = p.end_date), returns AS (SELECT a.asset_id, a.sic_code, a.sector, (ep.end_adj / sp.start_adj) - 1.0 AS ret FROM us_equities.main.assets a JOIN start_prices sp ON a.asset_id = sp.asset_id JOIN end_prices ep ON a.asset_id = ep.asset_id) SELECT sic_code, sector AS division_name, COUNT(DISTINCT asset_id) AS stock_count, median(ret) AS median_return FROM returns GROUP BY sic_code, sector ORDER BY sic_code;",
           "result": {
             "columns": [
-              "sector",
+              "sic_code",
+              "division_name",
+              "stock_count",
+              "median_return"
+            ],
+            "types": [
+              "VARCHAR",
+              "VARCHAR",
+              "BIGINT",
+              "DOUBLE"
+            ],
+            "rows": [
+              [
+                "",
+                "Nonclassifiable",
+                84,
+                -0.03435647355802829
+              ],
+              [
+                "0000",
+                "Nonclassifiable",
+                3,
+                -0.0190217391304347
+              ],
+              [
+                "0100",
+                "Agriculture, Forestry and Fishing",
+                5,
+                0.18215724302551095
+              ],
+              [
+                "0200",
+                "Agriculture, Forestry and Fishing",
+                1,
+                0.12027145909262305
+              ],
+              [
+                "0700",
+                "Agriculture, Forestry and Fishing",
+                3,
+                -0.08050513022888706
+              ],
+              [
+                "0900",
+                "Agriculture, Forestry and Fishing",
+                1,
+                0.032258064516129004
+              ],
+              [
+                "1000",
+                "Mining",
+                10,
+                0.19212058512914776
+              ],
+              [
+                "1040",
+                "Mining",
+                15,
+                0.13433858807402332
+              ],
+              [
+                "1090",
+                "Mining",
+                2,
+                0.3838829092624445
+              ],
+              [
+                "1220",
+                "Mining",
+                2,
+                0.22239194769317117
+              ],
+              [
+                "1221",
+                "Mining",
+                3,
+                0.18209212225570393
+              ],
+              [
+                "1311",
+                "Mining",
+                22,
+                0.26630884981360103
+              ],
+              [
+                "1381",
+                "Mining",
+                2,
+                0.24884189015817892
+              ],
+              [
+                "1389",
+                "Mining",
+                4,
+                0.19826767259865252
+              ],
+              [
+                "1400",
+                "Mining",
+                3,
+                0.1568228105906313
+              ],
+              [
+                "1531",
+                "Construction",
+                4,
+                -0.034889245452566164
+              ],
+              [
+                "1600",
+                "Construction",
+                1,
+                0.2456575682382134
+              ],
+              [
+                "1700",
+                "Construction",
+                5,
+                -0.10276544895868889
+              ],
+              [
+                "2000",
+                "Manufacturing",
+                9,
+                -0.06585788561525108
+              ],
+              [
+                "2013",
+                "Manufacturing",
+                1,
+                -0.03974358974358971
+              ],
+              [
+                "2040",
+                "Manufacturing",
+                1,
+                -0.1305530371713508
+              ],
+              [
+                "2070",
+                "Manufacturing",
+                4,
+                0.4886363693059921
+              ],
+              [
+                "2080",
+                "Manufacturing",
+                8,
+                -0.00490914452792518
+              ],
+              [
+                "2082",
+                "Manufacturing",
+                2,
+                0.017793052539654852
+              ],
+              [
+                "2086",
+                "Manufacturing",
+                4,
+                0.03944894921338771
+              ],
+              [
+                "2111",
+                "Manufacturing",
+                1,
+                0.057753444012716315
+              ],
+              [
+                "2211",
+                "Manufacturing",
+                2,
+                -0.08447754837139493
+              ],
+              [
+                "2221",
+                "Manufacturing",
+                1,
+                0.07810650887573956
+              ],
+              [
+                "2300",
+                "Manufacturing",
+                4,
+                0.032802740807000574
+              ],
+              [
+                "2320",
+                "Manufacturing",
+                1,
+                0.02759610783219002
+              ],
+              [
+                "2451",
+                "Manufacturing",
+                1,
+                -0.15595693536919797
+              ],
+              [
+                "2510",
+                "Manufacturing",
+                1,
+                0.27500000000000013
+              ],
+              [
+                "2511",
+                "Manufacturing",
+                1,
+                -0.16646778042959431
+              ],
+              [
+                "2631",
+                "Manufacturing",
+                1,
+                -0.22183908045977008
+              ],
+              [
+                "2650",
+                "Manufacturing",
+                1,
+                -0.027376589782280636
+              ],
+              [
+                "2670",
+                "Manufacturing",
+                2,
+                -0.24639610147228846
+              ],
+              [
+                "2711",
+                "Manufacturing",
+                1,
+                0.06712221948616914
+              ],
+              [
+                "2750",
+                "Manufacturing",
+                2,
+                0.24016444029527173
+              ],
+              [
+                "2780",
+                "Manufacturing",
+                2,
+                0.05227101640155174
+              ],
+              [
+                "2800",
+                "Manufacturing",
+                4,
+                0.08972415574528259
+              ],
+              [
+                "2810",
+                "Manufacturing",
+                1,
+                0.17593717107926476
+              ],
+              [
+                "2820",
+                "Manufacturing",
+                1,
+                0.4096499526963102
+              ],
+              [
+                "2821",
+                "Manufacturing",
+                5,
+                0.15872454751131215
+              ],
+              [
+                "2833",
+                "Manufacturing",
+                7,
+                -0.0880503144654089
+              ],
+              [
+                "2834",
+                "Manufacturing",
+                143,
+                -0.0391304347826088
+              ],
+              [
+                "2835",
+                "Manufacturing",
+                4,
+                -0.03443340455101751
+              ],
+              [
+                "2836",
+                "Manufacturing",
+                50,
+                -0.021861817352639368
+              ],
+              [
+                "2840",
+                "Manufacturing",
+                3,
+                0.18258795468097788
+              ],
+              [
+                "2842",
+                "Manufacturing",
+                1,
+                0.07834969751066168
+              ],
+              [
+                "2844",
+                "Manufacturing",
+                4,
+                -0.011794187724420313
+              ],
+              [
+                "2851",
+                "Manufacturing",
+                1,
+                -0.1377282575054164
+              ],
+              [
+                "2860",
+                "Manufacturing",
+                6,
+                0.49234239726862583
+              ],
+              [
+                "2870",
+                "Manufacturing",
+                4,
+                0.4255473553236745
+              ],
+              [
+                "2890",
+                "Manufacturing",
+                3,
+                0.03937839468919724
+              ],
+              [
+                "2891",
+                "Manufacturing",
+                1,
+                -0.12189554730351237
+              ],
+              [
+                "2911",
+                "Manufacturing",
+                10,
+                0.32074291005763855
+              ],
+              [
+                "3021",
+                "Manufacturing",
+                3,
+                -0.06887277829747429
+              ],
+              [
+                "3060",
+                "Manufacturing",
+                1,
+                0.07353217032451687
+              ],
+              [
+                "3089",
+                "Manufacturing",
+                4,
+                -0.042585227682239546
+              ],
+              [
+                "3100",
+                "Manufacturing",
+                1,
+                -0.25040983606557377
+              ],
+              [
+                "3140",
+                "Manufacturing",
+                2,
+                -0.1717065492322497
+              ],
+              [
+                "3231",
+                "Manufacturing",
+                1,
+                -0.08624004394397122
+              ],
+              [
+                "3241",
+                "Manufacturing",
+                4,
+                -0.052621490104889646
+              ],
+              [
+                "3260",
+                "Manufacturing",
+                1,
+                0.21359223300970887
+              ],
+              [
+                "3281",
+                "Manufacturing",
+                1,
+                -0.6289784946236558
+              ],
+              [
+                "3312",
+                "Manufacturing",
+                3,
+                -0.09999999999999998
+              ],
+              [
+                "3317",
+                "Manufacturing",
+                1,
+                0.27309166957127906
+              ],
+              [
+                "3334",
+                "Manufacturing",
+                2,
+                0.35672109059967194
+              ],
+              [
+                "3341",
+                "Manufacturing",
+                2,
+                0.16475464190981437
+              ],
+              [
+                "3357",
+                "Manufacturing",
+                2,
+                -0.0892326367257999
+              ],
+              [
+                "3360",
+                "Manufacturing",
+                1,
+                -0.20671378091872794
+              ],
+              [
+                "3390",
+                "Manufacturing",
+                1,
+                -0.27428998505231683
+              ],
+              [
+                "3411",
+                "Manufacturing",
+                3,
+                0.011265417111780085
+              ],
+              [
+                "3420",
+                "Manufacturing",
+                2,
+                0.05140463300269493
+              ],
+              [
+                "3433",
+                "Manufacturing",
+                1,
+                1.0615141955835963
+              ],
+              [
+                "3440",
+                "Manufacturing",
+                1,
+                0.007618510158013514
+              ],
+              [
+                "3470",
+                "Manufacturing",
+                1,
+                0.1349132300802387
+              ],
+              [
+                "3480",
+                "Manufacturing",
+                1,
+                -0.12066627929498353
+              ],
+              [
+                "3490",
+                "Manufacturing",
+                4,
+                -0.20108853586525532
+              ],
+              [
+                "3510",
+                "Manufacturing",
+                4,
+                0.09998400361398407
+              ],
+              [
+                "3523",
+                "Manufacturing",
+                4,
+                0.08132126061340206
+              ],
+              [
+                "3530",
+                "Manufacturing",
+                1,
+                0.043843474697807805
+              ],
+              [
+                "3531",
+                "Manufacturing",
+                5,
+                0.1659436008676789
+              ],
+              [
+                "3533",
+                "Manufacturing",
+                2,
+                0.03978389307347463
+              ],
+              [
+                "3540",
+                "Manufacturing",
+                1,
+                -0.024442846872753443
+              ],
+              [
+                "3559",
+                "Manufacturing",
+                7,
+                0.060243963156584535
+              ],
+              [
+                "3561",
+                "Manufacturing",
+                1,
+                0.6491557223264539
+              ],
+              [
+                "3564",
+                "Manufacturing",
+                2,
+                -0.05596562464134619
+              ],
+              [
+                "3569",
+                "Manufacturing",
+                2,
+                -0.0909636255936066
+              ],
+              [
+                "3570",
+                "Manufacturing",
+                1,
+                -0.16343134938050696
+              ],
+              [
+                "3571",
+                "Manufacturing",
+                2,
+                0.06544463705612519
+              ],
+              [
+                "3576",
+                "Manufacturing",
+                7,
+                0.022895520109898593
+              ],
+              [
+                "3577",
+                "Manufacturing",
+                2,
+                -0.10706660096903997
+              ],
+              [
+                "3578",
+                "Manufacturing",
+                1,
+                0.07806746207099713
+              ],
+              [
+                "3580",
+                "Manufacturing",
+                1,
+                -0.06339066339066357
+              ],
+              [
+                "3585",
+                "Manufacturing",
+                3,
+                0.06907645722937161
+              ],
+              [
+                "3590",
+                "Manufacturing",
+                1,
+                0.23404139532352564
+              ],
+              [
+                "3600",
+                "Manufacturing",
+                1,
+                -0.007109697107424595
+              ],
+              [
+                "3620",
+                "Manufacturing",
+                2,
+                0.384875062582495
+              ],
+              [
+                "3621",
+                "Manufacturing",
+                1,
+                0.01667824878387769
+              ]
+            ],
+            "truncated": true,
+            "duration_ms": 720
+          }
+        },
+        {
+          "sql": "WITH start_prices AS (SELECT dp.asset_id, dp.adjusted_close AS start_price FROM us_equities.main.daily_prices dp WHERE dp.trading_date = (SELECT MAX(trading_date) FROM us_equities.main.daily_prices dp2 WHERE dp2.asset_id = dp.asset_id AND dp2.trading_date < DATE '2026-01-02')), end_prices AS (SELECT dp.asset_id, dp.adjusted_close AS end_price FROM us_equities.main.daily_prices dp WHERE dp.trading_date = (SELECT MAX(trading_date) FROM us_equities.main.daily_prices dp2 WHERE dp2.asset_id = dp.asset_id AND dp2.trading_date <= DATE '2026-03-12')), returns AS (SELECT a.asset_id, a.sector, (ep.end_price - sp.start_price) / NULLIF(sp.start_price, 0) AS ret FROM us_equities.main.assets a JOIN start_prices sp ON a.asset_id = sp.asset_id JOIN end_prices ep ON a.asset_id = ep.asset_id) SELECT sector AS division_name, COUNT(*) AS stock_count, median(ret) AS median_return FROM returns GROUP BY sector ORDER BY sector;",
+          "result": {
+            "columns": [
+              "division_name",
               "stock_count",
               "median_return"
             ],
@@ -1649,56 +2256,56 @@
               [
                 "Agriculture, Forestry and Fishing",
                 10,
-                0.09385922572022168
+                0.090921875780506
               ],
               [
                 "Construction",
                 10,
-                -0.033015681654140344
+                -0.03488924545256619
               ],
               [
                 "Finance, Insurance and Real Estate",
-                361,
-                -0.014925373134328334
+                352,
+                -0.015411769421646525
               ],
               [
                 "Manufacturing",
-                579,
-                -0.02105652013298856
+                575,
+                -0.012151536812008572
               ],
               [
                 "Mining",
-                64,
-                0.1744179234645336
+                63,
+                0.20840787119856888
               ],
               [
                 "Nonclassifiable",
                 89,
-                -0.033955857385398865
+                -0.03370013755158174
               ],
               [
                 "Retail Trade",
-                83,
-                -0.05066766504430304
+                81,
+                -0.04048940464177608
               ],
               [
                 "Services",
                 264,
-                -0.13412223575298704
+                -0.12499463123255432
               ],
               [
                 "Transportation, Communications and Utilities",
                 99,
-                0.0357142857142857
+                0.038095238095238126
               ],
               [
                 "Wholesale Trade",
-                40,
-                0.02090937259124174
+                39,
+                0.01971608832807571
               ]
             ],
             "truncated": false,
-            "duration_ms": 731
+            "duration_ms": 829
           }
         },
         {
@@ -1896,7 +2503,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 681
+            "duration_ms": 677
           }
         },
         {
@@ -2337,7 +2944,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 692
+            "duration_ms": 674
           }
         },
         {
@@ -2724,7 +3331,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 740
+            "duration_ms": 686
           }
         },
         {
@@ -2922,7 +3529,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 688
+            "duration_ms": 687
           }
         },
         {
@@ -3093,7 +3700,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 716
+            "duration_ms": 698
           }
         },
         {
@@ -3291,7 +3898,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 701
+            "duration_ms": 682
           }
         },
         {
@@ -3516,7 +4123,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 720
+            "duration_ms": 728
           }
         },
         {
@@ -3741,7 +4348,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 730
+            "duration_ms": 742
           }
         },
         {
@@ -3831,7 +4438,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 697
+            "duration_ms": 678
           }
         }
       ]

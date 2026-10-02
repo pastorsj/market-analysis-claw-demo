@@ -4,7 +4,7 @@
     "id": "us-equities",
     "version": "0.1.0"
   },
-  "recordedAt": "2026-10-01T22:01:19.914233Z",
+  "recordedAt": "2026-10-02T00:55:00.666741Z",
   "sessions": [
     {
       "id": "market-leaders",
@@ -106,7 +106,7 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "4fe9dda9-4b1c-45f5-9228-12dc9c23a18d",
+          "jobId": "541cbc4d-3f9e-4366-85cf-4b8c8c3f8fb2",
           "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05."
         }
       ],
@@ -153,7 +153,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "bda8305f-0d82-457d-afc4-a09e816ab9a3",
+          "jobId": "f5c29bdd-94f0-40d8-9006-8256e1792a95",
           "question": "Across the 500 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2 to March 12, 2026, and how unusual was their trading volume?"
         }
       ],
@@ -193,7 +193,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "296fde25-7cda-46b4-9695-657b05286ddf",
+          "jobId": "1b2d590a-d4ae-427a-b234-51d55d4de78f",
           "question": "How many stocks are in each SIC division, and what was each division's median return from January 2 to March 12, 2026?"
         }
       ],
@@ -501,7 +501,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "92734381-96dc-4884-b6db-c4dbc0cbd267",
+          "jobId": "1e389487-8d46-4cf3-a4da-0a454623d9af",
           "question": "Which companies filed 8-Ks under Item 5.02 about executive or director changes in January and February 2026? Summarize three of them, and cite the filings."
         }
       ],
@@ -521,7 +521,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "c9ecf677-8432-499b-8c90-df33196904e2",
+          "jobId": "12556f9f-40c2-4185-8e20-39675429b223",
           "question": "Which 8-K filings from February and March 2026 report entering into or terminating a material definitive agreement under Item 1.01 or 1.02? Summarize three of the agreements, and cite the filings."
         }
       ],
@@ -541,7 +541,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "de8ae3fe-b674-4fe4-847e-8d5d6ba4bf49",
+          "jobId": "ba7ac84a-f01b-4479-aff5-37a3c26009b4",
           "question": "Which companies disclosed exit or restructuring costs under 8-K Item 2.05, and what charges did each expect? Cite the filings."
         }
       ],
@@ -621,7 +621,7 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "6455287c-39cb-41f6-8745-b061d58ce4f7",
+          "jobId": "74846beb-c3c6-4416-b377-af3dfa0a4a86",
           "question": "How did NVIDIA (NVDA) trade from February 2 through March 12, 2026? Separately, what did its 8-K filings in that period disclose? Report the prices and the filings apart, and do not claim that a filing caused a move."
         }
       ],
@@ -771,11 +771,11 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "4d830706-be39-41e8-a908-02093d11b329",
+          "jobId": "153311bf-f6f8-4517-8e2e-6884551a9add",
           "question": "Which 8-K filings in the corpus report a cybersecurity incident under Item 1.05? Select two examples with materially different disclosed impacts, and cite the filings."
         },
         {
-          "jobId": "123a1f1a-f144-43c5-84ff-9ec40846b948",
+          "jobId": "f78103d6-522f-4ccb-b411-96fa3090b93e",
           "question": "For those same two examples, compare the disclosed facts with the Title 17 cybersecurity incident disclosure requirements, and identify what the evidence does not establish."
         }
       ],
@@ -1059,11 +1059,11 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "332cddeb-66ff-4790-ac86-9e06f8b162ca",
+          "jobId": "adcabd03-4919-45b8-92dc-f1b0c6f3779c",
           "question": "Which companies reported a material cybersecurity incident on Form 8-K under Item 1.05, and when did each file? Cite the filings."
         },
         {
-          "jobId": "c8bb59a4-ad31-43fd-81d7-cc732c7e99ec",
+          "jobId": "56224920-3e69-4564-8066-8dbcfdeee7ed",
           "question": "How did each of those companies' stocks trade over the five sessions after its filing? Report the prices separately from the filings, and do not claim that a filing caused a move."
         }
       ],
@@ -1080,13 +1080,6 @@
           "device": null,
           "tools": [
             "retrieve_evidence"
-          ]
-        },
-        {
-          "pill": "ontology",
-          "device": null,
-          "tools": [
-            "ask_question"
           ]
         }
       ]

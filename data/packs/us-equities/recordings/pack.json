@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "build": "us-equities@0.1.0+default+0ecbb18e2095",
+  "build": "us-equities@0.1.0+default+9ea0959d2977",
   "id": "us-equities",
   "version": "0.1.0",
   "title": "US Equities",
@@ -49,6 +49,17 @@
       "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-08-17/title-17.xml",
       "as_of": "2026-08-17",
       "retrieved_on": "2026-09-22"
+    },
+    {
+      "id": "federal-register-2023-16194",
+      "title": "SEC final rule, Cybersecurity Risk Management, Strategy, Governance, and Incident Disclosure (88 FR 51896), Federal Register XML",
+      "kind": "download",
+      "synthetic": false,
+      "license": "US-Government-Public-Information",
+      "url": "https://www.federalregister.gov/documents/full_text/xml/2023/08/04/2023-16194.xml",
+      "as_of": "2023-08-04",
+      "retrieved_on": "2026-10-01",
+      "notes": "The rule's summary and its appendices of amended form text: Form 8-K General Instruction B.1 and Item 1.05, Form 10-K Item 1C, Form 20-F Item 16K and Form S-3. The preamble's discussion is left out."
     },
     {
       "id": "sec-edgar-issuers",
@@ -100,8 +111,8 @@
     {
       "id": "market_regulations",
       "name": "Market Regulations",
-      "description": "Current public eCFR Title 17 sections retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
-      "agent_description": "Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities regulation research.",
+      "description": "Current public eCFR Title 17 sections and the SEC's 2023 cybersecurity disclosure rule, retrieved from Milvus with NVIDIA Nemotron Embed and Rerank.",
+      "agent_description": "Retrieve citation-ready sections from the reviewed eCFR Title 17 snapshot for securities and commodities regulation research, and the form text the SEC's 2023 cybersecurity disclosure rule adopted (Form 8-K Item 1.05 and its filing deadline, Form 10-K Item 1C), which the CFR does not hold.",
       "kind": "documents",
       "capabilities": [
         "unstructured_retrieval"
@@ -1035,20 +1046,20 @@
         "tables/daily_prices.parquet": "c1b9696ff2282abc7805583acadacc780d87391ca8aaf4b1565912079891d29e",
         "tables/ticker_history.parquet": "5e864a6ae70553621998e5a11ec0ceb7e29f3161c2b771f15265b194764eb749",
         "tables/trading_sessions.parquet": "b3e2723efa4f9c3f20d4a0440f12c7612d9207cf41507ded2e3e4e45f34dde99",
-        "structured/us_equities.duckdb": "6ef2718e6b687eb52d0664461d3b12bc7a0fe7cde7af4cf538f7448b8390d98a",
-        "ontology/model.yaml": "8f231603ef529199f5ef9f9b7faff60e6846d8681b1bd03fec79acc9e6cc338d",
+        "structured/us_equities.duckdb": "f448a6ebfe35deaa335df64435d9beb3a06a0cf649879e331da8e328be692c52",
+        "ontology/model.yaml": "48f87c7ff5d36976e059573bccdcfff655858a472712a963526fb66bc6900544",
         "prediction/graph.json": "dc3fade0ea1a3174be0578449504fd4e4d77dcdcde4b9e6b1b030cc5393fc373",
         "prediction/templates.json": "16e4e4fc2c6197342f77e47bc3dafda40a6ab9e522ccaffd55d985ac3a27fdf1"
       }
     },
     "corpus": {
       "documents": {
-        "market_regulations": 3525,
+        "market_regulations": 3530,
         "sec_filings": 1887,
         "world_news": 8192
       },
       "files": {
-        "corpus/documents.jsonl": "e8e446704e1cffcff0ee8aad167625a07a714c6f0f75bff14e8a980353d61796"
+        "corpus/documents.jsonl": "441047db012886beab296f8aa0f4cd66bbfc4e3b4bdc4d9c10a329b06feebc4c"
       }
     }
   }
