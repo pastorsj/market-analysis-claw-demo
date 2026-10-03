@@ -442,7 +442,7 @@ measure_retrieval_indexes() {
   fi
 }
 
-# The retrieval-benchmark one-shot, with ARGS (e.g. `benchmark --again`), once the GPU Milvus is healthy.
+# The retrieval-benchmark one-shot, with ARGS (e.g. `benchmark --guard`), once the GPU Milvus is healthy.
 retrieval_benchmark() {
   dc up -d --wait milvus-gpu && dc run --rm --no-deps retrieval-benchmark "$@"
 }
@@ -528,8 +528,9 @@ test_live() {
 
 # test gpu [--perf]: on a host with an NVIDIA GPU, the CPU/GPU parity tests of market analytics (their RAPIDS venv
 # takes about 9 GB on the first run). --perf then measures the running analytics-gpu stack: the active pack's
-# eval/perf.yaml cases through market analytics' POST /benchmark, and the Milvus index comparison measured again,
-# each against its floor (eval/README.md). On a host without a GPU it skips, and succeeds.
+# eval/perf.yaml cases through market analytics' POST /benchmark, and the Milvus index comparison measured again into
+# the guard's own file, each against its floor (eval/README.md). It changes nothing the deployment serves: the
+# Benchmark tab keeps the comparison measured at `up`. On a host without a GPU it skips, and succeeds.
 test_gpu() {
   local perf=false
   case "$*" in
@@ -551,7 +552,8 @@ test_gpu() {
 }
 
 # The GPU guard on the running stack. Its inputs are copied out of the demo-data volume: the active build's
-# pack.json (which pack and profile) and the Milvus comparison, measured again first with `benchmark --again`.
+# pack.json (which pack and profile) and the Milvus comparison, measured again first with `benchmark --guard` into
+# retrieval-benchmark-guard.json. The API serves retrieval-benchmark.json, which only measure_retrieval_indexes writes.
 gpu_perf() {
   local work since status=0 retrieval=(--no-retrieval)
   load_env
@@ -564,12 +566,12 @@ gpu_perf() {
   work=$(mktemp -d)
   dc exec -T api cat /data/active/pack.json >"$work/pack.json"
   if has_profile retrieval; then
-    log "measuring the Milvus CPU index and its GPU copy again"
+    log "measuring the Milvus CPU index and its GPU copy again, for this check only (the Benchmark tab keeps up's)"
     # The guard fails a comparison measured before this time: when measuring again fails, the file keeps an older one
     since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    retrieval_benchmark benchmark --again ||
+    retrieval_benchmark benchmark --guard ||
       warn "measuring the Milvus comparison again failed: ./scripts/demo.sh logs retrieval-benchmark milvus-gpu"
-    dc exec -T api cat /data/active/retrieval-benchmark.json >"$work/retrieval.json" 2>/dev/null || true
+    dc exec -T api cat /data/active/retrieval-benchmark-guard.json >"$work/retrieval.json" 2>/dev/null || true
     retrieval=(--retrieval-benchmark "$work/retrieval.json" --measured-since "$since")
   fi
   log "GPU guard: the active pack's cases against their floors"

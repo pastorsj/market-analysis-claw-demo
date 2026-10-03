@@ -132,10 +132,13 @@ stack, which needs `analytics-gpu` in `COMPOSE_PROFILES`:
   when the GPU engine is not RAPIDS (cudf.pandas, cuml.accel, nx-cugraph), or when the speedup, the median CPU time
   over the median GPU time on the tools' own compute timers, stays below its floor in two measurements.
 - **Milvus.** With the retrieval profile, the guard measures the index comparison again
-  (`demo-retrieval benchmark --again`, the CPU HNSW index against its `GPU_IVF_FLAT` copy) and fails a workload
-  profile whose recall and agreement gates fail or whose search-time ratio is below its floor. If measuring it again
-  fails, every profile fails: the file then still holds an earlier measurement, which `--measured-since` (the time
-  `demo.sh` started measuring) rejects.
+  (`demo-retrieval benchmark --guard`, the CPU HNSW index against its `GPU_IVF_FLAT` copy, from the build's own query
+  vectors) into `retrieval-benchmark-guard.json`, and fails a workload profile whose recall and agreement gates fail
+  or whose search-time ratio is below its floor; each row shows the recall and overlap it measured. The Benchmark tab
+  serves `retrieval-benchmark.json`, which only the one-shot of `up` and `data reindex` writes, so the guard never
+  changes it. If measuring again fails, every profile fails: the guard's file then still holds an earlier
+  measurement, which `--measured-since` (the time `demo.sh` started measuring) rejects. Why the recall gates no longer
+  move between runs: [retrieval](../docs/retrieval.md#why-recall-moved-between-runs).
 
 The cases are written for one build profile (`profile:` in `perf.yaml`); on another the market cases are skipped.
 It prints one row per case (CPU and GPU milliseconds, the speedup, the floor, the recorded speedups) and exits 1 if

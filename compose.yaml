@@ -348,8 +348,9 @@ services:
       data-corpus: { condition: service_completed_successfully }
 
   # analytics-gpu with retrieval: times the build's vector searches on `milvus` and on its copy in `milvus-gpu`, once
-  # per build, into /data/active/retrieval-benchmark.json for the API. demo.sh runs it once the stack is up, and no
-  # service depends on it: a GPU Milvus that never turns healthy leaves the comparison out, never the answers.
+  # per build, into /data/active/retrieval-benchmark.json for the API (`benchmark --guard`, the GPU guard, into its own
+  # file). demo.sh runs it once the stack is up, and no service depends on it: a GPU Milvus that never turns healthy
+  # leaves the comparison out, never the answers.
   retrieval-benchmark:
     <<: *retrieval
     profiles: [analytics-gpu]
@@ -358,7 +359,7 @@ services:
     environment:
       <<: *retrieval-env
       MILVUS_GPU_URI: http://milvus-gpu:19530
-    volumes: [demo-data:/data] # writes /data/active/retrieval-benchmark.json
+    volumes: [demo-data:/data] # writes its retrieval-benchmark files into /data/active
     depends_on:
       milvus-gpu: { condition: service_healthy }
       retrieval-index: { condition: service_completed_successfully, required: false } # not without retrieval

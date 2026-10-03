@@ -69,7 +69,11 @@ def main(argv: list[str] | None = None) -> int:
     guard = commands.add_parser("perf", help="the GPU performance guard (demo.sh test gpu --perf)")
     guard.add_argument("--analytics-url", default="http://127.0.0.1:3010", help="market analytics (GPU service)")
     guard.add_argument("--build", type=Path, required=True, help="the active build's pack.json")
-    guard.add_argument("--retrieval-benchmark", type=Path, help="the active build's retrieval-benchmark.json")
+    guard.add_argument(
+        "--retrieval-benchmark",
+        type=Path,
+        help="the Milvus comparison measured for the guard (retrieval-benchmark-guard.json of the active build)",
+    )
     guard.add_argument(
         "--measured-since",
         type=_utc_time,

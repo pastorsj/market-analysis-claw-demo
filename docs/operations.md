@@ -141,7 +141,8 @@ cyber-disclosure-rules   PASS    ok       ok         ok     ok      ok       ok 
 **The eval** and **the GPU guard** are described in [`eval/README.md`](../eval/README.md): what each checks, the
 grader's environment (it must be a frontier model), the run directory, the `answers.yaml` and `perf.yaml` formats,
 and how the GPU floors were set. `test gpu --perf` also measures the Milvus index comparison again
-(`retrieval-benchmark`), which the Benchmark tab then shows.
+(`retrieval-benchmark --guard`), into a file of its own: whatever it measures, the Benchmark tab keeps showing the
+comparison measured at `up` ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)).
 
 ## Disk
 
@@ -197,6 +198,7 @@ most of it embedding the corpus).
 | `SEC_USER_AGENT is empty` | Set it to a name and an email, or use `DATA_CORPORA=market_regulations` (skips the SEC download). `us-equities` also needs it for its SEC company data |
 | Milvus restarts or is unhealthy | Docker has less than 8 GiB of memory. Give it more, or drop the retrieval profile |
 | The Benchmark tab says Milvus runs its CPU index only, on a GPU host | The profiles lack `analytics-gpu` or `retrieval`, or `retrieval-benchmark` could not measure (`up` then warns, and stops a `milvus-gpu` that did not turn healthy): `./scripts/demo.sh logs retrieval-benchmark milvus-gpu`. `./scripts/demo.sh data reindex` measures again. If GPU memory is tight, lower the pool in `tools/retrieval/milvus/gpu.yaml`, or stop `milvus-gpu` once it has measured: the comparison stays, and answers never use it |
+| The Benchmark tab's Milvus row says its quality gate did not pass | The comparison measured at `up` missed a recall or agreement gate; `up`'s output lists each profile's recall and overlap. It searches the build's own query vectors, so measuring that build again gives the same recall. `test gpu --perf` measures into a file of its own and never changes the tab |
 | `sandbox hermes is not Ready after 180s` | The sandbox's recent log is printed just before it. Check the Docker host kernel (Linux 6.2+ with Landlock) and `./scripts/demo.sh logs openshell-preflight openshell` |
 | `hermes-gateway` never turns healthy | The sandbox is not Ready, or `HERMES_API_SERVER_KEY` is shorter than 16 characters (run `init`) |
 | A tool call fails while the sandbox is Ready | `./scripts/demo.sh check`, then `./scripts/demo.sh logs agent`: `DENIED` lines name the binary, host and reason |
