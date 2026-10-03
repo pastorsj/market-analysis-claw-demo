@@ -107,7 +107,8 @@ The e2e tests start servers from the build: live mode against
 and replay mode on each pack's committed recordings in `../data/packs` (a pack without a
 recordings bundle is skipped). Every recorded session must replay without calling the API: its
 Recorded list entry with the tool pills its runs used, and for each turn the question, the answer,
-its cited sources and its run down to the closing events. The fake API offers the default pack's six featured questions.
+its cited sources and its run down to the closing events. The fake API offers the default pack's six featured questions
+and three more; seven of them are the picker's examples, more than the five rows it shows.
 It needs `npx playwright install chromium` once; on Linux, `npx playwright install --with-deps chromium`,
 which also installs Chromium's system libraries with apt (sudo), as CI and `demo.sh test e2e` do.
 

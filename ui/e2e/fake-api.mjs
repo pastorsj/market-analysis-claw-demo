@@ -3,8 +3,8 @@
 
 /**
  * A stand-in for the demo API, just enough for the live-mode smoke test:
- * the pack, its data sources, a job whose stream answers immediately, and a
- * transcription of any WAV recording.
+ * the pack and its examples, its data sources, a job whose stream answers
+ * immediately, and a transcription of any WAV recording.
  * Usage: FAKE_API_PORT=3990 node e2e/fake-api.mjs
  */
 
@@ -71,6 +71,45 @@ const PACK = {
       tools: ['cudf', 'retrieval'],
       featured: true,
     },
+    // Three more, so the composer's example picker has more than its five rows to show
+    {
+      id: 'outcome-prediction',
+      label: 'Five-Session Outlook',
+      question:
+        'Which of the most liquid issuers is Kumo most confident will rise over the next five sessions?',
+      sources: ['market_data'],
+      tools: ['kumo'],
+      featured: false,
+    },
+    {
+      id: 'sector-sql',
+      label: 'Sector Breakdown',
+      question:
+        'How many issuers does each sector have, and what was its median daily return in August 2026?',
+      sources: ['market_data'],
+      tools: ['ontology'],
+      featured: false,
+    },
+    {
+      id: 'volatility-ranking',
+      label: 'Volatility Ranking',
+      question: 'Which issuers were the most volatile in August 2026?',
+      sources: ['market_data'],
+      tools: ['cudf'],
+      featured: false,
+    },
+  ],
+  // The picker's questions, in its order: not volatility-ranking, and cyber-disclosure-rules needs a
+  // source this API does not offer
+  examples: [
+    'unusual-sessions',
+    'outcome-prediction',
+    'peer-network',
+    'sector-sql',
+    'cyber-disclosure-rules',
+    'market-leaders',
+    'news-and-filings',
+    'news-sentiment-reaction',
   ],
 }
 

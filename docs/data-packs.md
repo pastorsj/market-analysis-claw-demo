@@ -112,6 +112,16 @@ analytics question has an oracle in `eval/oracles/`, and `eval/retrieval.yaml` n
 answer should cite. `eval/answers.yaml` holds the answer checks of `demo.sh eval`, and `eval/perf.yaml` the GPU
 guard's cases ([eval](../eval/README.md)).
 
+`examples` in `questions.yaml` lists, in order, the questions the composer's "Choose an example" picker offers:
+at most 12, every featured question among them, and together declaring every tool the pack's questions declare
+(`data validate` checks all three). The picker shows five rows and scrolls for the rest, so the first five
+should show the widest mix of tools. A build offers the examples it serves (their sources built, their profiles
+matching), and `GET /v1/pack` those whose sources the running tools serve. A pack without the list offers its
+featured questions, then the others, up to 12. Every question stays in the pack for the landing page links, `record`
+and `eval`, whether or not it is an example. `us-equities` lists its six featured questions and one question for
+each tool and source they leave out (Kumo, Auto Ontology, the whole-market scan, regulations, NVIDIA's prices beside
+its filings, world headlines); `synthetic-market` lists all eleven.
+
 `questions.yaml` can also hold `conversations`: two to six turns asked in order in one conversation, so a later
 turn can refer to an earlier answer ("For those same two examples, ..."). They follow the same source and profile
 rules, share the questions' ids, are not listed in the UI, and are recorded by `record --all`, each as one replay

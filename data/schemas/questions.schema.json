@@ -7,6 +7,14 @@
   "required": ["schema_version", "questions"],
   "properties": {
     "schema_version": { "const": "1" },
+    "examples": {
+      "description": "The composer's example picker: these questions, in this order. Every featured question is among them, and together they declare every tool the pack's questions declare. Without it, the picker offers the featured questions, then the others, up to 12.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }
+    },
     "questions": {
       "type": "array",
       "minItems": 1,

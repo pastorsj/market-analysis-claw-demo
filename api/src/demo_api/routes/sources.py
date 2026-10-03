@@ -29,6 +29,7 @@ from demo_api.database.query import run_query
 from demo_api.database.schema import governed_columns
 from demo_api.database.schema import read_schema
 from demo_api.pack import PackUnavailableError
+from demo_api.pack import PackView
 from demo_api.pack import Source
 from demo_api.services import Services
 from demo_api.services import ServicesDep
@@ -41,8 +42,8 @@ class QueryRequest(BaseModel):
 
 
 @router.get("/pack")
-async def pack(services: ServicesDep) -> dict[str, Any]:
-    """Title, disclaimer and demo questions of the active data pack."""
+async def pack(services: ServicesDep) -> PackView:
+    """Title, disclaimer, demo questions and the example picker's questions of the active data pack."""
     try:
         return services.pack.public_view()
     except PackUnavailableError as error:

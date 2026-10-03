@@ -4,9 +4,10 @@
 /**
  * Data Pack Client (server-side)
  *
- * Reads the active data pack's public view (`GET /v1/pack`): its title,
- * disclaimer and demo questions. Used by server components, so it calls the
- * API directly at `API_URL` instead of going through the browser proxy.
+ * Reads the active data pack's public view (`GET /v1/pack`, the generated
+ * `PackView` contract): its title, disclaimer, demo questions and the examples
+ * of the composer's picker. Used by server components, so it calls the API
+ * directly at `API_URL` instead of going through the browser proxy.
  */
 
 import { z } from 'zod'
@@ -27,11 +28,14 @@ const PackQuestionSchema = z.object({
   featured: z.boolean().default(false),
 })
 
-const PackSchema = z.object({
+/** `PackView` (`@/generated/pack`) as the UI reads it; its spec checks that it accepts every view. */
+export const PackSchema = z.object({
   id: z.string(),
   title: z.string(),
   disclaimer: z.string().nullish(),
   questions: z.array(PackQuestionSchema),
+  /** The ids of the questions the composer's example picker offers, in order (none from an older API) */
+  examples: z.array(z.string()).nullish(),
 })
 
 export type PackQuestion = z.infer<typeof PackQuestionSchema>

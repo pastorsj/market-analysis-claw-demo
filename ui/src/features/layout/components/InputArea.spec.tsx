@@ -22,11 +22,34 @@ vi.mock('@/features/speech-input/browser-recorder', () => ({
 
 const VOICE = { speechInput: { enabled: true, maxSeconds: 60 } }
 
+/** Eight examples, more than the five rows the picker shows */
+const EXAMPLES = Array.from({ length: 8 }, (_, i) => ({
+  id: `example-${i + 1}`,
+  label: `Example ${i + 1}`,
+  tools: ['cudf' as const],
+  description: `Example question ${i + 1}`,
+  question: `Example question ${i + 1}?`,
+  sourceIds: ['market_analysis_structured'],
+}))
+const ROW_HEIGHT = 32
+
+/** Lays the picker's options out in rows of ROW_HEIGHT px (happy-dom has no layout). */
+const layOutOptions = () =>
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+    this: HTMLElement
+  ) {
+    const row = [...document.querySelectorAll('[role="option"]')].indexOf(this)
+    return row < 0
+      ? new DOMRect(0, 0, 0, 0)
+      : new DOMRect(0, 700 + row * ROW_HEIGHT, 380, ROW_HEIGHT)
+  })
+
 const initialChat = useChatStore.getState()
 const initialLayout = useLayoutStore.getState()
 
 describe('InputArea', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     useChatStore.setState(initialChat, true)
     useChatStore.getState().setCurrentUser('local')
@@ -52,6 +75,43 @@ describe('InputArea', () => {
     expect(hermes.sendMessage).toHaveBeenCalledWith('Which assets led?')
     expect(input).toHaveValue('')
     expect(useChatStore.getState().currentConversation).not.toBeNull()
+  })
+
+  test('the example picker shows five rows and scrolls for the rest', async () => {
+    layOutOptions()
+    render(<InputArea scenarios={EXAMPLES} />)
+
+    await userEvent.click(screen.getByTestId('demo-scenario-select'))
+    const list = await screen.findByTestId('demo-scenario-list')
+    expect(
+      screen.getAllByRole('option').map((option) => option.getAttribute('data-scenario-id'))
+    ).toEqual(EXAMPLES.map((example) => example.id))
+    // Exactly five rows tall, measured from the rows, and never taller than the space it has
+    await vi.waitFor(() =>
+      expect(list.style.maxHeight).toBe(`min(${5 * ROW_HEIGHT}px, var(--max-height))`)
+    )
+  })
+
+  test('the example picker scrolls the active row into view as the keyboard moves', async () => {
+    const scrolled: Array<string | null> = []
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(function (
+      this: HTMLElement
+    ) {
+      scrolled.push(this.getAttribute('data-scenario-id'))
+    })
+    render(<InputArea scenarios={EXAMPLES} />)
+
+    await userEvent.click(screen.getByTestId('demo-scenario-select'))
+    await screen.findByTestId('demo-scenario-list')
+    // Down to the sixth row, past the five the list shows: it scrolls into view, then the seventh
+    await userEvent.keyboard('{ArrowDown}'.repeat(6))
+    await vi.waitFor(() => expect(scrolled.at(-1)).toBe('example-6'))
+    await userEvent.keyboard('{ArrowDown}')
+    await vi.waitFor(() => expect(scrolled.at(-1)).toBe('example-7'))
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toHaveValue(
+      'Example question 7?'
+    )
   })
 
   test('disables sending an empty question', () => {

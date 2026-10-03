@@ -5,10 +5,14 @@
 
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 import yaml
+from jsonschema import Draft202012Validator
 from pydantic import SecretStr
+from support import REPO
 
 STRUCTURED = "/v1/data_sources/market_analysis_structured"
 
@@ -17,10 +21,48 @@ async def test_pack_lists_questions_the_running_sources_can_answer(api, data_dir
     pack = (await api.get("/v1/pack")).json()
     assert (pack["id"], pack["title"]) == ("market-analysis", "Synthetic Multi-Asset Market Analysis")
     assert [(q["id"], q["featured"]) for q in pack["questions"]] == [("market-leaders", True), ("filings", False)]
+    assert pack["examples"] == ["market-leaders", "filings"]
     assert [(c["id"], len(c["turns"])) for c in pack["conversations"]] == [("leaders-follow-up", 2)]
 
     (data_dir / "collection-manifest.json").unlink()
-    assert [q["id"] for q in (await api.get("/v1/pack")).json()["questions"]] == ["market-leaders"]
+    pack = (await api.get("/v1/pack")).json()
+    assert [q["id"] for q in pack["questions"]] == ["market-leaders"]
+    assert pack["examples"] == ["market-leaders"]
+
+
+async def test_pack_matches_its_contract(api):
+    schema = json.loads((REPO / "contracts" / "schemas" / "pack.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate((await api.get("/v1/pack")).json())
+
+
+async def test_the_example_picker_offers_the_pack_s_examples_in_order(api, data_dir):
+    pack = json.loads((data_dir / "pack.json").read_text())
+    extra = {
+        "id": "outlook",
+        "label": "Outlook",
+        "question": "What comes next?",
+        "sources": ["market_analysis_structured"],
+    }
+    pack["questions"].append(extra | {"tools": ["kumo"]})
+    pack["examples"] = ["outlook", "filings", "market-leaders"]
+    (data_dir / "pack.json").write_text(json.dumps(pack))
+
+    assert (await api.get("/v1/pack")).json()["examples"] == ["outlook", "filings", "market-leaders"]
+
+    # Only those whose sources the stack serves: no retrieval index, no filings
+    (data_dir / "collection-manifest.json").unlink()
+    assert (await api.get("/v1/pack")).json()["examples"] == ["outlook", "market-leaders"]
+
+
+async def test_without_a_list_the_picker_offers_the_featured_questions_then_the_rest_up_to_12(api, data_dir):
+    pack = json.loads((data_dir / "pack.json").read_text())
+    question = pack["questions"][0]
+    pack["questions"] = [question | {"id": f"q{n}", "featured": n in (7, 14)} for n in range(15)]
+    (data_dir / "pack.json").write_text(json.dumps(pack))
+
+    view = (await api.get("/v1/pack")).json()
+    assert len(view["questions"]) == 15
+    assert view["examples"] == ["q7", "q14", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q8", "q9", "q10"]
 
 
 async def test_data_sources_offer_only_capabilities_of_the_running_tools(api):

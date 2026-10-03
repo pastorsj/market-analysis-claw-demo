@@ -118,8 +118,12 @@ test.describe('live mode', () => {
     // As the parity screenshots against the original were taken: with the Data Sources panel closed
     await page.getByRole('button', { name: 'Close data sources panel' }).click()
     await page.getByTestId('demo-scenario-select').click()
-    await expect(page.getByRole('option')).toHaveCount(5)
+    // Seven examples: five rows show, the others scroll underneath
+    await expect(page.getByRole('option')).toHaveCount(7)
     await expect(page.getByRole('option').locator('.tool-pill').first()).toBeVisible()
+    await expect
+      .poll(() => page.getByTestId('demo-scenario-list').evaluate((list) => list.style.maxHeight))
+      .toMatch(/^min\(/)
     await matchesBaseline(page, 'question-picker')
   })
 })
