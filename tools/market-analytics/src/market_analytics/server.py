@@ -17,6 +17,7 @@ import logging
 import os
 import time
 from collections.abc import Callable
+from collections.abc import Mapping
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Annotated
@@ -58,6 +59,8 @@ from .worker import Worker
 from .worker import WorkerError
 
 PORT = 3010
+# The Kumo Relational service's key, as a Compose secret (compose.yaml). KUMO_API_KEY in the environment also works.
+KUMO_API_KEY_SECRET = Path("/run/secrets/kumo_api_key")
 READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=False)
 
 logger = logging.getLogger(__name__)
@@ -400,6 +403,42 @@ def create_server(pack: Pack, worker: Worker, *, cpu_worker: Callable[[], Worker
     return server
 
 
+class KumoConfigError(ValueError):
+    """Only one of KUMO_RELATIONAL_URL and KUMO_API_KEY is set."""
+
+
+def kumo_endpoint(env: Mapping[str, str] = os.environ, secret: Path = KUMO_API_KEY_SECRET) -> tuple[str, str] | None:
+    """The Kumo Relational service's URL and key, or None when Kumo is off.
+
+    Kumo is configured by its URL and its key together (docs/kumo-service.md): both set turns predict_asset_outcomes
+    on, neither leaves it off, and one without the other is an error. The key comes from KUMO_API_KEY or the
+    kumo_api_key secret; Compose writes no secret file for an empty value.
+    """
+    url = env.get("KUMO_RELATIONAL_URL", "").strip()
+    key = env.get("KUMO_API_KEY", "").strip() or (secret.read_text().strip() if secret.is_file() else "")
+    if url and key:
+        return url, key
+    if url or key:
+        missing = "KUMO_API_KEY" if url else "KUMO_RELATIONAL_URL"
+        raise KumoConfigError(
+            f"Kumo needs both KUMO_RELATIONAL_URL and KUMO_API_KEY, and {missing} is empty: set both to turn "
+            "predict_asset_outcomes on, or neither to leave it off (docs/kumo-service.md)"
+        )
+    return None
+
+
+def register_kumo(server: MCPServer, pack: Pack, endpoint: tuple[str, str] | None) -> bool:
+    """Register predict_asset_outcomes when Kumo is configured; True when it was."""
+    if endpoint is None:
+        logger.info("Kumo is off: predict_asset_outcomes needs KUMO_RELATIONAL_URL and KUMO_API_KEY")
+        return False
+    from .prediction import register  # only with the optional kumo extra
+
+    url, key = endpoint
+    register(server, pack, url, api_key=key)
+    return True
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(processName)s %(name)s: %(message)s")
     # /data/active is a symlink that moves when the data one-shot activates another build. Resolve it once, so a
@@ -408,7 +447,8 @@ def main() -> None:
     pack = Pack.load(root)
     try:
         validate(pack)
-    except ContractError as error:
+        kumo = kumo_endpoint()
+    except (ContractError, KumoConfigError) as error:
         raise SystemExit(str(error)) from None
     timeout = float(os.environ.get("MARKET_ANALYTICS_TIMEOUT_SECONDS", "120"))
     worker = Worker(root, timeout=timeout)
@@ -423,10 +463,7 @@ def main() -> None:
             return benchmark_cpu
 
     server = create_server(pack, worker, cpu_worker=cpu_worker)
-    if url := os.environ.get("KUMO_RELATIONAL_URL"):
-        from .prediction import register  # only with the optional kumo extra
-
-        register(server, pack, url, api_key=os.environ.get("KUMO_API_KEY") or None)
+    register_kumo(server, pack, kumo)
     logger.info("serving %s (%s) on :%d/mcp", pack.source_id, root, PORT)
     try:
         server.run("streamable-http", host="0.0.0.0", port=PORT, json_response=True)

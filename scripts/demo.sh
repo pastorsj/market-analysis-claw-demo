@@ -22,8 +22,10 @@ readonly UP_TIMEOUT=3600 # the first data build downloads SEC EDGAR and embeds t
 readonly PYTHON_PROJECTS="agent api data data/generate eval tools/retrieval tools/market-analytics tools/auto-ontology"
 readonly RUFF=ruff@0.16.9 # the version in .pre-commit-config.yaml
 # Profile sets `test compose` renders; each must be valid with no .env.
-readonly PROFILE_SETS="core core,retrieval,analytics core,retrieval,analytics-gpu,kumo
-  core,retrieval,analytics,kumo,ontology replay build,tools"
+readonly PROFILE_SETS="core core,retrieval,analytics core,retrieval,analytics-gpu
+  core,retrieval,analytics,ontology replay build,tools"
+# The Kumo service's own Compose project (docs/kumo-service.md), deployed on its own GPU host.
+readonly KUMO_SERVICE_DIR=infra/kumo-service
 
 usage() {
   cat <<'EOF'
@@ -43,7 +45,8 @@ Run
                           build cache, which is host-wide)
   restart SERVICE         agent: recreate the sandbox; switchyard: apply section 1 of .env
                           (routes, models, endpoints, keys) to Switchyard, the API, Auto Ontology
-                          and retrieval; anything else: docker compose restart SERVICE
+                          and retrieval; kumo: apply a new KUMO_RELATIONAL_URL or KUMO_API_KEY to
+                          market analytics; anything else: docker compose restart SERVICE
   status                  services, the sandbox, Switchyard routes and URLs
   logs [agent|routing|SERVICE...] [-f]
                           agent: Hermes in the sandbox; routing: Switchyard's routing decisions
@@ -65,8 +68,9 @@ Data and recordings
   replay                  serve the UI on the recorded sessions only: no .env, keys or GPU
 
 Development
-  test [unit|ui|e2e|contracts|compose|switchyard|all]
-                          default: unit ui contracts compose
+  test [unit|ui|e2e|contracts|compose|switchyard|kumo-service|all]
+                          default: unit ui contracts compose; kumo-service runs the Kumo
+                          service's proxy against a stub NIM on this Docker host
 
 On demand (run by hand)
   test live --url URL [--questions ID,...] [--budget SECONDS|ID=SECONDS]...
@@ -121,7 +125,6 @@ backend_services() {
       retrieval) services="$services retrieval" ;;
       analytics) services="$services market-analytics" ;;
       analytics-gpu) services="$services market-analytics-gpu" ;;
-      kumo) services="$services kumo-relational" ;;
       ontology) services="$services auto-ontology-mcp auto-ontology-frontend" ;;
     esac
   done
@@ -195,12 +198,13 @@ prune_builds() {
 
 # restart SERVICE
 cmd_restart() {
-  [ $# -eq 1 ] || die "$EXIT_USAGE" "usage: demo.sh restart agent|switchyard|SERVICE"
+  [ $# -eq 1 ] || die "$EXIT_USAGE" "usage: demo.sh restart agent|switchyard|kumo|SERVICE"
   load_env
   require_env
   case $1 in
     agent) openshell_up --recreate ;;
     switchyard) restart_inference ;;
+    kumo) restart_kumo ;;
     *) dc restart "$1" ;;
   esac
 }
@@ -209,6 +213,19 @@ cmd_restart() {
 # is kept. The API recreates only if its model ids changed, and Auto Ontology if its settings did; --no-deps
 # leaves the one-shots alone. Compose never compares a secret's value, so the services holding the inference
 # key as a secret are always recreated: Switchyard, and retrieval (its key defaults to the inference key).
+# A new Kumo URL or key on a stack where Kumo stays on. Market analytics reads both once, at start, and Compose
+# recreates it for neither a new key (a secret) nor a plain restart. Turning Kumo on or off also changes the
+# agent image's tools, which takes `up`.
+restart_kumo() {
+  local service=market-analytics
+  has_profile analytics-gpu && service=market-analytics-gpu
+  check_kumo
+  [ "$problems" -eq 0 ] || die "$EXIT_CONFIG" "fix the problems above, then run restart kumo again"
+  kumo_enabled || die "$EXIT_CONFIG" "Kumo is off in .env: to turn it off on a running stack, run ./scripts/demo.sh up"
+  log "recreating $service with the Kumo URL and key (if Kumo was off until now, run ./scripts/demo.sh up instead)"
+  dc up -d --wait --no-deps --force-recreate "$service"
+}
+
 restart_inference() {
   dc up -d --wait --force-recreate switchyard
   dc up -d --wait --no-deps api
@@ -459,12 +476,13 @@ cmd_test() {
       ;;
   esac
   local suites=${*:-unit ui contracts compose} suite
-  [ "$suites" != all ] || suites="unit ui e2e contracts compose switchyard"
+  [ "$suites" != all ] || suites="unit ui e2e contracts compose switchyard kumo-service"
   for suite in $suites; do
     case $suite in
       unit | ui | e2e | contracts | compose | switchyard) log "test $suite" && "test_$suite" ;;
-      *) die "$EXIT_USAGE" "usage: demo.sh test [unit|ui|e2e|contracts|compose|switchyard|all], test live --url URL," \
-        "or test gpu [--perf]" ;;
+      kumo-service) log "test $suite" && test_kumo_service ;;
+      *) die "$EXIT_USAGE" "usage: demo.sh test [unit|ui|e2e|contracts|compose|switchyard|kumo-service|all]," \
+        "test live --url URL, or test gpu [--perf]" ;;
     esac
   done
 }
@@ -635,15 +653,38 @@ test_compose() {
     esac
     log "compose config: $profiles"
   done
+  test_kumo_service_compose
+}
+
+# The Kumo service's own project (infra/kumo-service): valid with its .env.example, every image pinned by
+# digest, and only the proxy published. The NIM has no host port: the proxy is its only way in.
+test_kumo_service_compose() {
+  local config=(docker compose -f "$ROOT/$KUMO_SERVICE_DIR/compose.yaml" --env-file "$ROOT/$KUMO_SERVICE_DIR/.env.example")
+  "${config[@]}" config -q
+  if "${config[@]}" config --images | grep -v '@sha256:[0-9a-f]\{64\}$'; then
+    die "$EXIT_CONFIG" "$KUMO_SERVICE_DIR: every image must be pinned by digest"
+  fi
+  [ "$("${config[@]}" config | host_addresses)" = "proxy 0.0.0.0" ] ||
+    die "$EXIT_CONFIG" "$KUMO_SERVICE_DIR: only the proxy may publish a port"
+  log "compose config: $KUMO_SERVICE_DIR"
+}
+
+# The Kumo service's proxy against a stub NIM on this Docker host (no GPU), under a throwaway project.
+test_kumo_service() {
+  "$ROOT/$KUMO_SERVICE_DIR/tests/proxy-test.sh"
 }
 
 # The host addresses Compose publishes on, one "service address" line per port.
 published_hosts() {
-  COMPOSE_PROFILES=$1 docker compose -f "$ROOT/compose.yaml" --env-file "$VERSIONS_FILE" config |
-    awk '/^services:/ { in_services = 1; next }
-      /^[^ ]/ { in_services = 0 }
-      in_services && /^  [^ ]/ { service = $1; sub(/:$/, "", service) }
-      in_services && $1 == "host_ip:" { print service, $2 }'
+  COMPOSE_PROFILES=$1 docker compose -f "$ROOT/compose.yaml" --env-file "$VERSIONS_FILE" config | host_addresses
+}
+
+# host_addresses < `docker compose config` output: one "service address" line per published port.
+host_addresses() {
+  awk '/^services:/ { in_services = 1; next }
+    /^[^ ]/ { in_services = 0 }
+    in_services && /^  [^ ]/ { service = $1; sub(/:$/, "", service) }
+    in_services && $1 == "host_ip:" { print service, $2 }'
 }
 
 # Builds the image `up` runs: a plain `docker build` would retag it with a different ID.

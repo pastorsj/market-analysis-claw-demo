@@ -146,8 +146,8 @@ comparison measured at `up` ([retrieval](retrieval.md#cpugpu-index-comparison-an
 
 ## Disk
 
-Measured with `df` on a Brev A100 VM with every profile (`core,retrieval,analytics-gpu,kumo,ontology`),
-starting from an empty Docker host:
+Measured with `df` on a Brev A100 VM with every profile (`core,retrieval,analytics-gpu,kumo,ontology`, when the
+Kumo NIM still ran in the demo stack), starting from an empty Docker host:
 
 | After | Disk used |
 |---|---|
@@ -160,9 +160,10 @@ starting from an empty Docker host:
 | The GPU parity test's venv ([Brev VM mode](#brev-vm-mode), step 9) | +9 GB |
 | Another RAPIDS rebuild, with no prune in between | peak 161 GB, 153 GB after |
 
-So the first `up` takes about 110 GB. Plan for 150 GB free to run the demo, and for 200 GB, or a prune after
-each rebuild, if you change code and rebuild images on the host. The CPU tier builds no RAPIDS image and pulls
-no Kumo NIM. `docker system df` shows the current split.
+The Kumo NIM has since moved to a [service](kumo-service.md) of its own, so a demo host no longer pulls its
+44 GB. The first `up` then takes about 70 GB: plan for 110 GB free to run the demo, and for 160 GB, or a prune
+after each rebuild, if you change code and rebuild images on the host. The CPU tier also builds no RAPIDS image.
+`docker system df` shows the current split.
 
 **External data** (a pack such as `us-equities`, [data platform](data-platform.md)) sits outside Docker, in
 `DATA_SOURCE_DIR` (default `~/market-demo-data`). Plan for the dataset itself (`us-equities`' minute bars: 1.8 GB), plus, in the
@@ -212,21 +213,23 @@ most of it embedding the corpus).
 | Market tools or retrieval answer from old data | `./scripts/demo.sh data prepare` restarts market analytics and retrieval on the new build; after a manual data change, `./scripts/demo.sh restart market-analytics` (or `retrieval`) |
 | Every `up` recreates containers or the sandbox | An image got a new ID. Build through `demo.sh`, which turns off provenance attestations; a plain `docker build` retags the image with a different ID |
 | `the ontology profile needs the private submodule` | Run `git submodule update --init --checkout vendor/auto-ontology` (needs access), or drop the profile |
+| `the kumo profile is gone`, or `KUMO_API_KEY is empty` (or `KUMO_RELATIONAL_URL`) | Kumo is configured only by a [Kumo service](kumo-service.md)'s URL and key, both or neither: drop `kumo` from `COMPOSE_PROFILES` and set the two in `.env` section 3 |
+| A Kumo answer says the prediction was unavailable | `./scripts/demo.sh logs market-analytics` (or `market-analytics-gpu`) names the reason. An authentication error: `KUMO_API_KEY` is not the service's key; fix it, then `./scripts/demo.sh restart kumo`. Otherwise check the service ([Kumo service](kumo-service.md#expose-it-through-an-https-link)) |
 
 For the sandbox specifically, see the troubleshooting table in
 [`infra/openshell/README.md`](../infra/openshell/README.md#troubleshooting).
 
 ## Brev VM mode
 
-The GPU tier (`analytics-gpu`, the local Kumo NIM) runs on a Linux x86_64 VM with an NVIDIA GPU, such as a
-Brev A100 instance. Nothing about the demo changes: the same `demo.sh`, bound to the VM's loopback, reached
+The GPU tier (`analytics-gpu`) runs on a Linux x86_64 VM with an NVIDIA GPU, such as a Brev A100 instance; the
+GPU is the market tools' and the GPU Milvus's alone. Kumo runs elsewhere, as a [Kumo service](kumo-service.md). Nothing about the demo changes: the same `demo.sh`, bound to the VM's loopback, reached
 over SSH, or with the UI alone shared through a Brev link (step 8). These steps were run on 2026-09-29
 on a fresh Brev A100 (40 GB) VM with 12 vCPUs, 83 GiB of memory and a 533 GB disk (Ubuntu 22.04, kernel 6.8,
 Docker 29.8 with Compose 5.5, driver 595, NVIDIA Container Toolkit 1.20, as Brev provisions it), with every
 profile and the default corpora. `up` needed nothing else installed.
 
 1. **Check the host.** Docker Engine 28+ with Compose 2.30+, a kernel of 6.2 or later (for Landlock), and the
-   NVIDIA Container Toolkit (`docker info` lists the `nvidia` runtime). Plan for 150 GB of free disk with
+   NVIDIA Container Toolkit (`docker info` lists the `nvidia` runtime). Plan for 110 GB of free disk with
    every profile ([disk](#disk)).
 2. **Get the code** on the VM. With GitHub access there, `git clone` it; for the ontology profile, also run
    `git submodule update --init --checkout vendor/auto-ontology`, which needs access to the private
@@ -256,10 +259,11 @@ profile and the default corpora. `up` needed nothing else installed.
    `ontology` without the submodule):
 
    ```bash
-   COMPOSE_PROFILES=core,retrieval,analytics-gpu,kumo,ontology
+   COMPOSE_PROFILES=core,retrieval,analytics-gpu,ontology
    ```
 
-   Remove any hosted `KUMO_RELATIONAL_URL`, since the kumo profile runs its own NIM.
+   For the Kumo questions, also set `KUMO_RELATIONAL_URL` and `KUMO_API_KEY` to a
+   [Kumo service](kumo-service.md#point-a-demo-deployment-at-it), which runs on a GPU host of its own.
 
    **Real data** (`DATA_PACK=us-equities`) is what the hosted demo deployment runs, with every corpus
    (`DATA_CORPORA=sec_filings,market_regulations,world_news`); `synthetic-market` stays the default elsewhere
@@ -283,19 +287,9 @@ profile and the default corpora. `up` needed nothing else installed.
    up to daily bars in 3.6 s and built the pack in 8.2 s, plus about 4 minutes to look up SEC company data at
    SEC's rate limit, once; an unchanged pack is a no-op in 1.5 s. The dataset takes 1.8 GB on the VM's disk,
    and each build 73 MB in the `demo-data` volume.
-4. **The Kumo NIM image.** `up` pulls `nvcr.io/nim/nvidia/kumo-relational:1.0.1`, and the pull worked
-   without a login (on 2026-09-29: about 14 GB to download in 5 minutes, 44 GB unpacked). If the pull is
-   denied, log in with an NGC API key, piped rather than typed on the command line:
-
-   ```bash
-   printf '%s' "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
-   ```
-
-   The NIM has no GPU gate and needs no override on a GPU outside its support matrix, such as the A100. Its
-   only model profile (PyTorch, fp32) carries no GPU tag, so the NIM selects it on any GPU by hardware
-   filtering. It logs `TagsBasedProfileSelector not able to find the profile` and then
-   `ManifestProfileSelector compatible profile selected`, which is expected. `NIM_MODEL_PROFILE` would pin a
-   profile, but there is only one.
+4. **Kumo.** The demo host runs no Kumo NIM. Set up the [Kumo service](kumo-service.md) once, on a GPU host of
+   its own (sizing, setup, the HTTPS link and key rotation are there), and point the deployment at it (step 3).
+   `doctor --keys` (step 5) checks the link and the key together.
 5. **Start and prove it.**
 
    ```bash
@@ -310,7 +304,7 @@ profile and the default corpora. `up` needed nothing else installed.
    | Step | Time |
    |---|---|
    | Building the images (Switchyard compiles from source; the RAPIDS image is 15 GB) | 14 min |
-   | Pulling the Kumo NIM, Milvus, Phoenix and pgvector | 5 min |
+   | Pulling the Kumo NIM (then in the demo stack), Milvus, Phoenix and pgvector | 5 min |
    | The data pack (2,000 issuers) | 1.5 min |
    | Downloading the corpus (SEC EDGAR, eCFR and eight since-dropped briefs: 5,229 documents) | 5.5 min |
    | Embedding and indexing 23,654 chunks through the retriever endpoint | 15 min |
@@ -335,7 +329,7 @@ profile and the default corpora. `up` needed nothing else installed.
    Once the stack was up, `check` passed 8 of 8, and the seven hero questions of the retired `market-analysis`
    pack ([models and routing](models-and-routing.md#the-earlier-bake-off-2026-09-29)) each finished in 21 s
    to 3 minutes with citations and a Phoenix trace.
-6. **Footprint, and one GPU for both.** Sampled every 10 s with `df`, `free` and `nvidia-smi` through the
+6. **Footprint.** Sampled every 10 s with `df`, `free` and `nvidia-smi` through the
    install and the tests:
 
    | Resource | Whole stack, idle | Peak, and when |
@@ -344,21 +338,13 @@ profile and the default corpora. `up` needed nothing else installed.
    | Memory | 9.3 GiB used, 6.7 GiB of it the containers (the Kumo NIM 1.8 GiB, the RAPIDS worker 1.9 GiB) | 14.0 GiB, while `up` built the images |
    | GPU memory | 2.2 GiB before the first prediction, 4.3 GiB after | 5.6 GiB, with the benchmark's extra RAPIDS worker (step 7) running beside the stack |
 
-   `kumo-relational` and `market-analytics-gpu` both request `gpus: all` and share the GPU, and neither
-   preallocates a memory pool. (These figures predate `milvus-gpu`, which also requests `gpus: all` and
-   preallocates a 1 GiB pool that may grow to 4 GiB, set in `tools/retrieval/milvus/gpu.yaml`;
-   [retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu). On 2026-10-01, with `us-equities` and its
-   `GPU_IVF_FLAT` copy of 32,676 chunks measured, the whole stack held 9.1 GiB of the A100's 40 GiB: `milvus-gpu`
-   4.7 GiB, the Kumo NIM 3.5 GiB after its predictions, the RAPIDS worker 0.5 GiB.) At idle the Kumo NIM held 0.85 GiB and the RAPIDS worker 0.5 GiB. After its
-   first predictions the NIM kept about 3 GiB (PyTorch's cache). A single 40 GB GPU runs both with room to
-   spare; smaller GPUs were not tried.
-
-   **Kumo on the VM.** The NIM turned healthy about 40 s after it started. A prediction through
-   `predict_asset_outcomes` took 10.5 to 12.6 s for the two return templates and 0.6 s for `news_event`.
-   Each returned one probability per asset in the population (12 on that pack) for the requested
-   anchor and horizon, and repeat calls returned identical probabilities. The pack's events are fictional and
-   planted, and the history before the anchor does not foretell them: present the probabilities as the
-   model's output, not as a forecast.
+   These figures include the Kumo NIM, which then ran in the demo stack and has since moved to its own
+   [service](kumo-service.md): 1.8 GiB of the memory, and 0.85 GiB of GPU memory at idle, about 3.5 GiB after its
+   predictions. Without it, `market-analytics-gpu` and `milvus-gpu` have the GPU to themselves. The RAPIDS worker
+   preallocates no memory pool (0.5 GiB at idle); `milvus-gpu` preallocates a 1 GiB pool that may grow to 4 GiB,
+   set in `tools/retrieval/milvus/gpu.yaml` ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)).
+   On 2026-10-01, with `us-equities` and its `GPU_IVF_FLAT` copy of 32,676 chunks measured, `milvus-gpu` held
+   4.7 GiB of the A100's 40 GiB and the RAPIDS worker 0.5 GiB.
 7. **What the GPU buys here.** The RAPIDS worker gives the same answers as pandas (the parity test below, and
    every tool on the real pack). The method: a throwaway container from the stack's own `market-analytics:gpu`
    image, with `--gpus all` and the prepared pack mounted read-only, ran the service's worker with
@@ -461,10 +447,8 @@ profile and the default corpora. `up` needed nothing else installed.
 | Symptom | Cause and fix |
 |---|---|
 | `fatal: transport 'file' not allowed` from `submodule update` | Git refuses a local submodule URL by default; use the `-c protocol.file.allow=always` line in step 2 |
-| The `kumo-relational` pull is denied | Log in to `nvcr.io` as in step 4 |
 | `no space left on device` while building | The build cache grows with each rebuild; cap it or run `down --prune` ([disk](#disk)) |
 | The Auto Ontology frontend build logs Prisma `DatabaseNotReachable` | Expected: it pre-renders pages without a database, and the build succeeds |
-| The Kumo NIM logs `TagsBasedProfileSelector not able to find the profile` | Expected on any GPU; it selects its only profile next (step 4) |
 | `market-analytics-gpu` takes about 25 s to turn healthy | The worker loads the pack and warms up every tool on the GPU first (step 7) |
 | `uv: command not found` in `ssh <instance> 'command'` | Brev's uv is in `~/.local/bin`, on the `PATH` of a login shell only; use `ssh <instance> 'bash -lc "command"'` |
 | `test e2e` fails before any test runs | It needs Node.js 22 and sudo for Chromium's libraries (step 9) |

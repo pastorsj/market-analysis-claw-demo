@@ -120,8 +120,8 @@ def test_tool_registry_matches_the_config_and_policy(config, policy, providers):
     assert {tool["hermes_name"] for tool in tools} == exposed_tools(config)
     for tool in tools:
         assert tool["hermes_name"] == f"mcp__{tool['server']}__{tool['id']}"
-        assert FEATURES[tool["profile"]][0] == tool["server"], tool["id"]
-        assert (tool["profile"] == "kumo") == (tool["id"] == KUMO_TOOL), tool["id"]
+        assert FEATURES[tool["feature"]][0] == tool["server"], tool["id"]
+        assert (tool["feature"] == "kumo") == (tool["id"] == KUMO_TOOL), tool["id"]
         endpoint = endpoint_for(urlsplit(config["mcp_servers"][tool["server"]]["url"]), policy, providers)
         assert tool["id"] in allowed_tools(endpoint)
 

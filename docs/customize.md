@@ -67,7 +67,7 @@ For example, an eighth market tool on the `market_analytics` server:
    MCP annotation `read_only_hint=True` (Hermes replays read-only calls after a server restart). Add tests.
 2. Add an entry to `contracts/tool-registry.json`: `id` (the MCP tool name), `server`, `hermes_name`
    (`mcp__<server>__<id>`), `family`, `label` and `description` for the UI, `explorer`, `receipt_kind`,
-   `profile` (the agent feature that ships it) and `pills` (the technology pills of a run that uses it; a market
+   `feature` (the agent feature that ships it) and `pills` (the technology pills of a run that uses it; a market
    tool has `cudf`). Run `scripts/gen-contracts.sh`, which regenerates the UI's `TOOL_REGISTRY`.
 3. Add the tool to the server's `tools.include` in `agent/profile/config.yaml`.
 4. Add it to the server's `tools/call` allowlist in `agent/sandbox-policy.yaml`.
@@ -85,7 +85,7 @@ Everything above, plus:
 |---|---|
 | `tools/<name>/` | A self-contained service: its own `uv` project and `uv.lock` (Python 3.12), a `Dockerfile` without `EXPOSE`, a `README.md`, tests. Serve MCP over streamable HTTP at `/mcp` and a `GET /health` |
 | `compose.yaml` | A service under a new profile, published on `127.0.0.1:<port>` only; mount `demo-data:/data:ro` if it reads the pack |
-| `contracts/tool-registry.schema.json` | The new `server` and `profile` values |
+| `contracts/tool-registry.schema.json` | The new `server` and `feature` values |
 | `agent/render_config.py` | A feature: its MCP server and its skill |
 | `agent/profile/config.yaml` | The server under `mcp_servers` (`http://host.openshell.internal:<port>/mcp`) and in `platform_toolsets.api_server` |
 | `agent/sandbox-policy.yaml` | A network policy for `host.openshell.internal:<port>`, `protocol: mcp`, the handshake rules and the tool allowlist, binaries `*hermes` |

@@ -22,7 +22,7 @@ class Tool:
     family: str
     label: str
     receipt_kind: str
-    profile: str
+    feature: str  # the agent feature that provides it (AGENT_FEATURES)
     pills: tuple[str, ...] = ()  # the technology pills the UI shows for a run that uses the tool
 
 
@@ -51,7 +51,7 @@ class ToolRegistry:
 
     def available(self, features: frozenset[str]) -> list[Tool]:
         """The tools baked into an agent image built with these features."""
-        return [tool for tool in self.tools if tool.profile in features]
+        return [tool for tool in self.tools if tool.feature in features]
 
     def families(self, features: frozenset[str]) -> set[str]:
         return {tool.family for tool in self.available(features)}

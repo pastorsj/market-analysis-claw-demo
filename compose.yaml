@@ -7,10 +7,11 @@
 #   analytics      market analytics MCP server on CPU (analytics-gpu: on RAPIDS; never both). analytics-gpu also
 #                  holds a GPU Milvus and its one-shot, for the Benchmark tab's CPU/GPU index comparison: demo.sh
 #                  starts them after the stack, with retrieval only, and nothing waits on them
-#   kumo           Kumo Relational NIM behind predict_asset_outcomes (x86_64 + NVIDIA GPU)
 #   ontology       Auto Ontology, required (the vendor/auto-ontology submodule, private until it is published)
 #   replay         the UI alone, on the recorded sessions: no keys, no API, no GPU
 #   build, tools   the agent sandbox image and the OpenShell CLI, used by scripts/demo.sh
+# Kumo prediction is not a profile: market analytics calls a Kumo Relational service at KUMO_RELATIONAL_URL
+# with KUMO_API_KEY, both or neither (docs/kumo-service.md; the service's own recipe is infra/kumo-service/).
 #
 # Use scripts/demo.sh: it orders the bring-up around the OpenShell sandbox, which Compose
 # does not manage. By hand, pass the OpenShell pins along with .env:
@@ -21,8 +22,7 @@
 # host.openshell.internal:<port>, which the host-networked OpenShell supervisor maps to
 # 127.0.0.1. No variable is required (never ${VAR:?}), so the replay profile needs no .env.
 # Keys reach services as Compose secrets (/run/secrets/<name>), not environment variables.
-# Exceptions: upstream Auto Ontology (ontology profile) reads its keys from env, and so does
-# market-analytics for an optional hosted Kumo key.
+# Exception: upstream Auto Ontology (ontology profile) reads its keys from env.
 #
 # An image several services share is built by one of them only: Compose labels each build with its
 # service, so two builds of one image would give it a new ID on every build.
@@ -76,12 +76,12 @@ x-market-analytics: &market-analytics
   build: { context: tools/market-analytics, args: { ANALYTICS_EXTRAS: kumo } }
   image: market-demo/market-analytics:local
   ports: ["127.0.0.1:3010:3010"]
+  secrets: [kumo_api_key]
   volumes: [demo-data:/data:ro, *sources] # the sources: the minute bars, read in place
   depends_on:
     # The service keeps the build /data/active pointed at when it started: restart it when the data
     # one-shot is recreated (demo.sh data prepare restarts it itself).
     data: { condition: service_completed_successfully, restart: true }
-    kumo-relational: { condition: service_healthy, required: false }
 
 secrets:
   inference_api_key: { environment: INFERENCE_API_KEY }
@@ -91,6 +91,7 @@ secrets:
   hermes_receipt_api_key: { environment: HERMES_RECEIPT_API_KEY }
   auto_ontology_password: { environment: AUTO_ONTOLOGY_ADMIN_PASSWORD }
   speech_api_key: { environment: SPEECH_API_KEY } # voice input; demo.sh fills an empty one (env.sh)
+  kumo_api_key: { environment: KUMO_API_KEY } # empty: no Kumo prediction (with an empty KUMO_RELATIONAL_URL)
 
 networks:
   default: {}
@@ -381,16 +382,15 @@ services:
       # recreated for another build, as market analytics (demo.sh data prepare restarts it itself).
       data: { condition: service_completed_successfully, restart: true }
 
-  # ---------------------------------------------------------------- analytics and Kumo
+  # ---------------------------------------------------------------- analytics
   market-analytics:
     <<: *market-analytics
     profiles: [analytics]
-    # Anchors that carry keys live inside services: `docker compose config` prints every x- block.
     environment: &market-analytics-env
       DATA_ACTIVE_DIR: /data/active
-      # demo.sh sets http://kumo-relational:8000 under the kumo profile; empty = no prediction tool.
+      # The Kumo Relational service (docs/kumo-service.md): predict_asset_outcomes is registered only when both
+      # this URL and the kumo_api_key secret (KUMO_API_KEY, sent as X-API-Key) are set.
       KUMO_RELATIONAL_URL: ${KUMO_RELATIONAL_URL:-}
-      KUMO_API_KEY: ${KUMO_API_KEY:-} # only for a hosted Kumo endpoint
       MARKET_ANALYTICS_TIMEOUT_SECONDS: ${MARKET_ANALYTICS_TIMEOUT_SECONDS:-120}
       # Empty = the engine's default: 256 MiB on the CPU, 1 GiB on the GPU (tools/market-analytics).
       MARKET_ANALYTICS_BATCH_BYTES: ${MARKET_ANALYTICS_BATCH_BYTES:-}
@@ -408,22 +408,6 @@ services:
     gpus: all
     networks:
       default: { aliases: [market-analytics] }
-
-  # amd64 only; about 14 GB to download and 44 GB on disk. It pulls without a login; if nvcr.io
-  # denies it, log in (docs/operations.md, Brev VM mode).
-  kumo-relational:
-    <<: *restart
-    profiles: [kumo]
-    image: nvcr.io/nim/nvidia/kumo-relational:1.0.1@sha256:d2fedf5583d01932efdb7d91d0bcc31b7ff951fcd516f069c4cd900adb87908f
-    gpus: all
-    shm_size: 16gb
-    stop_grace_period: 30s
-    healthcheck:
-      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/health/ready', timeout=5)"]
-      interval: 10s
-      timeout: 6s
-      retries: 60
-      start_period: 180s
 
   # ---------------------------------------------------------------- Auto Ontology (ontology)
   # Upstream's images, built from .build/auto-ontology, which tools/auto-ontology/prepare.sh

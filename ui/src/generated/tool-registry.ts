@@ -50,9 +50,9 @@ export interface Tool {
   receipt_kind:
     'retrieval_evidence' | 'analytics_result' | 'structured_query' | 'structured_prediction'
   /**
-   * The Compose profile that provides the tool.
+   * The agent feature (AGENT_FEATURES) that provides the tool: retrieval, analytics and ontology come with the Compose profiles of those names (analytics-gpu gives analytics), kumo with a Kumo service's URL and key.
    */
-  profile: 'retrieval' | 'analytics' | 'kumo' | 'ontology'
+  feature: 'retrieval' | 'analytics' | 'kumo' | 'ontology'
   /**
    * The technology pills the UI shows for a question or a recorded run that uses the tool.
    *
@@ -72,7 +72,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Retrieves and reranks cited passages from the selected document sources',
       explorer: 'retrieval',
       receipt_kind: 'retrieval_evidence',
-      profile: 'retrieval',
+      feature: 'retrieval',
       pills: ['retrieval'],
     },
     {
@@ -84,7 +84,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Ranks assets by observed market signals',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf'],
     },
     {
@@ -96,7 +96,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Ranks unusual observed feature combinations',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf', 'cuml'],
     },
     {
@@ -108,7 +108,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Summarizes observed price history',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf'],
     },
     {
@@ -120,7 +120,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Aggregates observed news sentiment over time',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf'],
     },
     {
@@ -132,7 +132,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Aligns news with forward returns',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf'],
     },
     {
@@ -144,7 +144,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Ranks observed relationship centrality',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf', 'cugraph'],
     },
     {
@@ -156,7 +156,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Ranks asset sessions by intraday behavior from minute bars',
       explorer: 'market',
       receipt_kind: 'analytics_result',
-      profile: 'analytics',
+      feature: 'analytics',
       pills: ['cudf'],
     },
     {
@@ -168,7 +168,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Predicts per-asset outcome probabilities with NVIDIA Kumo',
       explorer: 'pql',
       receipt_kind: 'structured_prediction',
-      profile: 'kumo',
+      feature: 'kumo',
       pills: ['kumo'],
     },
     {
@@ -180,7 +180,7 @@ export const TOOL_REGISTRY: ToolRegistry = {
       description: 'Answers historical database questions with ontology-grounded SQL',
       explorer: 'ontology',
       receipt_kind: 'structured_query',
-      profile: 'ontology',
+      feature: 'ontology',
       pills: ['ontology'],
     },
   ],

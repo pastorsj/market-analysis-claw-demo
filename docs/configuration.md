@@ -95,6 +95,8 @@ Changing the embed model or the base URL changes the index: run `./scripts/demo.
 | Variable | Default | Meaning |
 |---|---|---|
 | `COMPOSE_PROFILES` | `core,retrieval,analytics` | The profiles to run (below). Commands that run the stack always add `core` |
+| `KUMO_RELATIONAL_URL` | empty | The `https://` URL of a [Kumo service](kumo-service.md): the Kumo Relational NIM behind a key-checking proxy, on a GPU host of its own. With `KUMO_API_KEY`, gives the agent `predict_asset_outcomes` (needs `analytics` or `analytics-gpu`) |
+| `KUMO_API_KEY` | empty | That service's key, sent as `X-API-Key`; it reaches market analytics only, as a Compose secret. Set both or neither: one without the other stops `doctor` and `up`. With neither, Kumo is off and its questions are not offered. After changing either on a running stack where Kumo stays on, run `./scripts/demo.sh restart kumo`; to turn Kumo on or off, `up` |
 | `UI_PORT` | `3100` | The UI's host port, on `UI_BIND_HOST` |
 | `UI_BIND_HOST` | `127.0.0.1` | The host address the UI is published on. `0.0.0.0` exposes the UI, and through its `/api/v1` proxy the agent, with no sign-in of its own: use it only behind a link that requires sign-in, such as a Brev link with sign-in set in the Brev console ([Brev VM mode](operations.md#brev-vm-mode)). `doctor` and `up` warn while it is set. Every other port stays on 127.0.0.1 |
 
@@ -133,8 +135,6 @@ Changing either Hermes key recreates the sandbox on the next `up`.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `KUMO_RELATIONAL_URL` | empty | A hosted Kumo Relational endpoint instead of the kumo profile's local NIM. Setting it gives the agent `predict_asset_outcomes` (needs analytics or analytics-gpu) |
-| `KUMO_API_KEY` | empty | Only for a hosted Kumo endpoint (sent as `X-API-Key`) |
 | `JOB_RETENTION_SECONDS` | `86400` | How long finished jobs stay available |
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one market tool call may run before its worker is replaced |
 | `MARKET_ANALYTICS_BATCH_BYTES` | empty | The most an `intraday_scan` reads at once, in bytes; empty means 256 MiB on the CPU and 1 GiB on the GPU. A CPU scan peaks at 8 to 14 times it, so raise it only with memory to spare |
@@ -155,8 +155,7 @@ Compose cannot compute these, so `demo.sh` exports them before every Compose cal
 | Variable | Value |
 |---|---|
 | `COMPOSE_PROFILES` | `core,retrieval,analytics` when unset |
-| `AGENT_FEATURES` | The tools baked into the agent image, from the profiles: `retrieval`, `analytics` (also for analytics-gpu), `kumo` (the kumo profile or a hosted `KUMO_RELATIONAL_URL`) and `ontology` |
-| `KUMO_RELATIONAL_URL` | `http://kumo-relational:8000` under the kumo profile |
+| `AGENT_FEATURES` | The tools baked into the agent image: `retrieval`, `analytics` (also for analytics-gpu) and `ontology` from the profiles, and `kumo` when `KUMO_RELATIONAL_URL` and `KUMO_API_KEY` are both set |
 | `AUTO_ONTOLOGY_URL` | `http://auto-ontology-frontend:3000` under the ontology profile, for the API's ontology view |
 | `DATA_DATABASE_NAME` | The pack id in snake case (`synthetic-market` → `synthetic_market`) |
 | `SPEECH_API_KEY` | `RETRIEVER_API_KEY` when empty and `RETRIEVER_BASE_URL` is build.nvidia.com (the ASR's host) |
@@ -172,7 +171,6 @@ documented in each component's README, for example [`api/README.md`](../api/READ
 | `retrieval` | Milvus, the document corpus and index, `retrieve_evidence` | the retriever key; `SEC_USER_AGENT` for `sec_filings` |
 | `analytics` | the seven market tools on CPU (pandas, scikit-learn, NetworkX) | – |
 | `analytics-gpu` | the same tools on RAPIDS (cuDF, cuML, nx-cugraph), with the same answers; never together with `analytics`. On an A100 at 2,000 issuers, 1.5x to 8.1x faster than the CPU tools on seven of nine measured calls, the two smallest breaking even or running slower ([measured](operations.md#brev-vm-mode)); on `us-equities` (1,601 stocks), 1.5x to 2.7x faster over every stock and slower than the CPU over 50 stocks (0.7x to 0.9x) ([measured](../tools/market-analytics/README.md#daily-tools-on-us-equities)); `intraday_scan` over real minute bars, 4x to 12x ([measured](../tools/market-analytics/README.md#intraday_scan-on-real-minute-bars)). With `retrieval`, also a GPU Milvus holding a `GPU_IVF_FLAT` copy of the index, for the Benchmark tab's CPU/GPU Milvus comparison only: answers still come from the CPU index ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)) | Linux, an NVIDIA GPU with driver 535 or newer, the NVIDIA Container Toolkit; 3.6 GB more image for the GPU Milvus |
-| `kumo` | Kumo Relational NIM behind `predict_asset_outcomes`; needs `analytics` or `analytics-gpu` | x86_64 and an NVIDIA GPU (it ran on an A100 with no override); the image from `nvcr.io`, which pulled without a login ([operations](operations.md#brev-vm-mode)) |
 | `ontology` | Auto Ontology and `ask_question`: required, it answers the structured questions | the `vendor/auto-ontology` submodule; until `NVIDIA/auto-ontology` is public, access to that repository |
 | `replay` | the UI alone, on the recorded sessions | nothing |
 
@@ -184,25 +182,29 @@ tools and skills, and recreates the sandbox because the image changed.
 | Tier | Profiles | Host |
 |---|---|---|
 | Replay | `replay` (`./scripts/demo.sh replay`) | Any Docker host; no keys, no GPU |
-| CPU | `core,retrieval,analytics` (the default), optionally with a hosted `KUMO_RELATIONAL_URL` | Linux kernel 6.2 or later on the Docker host (OpenShell needs Landlock ABI 3), Docker Engine 28+, Compose 2.30+, at least 8 GiB of memory for Docker (Milvus), x86_64 or arm64. Verified on macOS with colima (arm64, 4 CPU, 9 GiB) |
-| GPU | `core,retrieval,analytics-gpu,kumo` | Linux x86_64 with an NVIDIA GPU, driver 535 or newer and the NVIDIA Container Toolkit. The Kumo NIM image is about 14 GB to download and 44 GB on disk, and runs with a 16 GB shared-memory segment. Plan for 150 GB of free disk, or 200 GB to rebuild images on the host ([disk](operations.md#disk)). On a 40 GB A100 the stack held 4.3 GiB of GPU memory once Kumo had predicted, and 9.3 GiB of RAM ([footprint](operations.md#brev-vm-mode)), before the GPU Milvus, whose memory pool starts at 1 GiB and may grow to 4 GiB. Target: a Brev A100 VM ([operations](operations.md#brev-vm-mode)) |
+| CPU | `core,retrieval,analytics` (the default) | Linux kernel 6.2 or later on the Docker host (OpenShell needs Landlock ABI 3), Docker Engine 28+, Compose 2.30+, at least 8 GiB of memory for Docker (Milvus), x86_64 or arm64. Verified on macOS with colima (arm64, 4 CPU, 9 GiB) |
+| GPU | `core,retrieval,analytics-gpu` | Linux x86_64 with an NVIDIA GPU, driver 535 or newer and the NVIDIA Container Toolkit. The GPU is the market tools' and the GPU Milvus's alone. Plan for 110 GB of free disk, or 160 GB to rebuild images on the host ([disk](operations.md#disk)). On a 40 GB A100 the RAPIDS worker held about 0.5 GiB of GPU memory and the GPU Milvus 4.7 GiB with `us-equities` (its pool starts at 1 GiB and may grow to 4 GiB, [footprint](operations.md#brev-vm-mode)). Target: a Brev A100 VM ([operations](operations.md#brev-vm-mode)) |
 
-The language, embedding and rerank models are always hosted; only the kumo profile runs a model locally (the
-Kumo Relational NIM). On macOS, Docker Desktop needs host networking on and Enhanced Container Isolation off
+In every tier, Kumo prediction is a separate [Kumo service](kumo-service.md) on a GPU host of its own, which any
+number of deployments share: set its URL and key (section 3). The language, embedding and rerank models are
+always hosted, so no model runs in the demo stack. On macOS, Docker Desktop needs host networking on and Enhanced Container Isolation off
 (an OpenShell requirement, not verified here); colima needs neither.
 
 ## `doctor`
 
-`./scripts/demo.sh doctor` checks the host (Docker, Compose and kernel versions, the NVIDIA runtime and
-architecture for the GPU profiles, Docker memory for Milvus), that the published ports are free (skipped
+`./scripts/demo.sh doctor` checks the host (Docker, Compose and kernel versions, the NVIDIA runtime for the
+GPU profile, Docker memory for Milvus), that the published ports are free (skipped
 while the stack runs), and that
 `.env` is consistent: profile rules, required keys, distinct model ids for the template, an existing template,
-key and model id shapes on build.nvidia.com, `SEC_USER_AGENT` for `sec_filings`, and the generated secrets. `up` runs the same checks
-except ports and keys. Messages name variables, never their values.
+key and model id shapes on build.nvidia.com, `SEC_USER_AGENT` for `sec_filings`, the Kumo URL and key (both or
+neither, an `https://` URL, a market-analytics profile; with neither, one line says how to turn Kumo on), and the
+generated secrets. `up` runs the same checks except ports and keys. Messages name variables, never their values.
 
 `doctor --keys` also asks each endpoint for its model list with your key and looks for every id the selected
 template uses. It checks listing, not access: some gateways list models outside a key's access group, and
 those still return 403 when called. The hosted rerankers are not listed at all; the first index build checks the reranker.
+With Kumo configured, it also asks the Kumo service for its model list with `KUMO_API_KEY`, which checks the link
+and the key together.
 
 ## State and exit codes
 

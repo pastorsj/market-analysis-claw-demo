@@ -71,5 +71,5 @@ addopts = "-m 'not live'"
 markers = [
     "gpu: needs an NVIDIA GPU and the gpu-cu12 extra",
     "slow: slow test",
-    "live: calls a real Kumo Relational endpoint (needs KUMO_RELATIONAL_URL); never run in CI",
+    "live: calls a real Kumo Relational service (needs KUMO_RELATIONAL_URL and KUMO_API_KEY); run by hand only",
 ]

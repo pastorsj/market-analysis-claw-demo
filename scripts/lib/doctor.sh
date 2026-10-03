@@ -4,7 +4,7 @@
 #
 # doctor: host, configuration and profile checks. Messages name variables, never their values.
 
-readonly KNOWN_PROFILES="core retrieval analytics analytics-gpu kumo ontology"
+readonly KNOWN_PROFILES="core retrieval analytics analytics-gpu ontology"
 readonly BUILD_NVIDIA_HOST=integrate.api.nvidia.com
 
 problems=0
@@ -62,12 +62,9 @@ check_host() {
   # OpenShell's sandbox needs Landlock ABI 3 (Linux 6.2+) on the Docker host; it fails closed.
   kernel=$(docker info --format '{{.KernelVersion}}')
   [ "$(version_number "$kernel")" -ge 6002 ] || problem "Docker host kernel $kernel: OpenShell needs Linux 6.2 or later"
-  if has_profile analytics-gpu || has_profile kumo; then
+  if has_profile analytics-gpu; then
     docker info --format '{{json .Runtimes}}' | grep -q nvidia ||
-      problem "the analytics-gpu and kumo profiles need the NVIDIA Container Toolkit"
-  fi
-  if has_profile kumo && [ "$(docker info --format '{{.Architecture}}')" != x86_64 ]; then
-    problem "the kumo profile needs an x86_64 Docker host (the Kumo NIM is amd64 only)"
+      problem "the analytics-gpu profile needs the NVIDIA Container Toolkit"
   fi
   if has_profile retrieval && [ "$(docker info --format '{{.MemTotal}}')" -lt $((8 * 1024 * 1024 * 1024)) ]; then
     warn "Docker has less than 8 GiB of memory; Milvus needs at least 8 GiB"
@@ -102,6 +99,7 @@ check_config() {
   [ "$UI_BIND_HOST" = 127.0.0.1 ] ||
     warn "UI_BIND_HOST is not 127.0.0.1: the UI, and the agent behind it, is open to every network that reaches port $UI_PORT; keep it only behind a link that requires sign-in, such as a Brev link with sign-in set in the Brev console"
   check_profiles
+  check_kumo
   check_inference
   if has_profile retrieval || has_profile ontology; then
     check_retriever
@@ -162,18 +160,47 @@ check_profiles() {
   for profile in ${COMPOSE_PROFILES//,/ }; do
     case " $KNOWN_PROFILES " in
       *" $profile "*) ;;
-      *) problem "unknown profile '$profile' in COMPOSE_PROFILES (known: $KNOWN_PROFILES)" ;;
+      *)
+        if [ "$profile" = kumo ]; then
+          problem "the kumo profile is gone: remove it from COMPOSE_PROFILES, and set KUMO_RELATIONAL_URL and" \
+            "KUMO_API_KEY to a Kumo service (.env section 3; docs/kumo-service.md)"
+        else
+          problem "unknown profile '$profile' in COMPOSE_PROFILES (known: $KNOWN_PROFILES)"
+        fi
+        ;;
     esac
   done
   if has_profile analytics && has_profile analytics-gpu; then
     problem "use analytics or analytics-gpu, not both (they share a port and a DNS name)"
   fi
-  if [ -n "$KUMO_RELATIONAL_URL" ] && ! has_profile analytics && ! has_profile analytics-gpu; then
-    problem "Kumo (the kumo profile or KUMO_RELATIONAL_URL) needs the analytics or analytics-gpu profile"
-  fi
   if has_profile ontology && [ ! -e "$ROOT/vendor/auto-ontology/.git" ]; then
     problem "the ontology profile needs the private submodule:" \
       "git submodule update --init --checkout vendor/auto-ontology"
+  fi
+}
+
+# Kumo prediction (predict_asset_outcomes) is configured only by the URL and key of a Kumo service
+# (docs/kumo-service.md): both turn it on, neither leaves it off, and one without the other is a problem.
+check_kumo() {
+  if [ -z "$KUMO_RELATIONAL_URL" ] && [ -z "$KUMO_API_KEY" ]; then
+    log "Kumo prediction is off: to turn it on, set KUMO_RELATIONAL_URL and KUMO_API_KEY to a Kumo service" \
+      "(.env section 3; docs/kumo-service.md)"
+    return 0
+  fi
+  if ! kumo_enabled; then
+    local empty=KUMO_API_KEY
+    [ -n "$KUMO_RELATIONAL_URL" ] || empty=KUMO_RELATIONAL_URL
+    problem "$empty is empty: set KUMO_RELATIONAL_URL and KUMO_API_KEY together, or neither (.env section 3;" \
+      "docs/kumo-service.md)"
+    return 0
+  fi
+  # The Kumo client refuses to send a key over plain HTTP; the service is reached through an HTTPS link.
+  case $KUMO_RELATIONAL_URL in
+    https://?*) ;;
+    *) problem "KUMO_RELATIONAL_URL must be an https:// URL: the Kumo client never sends KUMO_API_KEY over plain HTTP" ;;
+  esac
+  if ! has_profile analytics && ! has_profile analytics-gpu; then
+    problem "Kumo (KUMO_RELATIONAL_URL and KUMO_API_KEY) needs the analytics or analytics-gpu profile"
   fi
 }
 
@@ -326,16 +353,21 @@ check_keys() {
     models_listed retriever "${RETRIEVER_BASE_URL:-https://$BUILD_NVIDIA_HOST/v1}" "$RETRIEVER_API_KEY" \
       "${RETRIEVER_EMBED_MODEL:-nvidia/nemotron-3-embed-1b}"
   fi
+  # The Kumo service's proxy checks the key on every route but /healthz, the NIM's /v1/models included.
+  if kumo_enabled; then
+    MODELS_AUTH=kumo models_listed kumo "${KUMO_RELATIONAL_URL%/}/v1" "$KUMO_API_KEY" kumo-relational
+  fi
 }
 
-# [MODELS_AUTH=anthropic] models_listed NAME BASE_URL KEY MODEL...
+# [MODELS_AUTH=anthropic|kumo] models_listed NAME BASE_URL KEY MODEL...
 models_listed() {
   local name=$1 url=$2 key=$3 listed model header='header = "Authorization: Bearer %s"\n'
   shift 3
   [ -n "$url" ] && [ -n "$key" ] || return 0 # already reported as empty
-  if [ "${MODELS_AUTH:-}" = anthropic ]; then
-    header='header = "x-api-key: %s"\nheader = "anthropic-version: 2023-06-01"\n'
-  fi
+  case ${MODELS_AUTH:-} in
+    anthropic) header='header = "x-api-key: %s"\nheader = "anthropic-version: 2023-06-01"\n' ;;
+    kumo) header='header = "X-API-Key: %s"\n' ;;
+  esac
   # curl reads the header from stdin, so the key never appears in a process listing.
   # shellcheck disable=SC2059 # the format is one of the two constant strings above
   if ! listed=$(printf "$header" "$key" |

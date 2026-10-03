@@ -9,7 +9,10 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - `api/`: job API (`demo_api`). Contracts live in `api/src/demo_api/events/` and `receipts/`.
 - `ui/`: Next.js UI. `ui/src/generated/` is generated.
 - `tools/`: MCP servers (`retrieval`, `market-analytics`, `auto-ontology`), each its own project.
-- `infra/`: `openshell/` (version pinned in `infra/openshell/versions.env`) and `switchyard/`.
+- `infra/`: `openshell/` (version pinned in `infra/openshell/versions.env`), `switchyard/`, and `kumo-service/`, the
+  Kumo Relational service that deployments share: its own Compose project on its own GPU host
+  ([Kumo service](docs/kumo-service.md)). The demo stack runs no Kumo NIM; it reaches the service only by
+  `KUMO_RELATIONAL_URL` and `KUMO_API_KEY`, both or neither.
 - `data/`: data packs (`data/packs/<id>/`) and the `demo-data` builder.
 - `contracts/`: tool registry, JSON Schemas and golden fixtures shared across languages.
 - `scripts/`: `demo.sh` (lifecycle) and `gen-contracts.sh` (codegen).
@@ -36,7 +39,8 @@ Next.js UI, run together with Docker Compose. See `README.md` for the overview.
 - One `uv` project and `uv.lock` per service directory; Python 3.12.
 - Secrets live only in `.env` (never committed). Never use `NVIDIA_API_KEY` or `NVIDIA_BASE_URL`.
 - Host ports bind to 127.0.0.1, except the UI's via `UI_BIND_HOST`. All Docker resources belong to the
-  Compose project `market-demo`.
+  Compose project `market-demo`, except `infra/kumo-service/`'s (project `kumo-service`, deployed on another host,
+  whose key-checking proxy is published for an HTTPS link).
 - A cached rebuild must give the same image ID, or `demo.sh up` recreates the container (and, for the
   agent image, the sandbox). So no `EXPOSE`: Docker Engine 28's BuildKit writes a pointer into its
   history line. `demo.sh` also builds without provenance attestations.

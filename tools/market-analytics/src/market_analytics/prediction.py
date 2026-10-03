@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """predict_asset_outcomes: run one of the pack's curated PQL templates on NVIDIA Kumo Relational.
 
-Registered only when KUMO_RELATIONAL_URL is set (the `kumo` compose profile). The model picks a template and
-an asset scope; it never writes PQL. The graph is the pack's prediction views, with the keys, time columns and
-links from pack.json `prediction`, read from the pack's DuckDB file on each call.
+Registered only when both KUMO_RELATIONAL_URL and KUMO_API_KEY are set (server.kumo_endpoint): a Kumo Relational
+service behind a key-checking proxy (docs/kumo-service.md). The model picks a template and an asset scope; it never
+writes PQL. The graph is the pack's prediction views, with the keys, time columns and links from pack.json
+`prediction`, read from the pack's DuckDB file on each call.
 """
 
 import logging
@@ -60,7 +61,7 @@ class PredictionResult(BaseModel):
 class Predictor:
     def __init__(self, pack: Pack, url: str, api_key: str | None = None) -> None:
         if pack.prediction is None:
-            raise ValueError("KUMO_RELATIONAL_URL is set, but the active data pack has no prediction section")
+            raise ValueError("Kumo is configured, but the active data pack has no prediction section")
         self.config = pack.prediction
         self.database = pack.database
         self.templates = {template["id"]: template for template in self.config["templates"]}

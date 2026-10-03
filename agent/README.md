@@ -31,9 +31,11 @@ optional tools baked into an image: `retrieval`, `analytics`, `kumo` (needs
 tool or visible skill. Change it by rebuilding the image and recreating the
 sandbox.
 
-To derive it from `COMPOSE_PROFILES`, keep `retrieval`, `analytics`, `kumo`
-and `ontology`, map `analytics-gpu` to `analytics`, and ignore every other
-profile. For example, `core,retrieval,analytics-gpu,kumo` becomes
+`demo.sh` derives it from `COMPOSE_PROFILES` and the Kumo settings: it keeps
+`retrieval`, `analytics` and `ontology`, maps `analytics-gpu` to `analytics`,
+ignores every other profile, and adds `kumo` when `KUMO_RELATIONAL_URL` and
+`KUMO_API_KEY` are both set ([Kumo service](../docs/kumo-service.md)). For
+example, `core,retrieval,analytics-gpu` with both set becomes
 `retrieval,analytics,kumo`. A profile passed through unmapped, such as `core`,
 fails the build as an unknown feature.
 
