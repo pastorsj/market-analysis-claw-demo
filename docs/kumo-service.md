@@ -50,7 +50,7 @@ rotation.
 | Disk | 100 GB or more: the image, the OS and Docker | The image: about 14 GB to download (5 minutes) and 44 GB on disk |
 | CPU | 4 vCPU or more | – |
 | Memory | 16 GB or more | 1.8 GiB for the NIM at idle |
-| Host | Linux x86_64 (the NIM is amd64 only), Docker Engine 28+ with Compose 2.30+, an NVIDIA driver and the NVIDIA Container Toolkit (`docker info` lists the `nvidia` runtime); for example Ubuntu 22.04 | – |
+| Host | Linux x86_64 (the NIM is amd64 only), Docker Engine 28+ with Compose 2.30+, an NVIDIA driver 580 or newer (the NIM is built on CUDA 13.2; an older driver leaves it on the CPU, with `torch.cuda.is_available()` false inside the container) and the NVIDIA Container Toolkit (`docker info` lists the `nvidia` runtime; after a driver change in CDI mode, run `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml` and restart Docker); for example Ubuntu 22.04 | – |
 
 The NIM turned healthy about 40 s after it started. A prediction took 10.5 to 12.6 s for the return
 templates and 0.6 s for a news template, and repeat calls returned identical probabilities. On
