@@ -29,7 +29,8 @@ runs without keys or a GPU.
 
 You need Docker Engine 28+ with Compose 2.30+ (Linux with kernel 6.2+, or macOS with colima), bash, curl and an
 `nvapi-` key from [build.nvidia.com](https://build.nvidia.com). OpenShell 0.1.2 runs in containers that
-`demo.sh` pins and builds, so there is no CLI to install. An NVIDIA GPU is optional (RAPIDS and the Kumo NIM),
+`demo.sh` pins and builds, so there is no CLI to install. An NVIDIA GPU is optional (RAPIDS),
+the Kumo questions need a [Kumo service](docs/kumo-service.md) (`KUMO_RELATIONAL_URL` and `KUMO_API_KEY` in `.env`),
 and the Auto Ontology questions need access to its submodule while `NVIDIA/auto-ontology` is private.
 
 ```bash
@@ -65,7 +66,7 @@ flowchart LR
     hermes -->|"MCP"| analytics["Market analytics<br/>RAPIDS or pandas"]
     hermes -->|"MCP"| retrieval["Retrieval<br/>LangChain NVIDIA"]
     hermes -.->|"MCP, ontology profile"| ontology["Auto Ontology<br/>text-to-SQL"]
-    analytics -.->|"kumo profile or hosted"| kumo["Kumo Relational NIM"]
+    analytics -.->|"HTTPS, URL and key"| kumo["Kumo service<br/>Kumo Relational NIM"]
     retrieval --> milvus[("Milvus")]
     hermes -->|"model calls"| switchyard["Switchyard"]
     switchyard --> nemotron(["Nemotron 3 Ultra"])
@@ -77,6 +78,7 @@ flowchart LR
 
 - [Architecture](docs/architecture.md): components, request flow, contracts, trust boundaries, limitations, technologies
 - [Configuration](docs/configuration.md): every `.env` variable, profiles, hardware tiers, `doctor`
+- [Kumo service](docs/kumo-service.md): the shared Kumo Relational NIM behind a key-checking proxy, and pointing a deployment at it
 - [Operations](docs/operations.md): lifecycle, Phoenix, jobs, recording and replay, on-demand checks, troubleshooting
 - [Models and routing](docs/models-and-routing.md): endpoints, model ids, routing templates, the bake-offs
 - [OpenShell](docs/openshell.md): the sandbox image, its policy, providers and lifecycle

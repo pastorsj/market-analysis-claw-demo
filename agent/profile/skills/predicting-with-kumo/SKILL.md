@@ -2,7 +2,7 @@
 name: predicting-with-kumo
 description: Predicts future asset outcomes with Kumo Relational
 license: Apache-2.0
-compatibility: Requires the market_analytics MCP server with NVIDIA Kumo Relational (the kumo profile's local NIM or a hosted endpoint)
+compatibility: Requires the market_analytics MCP server with an NVIDIA Kumo Relational service (its URL and key)
 metadata:
   author: NVIDIA
   version: "1.0"
@@ -20,8 +20,8 @@ metadata:
 # Predicting with Kumo
 
 `predict_asset_outcomes` runs one curated predictive query (PQL) template on
-Kumo Relational, a relational foundation model: the kumo profile's local NVIDIA
-Kumo Relational NIM, or a hosted endpoint set with `KUMO_RELATIONAL_URL`. For
+Kumo Relational, a relational foundation model, served by an NVIDIA Kumo
+Relational NIM that the deployment reaches by its URL and key. For
 each asset in scope it returns the probability of the template's outcome over
 the template's horizon. You choose the template and the assets. You never write
 PQL.

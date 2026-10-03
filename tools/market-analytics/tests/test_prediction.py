@@ -18,6 +18,9 @@ from market_analytics.prediction import Horizon
 from market_analytics.prediction import Predictor
 from market_analytics.prediction import horizon
 from market_analytics.prediction import register
+from market_analytics.server import KumoConfigError
+from market_analytics.server import kumo_endpoint
+from market_analytics.server import register_kumo
 
 pytestmark = pytest.mark.anyio
 
@@ -66,8 +69,68 @@ def stub(monkeypatch: pytest.MonkeyPatch) -> type[StubClient]:
 
 def server_with_prediction(pack: Pack) -> MCPServer:
     server = MCPServer("market_analytics")
-    register(server, pack, "http://kumo-relational:8000", api_key="dummy-key")
+    register(server, pack, "https://kumo.example.com", api_key="dummy-key")
     return server
+
+
+URL = "https://kumo.example.com"
+KEY = "k" * 64
+
+
+@pytest.mark.parametrize(
+    ("env", "expected"),
+    [
+        ({"KUMO_RELATIONAL_URL": URL, "KUMO_API_KEY": KEY}, (URL, KEY)),
+        ({"KUMO_RELATIONAL_URL": f" {URL} ", "KUMO_API_KEY": f"{KEY}\n"}, (URL, KEY)),
+        ({}, None),
+        ({"KUMO_RELATIONAL_URL": "", "KUMO_API_KEY": ""}, None),  # Compose renders an unset variable as ""
+    ],
+)
+def test_kumo_is_on_with_its_url_and_key_and_off_with_neither(
+    env: dict[str, str], expected: tuple[str, str] | None, tmp_path: Path
+) -> None:
+    assert kumo_endpoint(env, secret=tmp_path / "absent") == expected
+
+
+@pytest.mark.parametrize(
+    ("env", "missing"),
+    [({"KUMO_RELATIONAL_URL": URL}, "KUMO_API_KEY is empty"), ({"KUMO_API_KEY": KEY}, "KUMO_RELATIONAL_URL is empty")],
+)
+def test_a_url_without_a_key_or_a_key_without_a_url_is_refused(
+    env: dict[str, str], missing: str, tmp_path: Path
+) -> None:
+    with pytest.raises(KumoConfigError, match=f"both KUMO_RELATIONAL_URL and KUMO_API_KEY, and {missing}"):
+        kumo_endpoint(env, secret=tmp_path / "absent")
+
+
+def test_the_key_comes_from_the_compose_secret(tmp_path: Path) -> None:
+    secret = tmp_path / "kumo_api_key"
+    secret.write_text(f"{KEY}\n")
+    assert kumo_endpoint({"KUMO_RELATIONAL_URL": URL}, secret=secret) == (URL, KEY)
+    with pytest.raises(KumoConfigError, match="KUMO_RELATIONAL_URL is empty"):
+        kumo_endpoint({}, secret=secret)  # a key with no URL
+
+
+@pytest.mark.parametrize(
+    ("env", "registered"),
+    [
+        ({"KUMO_RELATIONAL_URL": URL, "KUMO_API_KEY": KEY}, True),
+        ({}, False),
+    ],
+)
+async def test_the_tool_is_registered_only_with_both_url_and_key(
+    pack: Pack, env: dict[str, str], registered: bool, tmp_path: Path, stub: type[StubClient]
+) -> None:
+    server = MCPServer("market_analytics")
+    assert register_kumo(server, pack, kumo_endpoint(env, secret=tmp_path / "absent")) is registered
+    async with Client(server) as client:
+        names = {tool.name for tool in (await client.list_tools()).tools}
+        assert ("predict_asset_outcomes" in names) is registered
+        if registered:
+            await client.call_tool("predict_asset_outcomes", {"template_id": "positive_return"})
+    if registered:
+        (call,) = stub.calls
+        assert (call["url"], call["api_key"]) == (URL, KEY)  # the client sends the key as X-API-Key
 
 
 def test_horizon_is_read_from_the_pql_window() -> None:
@@ -106,7 +169,7 @@ async def test_prediction_maps_kumo_rows_to_asset_probabilities(pack: Pack, stub
         "model": "kumo-relational",
     }
     (call,) = stub.calls
-    assert (call["url"], call["api_key"]) == ("http://kumo-relational:8000", "dummy-key")
+    assert (call["url"], call["api_key"]) == ("https://kumo.example.com", "dummy-key")
     assert (call["max_retries"], call["num_retries"]) == (0, 0)  # one attempt, so the call ends within its timeout
     assert call["query"] == TEMPLATES[0]["pql"]
     assert call["anchor_time"] == pd.Timestamp(pack.prediction["anchor"])
@@ -114,7 +177,7 @@ async def test_prediction_maps_kumo_rows_to_asset_probabilities(pack: Pack, stub
 
 
 def test_the_graph_has_the_pack_keys_time_columns_and_links(pack: Pack) -> None:
-    graph = Predictor(pack, "http://kumo-relational:8000").graph()
+    graph = Predictor(pack, "https://kumo.example.com").graph()
 
     assert graph["price_events"].primary_key.name == "price_id"
     assert graph["return_outcomes"].time_column.name == "realized_at"
@@ -161,11 +224,13 @@ async def test_assets_outside_the_population_and_unselected_sources_are_refused(
 
 @pytest.mark.live
 def test_live_prediction() -> None:
-    """KUMO_RELATIONAL_URL (and KUMO_API_KEY for a hosted gateway) plus DATA_ACTIVE_DIR with a real pack."""
-    if not (os.environ.get("KUMO_RELATIONAL_URL") and os.environ.get("DATA_ACTIVE_DIR")):
-        pytest.skip("set KUMO_RELATIONAL_URL and DATA_ACTIVE_DIR")
+    """KUMO_RELATIONAL_URL and KUMO_API_KEY (a Kumo Relational service) plus DATA_ACTIVE_DIR with a real pack."""
+    if not (
+        os.environ.get("KUMO_RELATIONAL_URL") and os.environ.get("KUMO_API_KEY") and os.environ.get("DATA_ACTIVE_DIR")
+    ):
+        pytest.skip("set KUMO_RELATIONAL_URL, KUMO_API_KEY and DATA_ACTIVE_DIR")
     pack = Pack.load(Path(os.environ["DATA_ACTIVE_DIR"]))
-    predictor = Predictor(pack, os.environ["KUMO_RELATIONAL_URL"], os.environ.get("KUMO_API_KEY"))
+    predictor = Predictor(pack, os.environ["KUMO_RELATIONAL_URL"], os.environ["KUMO_API_KEY"])
     template_id = next(iter(predictor.templates))
 
     result = predictor.predict(template_id, predictor.population[:2])

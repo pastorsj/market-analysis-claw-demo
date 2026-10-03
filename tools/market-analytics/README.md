@@ -1,7 +1,7 @@
 # market-analytics
 
 An MCP server (streamable HTTP at `:3010/mcp`) with seven read-only market tools, plus Kumo prediction when a
-Kumo Relational endpoint is configured. Hermes calls them as `mcp__market_analytics__<tool>`. The tools run on
+Kumo Relational service's URL and key are configured. Hermes calls them as `mcp__market_analytics__<tool>`. The tools run on
 pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (cuDF, cuML, cuGraph).
 
 | Question | Tool | CPU | GPU |
@@ -13,7 +13,7 @@ pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (c
 | How news sentiment lined up with later returns | `analyze_news_price_relationship` | pandas | cudf.pandas |
 | Most central assets in the return-correlation graph | `analyze_market_relationships` | `nx.pagerank` | nx-cugraph |
 | Sessions ranked by intraday range, minute volatility, drawdown or volume timing, from the raw minute bars | `intraday_scan` | pandas | cudf.pandas |
-| Probability of a curated future outcome per asset | `predict_asset_outcomes` | Kumo Relational (a NIM) | same |
+| Probability of a curated future outcome per asset | `predict_asset_outcomes` | Kumo Relational (a NIM on its own GPU host) | same |
 
 The results are descriptive. Each result names the device, library and time it used, and nothing more; the
 measured difference between the two engines is under [CPU and GPU timings](#cpu-and-gpu-timings).
@@ -88,9 +88,12 @@ measured difference between the two engines is under [CPU and GPU timings](#cpu-
 - **Prediction.** `predict_asset_outcomes(template_id, asset_ids?)` runs one of the pack's curated PQL
   templates (`pack.json` → `prediction.templates`) with `kumo-relational-client`. It returns `available` /
   `reason`, `template_id`, `pql`, `anchor`, `horizon {value, unit}` (read from the PQL window), and
-  `rows [{asset_id, probability}]`. It is registered only when `KUMO_RELATIONAL_URL` is set. A prediction is
-  one attempt with a 60 s timeout and no retries, so a slow NIM returns `available: false` before the agent's
-  MCP timeout (180 s). Never install the client's `[explain]` extra: it sends raw cell values to a third-party
+  `rows [{asset_id, probability}]`. It is registered only when both `KUMO_RELATIONAL_URL` and `KUMO_API_KEY`
+  are set: the URL of a Kumo Relational service behind a key-checking proxy ([Kumo service](../../docs/kumo-service.md)),
+  and its key, which the client sends as `X-API-Key`. Neither leaves the tool off; one without the other stops the
+  server at startup with a message naming both. The server calls the service itself, outside the agent's sandbox,
+  so the sandbox policy names no Kumo host. A prediction is one attempt with a 60 s timeout and no retries, so a
+  slow service returns `available: false` before the agent's MCP timeout (180 s). Never install the client's `[explain]` extra: it sends raw cell values to a third-party
   LLM.
 
 ## Scale
@@ -148,8 +151,8 @@ time leaves out the disk reads a real dataset of that size would need.
 | `MARKET_ANALYTICS_TIMEOUT_SECONDS` | `120` | How long one call may run before the worker is replaced |
 | `MARKET_ANALYTICS_BATCH_BYTES` | 1 GiB on the GPU, 256 MiB on the CPU | The most a minute-bar scan reads at once, estimated from the Parquet footers ([scale](#scale)). A CPU scan peaks at 8 to 14 times it |
 | `CUDF_PANDAS_RMM_MODE` | `managed_pool` | cudf.pandas' memory: managed memory past the GPU's pages to host memory. Compose sets it explicitly |
-| `KUMO_RELATIONAL_URL` | unset | Kumo Relational NIM, e.g. `http://kumo-relational:8000`; enables `predict_asset_outcomes` |
-| `KUMO_API_KEY` | unset | Only for an authenticating gateway in front of the NIM (sent as `X-API-Key`) |
+| `KUMO_RELATIONAL_URL` | unset | The Kumo Relational service, an `https://` URL ([Kumo service](../../docs/kumo-service.md)). With `KUMO_API_KEY`, enables `predict_asset_outcomes` |
+| `KUMO_API_KEY` | unset | The service's key, sent as `X-API-Key`. Compose passes it as the `kumo_api_key` secret (`/run/secrets/kumo_api_key`), which the server reads when the variable is unset |
 
 ## Run
 

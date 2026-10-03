@@ -26,7 +26,7 @@
         "description",
         "explorer",
         "receipt_kind",
-        "profile",
+        "feature",
         "pills"
       ],
       "properties": {
@@ -68,8 +68,8 @@
           "description": "The artifactKind of the tool's receipts.",
           "enum": ["retrieval_evidence", "analytics_result", "structured_query", "structured_prediction"]
         },
-        "profile": {
-          "description": "The Compose profile that provides the tool.",
+        "feature": {
+          "description": "The agent feature (AGENT_FEATURES) that provides the tool: retrieval, analytics and ontology come with the Compose profiles of those names (analytics-gpu gives analytics), kumo with a Kumo service's URL and key.",
           "enum": ["retrieval", "analytics", "kumo", "ontology"]
         },
         "pills": {

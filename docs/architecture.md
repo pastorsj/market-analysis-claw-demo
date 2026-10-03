@@ -29,7 +29,7 @@ flowchart LR
     hermes -.->|"MCP, ontology profile"| ontology["Auto Ontology :3003"]
     retrieval --> milvus[("Milvus")]
     retrieval -->|"RETRIEVER_API_KEY"| retriever[("Retriever endpoint<br/>build.nvidia.com")]
-    analytics -.->|"kumo profile or hosted"| kumo["Kumo Relational NIM"]
+    analytics -.->|"HTTPS, KUMO_API_KEY"| kumo[("Kumo service<br/>Kumo Relational NIM")]
     hermes -->|"receipts, model calls"| api
     hermes -->|"traces"| phoenix["Phoenix :6006"]
     switchyard -->|"traces"| phoenix
@@ -58,7 +58,6 @@ talks only to the UI, which proxies an allowlisted set of API routes.
 | `milvus`, `data-corpus`, `retrieval-index`, `retrieval` | retrieval | 8120 (`retrieval`) | Document corpus, vector index and the `retrieve_evidence` MCP server | [`tools/retrieval/`](../tools/retrieval/README.md) |
 | `milvus-gpu`, `retrieval-benchmark` (one-shot) | analytics-gpu, with retrieval | – | A GPU Milvus holding a `GPU_IVF_FLAT` copy of the index, and the one-shot that times the CPU and GPU indexes for the Benchmark tab, which `demo.sh up` runs after the stack; answers never use or wait on them ([retrieval](retrieval.md#cpugpu-index-comparison-analytics-gpu)) | [`tools/retrieval/`](../tools/retrieval/README.md) |
 | `market-analytics` or `market-analytics-gpu` | analytics or analytics-gpu | 3010 | Seven market tools on pandas or RAPIDS (one reads the minute bars in place), plus `predict_asset_outcomes` when Kumo is configured; the GPU service also runs the API's matched CPU/GPU comparisons (`POST /benchmark`) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
-| `kumo-relational` | kumo | – | Kumo Relational NIM (x86_64 and an NVIDIA GPU) | [`tools/market-analytics/`](../tools/market-analytics/README.md) |
 | `auto-ontology-*` | ontology | 3003 (`auto-ontology-mcp`) | NVIDIA Auto Ontology: `ask_question` answers structured questions with SQL | [`tools/auto-ontology/`](../tools/auto-ontology/README.md) |
 
 The `build` and `tools` profiles hold the agent image build, the OpenShell CLI and `data-fetch`, which `demo.sh`
@@ -66,6 +65,10 @@ runs. `demo.sh data generate` runs NeMo Data Designer with uv on the host, not i
 `synthetic-market` pack's committed text ([data platform](data-platform.md#the-data-designer-pack)). Named
 volumes: `demo-data`, `api-data`, `phoenix-data`, `milvus-data`, `milvus-gpu-data`, `switchyard-data`, `openshell-state`,
 `openshell-client` and `auto-ontology-db` (one per data pack).
+
+Kumo prediction is not part of the project: `predict_asset_outcomes` calls a Kumo Relational service that runs on
+a GPU host of its own, a NIM behind a key-checking proxy, reached through an HTTPS link with `KUMO_RELATIONAL_URL`
+and `KUMO_API_KEY` ([Kumo service](kumo-service.md); its recipe is `infra/kumo-service/`).
 
 ## How a question is answered
 
@@ -169,7 +172,7 @@ treated as untrusted: it reads documents and tool results that could carry promp
 | Browser → API | The UI proxies only `pack`, `data_sources/**`, job submit, job reads and cancel. `/internal/**` and everything else is a 404. In replay mode the proxy calls nothing. |
 | Sandbox network | The sandbox has no network interface. The host-networked OpenShell supervisor makes every connection after checking the policy: each MCP endpoint allows the handshake and an explicit tool list, Switchyard allows chat completions and the model list, the API allows only the three `/internal/hermes` routes, and Phoenix allows only `POST /v1/traces`. Only Hermes' interpreter may connect. |
 | Sandbox filesystem | Landlock (a hard requirement): Hermes and the skills are read-only, `HERMES_HOME` and the workspace are writable. The Hermes tools exposed to runs are the skills toolset and the MCP data tools only: no terminal, file, browser or web tools. |
-| Secrets | No model key enters the sandbox: Switchyard holds `INFERENCE_API_KEY` and `CAPABLE_API_KEY`, the retrieval server `RETRIEVER_API_KEY` (by default the inference key). The receipt key is an OpenShell placeholder that the supervisor replaces on the `/internal/hermes` routes only. Keys reach services as Compose secrets (files in `/run/secrets`), except Auto Ontology's and an optional hosted Kumo key, which upstream reads from the environment. |
+| Secrets | No model key enters the sandbox: Switchyard holds `INFERENCE_API_KEY` and `CAPABLE_API_KEY`, the retrieval server `RETRIEVER_API_KEY` (by default the inference key). The receipt key is an OpenShell placeholder that the supervisor replaces on the `/internal/hermes` routes only. `KUMO_API_KEY` reaches only market analytics, which calls the Kumo service from outside the sandbox. Keys reach services as Compose secrets (files in `/run/secrets`), except Auto Ontology's, which upstream reads from the environment. |
 | Per-job scope | Each run gets only the toolsets of its selected sources and cannot widen them (patch 0002). The plugin injects the job's immutable `source_ids` into every data tool call, and the tools refuse other sources. |
 | Skills | Skills are baked read-only. `skill_manage` writes are staged and never applied, so an injected document cannot plant a skill for a later job. |
 | Database viewer | `POST /v1/data_sources/{id}/query` runs one read-only SELECT in a separate process: 5 s, 100 rows, two at a time. |
@@ -194,10 +197,13 @@ committing ([data packs](data-packs.md#recordings)). To report a security issue,
   provider's terms. The default endpoint, build.nvidia.com, is open to anyone with an NVIDIA account but
   serves no GPT model; the `*-gpt` templates take GPT-6.1 Sol from a provider you configure.
 - **Auto Ontology is required for the structured questions.** Until `NVIDIA/auto-ontology` is public, the
-  `ontology` profile needs access to that repository. Without the profile, the agent declines questions that
-  need exact rows or custom SQL, such as the per-sector counts and median returns (`sector-sql`). The replay
+  `ontology` profile needs access to that repository. Without the profile, the questions that declare it, such
+  as the per-sector counts and median returns (`sector-sql`), are not offered, and the agent declines questions
+  that need exact rows or custom SQL. The replay
   bundle was recorded with it.
-- **Kumo.** The local Kumo NIM needs x86_64 and an NVIDIA GPU; elsewhere, use a hosted Kumo endpoint.
+- **Kumo needs its own service.** The Kumo Relational NIM runs on a separate x86_64 host with an NVIDIA GPU
+  ([Kumo service](kumo-service.md)). Without its URL and key, the agent has no prediction tool and the Kumo
+  questions are not offered.
 - **One user.** There are no accounts and no authentication, and one job runs at a time. The demo is for one
   person on one host.
 - **Small bake-offs.** The recommendation rests on the 2026-10-01 bake-off: 8 `us-equities` questions run twice
@@ -218,7 +224,7 @@ committing ([data packs](data-packs.md#recordings)). To report a security issue,
 | Retrieval models | Nemotron 3 Embed 1B, Llama Nemotron Rerank VL 1B v2 | hosted |
 | Retrieval | `langchain-nvidia-ai-endpoints`, `pymilvus`, Milvus (CPU standalone; with analytics-gpu, a GPU standalone for the Benchmark tab's index comparison) | 1.4.3, 2.6.17, 2.6.25 |
 | Market analytics | pandas, scikit-learn, NetworkX; on GPU, RAPIDS cuDF, cuML and nx-cugraph | 2.3, 1.9, 3.6; 26.06 (CUDA 12) |
-| Prediction | Kumo Relational NIM, `kumo-relational-client` | 1.0.1, 1.0.2 |
+| Prediction | Kumo Relational NIM (on its own host, behind nginx 1.30), `kumo-relational-client` | 1.0.1, 1.0.2 |
 | Synthetic data | NeMo Data Designer (`data-designer`) | 0.9.3 |
 | Structured questions | NVIDIA Auto Ontology (`ontology` profile, required) | 1.0.0 |
 | Tool protocol | Model Context Protocol, Python SDK over streamable HTTP | `mcp` 2.2 |

@@ -142,6 +142,9 @@ class ActivePack:
     def __init__(self, data_dir: Path, registry: ToolRegistry, features: frozenset[str]) -> None:
         self.data_dir = data_dir
         self._families = registry.families(features)
+        # The pills of the tools this stack serves: a question whose `tools` name another, such as kumo without a
+        # Kumo service, is not offered.
+        self._pills = {pill for tool in registry.available(features) for pill in tool.pills}
 
     def manifest(self) -> dict[str, Any]:
         try:
@@ -186,12 +189,16 @@ class ActivePack:
         """``GET /v1/pack``: what the UI shows on its landing page and in the composer's example picker, and the
         conversations `demo-api record` asks.
 
-        A build from before ``examples`` existed has none in its pack.json, so it gets the default list too.
+        Only what this stack can answer: the sources a question or conversation names, and the tools a question
+        declares (questions.yaml ``tools``), are all available. A build from before ``examples`` existed has none in
+        its pack.json, so it gets the default list too.
         """
         manifest = self.manifest()
         available = {source.id for source in self.sources()}
         questions = [
-            question for question in manifest.get("questions", []) if set(question.get("sources", [])) <= available
+            question
+            for question in manifest.get("questions", [])
+            if set(question.get("sources", [])) <= available and set(question.get("tools", [])) <= self._pills
         ]
         return PackView(
             **{key: manifest.get(key) for key in ("id", "version", "title", "description", "as_of", "disclaimer")},

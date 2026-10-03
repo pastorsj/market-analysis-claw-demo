@@ -100,7 +100,8 @@ the pack. Its MCP description starts with "Unavailable in the active data pack",
 `synthetic-market`'s daily-bar profiles). The market skill tells the agent not to call it.
 
 `questions.yaml` holds each pack's demo questions. A question is offered only when every source it names is in
-the build and, if it lists `profiles`, the build uses one of them. Each declares the `tools` it is expected to use
+the build and, if it lists `profiles`, the build uses one of them; the API also leaves out a question whose
+declared `tools` the running stack lacks, such as `kumo` without a [Kumo service](kumo-service.md). Each declares the `tools` it is expected to use
 as technology pills, which the composer's demo scenario picker shows beside its label: `cudf` for any market tool,
 plus `cuml` for `market_anomaly_scan` and `cugraph` for `analyze_market_relationships`; `kumo`
 (`predict_asset_outcomes`), `retrieval` (`retrieve_evidence`, one pill whatever the sources) and `ontology`
@@ -164,8 +165,8 @@ DATA_PACK=us-equities ./scripts/demo.sh replay
 ```
 
 Both were recorded on 2026-10-01, and some of their sessions again on 2026-10-02 (each pack's README names
-them), on a Brev A100 VM with every profile, including `ontology`, the local Kumo
-NIM and the GPU Milvus, so every answer that called the market tools carries its CPU/GPU comparison for the
+them), on a Brev A100 VM with every profile, including `ontology`, Kumo (then a NIM in
+the demo stack, since moved to its own [service](kumo-service.md)) and the GPU Milvus, so every answer that called the market tools carries its CPU/GPU comparison for the
 Benchmark tab, and every answer that searched documents carries the Milvus CPU/GPU index comparison
 (`retrievalBenchmark`). `synthetic-market` was recorded with the `.env.example` models and corpora (Nemotron 3
 Ultra alone, on build.nvidia.com), as a public user runs it. `us-equities`, the hosted demo's pack, was recorded

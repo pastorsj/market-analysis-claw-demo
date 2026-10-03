@@ -46,8 +46,8 @@ auto-ontology-db ──> auto-ontology-frontend-migrate ──> auto-ontology-fr
 - The database connection comes from `CONNECTION_STRINGS`, not from the catalog. As a result, upstream's
   `check_readiness` tool reports `can_execute_sql: false` even though SQL runs. Hermes enables only
   `ask_question`.
-- Prediction runs on the market-analytics server (`predict_asset_outcomes`, `kumo` profile). Auto Ontology no
-  longer calls Kumo, and the `kumo` profile does not need `ontology`.
+- Prediction runs on the market-analytics server (`predict_asset_outcomes`, with a [Kumo service](../../docs/kumo-service.md)).
+  Auto Ontology no longer calls Kumo, and Kumo does not need `ontology`.
 - The agent image includes the `auto_ontology` MCP server only when it is built with the `ontology` feature
   (see `agent/README.md`).
 

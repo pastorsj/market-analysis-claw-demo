@@ -20,6 +20,7 @@ tools/auto-ontology/     patches and seed for Auto Ontology (the ontology profil
 infra/openshell/         OpenShell pins, gateway config, provider profiles, CLI image
 infra/switchyard/        Switchyard image, route templates, judge prompt
 infra/phoenix/           Phoenix launcher
+infra/kumo-service/      the shared Kumo service: its own Compose project, the NIM behind a key-checking proxy
 data/                    data packs and the demo-data builder; packs/<id>/recordings is the replay bundle
 eval/                    on-demand checks of a running deployment: the answer-quality eval and the GPU guard
 contracts/               tool registry, JSON Schemas and golden fixtures
@@ -61,7 +62,7 @@ There is no hosted CI. Before you push, run:
 | Command | Checks |
 |---|---|
 | `pre-commit run --all-files` | ruff, shellcheck, gitleaks, JSON/TOML/YAML syntax, and the guards: no market data files, no Makefile, no Git LFS |
-| `./scripts/demo.sh test all` | Every Python project's tests and ruff, the UI's lint, type-check, unit tests, build and Playwright suite, the contracts check, the Compose config of every profile set, and the Switchyard dry-runs |
+| `./scripts/demo.sh test all` | Every Python project's tests and ruff, the UI's lint, type-check, unit tests, build and Playwright suite, the contracts check, the Compose config of every profile set and of the Kumo service, the Switchyard dry-runs, and the Kumo service's proxy against a stub NIM ([Kumo service](kumo-service.md#test)) |
 | `cd ui && npm run e2e:visual` | The visual baselines, in the Playwright Docker image ([e2e/visual](../ui/e2e/visual/README.md)) |
 | `cd data && uv run --locked pytest -m slow` | The end-to-end `synthetic-market` build |
 

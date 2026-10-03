@@ -186,7 +186,7 @@ build.nvidia.com's; the pinned Sol arm's result depends on the `market_scan` arg
 ## How the bake-off was run
 
 **When and where.** 2026-09-30, after the tuning above, on a Brev VM with one A100 (40 GB) and every profile
-(`core,retrieval,analytics-gpu,kumo,ontology`: the GPU market tools, the local Kumo NIM and Auto Ontology),
+(`core,retrieval,analytics-gpu,kumo,ontology`: the GPU market tools, the Kumo NIM, then in the demo stack, and Auto Ontology),
 OpenShell 0.1.2, Hermes v2026.9.24 and Switchyard 0.3.0. First `synthetic-market`, then `us-equities`, each
 with a sandbox started for that pack.
 

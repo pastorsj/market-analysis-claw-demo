@@ -14,6 +14,8 @@ from jsonschema import Draft202012Validator
 from pydantic import SecretStr
 from support import REPO
 
+from demo_api.pack import ActivePack
+
 STRUCTURED = "/v1/data_sources/market_analysis_structured"
 
 
@@ -43,7 +45,7 @@ async def test_the_example_picker_offers_the_pack_s_examples_in_order(api, data_
         "question": "What comes next?",
         "sources": ["market_analysis_structured"],
     }
-    pack["questions"].append(extra | {"tools": ["kumo"]})
+    pack["questions"].append(extra | {"tools": ["cudf"]})
     pack["examples"] = ["outlook", "filings", "market-leaders"]
     (data_dir / "pack.json").write_text(json.dumps(pack))
 
@@ -52,6 +54,24 @@ async def test_the_example_picker_offers_the_pack_s_examples_in_order(api, data_
     # Only those whose sources the stack serves: no retrieval index, no filings
     (data_dir / "collection-manifest.json").unlink()
     assert (await api.get("/v1/pack")).json()["examples"] == ["outlook", "market-leaders"]
+
+
+async def test_a_question_whose_tools_the_stack_lacks_is_not_offered(api, data_dir, tool_registry):
+    pack = json.loads((data_dir / "pack.json").read_text())
+    outlook = {"id": "outlook", "label": "Outlook", "question": "What comes next?", "tools": ["kumo"]}
+    pack["questions"].append(outlook | {"sources": ["market_analysis_structured"]})
+    pack["examples"] = ["outlook", "market-leaders", "filings"]
+    (data_dir / "pack.json").write_text(json.dumps(pack))
+
+    # AGENT_FEATURES=retrieval,analytics: no Kumo service, so no Kumo question, in the list or in the picker
+    view = (await api.get("/v1/pack")).json()
+    assert [question["id"] for question in view["questions"]] == ["market-leaders", "filings"]
+    assert view["examples"] == ["market-leaders", "filings"]
+
+    # The kumo feature (KUMO_RELATIONAL_URL and KUMO_API_KEY both set) offers it
+    with_kumo = ActivePack(data_dir, tool_registry, frozenset({"retrieval", "analytics", "kumo"})).public_view()
+    assert [question.id for question in with_kumo.questions] == ["market-leaders", "filings", "outlook"]
+    assert with_kumo.examples == ["outlook", "market-leaders", "filings"]
 
 
 async def test_without_a_list_the_picker_offers_the_featured_questions_then_the_rest_up_to_12(api, data_dir):

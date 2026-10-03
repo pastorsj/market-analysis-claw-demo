@@ -9,7 +9,7 @@
       "description": "Retrieves and reranks cited passages from the selected document sources",
       "explorer": "retrieval",
       "receipt_kind": "retrieval_evidence",
-      "profile": "retrieval",
+      "feature": "retrieval",
       "pills": ["retrieval"]
     },
     {
@@ -21,7 +21,7 @@
       "description": "Ranks assets by observed market signals",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf"]
     },
     {
@@ -33,7 +33,7 @@
       "description": "Ranks unusual observed feature combinations",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf", "cuml"]
     },
     {
@@ -45,7 +45,7 @@
       "description": "Summarizes observed price history",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf"]
     },
     {
@@ -57,7 +57,7 @@
       "description": "Aggregates observed news sentiment over time",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf"]
     },
     {
@@ -69,7 +69,7 @@
       "description": "Aligns news with forward returns",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf"]
     },
     {
@@ -81,7 +81,7 @@
       "description": "Ranks observed relationship centrality",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf", "cugraph"]
     },
     {
@@ -93,7 +93,7 @@
       "description": "Ranks asset sessions by intraday behavior from minute bars",
       "explorer": "market",
       "receipt_kind": "analytics_result",
-      "profile": "analytics",
+      "feature": "analytics",
       "pills": ["cudf"]
     },
     {
@@ -105,7 +105,7 @@
       "description": "Predicts per-asset outcome probabilities with NVIDIA Kumo",
       "explorer": "pql",
       "receipt_kind": "structured_prediction",
-      "profile": "kumo",
+      "feature": "kumo",
       "pills": ["kumo"]
     },
     {
@@ -117,7 +117,7 @@
       "description": "Answers historical database questions with ontology-grounded SQL",
       "explorer": "ontology",
       "receipt_kind": "structured_query",
-      "profile": "ontology",
+      "feature": "ontology",
       "pills": ["ontology"]
     }
   ]
