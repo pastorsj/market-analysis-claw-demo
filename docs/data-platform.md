@@ -214,7 +214,7 @@ it is empty, fetch only verifies what is already in place.
 - `DATA_SOURCE_DIR` defaults to `$HOME/market-demo-data`, outside the repository, so the data cannot be
   staged by accident. Three guards back that up: `.gitignore` ignores `data/external/`, `.verified.json` and
   Parquet, Arrow and Feather files outside `data/packs/*/text/` and the test fixtures; a pre-commit hook
-  refuses those files (and DuckDB files); and a CI step fails if any is committed.
+  refuses those files (and DuckDB files).
 - `doctor` (and so `up`) stops when a pack's dataset has not been fetched, naming the variable to set, and
   checks that `DATA_SOURCE_DIR` has room for it (its `bytes` plus 10%).
 - **Brev and other VMs.** Point `DATA_SOURCE_DIR` at the large disk. At setup, run `data fetch` from a
