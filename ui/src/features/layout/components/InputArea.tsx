@@ -5,15 +5,17 @@
  * InputArea Component
  *
  * Chat input area at the bottom of the chat view: the demo scenario picker
- * (the active data pack's questions), the question, the microphone when voice
- * input is on, the data source indicator, and send (or stop while a run is in
- * progress). A recorded session shows it read only, as the original demo UI did;
- * in replay mode that includes the original's microphone, disabled.
+ * (the active data pack's examples, five rows at a time), the question, the
+ * microphone when voice input is on, the data source indicator, and send (or
+ * stop while a run is in progress). A recorded session shows it read only, as
+ * the original demo UI did; in replay mode that includes the original's
+ * microphone, disabled.
  */
 
 'use client'
 
 import {
+  type CSSProperties,
   type FC,
   memo,
   useState,
@@ -35,13 +37,15 @@ import { useLayoutStore } from '../store'
 import { ToolPills } from '@/shared/components/ToolPills'
 import { getActiveDemoScenario, getAvailableDemoScenarios, type DemoScenario } from '../scenarios'
 import { ChartFlow, Globe, Paperplane, StopCircle } from '@/adapters/ui/icons'
+import { VISIBLE_EXAMPLE_ROWS, visibleRowsHeight } from './visible-rows'
 
 const NO_SCENARIOS: DemoScenario[] = []
+const EXAMPLE_LIST = 'demo-scenario-list'
 
 interface InputAreaProps {
   /** Placeholder text */
   placeholder?: string
-  /** The active data pack's questions, offered as demo scenarios */
+  /** The active data pack's examples, offered as demo scenarios */
   scenarios?: DemoScenario[]
   /** Whether the demo scenario picker shows (not beside the execution view) */
   showDemoScenarios?: boolean
@@ -91,6 +95,28 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
     message,
     enabledDataSourceIds,
     availableDemoScenarios
+  )
+
+  // The open list shows five examples and scrolls for the rest. Their height is measured once the
+  // list is laid out (it renders when the picker opens), and kept for the next opening. The list is
+  // never taller than the space it has; that is the select's own limit without the 12 px its opening
+  // slide keeps back, which would cut the fifth row below the composer of a 900 px high window.
+  const [exampleListHeight, setExampleListHeight] = useState<number | null>(null)
+  const handlePickerOpenChange = useCallback((open: boolean) => {
+    if (!open) return
+    window.requestAnimationFrame(() => {
+      const list = document.querySelector<HTMLElement>(`[data-testid="${EXAMPLE_LIST}"]`)
+      if (list) setExampleListHeight(visibleRowsHeight(list, VISIBLE_EXAMPLE_ROWS))
+    })
+  }, [])
+  const exampleListStyle = useMemo<CSSProperties | undefined>(
+    () =>
+      exampleListHeight === null
+        ? undefined
+        : {
+            maxHeight: `min(${exampleListHeight}px, var(--max-height))`,
+          },
+    [exampleListHeight]
   )
 
   const handleScenarioChange = useCallback(
@@ -259,9 +285,11 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
                 triggerKind="flat"
                 value={activeDemoScenario?.id ?? ''}
                 onValueChange={handleScenarioChange}
+                onOpenChange={handlePickerOpenChange}
                 disabled={disabled}
                 attributes={{
                   SelectTrigger: { 'data-testid': 'demo-scenario-select' },
+                  SelectContent: { 'data-testid': EXAMPLE_LIST, style: exampleListStyle },
                 }}
                 items={availableDemoScenarios.map((scenario) => ({
                   value: scenario.id,

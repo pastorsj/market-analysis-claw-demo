@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Demo scenarios: the active data pack's questions, offered by the composer's
+ * Demo scenarios: the active data pack's examples, offered by the composer's
  * "Demo scenario" picker. Choosing one stages its question with exactly the
  * data sources it needs.
  */
@@ -20,16 +20,40 @@ export interface DemoScenario {
   sourceIds: string[]
 }
 
-/** Every question of the pack, in the pack's order. */
-export const toDemoScenarios = (questions: readonly PackQuestion[]): DemoScenario[] =>
-  questions.map((question) => ({
-    id: question.id,
-    label: question.label,
-    tools: [...question.tools],
-    description: question.description ?? question.question,
-    question: question.question,
-    sourceIds: [...question.sources],
-  }))
+/** The most examples the picker offers (`MAX_EXAMPLES` in the API) */
+export const MAX_EXAMPLES = 12
+
+const toDemoScenario = (question: PackQuestion): DemoScenario => ({
+  id: question.id,
+  label: question.label,
+  tools: [...question.tools],
+  description: question.description ?? question.question,
+  question: question.question,
+  sourceIds: [...question.sources],
+})
+
+/**
+ * The pack's examples, in their order: the questions `examples` names. Without the list (an API from
+ * before it), the featured questions and then the others, as the API's default. At most 12.
+ */
+export const toDemoScenarios = (
+  questions: readonly PackQuestion[],
+  examples?: readonly string[] | null
+): DemoScenario[] => {
+  const byId = new Map(questions.map((question) => [question.id, question]))
+  const ids =
+    examples ??
+    [
+      ...questions.filter((question) => question.featured),
+      ...questions.filter((question) => !question.featured),
+    ].map((question) => question.id)
+  return ids
+    .flatMap((id) => {
+      const question = byId.get(id)
+      return question ? [toDemoScenario(question)] : []
+    })
+    .slice(0, MAX_EXAMPLES)
+}
 
 /** The scenarios whose data sources are all available. */
 export const getAvailableDemoScenarios = (

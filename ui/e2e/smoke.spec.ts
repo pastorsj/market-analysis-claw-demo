@@ -69,13 +69,23 @@ test.describe('live mode', () => {
     await expect(composer).toBeEnabled()
   })
 
-  test('the composer offers the pack questions as demo scenarios', async ({ page }) => {
+  test('the composer offers the pack examples as demo scenarios', async ({ page }) => {
     await page.goto('/research')
     const composer = page.getByRole('textbox', { name: 'Chat message input' })
 
     await page.getByTestId('demo-scenario-select').click()
-    // Only the questions whose data sources the API offers
-    await expect(page.getByRole('option')).toHaveCount(5)
+    // The pack's examples in their order, only those whose data sources the API offers
+    const options = page.getByRole('option')
+    await expect(options).toHaveCount(7)
+    expect(await options.evaluateAll((rows) => rows.map((row) => row.dataset.scenarioId))).toEqual([
+      'unusual-sessions',
+      'outcome-prediction',
+      'peer-network',
+      'sector-sql',
+      'market-leaders',
+      'news-and-filings',
+      'news-sentiment-reaction',
+    ])
     // Each with pills for the tools it is expected to use
     const peers = page.getByRole('option', { name: /Peer Network/ })
     await expect(peers.locator('.tool-pill')).toHaveText(['cuDF', 'cuGraph'])
@@ -86,6 +96,59 @@ test.describe('live mode', () => {
 
     await expect(composer).toHaveValue(/^In the return-correlation network/)
     await expect(page.getByTestId('demo-scenario-select')).toContainText('Peer Network')
+  })
+
+  test('the example picker shows five rows and scrolls the others into view', async ({ page }) => {
+    await page.goto('/research')
+    await page.getByTestId('demo-scenario-select').click()
+    const list = page.getByTestId('demo-scenario-list')
+    const options = page.getByRole('option')
+    await expect(options).toHaveCount(7)
+
+    /** The options shown whole in the list's scrollport, and whether any other one shows in part */
+    const shown = () =>
+      list.evaluate((element) => {
+        const port = element.getBoundingClientRect()
+        const top = port.top + element.clientTop
+        const bottom = top + element.clientHeight
+        const rows = [...element.querySelectorAll<HTMLElement>('[role="option"]')]
+        const whole = rows.filter((row) => {
+          const box = row.getBoundingClientRect()
+          return box.top >= top - 0.5 && box.bottom <= bottom + 0.5
+        })
+        const cut = rows.filter((row) => {
+          const box = row.getBoundingClientRect()
+          return !whole.includes(row) && box.bottom > top + 0.5 && box.top < bottom - 0.5
+        })
+        return { whole: whole.map((row) => row.dataset.scenarioId), cut: cut.length }
+      })
+
+    // Exactly five rows, none cut; the others are underneath
+    await expect.poll(shown).toEqual({
+      whole: [
+        'unusual-sessions',
+        'outcome-prediction',
+        'peer-network',
+        'sector-sql',
+        'market-leaders',
+      ],
+      cut: 0,
+    })
+    // The keyboard scrolls the list to the row it moves to
+    for (let n = 0; n < 7; n++) await page.keyboard.press('ArrowDown')
+    await expect(options.last()).toHaveAttribute('data-active-item')
+    await expect.poll(shown).toEqual({
+      whole: [
+        'peer-network',
+        'sector-sql',
+        'market-leaders',
+        'news-and-filings',
+        'news-sentiment-reaction',
+      ],
+      cut: 0,
+    })
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('demo-scenario-select')).toContainText('News & Price Reaction')
   })
 
   test('recorded sessions are listed beside My sessions and replay without the API', async ({

@@ -7,7 +7,7 @@ Screenshot baselines of the views that keep the original demo UI's look
 | -------------------------------- | --------------------------------------------------------------- |
 | `landing-dark`, `landing-light`  | The landing page                                                |
 | `research-data-sources`          | A new research session with the Data Sources panel and its hint |
-| `question-picker`                | The demo scenario picker with its tool pills                    |
+| `question-picker`                | The demo scenario picker: five rows with their tool pills       |
 | `recorded-list`                  | The Recorded list with its tool pills                           |
 | `recorded-answer`                | A recorded answer with its Sources and Inspect actions          |
 | `execution-graph`                | The execution workspace: replay bar, run summary and graph      |

@@ -4,9 +4,9 @@
 /**
  * Research Page
  *
- * The chat experience. In live mode the active data pack's questions are the
+ * The chat experience. In live mode the active data pack's examples are the
  * composer's demo scenarios, and `?question=<id>` (from the landing page)
- * places that question in the composer.
+ * places that question, any of the pack's, in the composer.
  */
 
 import { type ReactNode, Suspense } from 'react'
@@ -32,7 +32,7 @@ const ResearchPage = async ({ searchParams }: ResearchPageProps): Promise<ReactN
     <Suspense fallback={null}>
       <MainLayout
         initialQuestion={initialQuestion}
-        demoScenarios={toDemoScenarios(pack?.questions ?? [])}
+        demoScenarios={toDemoScenarios(pack?.questions ?? [], pack?.examples)}
       />
     </Suspense>
   )

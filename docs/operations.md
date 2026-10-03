@@ -106,13 +106,14 @@ could open would let anyone run the agent on the keys in `.env` ([below](#brev-v
 
 It checks `/api/health` (live mode), `/api/v1/pack` and the data sources, and that the landing page lists the
 featured questions. Then, one at a time, each in a new browser session, it picks each featured question in the
-composer's scenario picker, sends it, and checks:
+composer's scenario picker (a `--questions` id the picker does not offer opens as a landing page link does),
+sends it, and checks:
 
 | Check | Passes when |
 |---|---|
 | success | the job ends `success` |
 | citations | the report cites at least one receipt of the run, and every citation resolves |
-| pills | the picker shows the pills `questions.yaml` declares, and the run used each of them (the pills its replay shows) |
+| pills | the picker shows the pills `questions.yaml` declares (for a question it offers), and the run used each of them (the pills its replay shows) |
 | replay | the job's export loads, its event stream replays every event and ends `success`, and after a reload the reopened session's execution view shows the run's closing events |
 | closing | the run ends on `run.completed`, `report.completed`, `report.reference_resolution` and `report.metrics` |
 | latency | the job finished within its budget |

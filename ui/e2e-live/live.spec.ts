@@ -123,14 +123,21 @@ const askOne = async (
   let answered: Check = bad('not reached')
   let reopened: Check = bad('not reached')
   try {
-    // Pick the question in the composer's scenario picker, as a visitor does, and read its pills
+    // Pick the question in the composer's scenario picker, as a visitor does, and read its pills.
+    // The picker offers the pack's examples only; any other question opens as a landing link does.
     await page.goto('/research')
     await page.getByTestId('demo-scenario-select').click()
+    await expect(page.getByRole('option').first()).toBeVisible()
     const option = page.locator(`[data-scenario-id="${question.id}"]`)
-    shown = await option
-      .locator('.tool-pill')
-      .evaluateAll((pills) => pills.map((pill) => pill.getAttribute('data-pill') ?? ''))
-    await option.click()
+    if (await option.count()) {
+      shown = await option
+        .locator('.tool-pill')
+        .evaluateAll((pills) => pills.map((pill) => pill.getAttribute('data-pill') ?? ''))
+      await option.click()
+    } else {
+      await page.keyboard.press('Escape')
+      await page.goto(`/research?question=${encodeURIComponent(question.id)}`)
+    }
     const composer = page.getByRole('textbox', { name: 'Chat message input' })
     await expect(composer).toHaveValue(question.question.trim())
 
