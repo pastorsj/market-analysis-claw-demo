@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# proxy-test.sh's override of ../compose.yaml: a stub answers as kumo-relational, so the proxy runs unchanged
+# with no GPU and no NIM. Paths are relative to ../ (the first Compose file's directory).
+services:
+  stub:
+    image: python:3.12.14-slim-trixie@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+    command: [python, -u, /stub/stub_upstream.py]
+    user: "65534:65534"
+    volumes: [./tests/stub_upstream.py:/stub/stub_upstream.py:ro]
+    networks:
+      default: { aliases: [kumo-relational] }
