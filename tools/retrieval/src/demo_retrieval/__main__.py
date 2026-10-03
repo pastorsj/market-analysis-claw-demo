@@ -31,9 +31,10 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--data-dir", type=Path, default=Path("/data/active"), help="the active data pack")
     parser.add_argument(
-        "--again",
+        "--guard",
         action="store_true",
-        help="benchmark: measure a build that was already measured once more, and exit 1 if that fails",
+        help="benchmark: measure the build once more for the GPU guard into retrieval-benchmark-guard.json, never "
+        "the file the API serves, and exit 1 if that fails",
     )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -45,22 +46,23 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "ingest":
         ingest.run(settings, args.data_dir)
     elif args.command == "benchmark":
-        _benchmark(settings, args.data_dir, again=args.again)
+        _benchmark(settings, args.data_dir, guard=args.guard)
     else:
         _export_traces()
         server.serve(settings, args.data_dir)
 
 
-def _benchmark(settings: Settings, data_dir: Path, *, again: bool) -> None:
-    """The one-shot of `up` never fails the stack: the comparison is optional. ``again`` (the GPU guard, `demo.sh
+def _benchmark(settings: Settings, data_dir: Path, *, guard: bool) -> None:
+    """The one-shot of `up` never fails the stack: the comparison is optional. ``guard`` (the GPU guard, `demo.sh
     test gpu --perf`) fails when nothing was measured, so the guard never reads an earlier measurement as new."""
     log = logging.getLogger(__name__)
     try:
-        measured = benchmark.run(settings, data_dir, again=again)
+        measured = benchmark.run(settings, data_dir, guard=guard)
     except Exception:
-        log.exception("the CPU/GPU index comparison failed; the Benchmark tab will lack it")
+        missing = "the GPU guard has no new measurement" if guard else "the Benchmark tab will lack it"
+        log.exception("the CPU/GPU index comparison failed; %s", missing)
         measured = None
-    if again and measured is None:
+    if guard and measured is None:
         sys.exit(1)
 
 

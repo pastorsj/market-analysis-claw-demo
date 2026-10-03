@@ -18,10 +18,12 @@ One image, three commands:
   check, and runs as the `retrieval` service.
 - `demo-retrieval benchmark`: the `retrieval-benchmark` one-shot of the analytics-gpu profile. It copies the active
   build's vectors into a GPU Milvus (`MILVUS_GPU_URI`) under `GPU_IVF_FLAT`, times the pack's held-out queries
-  (`documents.benchmark_queries`) on both indexes, and writes `/data/active/retrieval-benchmark.json` for the
-  Benchmark tab ([retrieval](../../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)). Answers never use
-  the GPU copy. Without `MILVUS_GPU_URI` it does nothing. A build measured once is not measured again, except with
-  `--again`, which the GPU guard (`demo.sh test gpu --perf`) uses.
+  (`documents.benchmark_queries`, embedded once per build and kept in `/data/active/retrieval-benchmark-queries.npz`)
+  on both indexes, and writes `/data/active/retrieval-benchmark.json` for the Benchmark tab
+  ([retrieval](../../docs/retrieval.md#cpugpu-index-comparison-analytics-gpu)). Answers never use the GPU copy.
+  Without `MILVUS_GPU_URI` it does nothing. A build measured once is not measured again. `--guard`, which the GPU
+  guard (`demo.sh test gpu --perf`) uses, measures it once more into `/data/active/retrieval-benchmark-guard.json`
+  and never touches the file the Benchmark tab serves.
 
 ## How it fits
 
@@ -171,7 +173,7 @@ Raw Compose needs the OpenShell pins, `.env` and the `core` profile, which `retr
 run --rm retrieval-index`.
 
 The image runs as uid 1000. `ingest` writes the manifest into `/data/active`, so `retrieval-index` mounts the
-`demo-data` volume read-write, as `retrieval-benchmark` does for its result; `retrieval` mounts it read-only.
+`demo-data` volume read-write, as `retrieval-benchmark` does for its results; `retrieval` mounts it read-only.
 
 Locally, with Milvus Lite:
 

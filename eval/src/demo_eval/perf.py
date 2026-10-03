@@ -8,10 +8,11 @@ compares the payloads as the GPU parity tests do. A case fails when the results 
 RAPIDS (cudf.pandas, cuml.accel or nx-cugraph), or when the speedup (median CPU time over median GPU time, the
 tools' own compute timers) stays below the case's floor in two measurements.
 
-Milvus: each workload profile of the active build's `retrieval-benchmark.json` (the CPU HNSW index against its
-GPU_IVF_FLAT copy, measured again just before) fails when its recall and agreement gates fail or its CPU/GPU
-search-time ratio is below the floor. A comparison measured before the guard started (`--measured-since`) fails too:
-measuring it again did not succeed, and the file still holds an earlier measurement.
+Milvus: each workload profile of the comparison the guard measures just before (`demo-retrieval benchmark --guard`, the
+CPU HNSW index against its GPU_IVF_FLAT copy, into `retrieval-benchmark-guard.json`; the Benchmark tab keeps serving the
+`retrieval-benchmark.json` measured at `up`) fails when its recall and agreement gates fail or its CPU/GPU search-time
+ratio is below the floor. A comparison measured before the guard started (`--measured-since`) fails too: measuring it
+again did not succeed, and the file still holds an earlier measurement.
 
 A floor is half the lowest speedup recorded on the A100 for that case, rounded down to 0.05: wide enough for
 run-to-run noise on a shared host, narrow enough to catch the regressions seen so far (cudf.pandas falling back to
@@ -118,6 +119,14 @@ def _measured_at(benchmark: dict[str, Any]) -> datetime | None:
     return moment if moment.tzinfo else moment.replace(tzinfo=UTC)  # the benchmark writes UTC
 
 
+def _quality(quality: dict[str, Any]) -> str:
+    """The profile's gates as measured, e.g. "recall CPU 1.000 GPU 0.993, overlap 0.988"."""
+    values = [quality.get(key) for key in ("cpuRecallAtK", "gpuRecallAtK", "cpuGpuOverlapAtK")]
+    if any(not isinstance(value, int | float) for value in values):
+        return ""
+    return "; recall CPU {:.3f} GPU {:.3f}, overlap {:.3f}".format(*values)
+
+
 def judge_retrieval(
     case: RetrievalCase, benchmark: dict[str, Any] | None, measured_since: datetime | None = None
 ) -> Outcome:
@@ -133,24 +142,24 @@ def judge_retrieval(
         return Outcome(**base, result="FAIL", detail=detail)
     profile = next((p for p in benchmark.get("profiles", []) if p.get("profileId") == case.profile_id), None)
     if profile is None:
-        return Outcome(**base, result="FAIL", detail=f"retrieval-benchmark.json has no {case.profile_id} profile")
+        return Outcome(**base, result="FAIL", detail=f"the Milvus comparison has no {case.profile_id} profile")
     cpu, gpu, quality = profile.get("cpu") or {}, profile.get("gpu") or {}, profile.get("quality") or {}
-    indexes = f"{cpu.get('indexType')} vs {gpu.get('indexType')}"
+    indexes, gates = f"{cpu.get('indexType')} vs {gpu.get('indexType')}", _quality(quality)
     if cpu.get("status") != "completed" or gpu.get("status") != "completed":
         return Outcome(**base, result="FAIL", detail=f"{indexes}: a search failed")
     if not quality.get("passed"):
         reasons = "; ".join(quality.get("failureReasons") or []) or "recall or agreement below the gates"
-        return Outcome(**base, result="FAIL", detail=f"{indexes}: {reasons}"[:200])
+        return Outcome(**base, result="FAIL", detail=f"{indexes}: {reasons}{gates}"[:200])
     cpu_ms, gpu_ms = cpu.get("vectorSearchMs"), gpu.get("vectorSearchMs")
     if not cpu_ms or not gpu_ms:
         return Outcome(**base, result="FAIL", detail=f"{indexes}: no search time")
     speedup = cpu_ms / gpu_ms
     measured = {"speedup": speedup, "cpu_ms": cpu_ms, "gpu_ms": gpu_ms}
     if case.min_speedup is None:
-        return Outcome(**base, **measured, result="INFO", detail=indexes)
+        return Outcome(**base, **measured, result="INFO", detail=f"{indexes}{gates}")
     if speedup < case.min_speedup:
-        return Outcome(**base, **measured, result="FAIL", detail=f"{indexes}: below the floor")
-    return Outcome(**base, **measured, result="PASS", detail=indexes)
+        return Outcome(**base, **measured, result="FAIL", detail=f"{indexes}: below the floor{gates}")
+    return Outcome(**base, **measured, result="PASS", detail=f"{indexes}{gates}")
 
 
 def guard(

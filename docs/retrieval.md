@@ -124,22 +124,65 @@ on every host, and the GPU index exists only for this comparison.
   a time, 1.11x in batches of five and 1.76x with five concurrent requests. The GPU Milvus then held 4.7 GiB. `tools/retrieval/milvus/gpu.yaml` caps Milvus's GPU
   memory pool (1 GiB at start, 4 GiB at most).
 - **The workload.** The pack's held-out queries (`documents.benchmark_queries` in `pack.yaml`, 15 per pack,
-  never the demo questions), each embedded once with Nemotron Embed. Three profiles: one query per request,
+  never the demo questions), embedded once per build with Nemotron Embed. Their vectors are kept beside the
+  manifest (`/data/active/retrieval-benchmark-queries.npz`, keyed by the collection build, the embed model and the
+  query texts), so every measurement of a build searches the same vectors. Three profiles: one query per request,
   batches of five query vectors of one source scope, and five concurrent requests. Each profile warms both
   indexes up, then sends every request three times, alternating which index goes first. Only the Milvus search
   call is timed (top 10, filtered to the query's sources); embedding and reranking are left out.
 - **Quality gates.** Recall@10 of each index against the exact inner-product neighbors, computed from the same
   vectors: at least 0.95 on average and 0.80 for every query. The two indexes' results overlap by at least
   0.95 on average (Jaccard), and each returns the same neighbors in every repetition. Neighbors compare by
-  their exact score, so chunks with identical vectors (boilerplate repeated across filings) count as one.
+  their exact score, taken from one product of the query with every vector, so a chunk scores the same number as
+  a true neighbor and as a result. Scores within 1e-6 are one neighbor, so chunks with identical vectors
+  (boilerplate repeated across filings) count as one, whichever copy an index returns.
 - **Claim.** A profile claims a GPU speedup only when its gates pass and the CPU's total search time is at
   least 1.1 times the GPU's; otherwise it reports the ratio without a claim.
 - **Result.** `/data/active/retrieval-benchmark.json` (contract `RetrievalBenchmark`,
-  [contracts](../contracts/README.md)). The API serves it as `GET /v1/jobs/async/job/{id}/retrieval-benchmark`
-  for a run whose retrieval calls searched the same build, and a job export, so a recording, carries it. An
-  unchanged build is not measured again, unless its GPU copy was built under another index; `data reindex`
-  measures a new one. The one-shot never fails the
-  stack: a problem is logged (`demo.sh logs retrieval-benchmark`), and the tab shows no comparison.
+  [contracts](../contracts/README.md)), written only by the one-shot. The API serves it as `GET
+  /v1/jobs/async/job/{id}/retrieval-benchmark` for a run whose retrieval calls searched the same build, and a job
+  export, so a recording, carries it. An unchanged build is not measured again, unless its GPU copy was built
+  under another index, or its result has no query vectors beside it (measured by an earlier version, which the
+  next `up` measures again); `data reindex` measures a new one. The one-shot never fails the stack: a problem is
+  logged (`demo.sh logs retrieval-benchmark`), and the tab shows no comparison.
+- **The GPU guard.** `demo.sh test gpu --perf` measures the build once more with `demo-retrieval benchmark
+  --guard`, on the same GPU copy and query vectors, into `/data/active/retrieval-benchmark-guard.json`, and judges
+  that file ([eval](../eval/README.md#gpu-performance-guard)). It writes nothing else: whatever it measures, the
+  Benchmark tab keeps the comparison measured at `up`.
+
+### Why recall moved between runs
+
+On the A100 with `us-equities`, four measurements of the same index measured CPU (HNSW) recall@10 of 0.94, 0.94,
+0.9733 and 0.9733, and GPU (`GPU_IVF_FLAT`) recall of 0.9467, 0.9467, 0.98 and 0.98, while the overlap of the two
+indexes stayed at 0.9879. Both indexes gained or lost the same 5 of 150 neighbors together, which points at the
+measurement, not at either index. Two things combined:
+
+- **The query vectors changed on every run.** The measurement embedded the queries again each time, and the hosted
+  embed model returns a slightly different vector for the same text on most calls: over five embeddings of the 17
+  benchmark queries of both packs, 0 to 4 of the 17 were bit-identical to the first, with components differing by
+  up to 7e-8 (cosine similarity at least 0.9999998).
+- **The truth and the results were scored by two different computations.** The exact neighbors came from a float32
+  matrix product over the query's sources, each returned chunk from its own float32 dot product, and both were
+  rounded to six decimals before they were compared. The two disagreed on about 0.5% of the scores (1,062 to
+  1,129 of 212,814 per embedding below), so a true neighbor that an index did return could count as a miss, and
+  which ones did changed with the last bits of each new query vector. Chunks with identical vectors share one
+  score, so one disagreement can remove every copy at once, from both indexes' recall. The overlap compares the two
+  indexes' results with each other, scored the same way, which is why it did not move.
+
+Measured locally on a CPU build of the same embed model (23,646 chunks of SEC current reports and
+eCFR sections; the 15 benchmark queries those sources cover, embedded five times; the GPU index's `nlist = 128`
+and `nprobe = 64` on a CPU `IVF_FLAT` copy):
+
+| Recall@10 over five embeddings | Before | Now |
+|---|---|---|
+| HNSW, `ef = 128` (what `retrieve_evidence` uses) | 0.9733 to 0.9933 | 1.0 every time |
+| HNSW, `ef = 256` or `512` | the same as `ef = 128` | 1.0 every time |
+| IVF_FLAT, `nprobe = 64` | 0.9667 to 0.9867 | 0.9933 every time (one neighbor missed) |
+
+The overlap was 0.9879 every time. Raising `ef` changed nothing, because HNSW already returned every exact
+neighbor, so the search parameters stay as they are and answers are unchanged; the gates stay at 0.95. The 1e-6
+tolerance only joins identical vectors and float32 rounding: in that build no two of any query's 30 best scores
+were within 1e-6 of each other (2,175 gaps over the five embeddings, 5 of them under 1e-5).
 
 ## Result size
 

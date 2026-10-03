@@ -97,8 +97,19 @@ def test_milvus_profiles_need_their_quality_gates_and_floor():
     )
 
 
+def test_a_milvus_row_reports_the_recall_and_overlap_it_measured():
+    single = RetrievalCase("vector-single", (1.13,), 0.55)
+    measured = milvus()
+    measured["profiles"][0]["quality"] |= {"cpuRecallAtK": 1.0, "gpuRecallAtK": 0.9933, "cpuGpuOverlapAtK": 0.9879}
+
+    outcome = perf.judge_retrieval(single, measured)
+
+    assert outcome.detail == "HNSW vs GPU_IVF_FLAT; recall CPU 1.000 GPU 0.993, overlap 0.988"
+    assert perf.judge_retrieval(single, milvus()).detail == "HNSW vs GPU_IVF_FLAT"  # nothing measured: no numbers
+
+
 def test_a_milvus_comparison_measured_before_the_guard_fails():
-    """`benchmark --again` failed and left the earlier measurement: it must not pass as a new one."""
+    """`benchmark --guard` failed and left the earlier measurement: it must not pass as a new one."""
     single = RetrievalCase("vector-single", (1.13,), 0.55)
     since = datetime(2026, 10, 2, 3, 0, tzinfo=UTC)
     fresh = milvus() | {"measuredAt": "2026-10-02T03:00:05.123456Z"}

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 """The active data pack (/data/active): pack.json and corpus/documents.jsonl in, collection-manifest.json (and on a
-GPU host retrieval-benchmark.json) out."""
+GPU host the retrieval-benchmark files) out."""
 
 from __future__ import annotations
 
@@ -21,7 +21,9 @@ from .store import VECTOR_FIELD
 
 DOCUMENTS = Path("corpus/documents.jsonl")
 MANIFEST = Path("collection-manifest.json")
-BENCHMARK = Path("retrieval-benchmark.json")
+BENCHMARK = Path("retrieval-benchmark.json")  # the comparison the API serves: only the one-shot of `up` writes it
+BENCHMARK_GUARD = Path("retrieval-benchmark-guard.json")  # the GPU guard's own measurement, never served
+BENCHMARK_QUERIES = Path("retrieval-benchmark-queries.npz")  # the build's benchmark query vectors, embedded once
 
 
 @dataclass(frozen=True)
