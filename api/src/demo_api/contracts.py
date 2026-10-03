@@ -25,6 +25,7 @@ from pydantic.json_schema import GenerateJsonSchema
 from demo_api.benchmark import Benchmark
 from demo_api.benchmark import RetrievalBenchmark
 from demo_api.events import ExecutionEventV2
+from demo_api.pack import PackView
 from demo_api.receipts import ReceiptV2
 
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -35,6 +36,7 @@ SCHEMAS: dict[str, tuple[str, Any]] = {
     "receipt": ("ReceiptV2", ReceiptV2),
     "benchmark": ("Benchmark", Benchmark),
     "retrieval-benchmark": ("RetrievalBenchmark", RetrievalBenchmark),
+    "pack": ("PackView", PackView),
 }
 # Fixture file -> the model every record in it must satisfy.
 FIXTURES: dict[str, TypeAdapter[Any]] = {

@@ -55,7 +55,7 @@ Hermes to stop their runs, waiting up to 10 s. The container therefore needs a s
 | Route | Purpose |
 |---|---|
 | `GET /health` | 200 while the store answers and the job workers run |
-| `GET /v1/pack` | Title, disclaimer and questions of the active pack |
+| `GET /v1/pack` | Title, disclaimer, questions and the example picker's questions (`examples`) of the active pack |
 | `GET /v1/data_sources` | Sources the running tools can serve, with their capabilities |
 | `GET /v1/data_sources/{id}/schema` | Tables, views, columns, keys and relationships |
 | `GET /v1/data_sources/{id}/preview?table=&limit=` | First rows (at most 100) |

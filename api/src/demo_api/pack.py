@@ -10,6 +10,9 @@ running stack can serve it:
 - a document source also needs the retrieval index, which ``retrieval-index`` records in
   ``collection-manifest.json``.
 
+``GET /v1/pack`` (``PackView``, a contract: ``contracts/schemas/pack.schema.json``) offers the questions of those
+sources, and among them the examples of the composer's picker.
+
 Files are read on every call, because ``/data/active`` is a symlink that a rebuild can switch.
 """
 
@@ -20,7 +23,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+
 from .registry import ToolRegistry
+
+# The most examples the composer's picker offers
+MAX_EXAMPLES = 12
 
 
 class PackUnavailableError(Exception):
@@ -63,6 +73,69 @@ class Source:
             "synthetic": self.synthetic,
             "example_questions": list(self.example_questions),
         }
+
+
+class _View(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, json_schema_serialization_defaults_required=True)
+
+
+class PackQuestionView(_View):
+    """A demo question whose sources this stack serves."""
+
+    id: str
+    label: str
+    tag: str | None = None
+    description: str | None = None
+    question: str
+    sources: list[str]
+    tools: list[str] = Field(
+        default_factory=list,
+        description="The tools it is expected to use, as pills (Pill in contracts/tool-registry.schema.json).",
+    )
+    featured: bool = Field(default=False, description="Shown on the landing page.")
+
+
+class PackConversationView(_View):
+    """A multi-turn conversation that `demo-api record` asks; not listed in the UI."""
+
+    id: str
+    label: str
+    tag: str | None = None
+    description: str | None = None
+    sources: list[str]
+    turns: list[str]
+
+
+class PackView(_View):
+    """``GET /v1/pack``: the active pack's title, disclaimer, questions, examples and conversations."""
+
+    id: str
+    version: str | None = None
+    title: str
+    description: str | None = None
+    as_of: str | None = None
+    disclaimer: str | None = None
+    questions: list[PackQuestionView]
+    examples: list[str] = Field(
+        max_length=MAX_EXAMPLES,
+        description=(
+            "The ids of the questions the composer's example picker offers, in order: the pack's `examples` "
+            "(questions.yaml), or else its featured questions and then the others, at most 12, all among `questions`."
+        ),
+    )
+    conversations: list[PackConversationView]
+
+
+def picker_examples(questions: list[dict[str, Any]], declared: list[str] | None) -> list[str]:
+    """The ids of the picker's examples among ``questions``, at most ``MAX_EXAMPLES``.
+
+    The declared ones in their order, or without a list the featured questions and then the others.
+    """
+    offered = [question["id"] for question in questions]
+    if declared is None:
+        featured = [question["id"] for question in questions if question.get("featured")]
+        declared = featured + [question_id for question_id in offered if question_id not in featured]
+    return [question_id for question_id in declared if question_id in offered][:MAX_EXAMPLES]
 
 
 class ActivePack:
@@ -109,25 +182,36 @@ class ActivePack:
             )
         return sources
 
-    def public_view(self) -> dict[str, Any]:
-        """``GET /v1/pack``: what the UI shows on its landing page, and the conversations `demo-api record` asks."""
+    def public_view(self) -> PackView:
+        """``GET /v1/pack``: what the UI shows on its landing page and in the composer's example picker, and the
+        conversations `demo-api record` asks.
+
+        A build from before ``examples`` existed has none in its pack.json, so it gets the default list too.
+        """
         manifest = self.manifest()
         available = {source.id for source in self.sources()}
-        return {
+        questions = [
+            question for question in manifest.get("questions", []) if set(question.get("sources", [])) <= available
+        ]
+        return PackView(
             **{key: manifest.get(key) for key in ("id", "version", "title", "description", "as_of", "disclaimer")},
-            "questions": [
-                {key: question.get(key) for key in ("id", "label", "tag", "description", "question", "sources")}
-                | {"tools": question.get("tools", [])}
-                | {"featured": bool(question.get("featured", False))}
-                for question in manifest.get("questions", [])
-                if set(question.get("sources", [])) <= available
+            questions=[
+                PackQuestionView(
+                    **{key: question.get(key) for key in ("id", "label", "tag", "description", "question", "sources")},
+                    tools=question.get("tools", []),
+                    featured=bool(question.get("featured", False)),
+                )
+                for question in questions
             ],
-            "conversations": [
-                {key: conversation.get(key) for key in ("id", "label", "tag", "description", "sources", "turns")}
+            examples=picker_examples(questions, manifest.get("examples")),
+            conversations=[
+                PackConversationView(
+                    **{key: conversation.get(key) for key in ("id", "label", "tag", "description", "sources", "turns")}
+                )
                 for conversation in manifest.get("conversations", [])
                 if set(conversation.get("sources", [])) <= available
             ],
-        }
+        )
 
     def database_path(self) -> Path | None:
         database = (self.manifest().get("structured") or {}).get("database")
