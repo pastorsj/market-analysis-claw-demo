@@ -65,7 +65,10 @@ to the anchor only; the build writes their ids into `pack.json`.
 widest intraday swings from the minute bars (`intraday_scan`), unusual sessions among the 50 most liquid, the
 peer network, the Form 8-K Item 1.05 rule with the filings that report an incident, and February's biggest movers
 beside their own 8-Ks. Each declares the `tools` it is expected to use, as the demo scenario picker's pills
-([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)). The others cover every tool and source:
+([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)). The picker offers twelve of them
+(`examples`): the featured six, the five-session Kumo outlook, the SIC divisions through Auto Ontology, the
+500-stock scan, Schedules 13D and 13G, NVIDIA's prices and 8-Ks, and the cyber attack headlines. Its first five
+rows show every tool. The others cover every tool and source:
 
 | Kind | Questions |
 |---|---|
@@ -156,7 +159,7 @@ rules lost its citations and another called Item 1.05 part of Regulation S-K. Wh
 | `pack.yaml` | the manifest: the external dataset's pin, the `market` import settings, sources and analytics |
 | `schema.sql`, `views/prediction.sql` | the DuckDB schema and the leakage-safe prediction views |
 | `ontology.yaml` | table and column descriptions for Auto Ontology |
-| `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set |
+| `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set, `examples` the picker's |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot, Federal Register rule and EDGAR filings (URL and SHA-256 of every file) |
 | `corpus/select_filings.py` | selects the filings from the issuers' EDGAR submissions and writes their manifest |
 | `eval/` | SQL oracles for the analytics answers, the documents retrieval answers cite, the answer checks (`answers.yaml`) and the GPU guard's cases (`perf.yaml`) of the on-demand checks ([eval](../../../eval/README.md)); never read at runtime |

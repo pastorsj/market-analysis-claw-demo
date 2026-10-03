@@ -260,3 +260,114 @@ def test_question_tools_are_the_tool_registry_pills():
     question = schema["properties"]["questions"]["items"]["properties"]
 
     assert question["tools"]["items"]["enum"] == contract["$defs"]["Pill"]["enum"]
+
+
+# The composer's example picker of each pack (questions.yaml `examples`), in order
+EXAMPLES = {
+    "us-equities": [
+        "unusual-sessions",
+        "outcome-prediction",
+        "peer-network",
+        "sector-sql",
+        "moves-and-filings",
+        "market-leaders",
+        "cyber-disclosure-rules",
+        "intraday-ranges",
+        "beneficial-ownership",
+        "large-universe-scan",
+        "nvidia-results-and-prices",
+        "world-news-cyber",
+    ],
+    "synthetic-market": [
+        "unusual-sessions",
+        "outcome-prediction",
+        "peer-network",
+        "sector-sql",
+        "cyber-disclosure-rules",
+        "market-leaders",
+        "news-and-filings",
+        "news-sentiment-reaction",
+        "story-event-context",
+        "large-universe-scan",
+        "intraday-ranges",
+    ],
+}
+ALL_TOOLS = {"cudf", "cuml", "cugraph", "kumo", "retrieval", "ontology"}
+
+
+@pytest.mark.parametrize("name", ["synthetic-market", "us-equities"])
+def test_each_pack_s_examples_cover_its_featured_questions_and_every_tool(name):
+    pack = load_pack(PACKS / name)
+    questions = {question["id"]: question for question in pack.questions}
+
+    assert pack.examples == EXAMPLES[name]
+    assert len(pack.examples) <= 12
+    assert len(set(pack.examples)) == len(pack.examples)
+    assert {q["id"] for q in pack.questions if q.get("featured")} <= set(pack.examples)
+    assert {tool for question_id in pack.examples for tool in questions[question_id]["tools"]} == ALL_TOOLS
+    # The picker shows five rows before it scrolls: those five show every tool
+    assert {tool for question_id in pack.examples[:5] for tool in questions[question_id]["tools"]} == ALL_TOOLS
+
+
+def test_us_equities_examples_leave_out_the_weak_recordings():
+    """bank-results and filings-to-regulations keep weaker recordings (the pack README), so the picker skips them."""
+    assert not {"bank-results", "filings-to-regulations"} & set(load_pack(PACKS / "us-equities").examples)
+
+
+def test_broken_examples_report_every_problem(pack_copy):
+    pack_dir = pack_copy()
+
+    def break_examples(document):
+        # No market-leaders (featured), no outcome-prediction (the only kumo question), and a conversation-like id
+        document["examples"] = [e for e in document["examples"] if e not in ("market-leaders", "outcome-prediction")]
+        document["examples"].append("leaders-follow-up")
+
+    edit_yaml(pack_dir / "questions.yaml", break_examples)
+
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+
+    assert sorted(raised.value.errors) == [
+        "example leaders-follow-up is not a question",
+        "featured question market-leaders is not an example",
+        "no example declares the tools ['kumo']",
+    ]
+
+
+def test_examples_are_at_most_twelve_unique_questions(pack_copy):
+    pack_dir = pack_copy("us-equities")
+    questions = [question["id"] for question in yaml.safe_load((pack_dir / "questions.yaml").read_text())["questions"]]
+
+    edit_yaml(pack_dir / "questions.yaml", lambda document: document.update(examples=questions[:13]))
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+    assert raised.value.errors == [f"questions.yaml: examples: {questions[:13]} is too long"]
+
+    edit_yaml(pack_dir / "questions.yaml", lambda document: document.update(examples=EXAMPLES["us-equities"][:11] * 2))
+    with pytest.raises(PackError) as raised:
+        load_pack(pack_dir)
+    assert len(raised.value.errors) == 2  # too long, and not unique
+    assert any("non-unique elements" in error for error in raised.value.errors)
+
+
+def test_resolve_offers_the_examples_the_build_serves_in_order(synthetic_pack, pack_copy):
+    standard = synthetic_pack.resolve("standard", synthetic_pack.select_corpora(None))
+    assert standard["examples"] == EXAMPLES["synthetic-market"][:-1]  # intraday-ranges needs the 1-minute bars
+
+    # ci: the minute bars but not the large universe; no sec_filings, which two of them search
+    regulations_only = synthetic_pack.resolve("ci", synthetic_pack.select_corpora(["market_regulations"]))
+    assert regulations_only["examples"] == [
+        "unusual-sessions",
+        "outcome-prediction",
+        "peer-network",
+        "sector-sql",
+        "market-leaders",
+        "news-sentiment-reaction",
+        "story-event-context",
+        "intraday-ranges",
+    ]
+
+    # Without the list, pack.json has none, and the API offers its default (the featured questions, then the rest)
+    pack_dir = pack_copy()
+    edit_yaml(pack_dir / "questions.yaml", lambda document: document.pop("examples"))
+    assert "examples" not in load_pack(pack_dir).resolve("standard", [])

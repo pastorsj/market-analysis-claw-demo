@@ -58,6 +58,8 @@ class Pack:
     manifest: dict[str, Any]
     questions: list[dict[str, Any]]
     conversations: list[dict[str, Any]] = field(default_factory=list)
+    # The composer's example picker (questions.yaml `examples`), or None for the API's default
+    examples: list[str] | None = None
 
     @property
     def id(self) -> str:
@@ -162,6 +164,9 @@ class Pack:
                 if set(conversation["sources"]) <= served and profile in conversation.get("profiles", [profile])
             ],
         }
+        if self.examples is not None:
+            offered = {question["id"] for question in resolved["questions"]}
+            resolved["examples"] = [question_id for question_id in self.examples if question_id in offered]
         if self.structured:
             resolved["structured"] = {
                 "source": self.structured["source"],
@@ -223,7 +228,9 @@ def load_pack(directory: Path) -> Pack:
     errors = _schema_errors("questions.schema.json", questions, manifest["questions"])
     if errors:
         raise PackError(manifest["id"], errors)
-    pack = Pack(directory, manifest, questions["questions"], questions.get("conversations", []))
+    pack = Pack(
+        directory, manifest, questions["questions"], questions.get("conversations", []), questions.get("examples")
+    )
     errors = cross_reference_errors(pack)
     if errors:
         raise PackError(pack.id, errors)
@@ -370,6 +377,31 @@ def cross_reference_errors(pack: Pack) -> list[str]:
             errors.append(f"{kind} {entry['id']}: unknown profile {profile!r}")
     if not any(question.get("featured") for question in pack.questions):
         errors.append("at least one question must be featured")
+    errors += example_errors(pack)
+    return errors
+
+
+def example_errors(pack: Pack) -> list[str]:
+    """The rules for questions.yaml `examples` beyond the schema's (at most 12 unique ids).
+
+    Each names a question, every featured question is one, and together they declare every tool the pack's questions
+    declare, so the picker shows each tool at least once.
+    """
+    if pack.examples is None:
+        return []
+    questions = {question["id"]: question for question in pack.questions}
+    errors = [
+        f"example {question_id} is not a question" for question_id in pack.examples if question_id not in questions
+    ]
+    errors += [
+        f"featured question {question['id']} is not an example"
+        for question in pack.questions
+        if question.get("featured") and question["id"] not in pack.examples
+    ]
+    shown = {tool for question_id in pack.examples for tool in questions.get(question_id, {}).get("tools", [])}
+    declared = {tool for question in pack.questions for tool in question["tools"]}
+    if missing := sorted(declared - shown):
+        errors.append(f"no example declares the tools {missing}")
     return errors
 
 

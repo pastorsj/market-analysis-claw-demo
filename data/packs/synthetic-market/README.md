@@ -42,7 +42,8 @@ question needs a 1-minute profile (`ci` or `intraday`). `eval/oracles/` computes
 build, the slow tests run them on the `ci` build, and `eval/retrieval.yaml` names the documents a retrieval
 answer should cite.
 Each question declares the `tools` it is expected to use, as the demo scenario picker's pills
-([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)).
+([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)). The picker offers all eleven
+(`examples`), the first five showing every tool; a build offers those of its profile.
 
 ### Recorded answers
 
@@ -128,7 +129,7 @@ records the latest run.
 | `pack.yaml` | the manifest (see `data/README.md`) |
 | `schema.sql`, `views/prediction.sql` | the DuckDB schema (the `us-equities` one plus `company_news`) and the prediction views |
 | `ontology.yaml` | table and column descriptions for Auto Ontology |
-| `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set |
+| `questions.yaml` | the demo questions; `featured` ones are the landing page and replay set, `examples` the picker's |
 | `generator/build.py`, `generator/model.yaml` | the seeded market and its constants |
 | `text/` | the Nemotron text and its checks (`demo.sh data generate`) |
 | `corpus/*.manifest.json` | the pinned eCFR snapshot, Federal Register rule and EDGAR filings (URL and SHA-256 of every file) |

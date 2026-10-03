@@ -8,6 +8,21 @@
 # names the documents the retrieval answers cite. The pack has no ticker-linked news, so no question uses the news
 # tools; SEC filings are a separate document source, connected to the prices only by company.
 schema_version: "1"
+# The composer's example picker, in order: the six featured questions and one question for each tool and source
+# they leave out. Its first five rows show all six tools.
+examples:
+- unusual-sessions
+- outcome-prediction
+- peer-network
+- sector-sql
+- moves-and-filings
+- market-leaders
+- cyber-disclosure-rules
+- intraday-ranges
+- beneficial-ownership
+- large-universe-scan
+- nvidia-results-and-prices
+- world-news-cyber
 questions:
 - id: market-leaders
   label: Market Leaders

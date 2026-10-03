@@ -10,6 +10,19 @@
 # issuers are never SEC filers, so questions that use both keep them apart. Only the 1-minute profiles (ci,
 # intraday) have minute bars for intraday_scan.
 schema_version: "1"
+# The composer's example picker, in order: every question. Its first five rows show all six tools.
+examples:
+- unusual-sessions
+- outcome-prediction
+- peer-network
+- sector-sql
+- cyber-disclosure-rules
+- market-leaders
+- news-and-filings
+- news-sentiment-reaction
+- story-event-context
+- large-universe-scan
+- intraday-ranges
 questions:
 - id: market-leaders
   label: Market Leaders
