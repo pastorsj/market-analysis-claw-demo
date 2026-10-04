@@ -40,6 +40,7 @@ import {
 import { useLayoutStore } from '../store'
 import { useRecordedSessions } from '../use-recorded-sessions'
 import type { DemoScenario } from '../scenarios'
+import { useSearchParams } from 'next/navigation'
 import { useSessionUrl } from '@/hooks/use-session-url'
 
 /** A question to place in the composer, e.g. a featured question from the landing page. */
@@ -124,21 +125,44 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null, demoSc
   const { updateSessionUrl, clearSessionUrl } = useSessionUrl({ enabled: !isReplay })
 
   // Place a featured question in a fresh session, with its data sources,
-  // once the data sources are known.
+  // once the data sources are known. The question leaves the URL then, so a
+  // reload reopens the session it starts. A URL that also names one of this
+  // browser's sessions (one saved before the question left the URL) reopens
+  // that session instead.
+  const searchParams = useSearchParams()
+  const sessionAtLoad = useRef(searchParams?.get('session') ?? null)
   const initialQuestionApplied = useRef(false)
   useEffect(() => {
     if (!initialQuestion || initialQuestionApplied.current || availableDataSources === null) return
+    if (!currentUserId) return
     initialQuestionApplied.current = true
+    const saved = sessionAtLoad.current
+    if (saved && conversations.some((c) => c.id === saved && c.userId === currentUserId)) {
+      updateSessionUrl(saved)
+      return
+    }
     startNewSessionDraft()
     const available = new Set(availableDataSources.map((source) => source.id))
     const layout = useLayoutStore.getState()
     layout.setEnabledDataSources(initialQuestion.sourceIds.filter((id) => available.has(id)))
     layout.setPromptDraft(initialQuestion.question)
     clearSessionUrl()
-  }, [initialQuestion, availableDataSources, startNewSessionDraft, clearSessionUrl])
+  }, [
+    initialQuestion,
+    availableDataSources,
+    currentUserId,
+    conversations,
+    startNewSessionDraft,
+    updateSessionUrl,
+    clearSessionUrl,
+  ])
 
+  // The live session that was open before a recording, to go back to
+  const liveSessionBeforeRecording = useRef<string | null>(null)
   const handleSelectRecordedSession = useCallback(
     (sessionId: string) => {
+      const current = useChatStore.getState().currentConversation
+      if (current && !current.readOnly) liveSessionBeforeRecording.current = current.id
       closeExecution()
       clearSessionUrl()
       void openRecordedSession(sessionId)
@@ -178,6 +202,18 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null, demoSc
     clearSessionUrl()
     openRightPanel('data-sources')
   }, [startNewSessionDraft, clearSessionUrl, openRightPanel])
+
+  // "My sessions" while a recording is open: back to the live session it
+  // replaced, or to a new one.
+  const handleLeaveRecordedSession = useCallback(() => {
+    if (!useChatStore.getState().currentConversation?.readOnly) return
+    const previous = liveSessionBeforeRecording.current
+    if (previous && conversations.some((c) => c.id === previous)) {
+      handleSelectSession(previous)
+    } else {
+      handleNewSession()
+    }
+  }, [conversations, handleNewSession, handleSelectSession])
 
   // Wrap deleteConversation to clear URL if deleting current session
   const handleDeleteSession = useCallback(
@@ -234,6 +270,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null, demoSc
             loadingId: recordedLoadingId,
             onSelect: handleSelectRecordedSession,
             onRetry: retryRecordedSessions,
+            onLeave: isReplay ? undefined : handleLeaveRecordedSession,
           }
         : undefined,
     [
@@ -245,6 +282,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null, demoSc
       recordedLoadingId,
       handleSelectRecordedSession,
       retryRecordedSessions,
+      isReplay,
+      handleLeaveRecordedSession,
     ]
   )
 
@@ -257,6 +296,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ initialQuestion = null, demoSc
         newSessionActionLabel={executionOpen ? 'Back to answer' : 'Create new session'}
         isNewSessionDisabled={executionOpen ? false : isReplay || isStreaming}
         isDataSourceSelectionDisabled={isRecordedSession}
+        isRecordedSession={isRecordedSession}
       />
 
       {/* Main content area: in-flow panels reflow the center column (push, not overlay) */}
