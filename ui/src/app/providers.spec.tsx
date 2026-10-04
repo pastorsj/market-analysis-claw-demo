@@ -1,17 +1,20 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { fetchDataSources, getJobStatus } from '@/adapters/api'
+import { fetchDataSources, getJobStatus, submitJob } from '@/adapters/api'
+import { useHermesChat } from '@/features/chat/hooks/use-hermes-chat'
 import { useChatStore } from '@/features/chat/store'
 import type { Conversation } from '@/features/chat/types'
 import { useLayoutStore } from '@/features/layout'
 import { Providers } from './providers'
 
 vi.mock('@/adapters/api', () => ({
+  ApiRequestError: class ApiRequestError extends Error {},
   fetchDataSources: vi.fn(),
   getJobStatus: vi.fn(),
+  submitJob: vi.fn(),
 }))
 
 const initialChat = useChatStore.getState()
@@ -88,6 +91,44 @@ describe('Providers', () => {
 
     await waitFor(() => expect(savedJobStatus()).toBe('failure'))
     expect(getJobStatus).toHaveBeenCalledWith('job-1')
+  })
+
+  test('a question asked from a new draft is not looked up before the API admits its job', async () => {
+    // The API does not know the job until its submission returns (404 before)
+    let admit = (): void => {}
+    vi.mocked(submitJob).mockImplementation(
+      ({ jobId }) =>
+        new Promise((resolve) => {
+          admit = () => resolve({ job_id: jobId, status: 'submitted' })
+        })
+    )
+    vi.mocked(getJobStatus).mockRejectedValue(new Error('Failed to get job status: 404'))
+    let ask: (question: string) => void = () => {}
+    const Asker = () => {
+      ask = useHermesChat().sendMessage
+      return null
+    }
+    render(
+      <Providers config={{ mode: 'live', phoenixUrl: null, speechInput: SPEECH_OFF }}>
+        <Asker />
+      </Providers>
+    )
+    await waitFor(() => expect(useChatStore.getState().currentUserId).toBe('local'))
+
+    // A landing card's question: the session is created by Run, which restores its jobs
+    act(() => ask('Which assets led?'))
+    await act(async () => {})
+
+    expect(getJobStatus).not.toHaveBeenCalled()
+    await act(async () => admit())
+    const state = useChatStore.getState()
+    expect(state.isDeepResearchStreaming).toBe(true)
+    expect(state.submittingJobIds).toEqual([])
+    expect(
+      state.currentConversation?.messages.map(
+        (m) => m.deepResearchBannerData?.bannerType ?? m.messageType
+      )
+    ).toEqual(['user', 'agent_response', 'starting'])
   })
 
   test('replay mode never calls the API, even for saved live jobs', async () => {

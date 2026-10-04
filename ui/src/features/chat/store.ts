@@ -52,6 +52,43 @@ const CANCEL_FALLBACK_TIMEOUT_MS = 5000
 
 const TERMINAL_STATUSES: readonly DeepResearchJobStatus[] = ['success', 'failure', 'interrupted']
 
+/**
+ * The API knows a job only once it has admitted its submission, and a page can ask for it before:
+ * a reload while the submission (sent with keepalive) is still on its way. So for this long after
+ * its question, a job the API does not know (404) may still be admitted, not gone.
+ */
+const ADMISSION_GRACE_MS = 10_000
+/** While a job may still be admitted, its status is asked for again after these delays. */
+const ADMISSION_RETRY_DELAYS_MS = [250, 500, 1_000, 2_000, 3_000, 4_000]
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Whether the job of an answer placeholder was submitted moments ago (its submission may be pending). */
+const mayStillBeAdmitted = (message: ChatMessage): boolean =>
+  Math.abs(Date.now() - new Date(message.timestamp).getTime()) < ADMISSION_GRACE_MS
+
+/**
+ * A job's status, waiting out its admission if it was submitted moments ago. Null if `wanted`
+ * turns false meanwhile; a 404 once the job is no longer that recent is thrown, as is any other
+ * error.
+ */
+const getStatusOnceAdmitted = async (
+  message: ChatMessage,
+  wanted: () => boolean
+): Promise<Awaited<ReturnType<typeof getJobStatus>> | null> => {
+  const jobId = message.deepResearchJobId!
+  for (const delay of ADMISSION_RETRY_DELAYS_MS) {
+    try {
+      return await getJobStatus(jobId)
+    } catch (error) {
+      if (!isUnavailableDeepResearchJobError(error) || !mayStillBeAdmitted(message)) throw error
+    }
+    await sleep(delay)
+    if (!wanted()) return null
+  }
+  return getJobStatus(jobId)
+}
+
 const isQuotaExceededError = (error: unknown): boolean => {
   if (!(error instanceof Error)) return false
   if (error.name === 'QuotaExceededError') return true
@@ -172,6 +209,7 @@ const initialState: ChatState = {
   currentUserMessageId: null,
   currentStatus: null,
   ...clearedJobState,
+  submittingJobIds: [],
 }
 
 /**
@@ -756,6 +794,24 @@ export const useChatStore = create<ChatStore>()(
             )
           },
 
+          beginJobSubmission: (jobId: string) => {
+            set(
+              (state) => ({ submittingJobIds: [...state.submittingJobIds, jobId] }),
+              false,
+              'beginJobSubmission'
+            )
+          },
+
+          endJobSubmission: (jobId: string) => {
+            set(
+              (state) => ({
+                submittingJobIds: state.submittingJobIds.filter((id) => id !== jobId),
+              }),
+              false,
+              'endJobSubmission'
+            )
+          },
+
           startDeepResearch: (jobId: string, messageId: string) => {
             set(
               {
@@ -839,12 +895,16 @@ export const useChatStore = create<ChatStore>()(
             if (!isActiveJobMessage(message) || !message.isDeepResearchActive) return
 
             const jobId = message.deepResearchJobId!
+            // Submitted from this page and not answered yet: the API does not know it yet, and
+            // the page follows it once it is admitted.
+            if (get().submittingJobIds.includes(jobId)) return
             const isStillCurrent = (): boolean =>
               get().currentConversation?.id === conversationId && !get().isDeepResearchStreaming
 
             try {
-              const { status, error } = await getJobStatus(jobId)
-              if (!isStillCurrent()) return
+              const job = await getStatusOnceAdmitted(message, isStillCurrent)
+              if (!job || !isStillCurrent()) return
+              const { status, error } = job
 
               if (status === 'running' || status === 'submitted') {
                 // Replay the stream from the beginning: the execution view
@@ -890,6 +950,7 @@ export const useChatStore = create<ChatStore>()(
             for (const jobId of startingJobIds) {
               if (get().currentConversation?.id !== conversationId) return
               if (get().isDeepResearchStreaming && get().deepResearchJobId === jobId) continue
+              if (get().submittingJobIds.includes(jobId)) continue
               const message = currentConversation.messages.find(
                 (m) => m.messageType === 'agent_response' && m.deepResearchJobId === jobId
               )
@@ -900,10 +961,11 @@ export const useChatStore = create<ChatStore>()(
                   await settleJobFromReport(conversationId, message.id, jobId, status, error)
                 }
               } catch (error) {
-                if (isUnavailableDeepResearchJobError(error)) {
+                if (isUnavailableDeepResearchJobError(error) && !mayStillBeAdmitted(message)) {
                   settleUnavailableJob(conversationId, message.id, jobId)
                 }
-                // Other failures are likely transient; leave the banner as-is.
+                // Other failures are likely transient, and a job submitted moments ago may not
+                // be admitted yet; leave the banner as-is.
               }
             }
           },
@@ -917,15 +979,17 @@ export const useChatStore = create<ChatStore>()(
               const message = findLatestJobMessage(conversation.messages)
               if (!isActiveJobMessage(message)) continue
               const jobId = message.deepResearchJobId!
-              // The followed job settles through its stream.
+              // The followed job settles through its stream, and one being submitted is not known yet.
               if (get().isDeepResearchStreaming && get().deepResearchJobId === jobId) continue
+              if (get().submittingJobIds.includes(jobId)) continue
               try {
                 const { status, error } = await getJobStatus(jobId)
                 if (TERMINAL_STATUSES.includes(status)) {
                   await settleJobFromReport(conversation.id, message.id, jobId, status, error)
                 }
               } catch (error) {
-                if (isUnavailableDeepResearchJobError(error)) {
+                // A job submitted moments ago may not be admitted yet: not gone.
+                if (isUnavailableDeepResearchJobError(error) && !mayStillBeAdmitted(message)) {
                   settleUnavailableJob(conversation.id, message.id, jobId)
                 }
               }

@@ -123,6 +123,11 @@ export interface ChatState {
   activeDeepResearchMessageId: string | null
   /** Final answer received for the current job */
   reportContent: string
+  /**
+   * Jobs whose submission this page has sent and not yet seen answered. The API
+   * does not know such a job yet, so nothing asks for its status meanwhile.
+   */
+  submittingJobIds: string[]
 }
 
 /** Chat actions for Zustand store */
@@ -171,6 +176,10 @@ export interface ChatActions {
     jobId: string,
     conversationId?: string
   ) => void
+  /** Record that a job's submission was sent and its answer is awaited */
+  beginJobSubmission: (jobId: string) => void
+  /** Record that a job's submission was answered (admitted or refused) */
+  endJobSubmission: (jobId: string) => void
   /** Start following a submitted job */
   startDeepResearch: (jobId: string, messageId: string) => void
   /** Update the status of a job that is still running */
