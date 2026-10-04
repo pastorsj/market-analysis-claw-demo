@@ -74,8 +74,11 @@ export const useHermesChat = (): UseHermesChatReturn => {
     }
 
     // Persist the job identity before submission so a reload between the
-    // request and its response can still recover the run.
+    // request and its response can still recover the run. Until the API
+    // answers, it does not know the job, so nothing asks for its status
+    // meanwhile: a 404 then would wrongly report the run as gone.
     const jobId = uuidv4()
+    store.beginJobSubmission(jobId)
     const messageId = store.addAgentResponseWithMeta('', {
       deepResearchJobId: jobId,
       deepResearchJobStatus: 'submitted',
@@ -87,18 +90,27 @@ export const useHermesChat = (): UseHermesChatReturn => {
 
     submitJob({ input: content, conversationId, dataSources, jobId })
       .then(({ job_id: admittedJobId }) => {
-        if (!acceptsResultsRef.current) return
+        const current = useChatStore.getState()
+        if (!acceptsResultsRef.current) {
+          current.endJobSubmission(jobId)
+          return
+        }
         if (admittedJobId !== jobId) {
           throw new Error('Research admission returned an unexpected job identifier.')
         }
-        const current = useChatStore.getState()
-        if (current.currentConversation?.id !== conversationId) return
-        current.startDeepResearch(jobId, messageId)
-        current.setLoading(false)
+        // Follow the job before ending its submission, so that nothing asks
+        // for its status in between. A conversation the user has left
+        // reconnects to it when reopened.
+        if (current.currentConversation?.id === conversationId) {
+          current.startDeepResearch(jobId, messageId)
+          current.setLoading(false)
+        }
+        current.endJobSubmission(jobId)
       })
       .catch((error: unknown) => {
-        if (!acceptsResultsRef.current) return
         const current = useChatStore.getState()
+        current.endJobSubmission(jobId)
+        if (!acceptsResultsRef.current) return
         // A transport error cannot tell whether the job was admitted; recover
         // through the durable job status instead of reporting a false failure.
         if (isSubmissionOutcomeUnknown(error)) {

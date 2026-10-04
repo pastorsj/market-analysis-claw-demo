@@ -31,6 +31,8 @@ interface AppBarProps {
   isNewSessionDisabled?: boolean
   /** Disable the data sources action (replay mode: recorded sessions are read only) */
   isDataSourceSelectionDisabled?: boolean
+  /** A recorded session is open: it has no traces in this deployment's Phoenix */
+  isRecordedSession?: boolean
 }
 
 /**
@@ -42,6 +44,7 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
   newSessionActionLabel = 'Create new session',
   isNewSessionDisabled = false,
   isDataSourceSelectionDisabled = false,
+  isRecordedSession = false,
 }) {
   const { mode, phoenixUrl } = useAppConfig()
   const rightPanel = useLayoutStore((s) => s.rightPanel)
@@ -131,17 +134,25 @@ export const AppBar: FC<AppBarProps> = memo(function AppBar({
             </Flex>
           </Button>
 
-          {mode === 'replay' ? (
+          {mode === 'replay' || (isRecordedSession && phoenixUrl) ? (
             <Tooltip
               side="bottom"
               openDelayDuration={200}
-              slotContent="Traces are only available in live mode."
+              slotContent={
+                mode === 'replay'
+                  ? 'Traces are only available in live mode.'
+                  : 'Recorded sessions have no traces in Phoenix.'
+              }
             >
               <span
                 role="link"
                 aria-disabled="true"
                 tabIndex={0}
-                aria-label="Phoenix traces are only available in live mode"
+                aria-label={
+                  mode === 'replay'
+                    ? 'Phoenix traces are only available in live mode'
+                    : 'Phoenix traces are only available for live sessions'
+                }
                 data-testid="phoenix-observability-link"
                 className="text-primary focus-visible:ring-brand inline-flex h-8 cursor-not-allowed items-center gap-1 rounded px-2 focus-visible:outline-none focus-visible:ring-2"
               >

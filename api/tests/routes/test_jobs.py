@@ -282,6 +282,19 @@ async def test_submit_rejects_a_source_the_running_tools_cannot_serve(api, data_
     assert response.json()["detail"]["invalid_ids"] == ["market_news"]
 
 
+async def test_a_job_is_readable_the_moment_its_submission_returns(api, settings, fake_hermes):
+    """The UI asks for a job as soon as the POST answers: its row is committed by then, never a 404."""
+    statuses = []
+    for n in range(3):
+        assert (await submit(api, f"job-{n}")).status_code == 200
+        response = await api.get(f"/v1/jobs/async/job/job-{n}")
+        assert response.status_code == 200
+        statuses.append(response.json()["status"])
+        # Another connection, as another request would use, sees it too
+        assert await JobStore(settings.api_db_path).get(f"job-{n}") is not None
+    assert set(statuses) <= {"submitted", "running", "success", "failure"}
+
+
 @pytest.mark.parametrize("path", ["", "/report", "/stream", "/stream/3", "/export", "/trace"])
 async def test_unknown_jobs_are_404(api, path):
     assert (await api.get(f"/v1/jobs/async/job/missing{path}")).status_code == 404

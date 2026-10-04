@@ -129,6 +129,41 @@ describe('InputArea', () => {
     expect(hermes.stop).toHaveBeenCalledOnce()
   })
 
+  test('a double click on Run does not stop the run it starts', async () => {
+    // The mocked send does not run anything: make the session busy as a real one would
+    hermes.sendMessage.mockImplementation(() => useChatStore.setState({ isStreaming: true }))
+    render(<InputArea />)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Chat message input' }), 'Which?')
+
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Send message' }))
+    expect(hermes.sendMessage).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Stop generating' })).toBeInTheDocument()
+    expect(hermes.stop).not.toHaveBeenCalled()
+
+    // A deliberate Stop, later, still stops it
+    await new Promise((resolve) => setTimeout(resolve, 650))
+    await userEvent.click(screen.getByRole('button', { name: 'Stop generating' }))
+    expect(hermes.stop).toHaveBeenCalledOnce()
+  })
+
+  test('a recorded session shows no draft of a live question', () => {
+    useLayoutStore.setState({ promptDraft: 'A featured question' })
+    const { rerender } = render(<InputArea />)
+    const composer = screen.getByRole('textbox', { name: 'Chat message input' })
+    expect(composer).toHaveValue('A featured question')
+
+    useChatStore.getState().openRecordedSession({
+      id: 'rec-1',
+      title: 'Market leaders',
+      recordedAt: '2026-09-01T00:00:00Z',
+      turns: [{ question: 'Which led?', answer: 'Asset A.', jobId: 'job-1', sourceIds: [] }],
+    })
+    rerender(<InputArea />)
+
+    expect(composer).toHaveValue('')
+    expect(composer).toBeDisabled()
+  })
+
   test('prefills the composer from a staged prompt', () => {
     useLayoutStore.setState({ promptDraft: 'A featured question' })
     render(<InputArea />)

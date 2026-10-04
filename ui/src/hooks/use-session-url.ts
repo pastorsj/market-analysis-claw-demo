@@ -99,11 +99,14 @@ export function useSessionUrl({ enabled }: UseSessionUrlOptions): UseSessionUrlR
     }
   }, [enabled, currentUserId, currentConversation?.id, searchParams, pathname, router])
 
-  // Manual URL update function
+  // Manual URL update function. It also drops `?question=`: the landing page's
+  // question is placed in the composer once, and a reload of the URL must
+  // reopen the session rather than draft the question again.
   const updateSessionUrl = useCallback(
     (sessionId: string | null) => {
       const currentParams = searchParams?.toString() ?? ''
       const newParams = new URLSearchParams(currentParams)
+      newParams.delete('question')
 
       if (sessionId) {
         newParams.set('session', sessionId)

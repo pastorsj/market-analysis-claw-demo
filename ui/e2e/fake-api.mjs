@@ -3,8 +3,15 @@
 
 /**
  * A stand-in for the demo API, just enough for the live-mode smoke test:
- * the pack and its examples, its data sources, a job whose stream answers
- * immediately, and a transcription of any WAV recording.
+ * the pack and its examples, its data sources, jobs, and a transcription of
+ * any WAV recording.
+ *
+ * A job is known once its submission is admitted: before that its status and
+ * stream are 404, as the API's are. By default it is admitted at once and its
+ * stream answers immediately. A test can plan a job before submitting it
+ * (`POST /e2e/jobs/<id>` with `{admitAfterMs, runForMs}`): its admission then
+ * waits, so the submission is still in flight, and it runs for a while, its
+ * stream sending heartbeats until it answers.
  * Usage: FAKE_API_PORT=3990 node e2e/fake-api.mjs
  */
 
@@ -128,11 +135,57 @@ const ANSWER =
   'Asset A led the market [1].\n\n**References:**\n' +
   '- [1] Market analytics result — market scan — evidence `ev-1` — invocation `call-1`'
 
-const sse = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+const sse = (event, data, id) =>
+  `${id ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 
-const json = (res, body) => {
-  res.writeHead(200, { 'content-type': 'application/json' })
+const json = (res, body, status = 200) => {
+  res.writeHead(status, { 'content-type': 'application/json' })
   res.end(JSON.stringify(body))
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Plans registered by tests, by job id: `{admitAfterMs, runForMs}` */
+const plans = new Map()
+/** Admitted jobs, by id: `{admittedAt, runForMs, cancelled}` */
+const jobs = new Map()
+
+const statusOf = (job) =>
+  job.cancelled
+    ? 'interrupted'
+    : Date.now() - job.admittedAt >= job.runForMs
+      ? 'success'
+      : 'running'
+
+const unknownJob = (res, jobId) => json(res, { detail: `Job not found: ${jobId}` }, 404)
+
+/** The job's events: running, a heartbeat every 100 ms while it runs, then its answer. */
+const streamJob = async (req, res, job) => {
+  let closed = false
+  req.on('close', () => {
+    closed = true
+  })
+  res.writeHead(200, { 'content-type': 'text/event-stream' })
+  res.write(sse('job.status', { status: 'running' }, '1'))
+  let cursor = 1
+  while (!closed && statusOf(job) === 'running') {
+    await sleep(100)
+    if (!closed) res.write(sse('job.heartbeat', {}, String(++cursor)))
+  }
+  if (closed) return
+  if (job.cancelled) {
+    return res.end(
+      sse('job.status', { status: 'interrupted', error: 'cancelled by user' }, String(++cursor))
+    )
+  }
+  res.write(
+    sse(
+      'artifact.update',
+      { data: { type: 'output', output_category: 'final_report', content: ANSWER } },
+      String(++cursor)
+    )
+  )
+  res.end(sse('job.status', { status: 'success' }, String(++cursor)))
 }
 
 /** What the fake transcribes every recording to. */
@@ -148,9 +201,41 @@ createServer(async (req, res) => {
   const { pathname } = new URL(req.url, 'http://fake-api')
   if (req.method === 'GET' && pathname === '/v1/pack') return json(res, PACK)
   if (req.method === 'GET' && pathname === '/v1/data_sources') return json(res, DATA_SOURCES)
+  const plan = pathname.match(/^\/e2e\/jobs\/([^/]+)$/)
+  if (req.method === 'POST' && plan) {
+    plans.set(plan[1], await readJson(req))
+    return json(res, { planned: plan[1] })
+  }
   if (req.method === 'POST' && pathname === '/v1/jobs/async/submit') {
     const { job_id: jobId } = await readJson(req)
+    const { admitAfterMs = 0, runForMs = 0 } = plans.get(jobId) ?? {}
+    // A slow admission: the job is unknown until the submission returns
+    if (admitAfterMs) await sleep(admitAfterMs)
+    if (jobs.has(jobId)) return json(res, { detail: `Job already exists: ${jobId}` }, 409)
+    jobs.set(jobId, { admittedAt: Date.now(), runForMs, cancelled: false })
     return json(res, { job_id: jobId, status: 'submitted' })
+  }
+  const jobPath = pathname.match(/^\/v1\/jobs\/async\/job\/([^/]+)(\/.*)?$/)
+  if (jobPath) {
+    const [, jobId, rest = ''] = jobPath
+    const job = jobs.get(jobId)
+    if (!job) return unknownJob(res, jobId)
+    if (req.method === 'GET' && rest === '') {
+      const status = statusOf(job)
+      const error = status === 'interrupted' ? 'cancelled by user' : null
+      return json(res, { job_id: jobId, status, error })
+    }
+    if (req.method === 'GET' && rest === '/report') {
+      const done = statusOf(job) === 'success'
+      return json(res, { job_id: jobId, has_report: done, report: done ? ANSWER : null })
+    }
+    if (req.method === 'POST' && rest === '/cancel') {
+      if (statusOf(job) !== 'running') return json(res, { detail: 'Job already finished' }, 409)
+      job.cancelled = true
+      return json(res, { job_id: jobId, status: 'interrupted', cancelled: true })
+    }
+    if (req.method === 'GET' && rest.startsWith('/stream')) return streamJob(req, res, job)
+    return res.writeHead(404).end()
   }
   if (req.method === 'POST' && pathname === '/v1/speech/transcriptions') {
     const chunks = []
@@ -159,16 +244,6 @@ createServer(async (req, res) => {
     const wav = audio.length > 44 && audio.subarray(0, 4).toString() === 'RIFF'
     if (!wav || req.headers['content-type'] !== 'audio/wav') return res.writeHead(422).end()
     return json(res, { text: TRANSCRIPT })
-  }
-  if (req.method === 'GET' && pathname.endsWith('/stream')) {
-    res.writeHead(200, { 'content-type': 'text/event-stream' })
-    res.write(sse('job.status', { status: 'running' }))
-    res.write(
-      sse('artifact.update', {
-        data: { type: 'output', output_category: 'final_report', content: ANSWER },
-      })
-    )
-    return res.end(sse('job.status', { status: 'success' }))
   }
   res.writeHead(404).end()
 }).listen(Number(process.env.FAKE_API_PORT ?? 3990), '127.0.0.1')

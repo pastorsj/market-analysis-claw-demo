@@ -9,10 +9,11 @@ import type { ExecutionWorkspaceProps, RecordingsSource } from '@/shared/context
 import { useLayoutStore } from '../store'
 import { MainLayout } from './MainLayout'
 
+const navigation = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }))
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: navigation.replace }),
   usePathname: () => '/research',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => navigation.params,
 }))
 
 const initialChat = useChatStore.getState()
@@ -50,6 +51,8 @@ const recordings: RecordingsSource = {
 
 describe('MainLayout', () => {
   beforeEach(() => {
+    navigation.replace.mockClear()
+    navigation.params = new URLSearchParams()
     useChatStore.setState(initialChat, true)
     useChatStore.getState().setCurrentUser('local')
     useLayoutStore.setState({ ...initialLayout, availableDataSources: SOURCES }, true)
@@ -151,6 +154,49 @@ describe('MainLayout', () => {
       'Which assets led?'
     )
     expect(useLayoutStore.getState().enabledDataSourceIds).toEqual(['market_news'])
+  })
+
+  test('My sessions, from an open recording, goes back to the live session it replaced', async () => {
+    useChatStore.getState().addUserMessage('My own question')
+    const live = useChatStore.getState().currentConversation!.id
+    render(<MainLayout />, { feature: { recordings } })
+    await userEvent.click(await screen.findByRole('tab', { name: /Recorded \(1\)/ }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Recorded session: Market leaders; Completed' })
+    )
+    expect(await screen.findByText('Asset A led.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'My sessions' }))
+
+    expect(useChatStore.getState().currentConversation?.id).toBe(live)
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Add data sources' })).toBeEnabled()
+    expect(screen.queryByText('Recorded test session · read only')).not.toBeInTheDocument()
+  })
+
+  test('a featured question leaves the URL once placed, so a reload does not ask it again', async () => {
+    navigation.params = new URLSearchParams('question=market-leaders')
+    render(
+      <MainLayout initialQuestion={{ question: 'Which assets led?', sourceIds: ['market_news'] }} />
+    )
+
+    await waitFor(() => expect(navigation.replace).toHaveBeenLastCalledWith('/research'))
+  })
+
+  test('a URL that names a saved session reopens it rather than its question', async () => {
+    useChatStore.getState().addUserMessage('Which assets led?')
+    const saved = useChatStore.getState().currentConversation!.id
+    useChatStore.getState().startNewSessionDraft()
+    navigation.params = new URLSearchParams(`question=market-leaders&session=${saved}`)
+    render(
+      <MainLayout initialQuestion={{ question: 'Which assets led?', sourceIds: ['market_news'] }} />
+    )
+
+    await waitFor(() =>
+      expect(navigation.replace).toHaveBeenLastCalledWith(`/research?session=${saved}`)
+    )
+    expect(useChatStore.getState().currentConversation?.id).toBe(saved)
+    expect(screen.getByRole('textbox', { name: 'Chat message input' })).toHaveValue('')
   })
 
   test('places a featured question and its data sources in a new session', async () => {

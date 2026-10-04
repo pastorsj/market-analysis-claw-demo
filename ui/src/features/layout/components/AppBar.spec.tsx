@@ -70,6 +70,14 @@ describe('AppBar', () => {
     ).toBeGreaterThan(0)
   })
 
+  test('shows Phoenix disabled on a recorded session, which has no traces there', () => {
+    render(<AppBar isRecordedSession />, { config: { phoenixUrl: 'http://127.0.0.1:6006' } })
+    const link = screen.getByTestId('phoenix-observability-link')
+    expect(link).not.toHaveAttribute('href')
+    expect(link).toHaveAttribute('aria-disabled', 'true')
+    expect(link).toHaveAccessibleName('Phoenix traces are only available for live sessions')
+  })
+
   test('switches between light and dark themes', async () => {
     useLayoutStore.setState({ theme: 'light' })
     render(<AppBar />)

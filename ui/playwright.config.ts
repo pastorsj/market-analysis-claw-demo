@@ -18,7 +18,8 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { defineConfig, devices } from '@playwright/test'
 
-const FAKE_API = 'http://127.0.0.1:3990'
+/** The fake API (e2e/fake-api.mjs); tests also plan its jobs directly */
+export const FAKE_API = 'http://127.0.0.1:3990'
 export const LIVE_URL = 'http://127.0.0.1:3991'
 export const REPLAY_URL = 'http://127.0.0.1:3992'
 /** Live mode on the fixture pack's recordings, for the visual baselines */

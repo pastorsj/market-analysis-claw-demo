@@ -41,6 +41,11 @@ import { VISIBLE_EXAMPLE_ROWS, visibleRowsHeight } from './visible-rows'
 
 const NO_SCENARIOS: DemoScenario[] = []
 const EXAMPLE_LIST = 'demo-scenario-list'
+/**
+ * Run turns into Stop in place, so the second click of a double click on Run
+ * would stop the run it just started: Stop ignores clicks this soon after Run.
+ */
+const STOP_AFTER_RUN_GUARD_MS = 600
 
 interface InputAreaProps {
   /** Placeholder text */
@@ -66,6 +71,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   const speechInsertionRef = useRef({ start: 0, end: 0 })
   const { sendMessage, stop } = useHermesChat()
+  const sentAtRef = useRef(Number.NEGATIVE_INFINITY)
   const { mode, speechInput: speechInputConfig } = useAppConfig()
 
   // A running job in this session pauses the composer; it can be stopped.
@@ -74,6 +80,13 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
   const currentConversation = useChatStore((state) => state.currentConversation)
   const isRecordedSession = mode === 'replay' || currentConversation?.readOnly === true
   const disabled = isBusy || isRecordedSession
+
+  // A recorded session's read-only composer shows no draft of a live question.
+  useEffect(() => {
+    if (!isRecordedSession) return
+    messageRef.current = ''
+    setMessage('')
+  }, [isRecordedSession])
   const ensureSession = useChatStore((state) => state.ensureSession)
   const saveDataSourcesToConversation = useChatStore((state) => state.saveDataSourcesToConversation)
 
@@ -156,8 +169,14 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
     if (!ensureSession()) return
     messageRef.current = ''
     setMessage('')
+    sentAtRef.current = performance.now()
     sendMessage(message)
   }, [message, disabled, ensureSession, sendMessage])
+
+  const handleStop = useCallback(() => {
+    if (performance.now() - sentAtRef.current < STOP_AFTER_RUN_GUARD_MS) return
+    stop()
+  }, [stop])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
@@ -390,7 +409,7 @@ export const InputArea: FC<InputAreaProps> = memo(function InputArea({
               kind="secondary"
               size="small"
               color="danger"
-              onClick={stop}
+              onClick={handleStop}
               aria-label="Stop generating"
               title="Stop generating"
             >

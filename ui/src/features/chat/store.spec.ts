@@ -218,11 +218,72 @@ describe('useChatStore', () => {
     test('marks a job the API no longer knows as failed and unavailable', async () => {
       vi.mocked(getJobStatus).mockRejectedValue(new Error('Failed to get job status: 404'))
       askQuestion()
+      // Asked a minute ago: long admitted, so a 404 means it is gone
+      const conversationId = chat().currentConversation!.id
+      chat().patchConversationMessage(conversationId, messages()[1].id, {
+        timestamp: new Date(Date.now() - 60_000),
+      })
 
       await chat().reconnectToActiveJob()
 
+      expect(getJobStatus).toHaveBeenCalledTimes(1)
       expect(messages()[1].deepResearchJobStatus).toBe('failure')
       expect(kinds()).toEqual(['user', 'agent_response', 'expired'])
+    })
+
+    test('never asks for a job whose submission is still in flight', async () => {
+      askQuestion('job-1')
+      chat().beginJobSubmission('job-1')
+
+      await chat().reconnectToActiveJob()
+      await chat().cleanupOrphanedStartingBanners()
+      await chat().refreshDeepResearchSessionStatuses()
+
+      expect(getJobStatus).not.toHaveBeenCalled()
+      expect(kinds()).toEqual(['user', 'agent_response', 'starting'])
+
+      chat().endJobSubmission('job-1')
+      expect(chat().submittingJobIds).toEqual([])
+    })
+
+    test('waits for a job submitted moments ago that the API does not know yet (404, then 200)', async () => {
+      vi.useFakeTimers()
+      vi.mocked(getJobStatus)
+        .mockRejectedValueOnce(new Error('Failed to get job status: 404 - Job not found'))
+        .mockRejectedValueOnce(new Error('Failed to get job status: 404 - Job not found'))
+        .mockResolvedValue({ job_id: 'job-1', status: 'running', error: null })
+      askQuestion()
+
+      const reconnecting = chat().reconnectToActiveJob()
+      await vi.advanceTimersByTimeAsync(1_000)
+      await reconnecting
+
+      expect(getJobStatus).toHaveBeenCalledTimes(3)
+      expect(chat()).toMatchObject({ deepResearchJobId: 'job-1', isDeepResearchStreaming: true })
+      expect(kinds()).toEqual(['user', 'agent_response', 'starting'])
+    })
+
+    test('reports a job submitted moments ago as unavailable once it is no longer recent', async () => {
+      vi.useFakeTimers()
+      vi.mocked(getJobStatus).mockRejectedValue(new Error('Failed to get job status: 404'))
+      askQuestion()
+
+      const reconnecting = chat().reconnectToActiveJob()
+      await vi.advanceTimersByTimeAsync(15_000)
+      await reconnecting
+
+      expect(kinds()).toEqual(['user', 'agent_response', 'expired'])
+    })
+
+    test('leaves a recent job the API does not know yet as it is when refreshing the sessions', async () => {
+      vi.mocked(getJobStatus).mockRejectedValue(new Error('Failed to get job status: 404'))
+      askQuestion()
+
+      await chat().refreshDeepResearchSessionStatuses()
+      await chat().cleanupOrphanedStartingBanners()
+
+      expect(messages()[1].deepResearchJobStatus).toBe('submitted')
+      expect(kinds()).toEqual(['user', 'agent_response', 'starting'])
     })
   })
 

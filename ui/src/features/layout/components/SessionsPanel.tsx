@@ -71,6 +71,8 @@ export interface RecordedCollection {
   loadingId: string | null
   onSelect: (sessionId: string) => void
   onRetry: () => void
+  /** Leave the open recorded session for a live one, when "My sessions" is chosen */
+  onLeave?: () => void
 }
 
 interface SessionsPanelProps {
@@ -347,7 +349,11 @@ export const SessionsPanel: FC<SessionsPanelProps> = memo(function SessionsPanel
               type="button"
               role="tab"
               aria-selected={sessionCollection === 'saved'}
-              onClick={() => setSessionCollection('saved')}
+              onClick={() => {
+                setSessionCollection('saved')
+                // The recording stays read only: back to live, as New Session would be
+                if (recordedSelectedId) recorded.onLeave?.()
+              }}
               className={cn(
                 'text-primary rounded-md px-2 py-1.5 text-xs font-semibold transition-colors',
                 sessionCollection === 'saved'
@@ -601,6 +607,8 @@ interface RecordedSessionsListProps {
   onSearchQueryChange: (value: string) => void
   onSelect: (sessionId: string) => void
   onRetry: () => void
+  /** Leave the open recorded session for a live one, when "My sessions" is chosen */
+  onLeave?: () => void
 }
 
 /** The recorded sessions: a search, the count, one row per session, and a note on how they load. */

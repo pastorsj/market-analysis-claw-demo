@@ -178,6 +178,13 @@ test.describe('live mode', () => {
     await expect(workspace.getByText('Hermes Recorded')).toBeVisible()
     await expect(workspace.getByText(/^Step (\d+) of \1$/)).toBeVisible()
     expect(exports).toEqual([])
+
+    // My sessions leaves the read-only recording for a live session
+    await page.getByRole('button', { name: 'Back to Answer', exact: true }).click()
+    await page.getByRole('tab', { name: 'My sessions' }).click()
+    await expect(composer).toBeEnabled()
+    await expect(page.getByText('Recorded test session · read only')).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Add data sources' })).toBeEnabled()
   })
 
   test('voice input records a question and puts its transcript in the composer', async ({
