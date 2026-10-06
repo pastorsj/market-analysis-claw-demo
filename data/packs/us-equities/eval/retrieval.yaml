@@ -17,15 +17,15 @@ cyber-disclosure-rules:
     - 0001649739:0001649739-25-000246 # BAFN, 2025-10-30
     - 0001834584:0001834584-25-000196 # CPNG, 2025-12-16
 moves-and-filings:
-  # The six companies eval/oracles/february_moves.sql returns for February 2026 (the build's three strongest and
-  # three weakest): their 8-Ks filed January through March 2026 include these results releases and updates.
+  # The companies of the six February 2026 sessions eval/oracles/february_session_moves.sql returns (the three
+  # largest gains: CRWV, CRCL, BMNR; the three largest losses: IBM, AMAT, BMNR): their 8-Ks filed January through
+  # March 2026 include these results releases and updates.
   filings:
+    - 0001769628:0001769628-26-000094 # CRWV, 2026-02-26, results (Item 2.02)
     - 0001876042:0001876042-26-000032 # CRCL, 2026-02-25, results (Item 2.02)
     - 0000006951:0001628280-26-007661 # AMAT, 2026-02-12, results (Item 2.02)
-    - 0001065280:0001065280-26-000033 # NFLX, 2026-01-20, results (Item 2.02)
     - 0001829311:0001493152-26-006953 # BMNR, 2026-02-17, Regulation FD update (Item 7.01)
     - 0000051143:0000051143-26-000004 # IBM, 2026-01-28, results (Item 2.02)
-    - 0001535527:0001535527-26-000007 # CRWD, 2026-03-03, results (Item 2.02)
 executive-changes:
   filings: # every Item 5.02 8-K filed in January and February 2026
     - 0000320193:0001140361-26-000199 # AAPL, 2026-01-02
@@ -126,15 +126,3 @@ world-news-cyber:
     - gdelt:20251031014500-184 # 2025-10-31, govinfosecurity.com
     - gdelt:20251031084500-425 # 2025-10-31, moneycontrol.com
     - gdelt:20260105193000-1591 # 2026-01-05, csoonline.com
-nvidia-results-and-prices:
-  filings: # NVIDIA's 8-Ks from February 2 to March 12, 2026
-    - 0001045810:0001045810-26-000019 # NVDA, 2026-02-25, Items 2.02,9.01
-    - 0001045810:0001045810-26-000024 # NVDA, 2026-03-06, Items 5.02,9.01
-bank-results:
-  filings: # the five banks' results 8-Ks (Item 2.02) filed in January 2026
-    - 0000886982:0000886982-26-000004 # GS, 2026-01-08
-    - 0000019617:0001628280-26-001902 # JPM, 2026-01-13
-    - 0000070858:0000070858-26-000020 # BAC, 2026-01-14
-    - 0000831001:0001104659-26-003604 # C, 2026-01-14
-    - 0000072971:0000072971-26-000009 # WFC, 2026-01-14
-    - 0000886982:0000886982-26-000008 # GS, 2026-01-15

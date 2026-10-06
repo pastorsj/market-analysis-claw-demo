@@ -19,17 +19,17 @@ examples:
 - market-leaders
 - cyber-disclosure-rules
 - intraday-ranges
+- intraday-drawdowns
 - beneficial-ownership
 - large-universe-scan
-- nvidia-results-and-prices
 - world-news-cyber
 questions:
 - id: market-leaders
   label: Market Leaders
   tag: ANALYTICS
-  description: Scan the 50 most liquid US stocks for their strongest and weakest recent returns.
+  description: Scan every US stock in the pack for its strongest and weakest recent returns.
   question: >-
-    Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions
+    Across every stock in the pack, which had the strongest and weakest returns over the 20 trading sessions
     ending March 12, 2026, and how did their daily volatility compare?
   sources: [market_data]
   tools: [cudf]
@@ -48,23 +48,23 @@ questions:
 - id: unusual-sessions
   label: Unusual Sessions
   tag: ANOMALY
-  description: Rank unusual return, volatility and volume combinations across the 50 most liquid stocks.
+  description: Rank unusual return, volatility and volume combinations across every stock in the pack.
   question: >-
     Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual
-    among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
+    across every stock in the pack, and which features made each one unusual? Anomaly scores are neither
     forecasts nor explanations.
   sources: [market_data]
   tools: [cudf, cuml]
   featured: true
-- id: peer-network
-  label: Peer Network
-  tag: GRAPH
-  description: Find the most central stocks in the return-correlation network of same-industry peers.
+- id: intraday-drawdowns
+  label: Intraday Drawdowns
+  tag: INTRADAY
+  description: Scan the one-minute bars of the 500 most liquid stocks for the deepest falls from a session's running high.
   question: >-
-    Among declared industry peers, which stocks were the most central in the return-correlation network from
-    December 2025 through March 12, 2026, and which pairs moved together most closely?
+    Among the 500 most liquid US stocks, which 10 sessions from February 2 through February 27, 2026 had the
+    deepest drawdowns from the session's running high, and how did each one close relative to its open?
   sources: [market_data]
-  tools: [cudf, cugraph]
+  tools: [cudf]
   featured: true
 - id: cyber-disclosure-rules
   label: Cybersecurity Disclosures
@@ -79,21 +79,31 @@ questions:
 - id: moves-and-filings
   label: Moves & Filings
   tag: HYBRID
-  description: Price moves and SEC filings as two separate sources, joined only by company.
+  description: Minute-bar session moves and SEC filings as two separate sources, joined only by company.
   question: >-
-    Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in
-    February 2026? Separately, what did those six companies disclose in their 8-K filings from January through
-    March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move.
+    Among the 50 most liquid US stocks, which three sessions in February 2026 had the largest open-to-close gains
+    and which three the largest losses? Separately, what did those companies disclose in their 8-K filings from
+    January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a
+    move.
   sources: [market_data, sec_filings]
   tools: [cudf, retrieval]
   featured: true
+- id: peer-network
+  label: Peer Network
+  tag: GRAPH
+  description: Find the most central stocks in the return-correlation network of same-industry peers.
+  question: >-
+    Among declared industry peers, which stocks were the most central in the return-correlation network from
+    December 2025 through March 12, 2026, and which pairs moved together most closely?
+  sources: [market_data]
+  tools: [cudf, cugraph]
 - id: large-universe-scan
   label: Whole-Market Scan
   tag: ANALYTICS
-  description: Scan the 500 most liquid stocks at once.
+  description: Scan every stock in the pack at once.
   question: >-
-    Across the 500 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2 to
-    March 12, 2026, and how unusual was their trading volume?
+    Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2 to March 12,
+    2026, and how unusual was their trading volume?
   sources: [market_data]
   tools: [cudf]
 - id: outcome-prediction
@@ -126,37 +136,28 @@ questions:
 - id: volatility-ranking
   label: Volatility Ranking
   tag: ANALYTICS
-  description: Rank the 50 most liquid stocks by daily volatility over 60 sessions, with their returns.
+  description: Rank every stock in the pack by daily volatility over 60 sessions, with their returns.
   question: >-
-    Among the 50 most liquid US stocks, which five had the highest and which five the lowest daily volatility over
-    the 60 trading sessions ending March 12, 2026, and what were their returns over those sessions?
+    Across every stock in the pack, which five had the highest and which five the lowest daily volatility over the
+    60 trading sessions ending March 12, 2026, and what were their returns over those sessions?
   sources: [market_data]
   tools: [cudf]
 - id: peer-relative-returns
   label: Peer-Relative Returns
   tag: ANALYTICS
-  description: Find the stocks that beat or trailed the group's average return by the most.
+  description: Find the stocks that beat or trailed the all-stock average return by the most.
   question: >-
-    Among the 50 most liquid US stocks, which five beat the group's average return by the most, and which five
+    Across every stock in the pack, which five beat the all-stock average return by the most, and which five
     trailed it by the most, over the 20 trading sessions ending March 12, 2026?
   sources: [market_data]
   tools: [cudf]
 - id: second-half-2025
   label: Second Half of 2025
   tag: ANALYTICS
-  description: Scan the 500 most liquid stocks for the strongest and weakest returns of the second half of 2025.
+  description: Scan every stock in the pack for the strongest and weakest returns of the second half of 2025.
   question: >-
-    Among the 500 most liquid US stocks, which 10 had the strongest and which 10 the weakest returns from July 1
-    through December 31, 2025, and how volatile was each one's daily trading?
-  sources: [market_data]
-  tools: [cudf]
-- id: intraday-drawdowns
-  label: Intraday Drawdowns
-  tag: INTRADAY
-  description: Scan real one-minute bars for the deepest falls from a session's running high.
-  question: >-
-    Among the 50 most liquid US stocks, which 10 sessions from February 2 through February 27, 2026 had the deepest
-    drawdowns from the session's running high, and how did each one close relative to its open?
+    Across every stock in the pack, which 10 had the strongest and which 10 the weakest returns from July 1 through
+    December 31, 2025, and how volatile was each one's daily trading?
   sources: [market_data]
   tools: [cudf]
 - id: heaviest-sessions
@@ -174,17 +175,17 @@ questions:
   description: Score April 2025's sessions against a PCA model of the first quarter.
   question: >-
     Using January 2 through March 31, 2025 as the baseline, which 10 sessions in April 2025 were the most unusual
-    among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither
+    across every stock in the pack, and which features made each one unusual? Anomaly scores are neither
     forecasts nor explanations.
   sources: [market_data]
   tools: [cudf, cuml]
 - id: fourth-quarter-anomalies
   label: Q4 2025 Anomalies
   tag: ANOMALY
-  description: Score the fourth quarter of 2025 against the three before it, across the 500 most liquid stocks.
+  description: Score the fourth quarter of 2025 against the three before it, across every stock in the pack.
   question: >-
     Using January 2 through September 30, 2025 as the baseline, which 15 sessions in the fourth quarter of 2025
-    were the most unusual among the 500 most liquid US stocks, and which features made each one unusual? Anomaly
+    were the most unusual across every stock in the pack, and which features made each one unusual? Anomaly
     scores are neither forecasts nor explanations.
   sources: [market_data]
   tools: [cudf, cuml]
@@ -288,61 +289,21 @@ questions:
     headlines.
   sources: [world_news]
   tools: [retrieval]
-- id: nvidia-results-and-prices
-  label: NVIDIA Prices & Filings
-  tag: HYBRID
-  description: NVIDIA's price context and its 8-K filings, as two separate sources.
-  question: >-
-    How did NVIDIA (NVDA) trade from February 2 through March 12, 2026? Separately, what did its 8-K filings in
-    that period disclose? Report the prices and the filings apart, and do not claim that a filing caused a move.
-  sources: [market_data, sec_filings]
-  tools: [cudf, retrieval]
-- id: bank-results
-  label: Bank Results
-  tag: HYBRID
-  description: Five large banks' January 2026 moves beside their results 8-Ks, kept apart.
-  question: >-
-    How did JPMorgan Chase, Bank of America, Wells Fargo, Citigroup and Goldman Sachs trade in January 2026?
-    Separately, what did their January 2026 results 8-Ks report? Report the moves and the filings apart, and do
-    not claim that a filing caused a move.
-  sources: [market_data, sec_filings]
-  tools: [cudf, retrieval]
 # Multi-turn conversations, each recorded as one replay session with --all: a later turn refers to an earlier answer.
 conversations:
-- id: price-context-follow-up
-  label: Price Context Follow-up
-  tag: ANALYTICS
-  description: Summarize two stocks' daily price context, then add a third and aggregate the series weekly.
-  sources: [market_data]
-  turns:
-  - >-
-    Summarize the daily price context for NVIDIA (NVDA) and Apple (AAPL) from February 2 through February 27, 2026,
-    including each stock's return, price range and average volume.
-  - Keep that same window and add Microsoft (MSFT), but aggregate the displayed series weekly.
-- id: peer-network-follow-up
-  label: Peer Network Follow-up
-  tag: GRAPH
-  description: Find the most central peers, then compare their returns and volatility over the same window.
-  sources: [market_data]
-  turns:
-  - >-
-    Among declared industry peers, which five stocks were the most central in the return-correlation network from
-    December 2025 through March 12, 2026?
-  - >-
-    For the three most central stocks in that result, compare their returns and daily volatility over the same
-    window.
 - id: leaders-unusual-sessions
   label: Leaders & Unusual Sessions
   tag: ANOMALY
-  description: Rank the strongest and weakest recent returns, then check those stocks for unusual sessions.
+  description: Rank the strongest and weakest recent returns across every stock, then check the market for unusual sessions.
   sources: [market_data]
   turns:
   - >-
-    Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns over the
-    20 trading sessions ending March 12, 2026?
+    Across every stock in the pack, which three had the strongest and which three the weakest returns over the 20
+    trading sessions ending March 12, 2026?
   - >-
-    Using 2025 as the baseline, did any of those six stocks have unusual sessions in that same window? Name the
-    sessions and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations.
+    Using 2025 as the baseline, which 10 sessions in that same window were the most unusual across every stock in
+    the pack, and did any of them belong to those six stocks? Name the sessions and the features that made each one
+    unusual. Anomaly scores are neither forecasts nor explanations.
 - id: filings-to-regulations
   label: Filings & Regulations
   tag: RETRIEVAL
@@ -367,62 +328,41 @@ conversations:
   - >-
     Now separate the intentional and the unintentional selective disclosure cases, and say how the issuer may make
     the public disclosure, keeping the section citations.
-- id: mega-cap-follow-up
-  label: Mega-Cap Follow-up
-  tag: ANALYTICS
-  description: Summarize four large stocks' price context, then compare it with the previous quarter, monthly.
-  sources: [market_data]
-  turns:
-  - >-
-    Summarize the price context for Apple (AAPL), Microsoft (MSFT), Amazon (AMZN) and Alphabet (GOOGL) from
-    January 2 through March 12, 2026, including each stock's return, price range and average volume.
-  - >-
-    Keep the same four stocks and compare that with October 1 through December 31, 2025, aggregating both series
-    monthly.
 - id: april-2025-follow-up
   label: April 2025 Follow-up
   tag: ANALYTICS
-  description: Find the steepest early-April 2025 declines, then follow those stocks through the next week.
+  description: Find the steepest early-April 2025 declines across every stock, then the strongest rebounds the next week.
   sources: [market_data]
   turns:
-  - Among the 50 most liquid US stocks, which five had the weakest returns from April 1 through April 8, 2025?
-  - How did those five stocks trade over the following sessions, from April 9 through April 15, 2025?
+  - Across every stock in the pack, which five had the weakest returns from April 1 through April 8, 2025?
+  - >-
+    Across every stock in the pack, which five had the strongest returns from April 9 through April 15, 2025, and
+    were any of them among those five weakest?
 - id: intraday-volatility-follow-up
   label: Intraday Volatility Follow-up
   tag: INTRADAY
-  description: Rank minute-level volatility for three stocks, then look inside the most volatile sessions.
+  description: Rank minute-level volatility across the 500 most liquid stocks, then the heaviest sessions, and compare them.
   sources: [market_data]
   turns:
   - >-
-    For NVIDIA (NVDA), Tesla (TSLA) and AMD, which 10 sessions from January 2 through March 12, 2026 had the
-    highest minute-by-minute realized volatility?
+    Among the 500 most liquid US stocks, which 10 sessions from January 2 through March 12, 2026 had the highest
+    minute-by-minute realized volatility?
   - >-
-    For the three most volatile of those sessions, how did each trade from open to close, what was its VWAP, and
-    how much of its volume came in the last 30 minutes?
+    Among the same 500 stocks and the same window, which 10 sessions traded the most shares, and were any of them
+    among the 10 most volatile sessions?
 - id: prediction-follow-up
   label: Prediction Follow-up
   tag: PREDICTION
-  description: Rank a five-session outlook, then compare it with the returns that followed.
+  description: Rank a five-session outlook, then compare it with the strongest returns across every stock that followed.
   sources: [market_data]
   turns:
   - >-
     As of the March 5, 2026 market close, which five of the 50 most liquid US stocks are most likely to post a
     positive five-session return?
   - >-
-    What were those five stocks' actual returns from the March 5 close through March 12, 2026? Compare them with
-    the predictions, without treating one week as a test of the model.
-- id: peer-links-follow-up
-  label: Peer Links Follow-up
-  tag: GRAPH
-  description: List the strongest peer correlations, then compare the strongest pair's returns.
-  sources: [market_data]
-  turns:
-  - >-
-    In the declared-peer return-correlation network from December 2025 through March 12, 2026, which 10 pairs of
-    stocks were the most strongly correlated, and did any pair move in opposite directions?
-  - >-
-    For the most strongly correlated pair in that result, compare the two stocks' returns and daily volatility over
-    the same window.
+    Across every stock in the pack, which five had the strongest returns from the March 5 close through March 12,
+    2026, and were any of them among the five you ranked? Compare them with the predictions, without treating one
+    week as a test of the model.
 - id: sector-follow-up
   label: Sector Follow-up
   tag: SQL
@@ -455,27 +395,3 @@ conversations:
   - >-
     Now contrast the conditions for directors and officers with those for other persons, keeping the section
     citations.
-- id: headlines-and-prices
-  label: Headlines & Prices
-  tag: HYBRID
-  description: World headlines that mention Nvidia, then NVDA's prices that month, as separate sources.
-  sources: [world_news, market_data]
-  turns:
-  - >-
-    Which world news headlines from February 2025 mention Nvidia? List their outlets and dates, and cite the
-    headlines.
-  - >-
-    Separately, how did NVIDIA (NVDA) trade in February 2025? Report the prices apart from the headlines, and do
-    not claim that a headline caused a move.
-- id: incidents-and-prices
-  label: Incidents & Prices
-  tag: HYBRID
-  description: Item 1.05 cybersecurity incident filings, then the filers' prices after each, kept apart.
-  sources: [sec_filings, market_data]
-  turns:
-  - >-
-    Which companies reported a material cybersecurity incident on Form 8-K under Item 1.05, and when did each
-    file? Cite the filings.
-  - >-
-    How did each of those companies' stocks trade over the five sessions after its filing? Report the prices
-    separately from the filings, and do not claim that a filing caused a move.

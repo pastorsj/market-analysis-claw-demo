@@ -168,7 +168,7 @@ def test_the_opt_in_world_news_corpus_is_read_in_place(equities, tmp_path, monke
         "world-news-rates",
         "world-news-cyber",
     ]
-    assert [c["id"] for c in pack["conversations"] if "world_news" in c["sources"]] == ["headlines-and-prices"]
+    assert [c["id"] for c in pack["conversations"] if "world_news" in c["sources"]] == []
 
 
 def test_prepare_stops_until_the_dataset_is_fetched(equities, tmp_path, capsys):

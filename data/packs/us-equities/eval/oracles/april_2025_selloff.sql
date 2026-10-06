@@ -1,11 +1,10 @@
--- april-2025-follow-up (conversation): the 50 most liquid stocks' returns from 2025-04-01 to 2025-04-08 (turn 1) and
+-- april-2025-follow-up (conversation): every stock's returns from 2025-04-01 to 2025-04-08 (turn 1) and
 -- from 2025-04-09 to 2025-04-15 (turn 2), each from the close before its window to its last close.
 WITH closes AS (
   SELECT p.asset_id, a.company_name, p.trading_date, p.adjusted_close,
     coalesce(lag(p.adjusted_close) OVER (PARTITION BY p.asset_id ORDER BY p.trading_date), p.adjusted_close)
       AS return_base
   FROM main.daily_prices p JOIN main.assets a USING (asset_id)
-  WHERE a.liquidity_rank <= 50
 )
 SELECT asset_id, company_name,
   arg_max(adjusted_close, trading_date) FILTER (WHERE trading_date BETWEEN DATE '2025-04-01' AND DATE '2025-04-08')

@@ -1,12 +1,11 @@
--- large-universe-scan: the 500 most liquid stocks' returns from 2026-01-02 to 2026-03-12 (from the close before
+-- large-universe-scan: every stock's returns from 2026-01-02 to 2026-03-12 (from the close before
 -- the window, as market_scan measures them) and how unusual their trading volume was: the z-score of each stock's
--- total volume in the window among the 500 (population standard deviation), as market_scan reports it in `zscores`.
+-- total volume in the window among every stock (population standard deviation), as market_scan reports it in `zscores`.
 WITH closes AS (
   SELECT p.asset_id, p.trading_date, p.adjusted_close, p.volume,
     coalesce(lag(p.adjusted_close) OVER (PARTITION BY p.asset_id ORDER BY p.trading_date), p.adjusted_close)
       AS return_base
   FROM main.daily_prices p JOIN main.assets a USING (asset_id)
-  WHERE a.liquidity_rank <= 500
 ),
 per_asset AS (
   SELECT asset_id,
