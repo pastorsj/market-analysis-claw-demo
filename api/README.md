@@ -187,7 +187,7 @@ Secrets can also be files in `/run/secrets` named after the setting (Compose sec
 | `AUTO_ONTOLOGY_URL`, `AUTO_ONTOLOGY_EMAIL`, `AUTO_ONTOLOGY_PASSWORD` | empty | Ontology view; an empty URL turns it off |
 | `AUTO_ONTOLOGY_ORIGIN` | `AUTO_ONTOLOGY_URL` | The `Origin` Auto Ontology's sign-in trusts |
 | `MARKET_ANALYTICS_URL` | `http://market-analytics:3010` | The market-analytics service, for the Benchmark tab |
-| `BENCHMARK_PAIRS`, `BENCHMARK_BUDGET_SECONDS` | `5`, `20` | Matched pairs asked of each call, and the time after which no new pair starts |
+| `BENCHMARK_PAIRS`, `BENCHMARK_BUDGET_SECONDS` | `5`, `90` | Matched pairs asked of each call, and the time after which no new pair starts. A call claims a speedup only after 5 pairs, so the budget must fit 5 pairs of the slowest call: 5 pairs of a 500-stock minute-bar scan take about 55 s, and a whole-market one (73 s on the CPU) would need about 450 s |
 | `SPEECH_INPUT_ENABLED` | `false` | Voice input |
 | `SPEECH_API_KEY` | – (secret) | An nvapi- key for build.nvidia.com; `demo.sh` uses `RETRIEVER_API_KEY` when this is empty and the retriever is build.nvidia.com |
 | `SPEECH_INPUT_MAX_SECONDS`, `SPEECH_MAX_CONCURRENT` | `60` (1 to 90), `2` | The longest recording, and transcriptions at once |

@@ -53,6 +53,18 @@ def test_payloads_match_within_gpu_rounding() -> None:
     assert benchmark.payload_mismatch(rows("a", 0.2), cpu) == "payload.rows[0].score"
 
 
+def test_the_batch_count_is_not_part_of_the_comparison() -> None:
+    """Each engine plans its minute-bar batches from its own byte budget (the CPU's is a quarter of the GPU's), so a
+    scan over many stocks reads in more batches on the CPU: how the work was split is not a difference in the result."""
+    cpu = {"rows": [{"asset_id": "a", "score": 1.0}], "batches": 8, "files": 500}
+    assert benchmark.payload_mismatch({**cpu, "batches": 2}, cpu) is None
+    assert benchmark.payload_mismatch({**cpu, "files": 499}, cpu) == "payload.files"
+    assert benchmark.payload_mismatch({**cpu, "rows": []}, cpu) == "payload.rows"
+    # only the payload's own field is exempt, not a field of that name deeper in a row
+    nested = {"rows": [{"batches": 1}]}
+    assert benchmark.payload_mismatch({"rows": [{"batches": 2}]}, nested) == "payload.rows[0].batches"
+
+
 def result(ms: float, payload: Any = None, status: str = "succeeded") -> dict[str, Any]:
     return {
         "status": status,
