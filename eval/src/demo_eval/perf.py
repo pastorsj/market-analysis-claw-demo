@@ -171,7 +171,7 @@ def guard(
     retrieval_expected: bool,
     retrieval_since: datetime | None = None,
     pairs: int = 5,
-    budget_seconds: float = 60.0,
+    budget_seconds: float = 90.0,
     post: Callable[..., Any] = request_json,
     log: Callable[[str], None] = print,
 ) -> list[Outcome]:

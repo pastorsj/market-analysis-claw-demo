@@ -27,10 +27,10 @@ questions:
 - id: market-leaders
   label: Market Leaders
   tag: ANALYTICS
-  description: Scan every US stock in the pack for its strongest and weakest recent returns.
+  description: Scan every US stock in the pack for its strongest and weakest returns since the start of 2025.
   question: >-
-    Across every stock in the pack, which had the strongest and weakest returns over the 20 trading sessions
-    ending March 12, 2026, and how did their daily volatility compare?
+    Across every stock in the pack, which had the strongest and weakest returns from January 2, 2025 through
+    March 12, 2026, and how did their daily volatility and trading volume compare?
   sources: [market_data]
   tools: [cudf]
   featured: true
@@ -50,9 +50,9 @@ questions:
   tag: ANOMALY
   description: Rank unusual return, volatility and volume combinations across every stock in the pack.
   question: >-
-    Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual
-    across every stock in the pack, and which features made each one unusual? Anomaly scores are neither
-    forecasts nor explanations.
+    Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through March 12, 2026 were
+    the most unusual across every stock in the pack, and which features made each one unusual? Anomaly scores are
+    neither forecasts nor explanations.
   sources: [market_data]
   tools: [cudf, cuml]
   featured: true
@@ -102,8 +102,8 @@ questions:
   tag: ANALYTICS
   description: Scan every stock in the pack at once.
   question: >-
-    Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2 to March 12,
-    2026, and how unusual was their trading volume?
+    Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2, 2025 through
+    March 12, 2026, and how unusual was their trading volume?
   sources: [market_data]
   tools: [cudf]
 - id: outcome-prediction
@@ -136,10 +136,10 @@ questions:
 - id: volatility-ranking
   label: Volatility Ranking
   tag: ANALYTICS
-  description: Rank every stock in the pack by daily volatility over 60 sessions, with their returns.
+  description: Rank every stock in the pack by daily volatility since the start of 2025, with their returns.
   question: >-
-    Across every stock in the pack, which five had the highest and which five the lowest daily volatility over the
-    60 trading sessions ending March 12, 2026, and what were their returns over those sessions?
+    Across every stock in the pack, which five had the highest and which five the lowest daily volatility from
+    January 2, 2025 through March 12, 2026, and what were their returns over that period?
   sources: [market_data]
   tools: [cudf]
 - id: peer-relative-returns
@@ -148,16 +148,16 @@ questions:
   description: Find the stocks that beat or trailed the all-stock average return by the most.
   question: >-
     Across every stock in the pack, which five beat the all-stock average return by the most, and which five
-    trailed it by the most, over the 20 trading sessions ending March 12, 2026?
+    trailed it by the most, from January 2, 2025 through March 12, 2026?
   sources: [market_data]
   tools: [cudf]
-- id: second-half-2025
-  label: Second Half of 2025
+- id: calendar-2025
+  label: Calendar 2025
   tag: ANALYTICS
-  description: Scan every stock in the pack for the strongest and weakest returns of the second half of 2025.
+  description: Scan every stock in the pack for the strongest and weakest returns of 2025.
   question: >-
-    Across every stock in the pack, which 10 had the strongest and which 10 the weakest returns from July 1 through
-    December 31, 2025, and how volatile was each one's daily trading?
+    Across every stock in the pack, which 10 had the strongest and which 10 the weakest returns from January 2
+    through December 31, 2025, and how volatile was each one's daily trading?
   sources: [market_data]
   tools: [cudf]
 - id: heaviest-sessions
@@ -169,26 +169,6 @@ questions:
     shares, and how much of each session's volume came in its first and last 30 minutes?
   sources: [market_data]
   tools: [cudf]
-- id: april-2025-anomalies
-  label: April 2025 Anomalies
-  tag: ANOMALY
-  description: Score April 2025's sessions against a PCA model of the first quarter.
-  question: >-
-    Using January 2 through March 31, 2025 as the baseline, which 10 sessions in April 2025 were the most unusual
-    across every stock in the pack, and which features made each one unusual? Anomaly scores are neither
-    forecasts nor explanations.
-  sources: [market_data]
-  tools: [cudf, cuml]
-- id: fourth-quarter-anomalies
-  label: Q4 2025 Anomalies
-  tag: ANOMALY
-  description: Score the fourth quarter of 2025 against the three before it, across every stock in the pack.
-  question: >-
-    Using January 2 through September 30, 2025 as the baseline, which 15 sessions in the fourth quarter of 2025
-    were the most unusual across every stock in the pack, and which features made each one unusual? Anomaly
-    scores are neither forecasts nor explanations.
-  sources: [market_data]
-  tools: [cudf, cuml]
 - id: central-industries
   label: Central Industries
   tag: GRAPH
@@ -294,16 +274,16 @@ conversations:
 - id: leaders-unusual-sessions
   label: Leaders & Unusual Sessions
   tag: ANOMALY
-  description: Rank the strongest and weakest recent returns across every stock, then check the market for unusual sessions.
+  description: Rank the strongest and weakest returns across every stock, then check the market for unusual sessions.
   sources: [market_data]
   turns:
   - >-
-    Across every stock in the pack, which three had the strongest and which three the weakest returns over the 20
-    trading sessions ending March 12, 2026?
+    Across every stock in the pack, which three had the strongest and which three the weakest returns from January 2,
+    2025 through March 12, 2026?
   - >-
-    Using 2025 as the baseline, which 10 sessions in that same window were the most unusual across every stock in
-    the pack, and did any of them belong to those six stocks? Name the sessions and the features that made each one
-    unusual. Anomaly scores are neither forecasts nor explanations.
+    Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through March 12, 2026 were the
+    most unusual across every stock in the pack, and did any of them belong to those six stocks? Name the sessions
+    and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations.
 - id: filings-to-regulations
   label: Filings & Regulations
   tag: RETRIEVAL
@@ -328,16 +308,16 @@ conversations:
   - >-
     Now separate the intentional and the unintentional selective disclosure cases, and say how the issuer may make
     the public disclosure, keeping the section citations.
-- id: april-2025-follow-up
-  label: April 2025 Follow-up
+- id: laggards-follow-up
+  label: Laggards Follow-up
   tag: ANALYTICS
-  description: Find the steepest early-April 2025 declines across every stock, then the strongest rebounds the next week.
+  description: Find 2025's weakest returns across every stock, then the strongest returns since, and compare them.
   sources: [market_data]
   turns:
-  - Across every stock in the pack, which five had the weakest returns from April 1 through April 8, 2025?
+  - Across every stock in the pack, which five had the weakest returns from January 2 through December 31, 2025?
   - >-
-    Across every stock in the pack, which five had the strongest returns from April 9 through April 15, 2025, and
-    were any of them among those five weakest?
+    Across every stock in the pack, which five had the strongest returns from January 2, 2025 through March 12,
+    2026, and were any of them among those five weakest of 2025?
 - id: intraday-volatility-follow-up
   label: Intraday Volatility Follow-up
   tag: INTRADAY
@@ -350,19 +330,6 @@ conversations:
   - >-
     Among the same 500 stocks and the same window, which 10 sessions traded the most shares, and were any of them
     among the 10 most volatile sessions?
-- id: prediction-follow-up
-  label: Prediction Follow-up
-  tag: PREDICTION
-  description: Rank a five-session outlook, then compare it with the strongest returns across every stock that followed.
-  sources: [market_data]
-  turns:
-  - >-
-    As of the March 5, 2026 market close, which five of the 50 most liquid US stocks are most likely to post a
-    positive five-session return?
-  - >-
-    Across every stock in the pack, which five had the strongest returns from the March 5 close through March 12,
-    2026, and were any of them among the five you ranked? Compare them with the predictions, without treating one
-    week as a test of the model.
 - id: sector-follow-up
   label: Sector Follow-up
   tag: SQL
