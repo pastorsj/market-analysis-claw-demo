@@ -27,10 +27,10 @@ questions:
 - id: market-leaders
   label: Market Leaders
   tag: ANALYTICS
-  description: Scan every US stock in the pack for its strongest and weakest returns since the start of 2025.
+  description: Scan the 1,000 most liquid US stocks for their strongest and weakest returns since the start of 2025.
   question: >-
-    Across every stock in the pack, which had the strongest and weakest returns from January 2, 2025 through
-    March 12, 2026, and how did their daily volatility and trading volume compare?
+    Among the 1,000 most liquid US stocks, which had the strongest and weakest returns from January 2, 2025
+    through March 12, 2026, and how did their daily volatility and trading volume compare?
   sources: [market_data]
   tools: [cudf]
   featured: true
@@ -48,11 +48,11 @@ questions:
 - id: unusual-sessions
   label: Unusual Sessions
   tag: ANOMALY
-  description: Rank unusual return, volatility and volume combinations across every stock in the pack.
+  description: Rank unusual return, volatility and volume combinations across the 1,000 most liquid stocks.
   question: >-
-    Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through March 12, 2026 were
-    the most unusual across every stock in the pack, and which features made each one unusual? Anomaly scores are
-    neither forecasts nor explanations.
+    Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through January 30, 2026
+    were the most unusual among the 1,000 most liquid US stocks, and which features made each one unusual?
+    Anomaly scores are neither forecasts nor explanations.
   sources: [market_data]
   tools: [cudf, cuml]
   featured: true
@@ -100,10 +100,10 @@ questions:
 - id: large-universe-scan
   label: Whole-Market Scan
   tag: ANALYTICS
-  description: Scan every stock in the pack at once.
+  description: Scan the 1,000 most liquid stocks at once.
   question: >-
-    Across every stock in the pack, which 20 had the strongest and the weakest returns from January 2, 2025 through
-    March 12, 2026, and how unusual was their trading volume?
+    Among the 1,000 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2, 2025
+    through March 12, 2026, and how unusual was their trading volume?
   sources: [market_data]
   tools: [cudf]
 - id: outcome-prediction
@@ -136,27 +136,27 @@ questions:
 - id: volatility-ranking
   label: Volatility Ranking
   tag: ANALYTICS
-  description: Rank every stock in the pack by daily volatility since the start of 2025, with their returns.
+  description: Rank the 1,000 most liquid stocks by daily volatility through January 2026, with their returns.
   question: >-
-    Across every stock in the pack, which five had the highest and which five the lowest daily volatility from
-    January 2, 2025 through March 12, 2026, and what were their returns over that period?
+    Among the 1,000 most liquid US stocks, which five had the highest and which five the lowest daily volatility
+    from January 2, 2025 through January 30, 2026, and what were their returns over that period?
   sources: [market_data]
   tools: [cudf]
 - id: peer-relative-returns
   label: Peer-Relative Returns
   tag: ANALYTICS
-  description: Find the stocks that beat or trailed the all-stock average return by the most.
+  description: Find the stocks that beat or trailed the group's average return by the most.
   question: >-
-    Across every stock in the pack, which five beat the all-stock average return by the most, and which five
+    Among the 1,000 most liquid US stocks, which five beat the group's average return by the most, and which five
     trailed it by the most, from January 2, 2025 through March 12, 2026?
   sources: [market_data]
   tools: [cudf]
 - id: calendar-2025
   label: Calendar 2025
   tag: ANALYTICS
-  description: Scan every stock in the pack for the strongest and weakest returns of 2025.
+  description: Scan the 1,000 most liquid stocks for the strongest and weakest returns of 2025.
   question: >-
-    Across every stock in the pack, which 10 had the strongest and which 10 the weakest returns from January 2
+    Among the 1,000 most liquid US stocks, which 10 had the strongest and which 10 the weakest returns from January 2
     through December 31, 2025, and how volatile was each one's daily trading?
   sources: [market_data]
   tools: [cudf]
@@ -274,15 +274,15 @@ conversations:
 - id: leaders-unusual-sessions
   label: Leaders & Unusual Sessions
   tag: ANOMALY
-  description: Rank the strongest and weakest returns across every stock, then check the market for unusual sessions.
+  description: Rank the strongest and weakest returns among the 1,000 most liquid stocks, then check them for unusual sessions.
   sources: [market_data]
   turns:
   - >-
-    Across every stock in the pack, which three had the strongest and which three the weakest returns from January 2,
-    2025 through March 12, 2026?
+    Among the 1,000 most liquid US stocks, which three had the strongest and which three the weakest returns from
+    January 2, 2025 through March 12, 2026?
   - >-
-    Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through March 12, 2026 were the
-    most unusual across every stock in the pack, and did any of them belong to those six stocks? Name the sessions
+    Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through January 30, 2026 were
+    the most unusual among the same 1,000 stocks, and did any of them belong to those six stocks? Name the sessions
     and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations.
 - id: filings-to-regulations
   label: Filings & Regulations
@@ -311,12 +311,12 @@ conversations:
 - id: laggards-follow-up
   label: Laggards Follow-up
   tag: ANALYTICS
-  description: Find 2025's weakest returns across every stock, then the strongest returns since, and compare them.
+  description: Find 2025's weakest returns among the 1,000 most liquid stocks, then the strongest returns since, and compare them.
   sources: [market_data]
   turns:
-  - Across every stock in the pack, which five had the weakest returns from January 2 through December 31, 2025?
+  - Among the 1,000 most liquid US stocks, which five had the weakest returns from January 2 through December 31, 2025?
   - >-
-    Across every stock in the pack, which five had the strongest returns from January 2, 2025 through March 12,
+    Among the same 1,000 stocks, which five had the strongest returns from January 2, 2025 through March 12,
     2026, and were any of them among those five weakest of 2025?
 - id: intraday-volatility-follow-up
   label: Intraday Volatility Follow-up

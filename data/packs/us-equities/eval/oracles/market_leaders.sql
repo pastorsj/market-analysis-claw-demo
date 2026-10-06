@@ -1,4 +1,4 @@
--- market-leaders: every stock in the pack from 2025-01-02 to 2026-03-12, as market_scan measures them: the return
+-- market-leaders: the 1,000 most liquid stocks from 2025-01-02 to 2026-03-12, as market_scan measures them: the return
 -- from the close before the window to its last close, and the standard deviation of the daily returns in it, with
 -- the window's total volume.
 WITH closes AS (
@@ -6,6 +6,7 @@ WITH closes AS (
     coalesce(lag(p.adjusted_close) OVER (PARTITION BY p.asset_id ORDER BY p.trading_date), p.adjusted_close)
       AS return_base
   FROM main.daily_prices p JOIN main.assets a USING (asset_id)
+  WHERE a.liquidity_rank <= 1000
 )
 SELECT asset_id, company_name,
   arg_max(adjusted_close, trading_date) / arg_min(return_base, trading_date) - 1 AS total_return,
