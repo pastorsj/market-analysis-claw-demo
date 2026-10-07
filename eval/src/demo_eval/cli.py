@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     guard.add_argument("--no-retrieval", action="store_true", help="the stack runs without the retrieval profile")
     guard.add_argument("--pairs", type=int, default=5, help="timed CPU/GPU pairs per case (default 5)")
-    guard.add_argument("--budget", type=float, default=60.0, help="seconds of timed pairs per case (default 60)")
+    guard.add_argument("--budget", type=float, default=90.0, help="seconds of timed pairs per case (default 90)")
 
     args = parser.parse_args(argv)
     try:

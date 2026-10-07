@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import date
 from datetime import datetime
 from datetime import time
@@ -159,6 +160,8 @@ class MarketData:
     graph: nx.DiGraph
     universes: dict[str, tuple[str, ...]]
     aliases: dict[str, tuple[str, ...]]  # normalized asset id, ticker, name or name prefix -> asset ids
+    # What the GPU engine keeps on the device between calls (tools/anomaly_gpu.py): the data never changes
+    resident: dict[Any, Any] = field(default_factory=dict, repr=False, compare=False)
 
     @classmethod
     def load(cls, pack: Pack) -> MarketData:

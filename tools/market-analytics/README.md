@@ -7,7 +7,7 @@ pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (c
 | Question | Tool | CPU | GPU |
 | --- | --- | --- | --- |
 | Leaders and laggards by return, volume, volatility or peer-relative return | `market_scan` | pandas | cudf.pandas |
-| Sessions that behave unusually against an earlier baseline | `market_anomaly_scan` | scikit-learn PCA | cuml.accel |
+| Sessions that behave unusually against an earlier baseline | `market_anomaly_scan` | scikit-learn PCA | cuML PCA, on the device |
 | Return, price range and volume for named assets | `price_context` | pandas | cudf.pandas |
 | Positive, neutral and negative news labels over time | `sentiment_timeline` | pandas | cudf.pandas |
 | How news sentiment lined up with later returns | `analyze_news_price_relationship` | pandas | cudf.pandas |
@@ -197,6 +197,9 @@ through `POST /benchmark` against floors set from the timings below ([eval](../.
 
 ## CPU and GPU timings
 
+Which question shapes win on the GPU, on an A100 and on a B200 host with a faster CPU, and why the demo's questions are
+built on the 1,000 most liquid stocks and on minute bars: the [GPU speedup report](../../docs/gpu-speedup-report.md).
+
 Measured on a 40 GB A100 VM with 12 vCPUs, on the `qualification` profile of `market-analysis`, the pack
 `synthetic-market` replaced at the same scale (2,000 issuers, 1.36 million daily bars, 84,000 news items). The
 method: a throwaway container from the stack's own GPU image, with `--gpus all` and the pack mounted read-only, ran the service's worker with `MARKET_ANALYTICS_ENGINE=cpu` and then with
@@ -276,7 +279,7 @@ after; the other tools did not change):
 | `intraday_scan`, the three cases of `eval/perf.yaml` | | 1.1 to 1.3 s | 1.1 to 1.3 s | 0.3 s | 0.3 s | 3.60x to 4.21x | 3.63x to 4.26x |
 
 No call fell back to pandas: cudf.pandas logged no fallback, its profiler counted no CPU call,
-`CUDF_PANDAS_FAIL_ON_FALLBACK=1` passed, and cuml.accel ran PCA's fit and transforms on the GPU. Before, the scan's
+`CUDF_PANDAS_FAIL_ON_FALLBACK=1` passed, and cuml.accel ran PCA's fit and transforms on the GPU (since 2026-10-07 cuML runs them on the device, [below](#market_anomaly_scan-on-the-device)). Before, the scan's
 GPU time hardly moved with its size (70 to 87 ms from 1,000 rows to 452,837): each of its 52 pandas calls cost 0.5
 to 1.5 ms on the GPU, nearly all of it fixed (dispatch, kernel launches, synchronization), while the CPU's time grew
 with the table, mostly the universe filter over every row (13 ms on this pack, 82 to 90 ms on the 1.34 million
@@ -298,6 +301,32 @@ The memory mode matters at this size too. In the isolated method the 50-stock sc
 `CUDF_PANDAS_RMM_MODE=managed_pool` and 15 ms with `async` (1.46x the CPU; the whole-market scan 4.6x), and the
 50-stock anomaly scan 30 and 22 ms (0.98x). The stack keeps the managed pool, which lets a pack larger than the
 GPU's memory page to host memory instead of failing ([scale](#scale)).
+
+### `market_anomaly_scan` on the device
+
+Through cudf.pandas and cuml.accel the anomaly scan took about 80 ms on an A100 against 99 ms on the CPU, because it
+spent its time moving data: filtering the feature frame by universe and window took 27 proxied pandas calls, both windows
+were copied to the host, the NumPy standardizing and medians there ran about twice as slow in the GPU process as in the
+CPU one, and every PCA input and output was converted between host and device. On the GPU engine
+(`src/market_analytics/tools/anomaly_gpu.py`) each universe's features stay on the device as CuPy arrays (built once at
+warm-up, in `MarketData.resident`), a window is two comparisons on an int64 timestamp column, and standardizing, cuML's
+PCA (full SVD solver, CuPy in and out), the 95th percentile, the ranking and the median/MAD z-scores stay there; only the
+ranked rows return, for their ids and timestamps. The CPU engine's path is unchanged and the two share one result type
+and one payload builder. The engine reports library `cuml`, not `cuml.accel`.
+
+Measured with `POST /benchmark`, median CPU/GPU over five pairs, the same call before and after, scoring July 2025 to
+January 30, 2026 against a first-half 2025 baseline:
+
+| Universe | A100 before | A100 after | B200 host after (CPU 2.5x faster) |
+| --- | --- | --- | --- |
+| 1,000 most liquid | 1.04x to 1.35x | 4.1x to 4.3x (GPU 28 ms) | 4.2x to 4.3x (GPU 11 ms) |
+| 500 most liquid | 1.0x | 2.6x to 3.2x | 2.8x to 2.9x |
+| every stock | 1.5x to 2.1x | 7.7x to 10.4x | 5.9x to 7.2x |
+| 50 most liquid | 0.7x | 1.0x to 1.5x | about 1.0x |
+
+The ranked sessions are identical to the host path, the scores agree to about 2e-15 relative and the deviations to the
+bit; `pytest -m gpu` checks it over other universes, limits, the percentile cut and the error paths. The engine's
+timings and the reasons are in the [GPU speedup report](../../docs/gpu-speedup-report.md).
 
 ## Changing the contract
 

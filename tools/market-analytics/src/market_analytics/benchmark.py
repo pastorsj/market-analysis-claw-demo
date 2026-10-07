@@ -46,9 +46,17 @@ class BenchmarkRequest(BaseModel):
     budget_seconds: float = Field(default=30.0, gt=0, le=600)
 
 
+# Payload fields about how a call ran, not what it returned. Each engine plans a minute-bar scan's batches from its
+# own byte budget (bars.py: the CPU's is a quarter of the GPU's), so a scan of many stocks differs in `batches`.
+EXECUTION_FIELDS = frozenset({"batches"})
+
+
 def payload_mismatch(gpu: Any, cpu: Any, path: str = "payload") -> str | None:
     """Where two payloads differ: equal structure, ids, ranks and timestamps; floats within GPU rounding."""
     if isinstance(cpu, dict):
+        if path == "payload":
+            gpu = {k: v for k, v in gpu.items() if k not in EXECUTION_FIELDS} if isinstance(gpu, dict) else gpu
+            cpu = {k: v for k, v in cpu.items() if k not in EXECUTION_FIELDS}
         if not isinstance(gpu, dict) or gpu.keys() != cpu.keys():
             return path
         return next((found for key in cpu if (found := payload_mismatch(gpu[key], cpu[key], f"{path}.{key}"))), None)

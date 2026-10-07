@@ -105,20 +105,24 @@ def test_a_broken_pack_reports_every_problem(pack_copy):
 
 def test_conversations_share_the_question_ids_and_name_known_sources(pack_copy):
     pack_dir = pack_copy("us-equities")
+    broken = {}
 
     def break_conversations(document):
         document["conversations"][0]["id"] = "market-leaders"
         document["conversations"][1]["sources"] = ["market_prices"]
+        broken["id"] = document["conversations"][1]["id"]
 
     edit_yaml(pack_dir / "questions.yaml", break_conversations)
 
     with pytest.raises(PackError) as raised:
         load_pack(pack_dir)
 
-    assert sorted(raised.value.errors) == [
-        "conversation peer-network-follow-up: unknown source 'market_prices'",
-        "question market-leaders is declared twice",
-    ]
+    assert sorted(raised.value.errors) == sorted(
+        [
+            f"conversation {broken['id']}: unknown source 'market_prices'",
+            "question market-leaders is declared twice",
+        ]
+    )
 
 
 def test_resolve_serves_only_the_conversations_the_build_can_answer():
@@ -273,9 +277,9 @@ EXAMPLES = {
         "market-leaders",
         "cyber-disclosure-rules",
         "intraday-ranges",
+        "intraday-drawdowns",
         "beneficial-ownership",
         "large-universe-scan",
-        "nvidia-results-and-prices",
         "world-news-cyber",
     ],
     "synthetic-market": [
@@ -310,8 +314,8 @@ def test_each_pack_s_examples_cover_its_featured_questions_and_every_tool(name):
 
 
 def test_us_equities_examples_leave_out_the_weak_recordings():
-    """bank-results and filings-to-regulations keep weaker recordings (the pack README), so the picker skips them."""
-    assert not {"bank-results", "filings-to-regulations"} & set(load_pack(PACKS / "us-equities").examples)
+    """filings-to-regulations keeps a weaker recording (the pack README), so the picker skips it."""
+    assert "filings-to-regulations" not in load_pack(PACKS / "us-equities").examples
 
 
 def test_broken_examples_report_every_problem(pack_copy):

@@ -4,7 +4,7 @@
     "id": "us-equities",
     "version": "0.1.0"
   },
-  "recordedAt": "2026-10-02T17:39:25.004285Z",
+  "recordedAt": "2026-10-07T15:24:02.171154Z",
   "sessions": [
     {
       "id": "market-leaders",
@@ -12,8 +12,8 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "5cf3b6e9-de56-4f90-b1d6-4a82bb654e91",
-          "question": "Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare?"
+          "jobId": "0c4bafa1-9d0d-466f-9194-5fd394b2fbd8",
+          "question": "Among the 1,000 most liquid US stocks, which had the strongest and weakest returns from January 2, 2025 through March 12, 2026, and how did their daily volatility and trading volume compare?"
         }
       ],
       "tools": [
@@ -52,8 +52,8 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "caeeb742-da37-4201-8fe2-cb3dee58c777",
-          "question": "Using 2025 as the baseline, which 10 sessions from January 2 through March 12, 2026 were the most unusual among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
+          "jobId": "2309a038-1167-477e-b71f-73d81fd57159",
+          "question": "Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through January 30, 2026 were the most unusual among the 1,000 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
         }
       ],
       "tools": [
@@ -69,6 +69,73 @@
           "device": "gpu",
           "tools": [
             "market_anomaly_scan"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "intraday-drawdowns",
+      "title": "Intraday Drawdowns",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "95b4162b-435b-4433-bcfa-500c922050b1",
+          "question": "Among the 500 most liquid US stocks, which 10 sessions from February 2 through February 27, 2026 had the deepest drawdowns from the session's running high, and how did each one close relative to its open?"
+        }
+      ],
+      "tools": [
+        {
+          "pill": "cudf",
+          "device": "gpu",
+          "tools": [
+            "intraday_scan"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cyber-disclosure-rules",
+      "title": "Cybersecurity Disclosures",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "0d69351c-8275-4ef6-ae20-06f66fc7ba3d",
+          "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05."
+        }
+      ],
+      "tools": [
+        {
+          "pill": "retrieval",
+          "device": null,
+          "tools": [
+            "retrieve_evidence"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "moves-and-filings",
+      "title": "Moves & Filings",
+      "featured": true,
+      "turns": [
+        {
+          "jobId": "e1a07378-4650-4f4c-a7c9-1937fde3fd55",
+          "question": "Among the 50 most liquid US stocks, which three sessions in February 2026 had the largest open-to-close gains and which three the largest losses? Separately, what did those companies disclose in their 8-K filings from January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move."
+        }
+      ],
+      "tools": [
+        {
+          "pill": "cudf",
+          "device": "gpu",
+          "tools": [
+            "intraday_scan"
+          ]
+        },
+        {
+          "pill": "retrieval",
+          "device": null,
+          "tools": [
+            "retrieve_evidence"
           ]
         }
       ]
@@ -101,60 +168,13 @@
       ]
     },
     {
-      "id": "cyber-disclosure-rules",
-      "title": "Cybersecurity Disclosures",
-      "featured": true,
-      "turns": [
-        {
-          "jobId": "0d69351c-8275-4ef6-ae20-06f66fc7ba3d",
-          "question": "What does Form 8-K Item 1.05 require a company to disclose about a material cybersecurity incident, and by when? Cite the regulation, and any 8-K filings in the corpus that report an incident under Item 1.05."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "retrieval",
-          "device": null,
-          "tools": [
-            "retrieve_evidence"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "moves-and-filings",
-      "title": "Moves & Filings",
-      "featured": true,
-      "turns": [
-        {
-          "jobId": "633012d5-0f6c-4bfe-860f-535bf750794a",
-          "question": "Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-K filings from January through March 2026? Report the moves and the filings apart, and do not claim that a filing caused a move."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "market_scan"
-          ]
-        },
-        {
-          "pill": "retrieval",
-          "device": null,
-          "tools": [
-            "retrieve_evidence"
-          ]
-        }
-      ]
-    },
-    {
       "id": "large-universe-scan",
       "title": "Whole-Market Scan",
       "featured": false,
       "turns": [
         {
-          "jobId": "f5c29bdd-94f0-40d8-9006-8256e1792a95",
-          "question": "Across the 500 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2 to March 12, 2026, and how unusual was their trading volume?"
+          "jobId": "2afe739e-1709-49f8-beff-9c7dc209921b",
+          "question": "Among the 1,000 most liquid US stocks, which 20 had the strongest and the weakest returns from January 2, 2025 through March 12, 2026, and how unusual was their trading volume?"
         }
       ],
       "tools": [
@@ -233,8 +253,8 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "27482200-1fd5-4fc8-9871-fda301c8beb1",
-          "question": "Among the 50 most liquid US stocks, which five had the highest and which five the lowest daily volatility over the 60 trading sessions ending March 12, 2026, and what were their returns over those sessions?"
+          "jobId": "07df4867-026c-4d03-9f6c-cb322e9a367b",
+          "question": "Among the 1,000 most liquid US stocks, which five had the highest and which five the lowest daily volatility from January 2, 2025 through January 30, 2026, and what were their returns over that period?"
         }
       ],
       "tools": [
@@ -253,8 +273,8 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "504255ae-74b2-47e7-8445-1e79bd2cebf4",
-          "question": "Among the 50 most liquid US stocks, which five beat the group's average return by the most, and which five trailed it by the most, over the 20 trading sessions ending March 12, 2026?"
+          "jobId": "e946f996-c1cc-4a73-acc5-ca13f8f196df",
+          "question": "Among the 1,000 most liquid US stocks, which five beat the group's average return by the most, and which five trailed it by the most, from January 2, 2025 through March 12, 2026?"
         }
       ],
       "tools": [
@@ -268,13 +288,13 @@
       ]
     },
     {
-      "id": "second-half-2025",
-      "title": "Second Half of 2025",
+      "id": "calendar-2025",
+      "title": "Calendar 2025",
       "featured": false,
       "turns": [
         {
-          "jobId": "755f4dda-d5d0-40d3-b03d-d3da634915fa",
-          "question": "Among the 500 most liquid US stocks, which 10 had the strongest and which 10 the weakest returns from July 1 through December 31, 2025, and how volatile was each one's daily trading?"
+          "jobId": "4578b735-1d0c-4911-a1e3-4b393ed09e45",
+          "question": "Among the 1,000 most liquid US stocks, which 10 had the strongest and which 10 the weakest returns from January 2 through December 31, 2025, and how volatile was each one's daily trading?"
         }
       ],
       "tools": [
@@ -283,26 +303,6 @@
           "device": "gpu",
           "tools": [
             "market_scan"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "intraday-drawdowns",
-      "title": "Intraday Drawdowns",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "63d04125-c655-4503-b68d-c31f137e500d",
-          "question": "Among the 50 most liquid US stocks, which 10 sessions from February 2 through February 27, 2026 had the deepest drawdowns from the session's running high, and how did each one close relative to its open?"
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "intraday_scan"
           ]
         }
       ]
@@ -323,60 +323,6 @@
           "device": "gpu",
           "tools": [
             "intraday_scan"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "april-2025-anomalies",
-      "title": "April 2025 Anomalies",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "3607b827-f702-43c5-8e8b-6ba1e3e5776c",
-          "question": "Using January 2 through March 31, 2025 as the baseline, which 10 sessions in April 2025 were the most unusual among the 50 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "market_anomaly_scan"
-          ]
-        },
-        {
-          "pill": "cuml",
-          "device": "gpu",
-          "tools": [
-            "market_anomaly_scan"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "fourth-quarter-anomalies",
-      "title": "Q4 2025 Anomalies",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "d333cdb9-ea24-4140-9092-0670764e4c15",
-          "question": "Using January 2 through September 30, 2025 as the baseline, which 15 sessions in the fourth quarter of 2025 were the most unusual among the 500 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "market_anomaly_scan"
-          ]
-        },
-        {
-          "pill": "cuml",
-          "device": "gpu",
-          "tools": [
-            "market_anomaly_scan"
           ]
         }
       ]
@@ -616,133 +562,17 @@
       ]
     },
     {
-      "id": "nvidia-results-and-prices",
-      "title": "NVIDIA Prices & Filings",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "5407f917-5201-4441-bbcc-a0d542932f26",
-          "question": "How did NVIDIA (NVDA) trade from February 2 through March 12, 2026? Separately, what did its 8-K filings in that period disclose? Report the prices and the filings apart, and do not claim that a filing caused a move."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "price_context"
-          ]
-        },
-        {
-          "pill": "retrieval",
-          "device": null,
-          "tools": [
-            "retrieve_evidence"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "bank-results",
-      "title": "Bank Results",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "394ebd3d-ce74-441a-9e71-eec032e16d24",
-          "question": "How did JPMorgan Chase, Bank of America, Wells Fargo, Citigroup and Goldman Sachs trade in January 2026? Separately, what did their January 2026 results 8-Ks report? Report the moves and the filings apart, and do not claim that a filing caused a move."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "price_context"
-          ]
-        },
-        {
-          "pill": "retrieval",
-          "device": null,
-          "tools": [
-            "retrieve_evidence"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "price-context-follow-up",
-      "title": "Price Context Follow-up",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "bfca3c82-8581-45f9-abc8-b9bb20efa4ed",
-          "question": "Summarize the daily price context for NVIDIA (NVDA) and Apple (AAPL) from February 2 through February 27, 2026, including each stock's return, price range and average volume."
-        },
-        {
-          "jobId": "e417ab31-4fea-470c-82e7-3252ec1d35e4",
-          "question": "Keep that same window and add Microsoft (MSFT), but aggregate the displayed series weekly."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "price_context"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "peer-network-follow-up",
-      "title": "Peer Network Follow-up",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "3729d1d9-808c-4dcc-95c3-9c1d5d4b81ae",
-          "question": "Among declared industry peers, which five stocks were the most central in the return-correlation network from December 2025 through March 12, 2026?"
-        },
-        {
-          "jobId": "503a45a8-e7a3-41fa-8136-2b5123099dd4",
-          "question": "For the three most central stocks in that result, compare their returns and daily volatility over the same window."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "analyze_market_relationships"
-          ]
-        },
-        {
-          "pill": "cugraph",
-          "device": "gpu",
-          "tools": [
-            "analyze_market_relationships"
-          ]
-        },
-        {
-          "pill": "ontology",
-          "device": null,
-          "tools": [
-            "ask_question"
-          ]
-        }
-      ]
-    },
-    {
       "id": "leaders-unusual-sessions",
       "title": "Leaders & Unusual Sessions",
       "featured": false,
       "turns": [
         {
-          "jobId": "0ec50f4d-470e-4667-9951-47017586fb48",
-          "question": "Among the 50 most liquid US stocks, which three had the strongest and which three the weakest returns over the 20 trading sessions ending March 12, 2026?"
+          "jobId": "6fc6ad14-0ad3-4ceb-93a2-0bdd22b5e5a5",
+          "question": "Among the 1,000 most liquid US stocks, which three had the strongest and which three the weakest returns from January 2, 2025 through March 12, 2026?"
         },
         {
-          "jobId": "7a24b063-017a-4d23-b357-31c9f8eb8906",
-          "question": "Using 2025 as the baseline, did any of those six stocks have unusual sessions in that same window? Name the sessions and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations."
+          "jobId": "f80ded4c-ebef-4016-8746-7cbd006985b5",
+          "question": "Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through January 30, 2026 were the most unusual among the same 1,000 stocks, and did any of them belong to those six stocks? Name the sessions and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations."
         }
       ],
       "tools": [
@@ -812,17 +642,17 @@
       ]
     },
     {
-      "id": "mega-cap-follow-up",
-      "title": "Mega-Cap Follow-up",
+      "id": "laggards-follow-up",
+      "title": "Laggards Follow-up",
       "featured": false,
       "turns": [
         {
-          "jobId": "9a31778e-8fe7-4f00-ac7d-c31970a1b1ee",
-          "question": "Summarize the price context for Apple (AAPL), Microsoft (MSFT), Amazon (AMZN) and Alphabet (GOOGL) from January 2 through March 12, 2026, including each stock's return, price range and average volume."
+          "jobId": "63dba7e2-13c7-490d-8e55-2dd4c38e74f4",
+          "question": "Among the 1,000 most liquid US stocks, which five had the weakest returns from January 2 through December 31, 2025?"
         },
         {
-          "jobId": "0c4d91c8-9bf7-44c7-b2ad-140a9050e613",
-          "question": "Keep the same four stocks and compare that with October 1 through December 31, 2025, aggregating both series monthly."
+          "jobId": "5b3dfdd3-27b2-4d34-bdec-1684d315c2b2",
+          "question": "Among the same 1,000 stocks, which five had the strongest returns from January 2, 2025 through March 12, 2026, and were any of them among those five weakest of 2025?"
         }
       ],
       "tools": [
@@ -830,32 +660,7 @@
           "pill": "cudf",
           "device": "gpu",
           "tools": [
-            "price_context"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "april-2025-follow-up",
-      "title": "April 2025 Follow-up",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "475e0236-b279-4cd6-8f2d-707646b01e97",
-          "question": "Among the 50 most liquid US stocks, which five had the weakest returns from April 1 through April 8, 2025?"
-        },
-        {
-          "jobId": "f8e841fa-7e1a-4562-93d9-06ad591135e3",
-          "question": "How did those five stocks trade over the following sessions, from April 9 through April 15, 2025?"
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "market_scan",
-            "price_context"
+            "market_scan"
           ]
         }
       ]
@@ -866,12 +671,12 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "28ac22bc-caab-48ba-bf5d-e7b6949366c8",
-          "question": "For NVIDIA (NVDA), Tesla (TSLA) and AMD, which 10 sessions from January 2 through March 12, 2026 had the highest minute-by-minute realized volatility?"
+          "jobId": "392a766c-e04f-4547-ad5a-e82af0dd3b72",
+          "question": "Among the 500 most liquid US stocks, which 10 sessions from January 2 through March 12, 2026 had the highest minute-by-minute realized volatility?"
         },
         {
-          "jobId": "56354403-6b63-4c65-802f-491dc81d8183",
-          "question": "For the three most volatile of those sessions, how did each trade from open to close, what was its VWAP, and how much of its volume came in the last 30 minutes?"
+          "jobId": "14bb91cc-01b3-4c53-86ba-7a4c4791855d",
+          "question": "Among the same 500 stocks and the same window, which 10 sessions traded the most shares, and were any of them among the 10 most volatile sessions?"
         }
       ],
       "tools": [
@@ -880,70 +685,6 @@
           "device": "gpu",
           "tools": [
             "intraday_scan"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "prediction-follow-up",
-      "title": "Prediction Follow-up",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "4e6ffaf9-f0c5-46b7-819e-8d519d41cb5b",
-          "question": "As of the March 5, 2026 market close, which five of the 50 most liquid US stocks are most likely to post a positive five-session return?"
-        },
-        {
-          "jobId": "29e7af40-b5a3-4d0c-8574-f02f48e6b3fd",
-          "question": "What were those five stocks' actual returns from the March 5 close through March 12, 2026? Compare them with the predictions, without treating one week as a test of the model."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "price_context"
-          ]
-        },
-        {
-          "pill": "kumo",
-          "device": null,
-          "tools": [
-            "predict_asset_outcomes"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "peer-links-follow-up",
-      "title": "Peer Links Follow-up",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "fe6a5463-d744-4800-9554-7fdc8b467f59",
-          "question": "In the declared-peer return-correlation network from December 2025 through March 12, 2026, which 10 pairs of stocks were the most strongly correlated, and did any pair move in opposite directions?"
-        },
-        {
-          "jobId": "cfebf499-7250-4f12-a3c1-e734d39f304c",
-          "question": "For the most strongly correlated pair in that result, compare the two stocks' returns and daily volatility over the same window."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "analyze_market_relationships",
-            "price_context",
-            "market_scan"
-          ]
-        },
-        {
-          "pill": "cugraph",
-          "device": "gpu",
-          "tools": [
-            "analyze_market_relationships"
           ]
         }
       ]
@@ -1011,68 +752,6 @@
         }
       ],
       "tools": [
-        {
-          "pill": "retrieval",
-          "device": null,
-          "tools": [
-            "retrieve_evidence"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "headlines-and-prices",
-      "title": "Headlines & Prices",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "e894dbd5-b414-4e8d-84c9-d8fe40209265",
-          "question": "Which world news headlines from February 2025 mention Nvidia? List their outlets and dates, and cite the headlines."
-        },
-        {
-          "jobId": "b48db705-3ca8-485e-afda-64e7f873ec48",
-          "question": "Separately, how did NVIDIA (NVDA) trade in February 2025? Report the prices apart from the headlines, and do not claim that a headline caused a move."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "price_context"
-          ]
-        },
-        {
-          "pill": "retrieval",
-          "device": null,
-          "tools": [
-            "retrieve_evidence"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "incidents-and-prices",
-      "title": "Incidents & Prices",
-      "featured": false,
-      "turns": [
-        {
-          "jobId": "2f808ae9-adc2-4b8a-984f-3e48ae53a7da",
-          "question": "Which companies reported a material cybersecurity incident on Form 8-K under Item 1.05, and when did each file? Cite the filings."
-        },
-        {
-          "jobId": "a8dd7d74-6d3c-49d4-8a1e-d37ad92e752d",
-          "question": "How did each of those companies' stocks trade over the five sessions after its filing? Report the prices separately from the filings, and do not claim that a filing caused a move."
-        }
-      ],
-      "tools": [
-        {
-          "pill": "cudf",
-          "device": "gpu",
-          "tools": [
-            "price_context"
-          ]
-        },
         {
           "pill": "retrieval",
           "device": null,

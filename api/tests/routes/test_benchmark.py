@@ -106,7 +106,7 @@ async def test_a_finished_run_is_compared_stored_and_exported(app, api, fake_her
             "tool": "market_anomaly_scan",
             "arguments": receipt["content"]["publicParameters"],
             "pairs": 5,
-            "budget_seconds": 20.0,
+            "budget_seconds": 90.0,
         }
     ]
     # Stored: later requests do not rerun it, and the export carries it

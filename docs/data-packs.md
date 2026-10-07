@@ -120,13 +120,13 @@ should show the widest mix of tools. A build offers the examples it serves (thei
 matching), and `GET /v1/pack` those whose sources the running tools serve. A pack without the list offers its
 featured questions, then the others, up to 12. Every question stays in the pack for the landing page links, `record`
 and `eval`, whether or not it is an example. `us-equities` lists its six featured questions and one question for
-each tool and source they leave out (Kumo, Auto Ontology, the whole-market scan, regulations, NVIDIA's prices beside
-its filings, world headlines); `synthetic-market` lists all eleven.
+each tool and source they leave out (Kumo, the peer network, Auto Ontology, the whole-market scan, regulations,
+world headlines); `synthetic-market` lists all eleven.
 
 `questions.yaml` can also hold `conversations`: two to six turns asked in order in one conversation, so a later
 turn can refer to an earlier answer ("For those same two examples, ..."). They follow the same source and profile
 rules, share the questions' ids, are not listed in the UI, and are recorded by `record --all`, each as one replay
-session. `us-equities` has 30 questions and 15 conversations, 45 sessions in all.
+session. `us-equities` has 26 questions and 8 conversations, 34 sessions in all.
 
 `documents.benchmark_queries` in `pack.yaml` lists held-out queries for the Benchmark tab's CPU/GPU Milvus
 comparison on a GPU host, each with the document sources it searches; they are never demo questions. A build keeps
@@ -155,7 +155,7 @@ recorded events. A market tool that ran on the CPU shows its CPU library (pandas
 same RAPIDS color, not the GPU name.
 
 Both packs are recorded: `synthetic-market`'s ten questions of its default (`standard`) profile, and every
-`us-equities` session, its 30 questions and 15 two-turn conversations (45 sessions, 60 answers). The
+`us-equities` session, its 26 questions and 8 two-turn conversations (34 sessions, 42 answers). The
 synthetic pack's eleventh question, `intraday-ranges`, needs a minute-bar profile (`ci` or `intraday`), so its
 bundle leaves it out.
 

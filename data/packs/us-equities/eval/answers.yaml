@@ -16,18 +16,18 @@ format:
 questions:
   market-leaders:
     oracles:
-      market_leaders: {}
+      leaders_top: {sql: market_leaders, limit: 5}
+      leaders_bottom: {sql: market_leaders, order: ORDER BY total_return ASC, limit: 5}
     tools: [[market_scan]]
     checks:
-      - {id: strongest_named, named: "market_leaders[0].asset_id"}
-      - {id: weakest_named, named: "market_leaders[-1].asset_id"}
-      - {id: strongest_return_exact, percent: "market_leaders[0].total_return"}
+      - {id: strongest_named, named: "leaders_top[0].asset_id"}
+      - {id: weakest_named, named: "leaders_bottom[0].asset_id"}
+      - {id: strongest_return_exact, percent: "leaders_top[0].total_return"}
     facts: >-
-      Universe: the 50 most liquid stocks (top_50). Adjusted-close return over the 20 sessions ending 2026-03-12,
-      from the close before the first of them to the last close (20 daily returns), and daily volatility: five
-      strongest {market_leaders[:5]: asset_id, total_return, daily_volatility}; five weakest {market_leaders[-5:]:
-      asset_id, total_return, daily_volatility}. A good answer names the strongest and the weakest with values that
-      match.
+      Universe: the 1,000 most liquid stocks (liquid_1000). Adjusted-close return from 2025-01-02 to 2026-03-12, from the
+      close before the first session to the last close, and the standard deviation of the daily returns: five
+      strongest {leaders_top: asset_id, total_return, daily_volatility}; five weakest {leaders_bottom: asset_id,
+      total_return, daily_volatility}. A good answer names the strongest and the weakest with values that match.
 
   intraday-ranges:
     oracles:
@@ -47,7 +47,7 @@ questions:
         pattern: "(?i)not (a |an )?(forecast|prediction)|neither\\b.{0,40}forecast|no(t)? .{0,20}forecast"
       - {id: not_explanation, pattern: "(?i)caus|explanation"}
     facts: >-
-      Baseline 2025, scored sessions 2026-01-02 to 2026-03-12, the 50 most liquid stocks. The ranked sessions and
+      Baseline the first half of 2025 (2025-01-02 to 2025-06-30), scored sessions 2025-07-01 to 2026-01-30, the 1,000 most liquid stocks (liquid_1000). The ranked sessions and
       feature explanations must come from the market_anomaly_scan evidence. Its deviations are robust z-scores, not
       percentages. The report must say anomaly scores are neither forecasts nor explanations.
 
@@ -92,17 +92,19 @@ questions:
 
   moves-and-filings:
     oracles:
-      february: {sql: february_moves}
-    tools: [[retrieve_evidence], [market_scan]]
+      gains: {sql: february_session_moves, limit: 3}
+      losses: {sql: february_session_moves, order: ORDER BY open_to_close_return ASC, limit: 3}
+    tools: [[retrieve_evidence], [intraday_scan]]
     checks:
-      - {id: three_strongest_named, named: "february[:3].asset_id"}
-      - {id: three_weakest_named, named: "february[-3:].asset_id"}
+      - {id: largest_gains_named, named: "gains[:3].asset_id"}
+      - {id: largest_losses_named, named: "losses[:3].asset_id"}
       - {id: filings_retrieved, retrieved_source: sec_filings}
     facts: >-
-      The 50 most liquid stocks' February 2026 returns (from the last January close to the last February close):
-      strongest {february[:3]: asset_id, february_return}; weakest {february[-3:]: asset_id, february_return}. Their
-      8-Ks from January to March 2026 include results releases (Item 2.02) and Regulation FD updates; filing contents
-      must come from the retrieved evidence. The report must keep the moves and the filings apart and not claim a
+      The 50 most liquid stocks' sessions in February 2026 by regular-session open-to-close return: three largest
+      gains {gains: asset_id, trading_date, open_to_close_return}; three largest losses {losses: asset_id,
+      trading_date, open_to_close_return}. One company can appear twice. Their 8-Ks from January to March 2026
+      include results releases (Item 2.02) and Regulation FD updates; filing contents must come from the retrieved
+      evidence. The report must keep the moves and the filings apart and not claim a
       filing caused a move.
 
   outcome-prediction:
@@ -136,7 +138,7 @@ questions:
       - {id: strongest_named, named: "universe_top[0].asset_id"}
       - {id: weakest_named, named: "universe_bottom[0].asset_id"}
     facts: >-
-      The 500 most liquid stocks (liquid_500). Return over the sessions from 2026-01-02 to 2026-03-12, from the close
+      The 1,000 most liquid stocks (liquid_1000). Return over the sessions from 2025-01-02 to 2026-03-12, from the close
       before the first session to the last close, with the z-score of the stock's total volume in the window among
-      the 500 (market_scan's volume z-score). 20 strongest: {universe_top: asset_id, total_return, volume_zscore}. 20 weakest: {universe_bottom:
+      the 1,000 (market_scan's volume z-score). 20 strongest: {universe_top: asset_id, total_return, volume_zscore}. 20 weakest: {universe_bottom:
       asset_id, total_return, volume_zscore}.

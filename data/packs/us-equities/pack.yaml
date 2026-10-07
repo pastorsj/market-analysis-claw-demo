@@ -250,6 +250,9 @@ analytics:
     liquid_500:
       description: The 500 most liquid stocks.
       where: liquidity_rank <= 500
+    liquid_1000:
+      description: The 1,000 most liquid stocks.
+      where: liquidity_rank <= 1000
     all_assets:
       description: Every stock in the pack.
       where: "true"

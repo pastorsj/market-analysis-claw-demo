@@ -710,7 +710,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 705
+          "duration_ms": 699
         },
         "daily_prices": {
           "table": "daily_prices",
@@ -857,7 +857,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 687
+          "duration_ms": 699
         },
         "ticker_history": {
           "table": "ticker_history",
@@ -934,7 +934,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 715
+          "duration_ms": 674
         },
         "trading_sessions": {
           "table": "trading_sessions",
@@ -1001,7 +1001,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 724
+          "duration_ms": 697
         },
         "prediction.asset_entities": {
           "table": "prediction.asset_entities",
@@ -1078,7 +1078,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 706
+          "duration_ms": 692
         },
         "prediction.price_events": {
           "table": "prediction.price_events",
@@ -1165,7 +1165,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 722
+          "duration_ms": 696
         },
         "prediction.return_outcomes": {
           "table": "prediction.return_outcomes",
@@ -1252,7 +1252,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 747
+          "duration_ms": 760
         },
         "prediction.top_50_population": {
           "table": "prediction.top_50_population",
@@ -1289,7 +1289,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 693
+          "duration_ms": 678
         }
       },
       "queries": [
@@ -1335,7 +1335,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 690
+            "duration_ms": 689
           }
         },
         {
@@ -1372,7 +1372,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 698
+            "duration_ms": 693
           }
         },
         {
@@ -1441,7 +1441,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 717
+            "duration_ms": 705
           }
         },
         {
@@ -1510,7 +1510,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 705
+            "duration_ms": 685
           }
         },
         {
@@ -1591,7 +1591,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 736
+            "duration_ms": 730
           }
         },
         {
@@ -1660,41 +1660,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 787
-          }
-        },
-        {
-          "sql": "WITH wp AS (SELECT asset_id, trading_date, adjusted_close, total_return_1d FROM us_equities.main.daily_prices WHERE asset_id IN ('BMY','ABBV','PFE') AND trading_date BETWEEN DATE '2025-12-01' AND DATE '2026-03-12'), endc AS (SELECT asset_id, adjusted_close AS end_close FROM (SELECT asset_id, adjusted_close, ROW_NUMBER() OVER (PARTITION BY asset_id ORDER BY trading_date DESC) AS rn FROM wp) sub WHERE rn = 1), basec AS (SELECT asset_id, COALESCE((SELECT dp.adjusted_close FROM us_equities.main.daily_prices dp WHERE dp.asset_id = wp.asset_id AND dp.trading_date < DATE '2025-12-01' ORDER BY dp.trading_date DESC LIMIT 1), (SELECT dp.adjusted_close FROM us_equities.main.daily_prices dp WHERE dp.asset_id = wp.asset_id AND dp.trading_date BETWEEN DATE '2025-12-01' AND DATE '2026-03-12' ORDER BY dp.trading_date ASC LIMIT 1)) AS base_close FROM wp GROUP BY asset_id), stats AS (SELECT asset_id, stddev_samp(total_return_1d) AS daily_volatility FROM wp GROUP BY asset_id) SELECT e.asset_id AS ticker, (e.end_close / b.base_close) - 1 AS total_return, s.daily_volatility FROM endc e JOIN basec b ON e.asset_id = b.asset_id JOIN stats s ON e.asset_id = s.asset_id;",
-          "result": {
-            "columns": [
-              "ticker",
-              "total_return",
-              "daily_volatility"
-            ],
-            "types": [
-              "VARCHAR",
-              "DOUBLE",
-              "DOUBLE"
-            ],
-            "rows": [
-              [
-                "ABBV",
-                -0.004163275333808669,
-                0.01539786146647154
-              ],
-              [
-                "BMY",
-                0.19817073170731714,
-                0.016568434057748625
-              ],
-              [
-                "PFE",
-                0.04231366459627339,
-                0.013988271521856617
-              ]
-            ],
-            "truncated": false,
-            "duration_ms": 746
+            "duration_ms": 732
           }
         },
         {
@@ -1892,7 +1858,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 702
+            "duration_ms": 684
           }
         },
         {
@@ -2333,7 +2299,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 692
+            "duration_ms": 695
           }
         },
         {
@@ -2720,7 +2686,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 705
+            "duration_ms": 687
           }
         },
         {
@@ -2918,7 +2884,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 691
+            "duration_ms": 672
           }
         },
         {
@@ -3089,7 +3055,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 709
+            "duration_ms": 703
           }
         },
         {
@@ -3287,7 +3253,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 700
+            "duration_ms": 689
           }
         },
         {
@@ -3512,7 +3478,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 726
+            "duration_ms": 720
           }
         },
         {
@@ -3737,7 +3703,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 755
+            "duration_ms": 740
           }
         },
         {
@@ -3827,7 +3793,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 704
+            "duration_ms": 682
           }
         }
       ]

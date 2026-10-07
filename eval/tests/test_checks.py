@@ -82,6 +82,11 @@ def test_an_asset_is_named_by_its_ticker_or_its_company_name():
         ("up 25%", 0.2474, False),
         ("up 0.2474", 0.2474, False),  # a fraction is not shown as a percentage
         ("up 24.74%", None, False),
+        # Thousands separators: a ranking of the 1,000 most liquid stocks has returns above +1,000%
+        ("DFDV +3,653.4% over the window", 36.5345, True),
+        ("DFDV +3,653.4% over the window", 0.5345, False),  # not read as +653.4%
+        ("a 1,234,567.8% move", 12345.678, True),
+        ("fell 1,234.5%", -12.345, True),
     ],
 )
 def test_a_fraction_is_found_as_a_percentage(text, fraction, expected):
@@ -99,6 +104,11 @@ def test_grounding_is_the_share_of_percentages_found_in_the_evidence():
     turn = market_turn("PEAX +24.74% and VIAS -18.78%, overall 50%.", payload={"rows": [0.2474, -0.1878]})
     assert grounding(report_text(turn), turn) == pytest.approx(2 / 3)
     assert grounding("no numbers here", turn) is None
+
+
+def test_grounding_reads_percentages_with_thousands_separators():
+    turn = market_turn("DFDV +3,653.4% and VIAS -18.78%.", payload={"rows": [36.534, -0.1878]})
+    assert grounding(report_text(turn), turn) == pytest.approx(1.0)
 
 
 def test_each_check_kind():

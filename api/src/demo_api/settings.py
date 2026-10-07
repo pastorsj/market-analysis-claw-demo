@@ -63,10 +63,12 @@ class Settings(BaseSettings):
     agent_efficient_model: str = ""
     agent_capable_model: str = ""
 
-    # Market analytics, for the Benchmark tab's matched CPU/GPU runs of a finished job's calls
+    # Market analytics, for the Benchmark tab's matched CPU/GPU runs of a finished job's calls. A call claims a
+    # speedup only after 5 pairs, so the budget must fit 5 pairs of the slowest call: a scan of the 500 most liquid
+    # stocks' minute bars takes about 10 s on the CPU, so 5 pairs take about 55 s.
     market_analytics_url: str = "http://market-analytics:3010"
     benchmark_pairs: int = Field(default=5, ge=1, le=20)
-    benchmark_budget_seconds: float = Field(default=20, gt=0, le=300)
+    benchmark_budget_seconds: float = Field(default=90, gt=0, le=300)
 
     # Voice input (demo_api/speech): NVIDIA Nemotron ASR on build.nvidia.com. Off unless enabled and keyed.
     speech_input_enabled: bool = False
