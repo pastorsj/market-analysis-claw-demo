@@ -16,7 +16,8 @@ from .deadline import deadline_ok
 from .spec import Check
 from .spec import RowRef
 
-PERCENT = re.compile(r"([+\-]?\d+(?:\.\d+)?)\s?%")
+# Digits may be grouped by thousands ("+3,653.4%"): the 1,000 most liquid stocks include returns above +1,000%
+PERCENT = re.compile(r"([+\-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s?%")
 # A word for a fall just before or after an unsigned percentage: "fell 1.23%", "a decline of 1.23%", "1.23% lower"
 FALL = re.compile(
     r"\b(?:down|fell|fall(?:s|ing)?|dropp?(?:ed|ing|s)?|declin\w*|decreas\w*|lower|negative|loss(?:es)?|lost|slid"
@@ -60,7 +61,7 @@ def has_percent(text: str, fraction: Any, tolerance: float = 0.0005) -> bool:
         return False
     target, limit = fraction * 100, max(tolerance * 100, 0.051)
     for match in PERCENT.finditer(text):
-        value = float(match[1])
+        value = float(match[1].replace(",", ""))
         if abs(value - target) <= limit:
             return True
         unsigned = match[1][0] not in "+-"
@@ -94,7 +95,7 @@ def receipt_numbers(turn: dict[str, Any]) -> list[float]:
 
 def grounding(text: str, turn: dict[str, Any]) -> float | None:
     """The share of the report's percentages (before Sources) that match a number in the evidence."""
-    reported = [float(p) for p in PERCENT.findall(body(text))]
+    reported = [float(p.replace(",", "")) for p in PERCENT.findall(body(text))]
     if not reported:
         return None
     numbers = receipt_numbers(turn)
