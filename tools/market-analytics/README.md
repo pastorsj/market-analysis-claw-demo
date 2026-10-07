@@ -7,7 +7,7 @@ pandas, scikit-learn and NetworkX; the GPU image runs the same code on RAPIDS (c
 | Question | Tool | CPU | GPU |
 | --- | --- | --- | --- |
 | Leaders and laggards by return, volume, volatility or peer-relative return | `market_scan` | pandas | cudf.pandas |
-| Sessions that behave unusually against an earlier baseline | `market_anomaly_scan` | scikit-learn PCA | cuml.accel |
+| Sessions that behave unusually against an earlier baseline | `market_anomaly_scan` | scikit-learn PCA | cuML PCA, on the device |
 | Return, price range and volume for named assets | `price_context` | pandas | cudf.pandas |
 | Positive, neutral and negative news labels over time | `sentiment_timeline` | pandas | cudf.pandas |
 | How news sentiment lined up with later returns | `analyze_news_price_relationship` | pandas | cudf.pandas |

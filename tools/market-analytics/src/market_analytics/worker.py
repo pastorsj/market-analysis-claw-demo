@@ -26,6 +26,7 @@ from . import tools
 from .data import MarketData
 from .data import Pack
 from .data import footprint
+from .tools import anomaly_gpu
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,10 @@ def warm_up(data: MarketData) -> str:
     for tool, arguments in calls:
         status = tools.run(data, tool, arguments)["status"]  # never raises
         statuses.append(f"{tool} {status}")
+    try:
+        anomaly_gpu.prepare(data)  # every universe's anomaly features on the device, so no scan pays for it
+    except Exception as error:  # the first scan of a universe then pays for it
+        logger.warning("the anomaly features could not be kept on the device: %s: %s", type(error).__name__, error)
     return f"warm-up in {time.perf_counter() - started:.1f} s: {', '.join(statuses) or 'failed'}"
 
 

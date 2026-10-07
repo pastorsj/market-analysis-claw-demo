@@ -129,7 +129,7 @@ stack, which needs `analytics-gpu` in `COMPOSE_PROFILES`:
 - **Market tools.** Each case of the active pack's `eval/perf.yaml` goes to market analytics' `POST /benchmark`
   (the route behind the UI's Benchmark tab), which runs the call once untimed on each engine, then in five
   alternating CPU/GPU pairs, and compares the results as the parity tests do. A case fails when the results differ,
-  when the GPU engine is not RAPIDS (cudf.pandas, cuml.accel, nx-cugraph), or when the speedup, the median CPU time
+  when the GPU engine is not RAPIDS (cudf.pandas, cuml, cuml.accel, nx-cugraph), or when the speedup, the median CPU time
   over the median GPU time on the tools' own compute timers, stays below its floor in two measurements.
 - **Milvus.** With the retrieval profile, the guard measures the index comparison again
   (`demo-retrieval benchmark --guard`, the CPU HNSW index against its `GPU_IVF_FLAT` copy, from the build's own query

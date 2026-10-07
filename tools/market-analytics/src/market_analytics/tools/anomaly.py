@@ -4,11 +4,13 @@
 
 The detector standardizes four price/volume features on the training window, fits a PCA with up to three
 components, and scores each session by its reconstruction error. Sessions above the training window's 95th
-percentile error are flagged. On GPU, cuml.accel runs the same scikit-learn PCA.
+percentile error are flagged. On GPU the scan stays on the device (anomaly_gpu.py): the features of each universe are
+kept as CuPy arrays and cuML fits the same PCA; the host path below runs on the CPU engine and gives the same answers.
 """
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 
 import numpy as np
@@ -21,7 +23,11 @@ from ..data import MarketData
 from ..models import AnomalyObservation
 from ..models import InvalidRequest
 from ..models import MarketAnomalyPayload
+from . import anomaly_gpu
+from .common import FLAG_QUANTILE
+from .common import MIN_TRAINING_ROWS
 from .common import Output
+from .common import Scored
 from .common import check_window
 from .common import host
 
@@ -30,8 +36,6 @@ LIMITATIONS = (
     "Observed deviations are robust z-scores against the training window, not returns or percentages; they are "
     "descriptive reason codes and do not establish a cause or adverse event.",
 )
-MIN_TRAINING_ROWS = 8
-FLAG_QUANTILE = 0.95
 
 
 def run(
@@ -49,6 +53,62 @@ def run(
     check_window(scoring_start, scoring_end)
     if scoring_start <= training_end:
         raise InvalidRequest("the scoring window must begin after the training window ends")
+    windows = (training_start, training_end, scoring_start, scoring_end)
+    if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu" and anomaly_gpu.available(data):
+        scored = anomaly_gpu.score(data, universe_id, *windows, limit)
+    else:
+        scored = _score(data, universe_id, *windows, limit)
+
+    # Ranks and percentiles count every scored row, though only the `limit` highest are kept
+    count = scored.scoring
+    position = np.arange(len(scored.asset_ids))
+    cohort_percentile = 100 * (count - position) / count
+    keep = np.ones(len(position), dtype=bool)
+    if minimum_percentile is not None:
+        keep = cohort_percentile >= minimum_percentile  # it falls with the position, so the kept rows lead
+    observations = [
+        AnomalyObservation(
+            rank=rank,
+            asset_id=asset_id,
+            timestamp=timestamp,
+            anomaly_score=anomaly_score,
+            decision_score=decision,
+            cohort_percentile=percentile,
+            is_anomaly=decision < 0,
+            observed_deviations=dict(zip(FEATURES, row_deviations, strict=True)),
+        )
+        for rank, asset_id, timestamp, anomaly_score, decision, percentile, row_deviations in zip(
+            (position[keep] + 1).tolist(),
+            scored.asset_ids[keep].tolist(),
+            scored.timestamps[keep].astype("datetime64[us]").tolist(),
+            scored.scores[keep].tolist(),
+            scored.decisions[keep].tolist(),
+            cohort_percentile[keep].tolist(),
+            scored.deviations[keep].tolist(),
+            strict=True,
+        )
+    ]
+    payload = MarketAnomalyPayload(
+        universe_id=universe_id,
+        feature_names=list(FEATURES),
+        training_observations=scored.training,
+        scoring_observations=scored.scoring,
+        flagged_observations=scored.flagged,
+        observations=observations,
+    )
+    return Output(payload, rows_scanned=scored.training + scored.scoring, assets=scored.assets, empty=not observations)
+
+
+def _score(
+    data: MarketData,
+    universe_id: str,
+    training_start: datetime,
+    training_end: datetime,
+    scoring_start: datetime,
+    scoring_end: datetime,
+    limit: int,
+) -> Scored:
+    """The scan on host arrays: scikit-learn's PCA, or cuml.accel's when the GPU engine has no resident features."""
     features = data.features
     scoped = features[features["asset_id"].isin(data.universe(universe_id))]
     training = scoped[scoped["timestamp"].between(training_start, training_end)]
@@ -80,52 +140,25 @@ def run(
     # Ranked on the host too: only the `limit` highest scores are needed, and on the GPU sorting the whole scoring
     # frame by three keys, then reading its top rows back, took more pandas calls than the PCA itself. The order is
     # the one that sort gave (score descending, then asset id, then time), and a percentile still counts every row.
-    count = len(score_error)
-    top, asset_ids, timestamps = _highest(scoring, score_error, min(limit, count))
-    position = np.arange(len(top))
-    cohort_percentile = 100 * (count - position) / count
-    if minimum_percentile is not None:
-        kept = cohort_percentile >= minimum_percentile  # it falls with the position, so the kept rows lead
-        top, asset_ids, timestamps = top[kept], asset_ids[kept], timestamps[kept]
-        position, cohort_percentile = position[kept], cohort_percentile[kept]
+    top, asset_ids, timestamps = _highest(scoring, score_error, min(limit, len(score_error)))
 
     # Robust z-scores (median / MAD) against the training window explain which features moved.
     median = np.median(train, axis=0)
     mad = np.median(np.abs(train - median), axis=0) * 1.4826
     deviations = (score[top] - median) / np.where(mad > 1e-12, mad, 1.0)
-    observations = [
-        AnomalyObservation(
-            rank=rank,
-            asset_id=asset_id,
-            timestamp=timestamp,
-            anomaly_score=anomaly_score,
-            decision_score=decision,
-            cohort_percentile=percentile,
-            is_anomaly=decision < 0,
-            observed_deviations=dict(zip(FEATURES, row_deviations, strict=True)),
-        )
-        for rank, asset_id, timestamp, anomaly_score, decision, percentile, row_deviations in zip(
-            (position + 1).tolist(),
-            asset_ids.tolist(),
-            timestamps.astype("datetime64[us]").tolist(),
-            score_error[top].tolist(),
-            decision_score[top].tolist(),
-            cohort_percentile.tolist(),
-            deviations.tolist(),
-            strict=True,
-        )
-    ]
-    payload = MarketAnomalyPayload(
-        universe_id=universe_id,
-        feature_names=list(FEATURES),
-        training_observations=len(training),
-        scoring_observations=len(scoring),
-        flagged_observations=int((score_error > threshold).sum()),
-        observations=observations,
-    )
     # Concatenated, then counted: both windows' assets, on the GPU under cudf.pandas
     assets = pd.concat([training["asset_id"], scoring["asset_id"]]).nunique()
-    return Output(payload, rows_scanned=len(training) + len(scoring), assets=assets, empty=not observations)
+    return Scored(
+        training=len(training),
+        scoring=len(scoring),
+        assets=int(assets),
+        flagged=int((score_error > threshold).sum()),
+        asset_ids=asset_ids,
+        timestamps=timestamps,
+        scores=score_error[top],
+        decisions=decision_score[top],
+        deviations=deviations,
+    )
 
 
 def _highest(scoring: pd.DataFrame, scores: np.ndarray, limit: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

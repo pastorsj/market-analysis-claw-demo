@@ -90,7 +90,7 @@ CPU_LIBRARIES: dict[Family, tuple[str, str]] = {
 }
 GPU_LIBRARIES: dict[Family, tuple[str, str]] = {
     "tabular": ("cudf.pandas", "cudf"),
-    "ml": ("cuml.accel", "cuml"),
+    "ml": ("cuml", "cuml"),
     "graph": ("nx-cugraph", "nx_cugraph"),
 }
 # The engine ids the receipts show, by family and device: the same method on each device, so a CPU id names the

@@ -14,7 +14,9 @@ import math
 import multiprocessing
 import shutil
 from collections.abc import Iterator
+from datetime import UTC
 from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +41,7 @@ pytestmark = [
 ]
 
 JUNE = {"start": at(21, 0), "end": at(41, 23)}
+AFTER = datetime(2100, 1, 1, tzinfo=UTC)  # long after the last session
 WIRE_A = {"source_names": ["Wire A"]}
 CALLS = [
     ("market_scan", {"universe_id": "all_assets", "metrics": ["return", "volatility"], **JUNE}),
@@ -53,6 +56,27 @@ CALLS = [
             "scoring_start": at(50, 0),
             "scoring_end": at(69, 23),
         },
+    ),
+    # The anomaly scan's device path: another universe, fewer and more rows than the scoring window holds, a
+    # percentile cut, and a scoring window that overlaps nothing but the end of the data
+    *(
+        (
+            "market_anomaly_scan",
+            {
+                "universe_id": universe,
+                "training_start": at(20, 0),
+                "training_end": at(49, 23),
+                "scoring_start": at(50, 0),
+                "scoring_end": at(69, 23),
+                **extra,
+            },
+        )
+        for universe, extra in (
+            ("reviewed_assets", {}),
+            ("all_assets", {"limit": 1}),
+            ("all_assets", {"limit": 50}),
+            ("all_assets", {"minimum_percentile": 90}),
+        )
     ),
     ("price_context", {"asset_ids": ["ALPH", "GAMA"], "frequency": "weekly", **JUNE}),
     ("sentiment_timeline", {"start": at(0, 0), "end": at(69, 23), "frequency": "weekly"}),
@@ -90,9 +114,34 @@ def test_gpu_matches_cpu(data: MarketData, gpu_worker: Worker, tool: str, argume
     gpu = gpu_worker.call(tool, arguments)
 
     assert gpu["engine"]["device"] == "gpu"
-    assert gpu["engine"]["library"] in {"cudf.pandas", "cuml.accel", "nx-cugraph"}
+    assert gpu["engine"]["library"] in {"cudf.pandas", "cuml", "cuml.accel", "nx-cugraph"}
     assert gpu["status"] == cpu["status"] == "succeeded"
     assert_close(gpu["payload"], cpu["payload"])
+
+
+@pytest.mark.parametrize(
+    "windows",
+    [
+        # fewer than the 8 observations a training window needs
+        {"training_start": at(20, 0), "training_end": at(20, 1), "scoring_start": at(50, 0), "scoring_end": at(69, 23)},
+        # a scoring window after the data ends
+        {
+            "training_start": at(20, 0),
+            "training_end": at(49, 23),
+            "scoring_start": AFTER,
+            "scoring_end": AFTER + timedelta(days=1),
+        },
+    ],
+)
+def test_the_anomaly_scan_fails_the_same_way_on_both_engines(
+    data: MarketData, gpu_worker: Worker, windows: dict[str, datetime]
+) -> None:
+    arguments = {"universe_id": "all_assets", **windows}
+    cpu = tools.run(data, "market_anomaly_scan", arguments)
+    gpu = gpu_worker.call("market_anomaly_scan", arguments)
+
+    assert gpu["status"] == cpu["status"] == "failed"
+    assert gpu["error"] == cpu["error"]
 
 
 def test_the_declared_peer_graph_loads_and_matches_on_the_gpu(pack_root: Path, tmp_path: Path) -> None:

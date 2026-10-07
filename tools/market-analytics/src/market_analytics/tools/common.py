@@ -31,6 +31,10 @@ class Output:
     warnings: tuple[str, ...] = ()
 
 
+# market_anomaly_scan, shared by its host path (anomaly.py) and its device path (anomaly_gpu.py)
+MIN_TRAINING_ROWS = 8
+FLAG_QUANTILE = 0.95
+
 NANOSECONDS_PER_DAY = 86_400_000_000_000
 
 
@@ -94,3 +98,18 @@ def rank(scores: np.ndarray, ids: np.ndarray, *, ascending: bool) -> np.ndarray:
 def _days(counts: pd.Series) -> pd.Series:
     # Integer nanoseconds cast to a timedelta: runs on the GPU, where pd.to_timedelta falls back to pandas.
     return (counts.astype("int64") * NANOSECONDS_PER_DAY).astype("timedelta64[ns]")
+
+
+@dataclass(frozen=True)
+class Scored:
+    """What either engine's scan decides: the counts, and the `limit` highest-scoring observations in rank order."""
+
+    training: int
+    scoring: int
+    assets: int
+    flagged: int
+    asset_ids: np.ndarray  # of the ranked observations
+    timestamps: np.ndarray  # datetime64, naive UTC
+    scores: np.ndarray  # reconstruction errors
+    decisions: np.ndarray  # the training window's 95th percentile error, less the score
+    deviations: np.ndarray  # (ranked, FEATURES) robust z-scores against the training window

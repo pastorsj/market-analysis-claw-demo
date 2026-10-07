@@ -5,7 +5,7 @@
 Market tools: each case of the active pack's `eval/perf.yaml` goes to market-analytics' `POST /benchmark`, the route
 behind the UI's Benchmark tab. It runs the call once untimed on each engine, then in alternating CPU/GPU pairs, and
 compares the payloads as the GPU parity tests do. A case fails when the results differ, when the GPU engine is not
-RAPIDS (cudf.pandas, cuml.accel or nx-cugraph), or when the speedup (median CPU time over median GPU time, the
+RAPIDS (cudf.pandas, cuml, cuml.accel or nx-cugraph), or when the speedup (median CPU time over median GPU time, the
 tools' own compute timers) stays below the case's floor in two measurements.
 
 Milvus: each workload profile of the comparison the guard measures just before (`demo-retrieval benchmark --guard`, the
@@ -36,7 +36,7 @@ from .spec import MarketCase
 from .spec import PerfSpec
 from .spec import RetrievalCase
 
-RAPIDS = frozenset({"cudf.pandas", "cuml.accel", "nx-cugraph"})
+RAPIDS = frozenset({"cudf.pandas", "cuml", "cuml.accel", "nx-cugraph"})
 
 
 class GuardUnavailable(RuntimeError):
