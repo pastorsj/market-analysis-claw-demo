@@ -53,11 +53,16 @@ def run(
     check_window(scoring_start, scoring_end)
     if scoring_start <= training_end:
         raise InvalidRequest("the scoring window must begin after the training window ends")
-    windows = (training_start, training_end, scoring_start, scoring_end)
+    windows = {
+        "training_start": training_start,
+        "training_end": training_end,
+        "scoring_start": scoring_start,
+        "scoring_end": scoring_end,
+    }
     if os.environ.get("MARKET_ANALYTICS_ENGINE", "cpu") == "gpu" and anomaly_gpu.available(data):
-        scored = anomaly_gpu.score(data, universe_id, *windows, limit)
+        scored = anomaly_gpu.score(data, universe_id, limit=limit, **windows)
     else:
-        scored = _score(data, universe_id, *windows, limit)
+        scored = _score(data, universe_id, limit=limit, **windows)
 
     # Ranks and percentiles count every scored row, though only the `limit` highest are kept
     count = scored.scoring
@@ -102,6 +107,7 @@ def run(
 def _score(
     data: MarketData,
     universe_id: str,
+    *,
     training_start: datetime,
     training_end: datetime,
     scoring_start: datetime,

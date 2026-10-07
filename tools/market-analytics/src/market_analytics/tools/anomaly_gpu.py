@@ -73,6 +73,7 @@ def resident(data: MarketData, universe_id: str) -> Resident:
 def score(
     data: MarketData,
     universe_id: str,
+    *,
     training_start: datetime,
     training_end: datetime,
     scoring_start: datetime,
