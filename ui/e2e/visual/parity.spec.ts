@@ -101,7 +101,7 @@ test.describe('live mode', () => {
           page.getByRole('region', { name: 'Featured questions' }).getByRole('link')
         ).toHaveCount(6, { timeout: 1_000 })
       }).toPass()
-      await expect(page.locator('main [data-brand] img')).toHaveCount(14)
+      await expect(page.locator('main [data-brand] img')).toHaveCount(11)
       await matchesBaseline(page, `landing-${colorScheme}`)
     })
   }

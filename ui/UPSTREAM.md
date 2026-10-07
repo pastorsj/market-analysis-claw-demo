@@ -69,7 +69,9 @@ invocation `id` `` become inspectable evidence (`EvidenceDisclosure`).
   successful job shows its answer instead (answer-first); the no-sources banner
   no longer mentions files;
   the landing page names LangChain instead of LlamaIndex and adds OpenShell and
-  Switchyard to the Hermes card.
+  Switchyard to the Hermes card, and its analytics card is titled "Market Analytics
+  (using CUDA-X Libraries)", with the NVIDIA mark on cuDF, cuGraph and cuML (not the
+  RAPIDS logo).
 - Landing page: it keeps the prototype's technology logos
   (`public/ecosystem-logos`) and adds the LangChain symbol; Kumo, which has no
   logo file, gets a text badge of the same size. The Market Analytics card
