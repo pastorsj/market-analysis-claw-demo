@@ -197,6 +197,9 @@ through `POST /benchmark` against floors set from the timings below ([eval](../.
 
 ## CPU and GPU timings
 
+Which question shapes win on the GPU, on an A100 and on a B200 host with a faster CPU, and why the demo's questions are
+built on the 1,000 most liquid stocks and on minute bars: the [GPU speedup report](../../docs/gpu-speedup-report.md).
+
 Measured on a 40 GB A100 VM with 12 vCPUs, on the `qualification` profile of `market-analysis`, the pack
 `synthetic-market` replaced at the same scale (2,000 issuers, 1.36 million daily bars, 84,000 news items). The
 method: a throwaway container from the stack's own GPU image, with `--gpus all` and the pack mounted read-only, ran the service's worker with `MARKET_ANALYTICS_ENGINE=cpu` and then with

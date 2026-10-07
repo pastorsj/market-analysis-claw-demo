@@ -592,7 +592,7 @@ cite is in the pack's manifest. The live runs come with the recordings.
 | `market-leaders` ★ | ANALYTICS | `market_data` | Among the 12 most liquid issuers, which had the strongest and weakest returns over the 20 trading sessions ending August 31, 2026, and how did their daily volatility compare? | `market_scan` | `market_leaders.sql` |
 | `news-sentiment-reaction` ★ | ANALYTICS | `market_data` | For company news about the 12 most liquid issuers published August 17–24, 2026, how did the sentiment labels line up with the following five sessions' returns? Without claiming causation. | `sentiment_timeline`, `analyze_news_price_relationship` | `news_sentiment_reaction.sql` |
 | `unusual-sessions` ★ | ANOMALY | `market_data` | With January 2 to June 30, 2026 as the baseline for every issuer, which 10 issuer sessions from July 1 to August 31 were most unusual in return, volatility and volume, and why? | `market_anomaly_scan` | – (PCA) |
-| `peer-network` ★ | GRAPH | `market_data` | In the return-correlation network from June through August 2026, which issuers are most central, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` |
+| `peer-network` | GRAPH | `market_data` | In the return-correlation network from June through August 2026, which issuers are most central, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` |
 | `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require after a material cybersecurity incident, and by when? Cite the regulation and any 2026 Q2 filings that report an incident. | `retrieve_evidence` | `retrieval.yaml`: 17 CFR 229.106 and 249.308, the rule's Form 8-K appendix; one filing (CB Financial Services) |
 | `news-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Which of the 12 most liquid issuers had the most negative company news in July and August 2026, and how did their prices react? Separately, which real 2026 Q2 filings describe operational disruptions? Keep them apart. | `sentiment_timeline`, `price_context`, `retrieve_evidence` | `negative_news.sql`; `retrieval.yaml`: four filings that report a disruption (TotalEnergies, B2Gold, Centerra Gold, Cactus) |
 | `story-event-context` | ANALYTICS | `market_data` | Each story's return on its publication session and the two after it | `price_context` | `story_event_context.sql` |
@@ -605,21 +605,24 @@ cite is in the pack's manifest. The live runs come with the recordings.
 
 | Id | Tag | Sources | Question | Tools | Oracle |
 |---|---|---|---|---|---|
-| `market-leaders` ★ | ANALYTICS | `market_data` | Among the 50 most liquid US stocks, which had the strongest and weakest returns over the 20 trading sessions ending March 12, 2026, and how did their daily volatility compare? | `market_scan` | `market_leaders.sql` |
+| `market-leaders` ★ | ANALYTICS | `market_data` | Among the 1,000 most liquid US stocks, which had the strongest and weakest returns from January 2, 2025 to March 12, 2026, and how did their daily volatility and volume compare? | `market_scan` | `market_leaders.sql` |
 | `intraday-ranges` ★ | INTRADAY | `market_data` | Among the 50 most liquid, which sessions from March 2 to March 12, 2026 had the widest intraday ranges? How did each trade from open to close, and how much volume came in the last 30 minutes? | `intraday_scan` | `intraday_ranges.sql` |
-| `unusual-sessions` ★ | ANOMALY | `market_data` | With 2025 as the baseline, which 10 sessions from January 2 to March 12, 2026 were most unusual among the 50 most liquid, and which features made each unusual? | `market_anomaly_scan` | – (PCA) |
-| `peer-network` ★ | GRAPH | `market_data` | Among declared industry peers, which stocks were most central in the return-correlation network from December 2025 to March 12, 2026, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` (share classes of one company lead) |
+| `unusual-sessions` ★ | ANOMALY | `market_data` | With the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 to January 30, 2026 were most unusual among the 1,000 most liquid, and which features made each unusual? | `market_anomaly_scan` | – (PCA) |
+| `peer-network` | GRAPH | `market_data` | Among declared industry peers, which stocks were most central in the return-correlation network from December 2025 to March 12, 2026, and which pairs moved together most closely? | `analyze_market_relationships` | `peer_pair_correlations.sql` (share classes of one company lead) |
 | `cyber-disclosure-rules` ★ | RETRIEVAL | `sec_filings`, `market_regulations` | What does Form 8-K Item 1.05 require, and by when? Cite the regulation, and any 8-Ks in the corpus that report an incident under Item 1.05. | `retrieve_evidence` | `retrieval.yaml`: 17 CFR 229.106 and 249.308, the rule's Form 8-K appendix; six filings (CNDT, COIN, DAIO twice, BAFN, CPNG) |
-| `moves-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Among the 50 most liquid, which three had the strongest and three the weakest returns in February 2026? Separately, what did those six companies disclose in their 8-Ks from January to March 2026? No causal claims. | `market_scan`, `retrieve_evidence` | `february_moves.sql`; `retrieval.yaml` |
-| `large-universe-scan` | ANALYTICS | `market_data` | The 20 strongest and weakest of the 500 most liquid, January 2 to March 12, 2026, and how unusual their volume was | `market_scan` | `large_universe_scan.sql` |
+| `moves-and-filings` ★ | HYBRID | `market_data`, `sec_filings` | Among the 50 most liquid, which three sessions in February 2026 had the largest open-to-close gains and which three the largest losses? Separately, what did those companies disclose in their 8-Ks from January to March 2026? No causal claims. | `intraday_scan`, `retrieve_evidence` | `february_session_moves.sql` |
+| `large-universe-scan` | ANALYTICS | `market_data` | The 20 strongest and weakest of the 1,000 most liquid, January 2, 2025 to March 12, 2026, and how unusual their volume was | `market_scan` | `large_universe_scan.sql` |
 | `outcome-prediction` | PREDICTION | `market_data` | As of the March 5, 2026 close, the 50 most liquid by likelihood of a positive five-session return | `predict_asset_outcomes` | – |
 | `sector-sql` | SQL | `market_data` | Stocks and median return by SIC division, January 2 to March 12, 2026 | `ask_question` | `sector_breakdown.sql` |
 | `world-news-rates` | RETRIEVAL | `world_news` (opt-in) | Which world headlines mention the Federal Reserve or another central bank, with their outlets and dates? | `retrieve_evidence` | – |
 
-The universes in `us-equities` are `top_50` (`liquidity_rank <= 50`), `liquid_500` and `all_assets`. Whole-market
-questions use `liquid_500`: the smallest stocks trade a few hundred dollars a day, and single trades give them
-absurd returns. The anomaly question uses `top_50`: one split adjustment the dataset applies a session late
-(ASST, 2026-02-05) fills a `liquid_500` scan of 2026 ([known issues](../data/packs/us-equities/README.md#known-issues)).
+The universes in `us-equities` are `top_50` (`liquidity_rank <= 50`), `liquid_500`, `liquid_1000` and `all_assets`.
+The daily questions use `liquid_1000`: the smallest stocks trade a few hundred dollars a day, and single trades give
+them absurd returns (over every stock, BVC's +7,400% leads and fills an anomaly scan), while the 1,000 most liquid
+still give the GPU enough rows to win the Benchmark tab's comparison on every pair; the 50 most liquid do not (the
+CPU wins there). The anomaly question scores July 2025 to January 30, 2026: one split adjustment the dataset applies a
+session late (ASST, 2026-02-05) and AZN's listing change (2026-02-02) would otherwise fill a scan of 2026
+([known issues](../data/packs/us-equities/README.md#known-issues)).
 The Kumo population is `top_50`, with the anchor at 2026-03-05 21:00 UTC and a horizon of 5 sessions. With no
 news table, the prediction graph has no `news_events` view and no news template, and the news tools get no
 question in `us-equities`.

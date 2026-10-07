@@ -170,13 +170,19 @@ floor and is only reported.
 | | `market_scan`, every stock, January 2025 to March 2026 | 2.69x, 2.65x, 2.66x, 2.49x | 1.2x |
 | | `market_scan`, every stock, 20 sessions | 1.58x, 1.57x, 1.57x, 1.53x | 0.75x |
 | | `market_anomaly_scan`, every stock | 1.81x, 1.65x, 1.9x, 1.79x | 0.8x |
+| | `market_scan`, every stock, with volume | 2.48x, 2.63x, 2.58x | 1.2x |
+| | `market_anomaly_scan`, every stock, scoring July 2025 on | 2.21x, 1.79x, 1.91x, 1.94x, 1.81x, 2.32x | 0.85x |
+| | `market_scan`, 1,000 most liquid, with volume; and over 2025 | 2.28x, 2.13x, 2.19x; 2.13x, 2.24x, 2.22x | 1.05x each |
+| | `market_anomaly_scan`, 1,000 most liquid, scoring July 2025 to January 2026 | 1.04x, 1.35x, 1.14x (no reliable margin: the floor only catches a fall back to pandas) | 0.5x |
+| | `intraday_scan`, 500 stocks, February, by drawdown | 9.06x, 9.17x | 4.5x |
 | | `market_scan` and `market_anomaly_scan`, 50 stocks | 0.78x to 0.89x, 0.69x to 0.73x (the CPU wins at this size) | reported only |
 | | Milvus single, batch, concurrent | 1.13x and 1.22x, 1.11x and 1.20x, 1.76x and 1.07x | 0.55x, 0.55x, 0.5x |
 
 The speedups come from the isolated method of [operations](../docs/operations.md#brev-vm-mode) (step 7) and the
 [market-analytics README](../tools/market-analytics/README.md#cpu-and-gpu-timings), on 2026-09-29 and 2026-09-30,
-and from `POST /benchmark` on the running stack for the recorded sessions' calls, on 2026-10-01, and for
-`us-equities`' daily `market_scan` and `market_anomaly_scan` cases, on 2026-10-02
+and from `POST /benchmark` on the running stack for the recorded sessions' calls, on 2026-10-01, for
+`us-equities`' daily `market_scan` and `market_anomaly_scan` cases, on 2026-10-02, and for the 1,000-stock,
+every-stock and 500-stock minute-bar cases, on 2026-10-06 ([report](../docs/gpu-speedup-report.md))
 ([why the 50-stock cases are reported only](../tools/market-analytics/README.md#daily-tools-on-us-equities)). To add a case,
 measure it on the GPU host a few times, list the speedups in `recorded`, and set `min_speedup` by the rule.
 

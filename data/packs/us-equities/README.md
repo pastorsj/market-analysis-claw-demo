@@ -61,42 +61,46 @@ to the anchor only; the build writes their ids into `pack.json`.
 
 ## Questions
 
-`questions.yaml` holds 30 questions; six are featured: market leaders among the 50 most liquid stocks, the
-widest intraday swings from the minute bars (`intraday_scan`), unusual sessions among the 50 most liquid, the
-peer network, the Form 8-K Item 1.05 rule with the filings that report an incident, and February's biggest movers
-beside their own 8-Ks. Each declares the `tools` it is expected to use, as the demo scenario picker's pills
-([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)). The picker offers twelve of them
-(`examples`): the featured six, the five-session Kumo outlook, the SIC divisions through Auto Ontology, the
-500-stock scan, Schedules 13D and 13G, NVIDIA's prices and 8-Ks, and the cyber attack headlines. Its first five
-rows show every tool. The others cover every tool and source:
+`questions.yaml` holds 26 questions; six are featured: market leaders among the 1,000 most liquid stocks, the
+widest intraday swings from the minute bars (`intraday_scan`), unusual sessions among the 1,000 most liquid, the
+deepest intraday drawdowns among the 500 most liquid, the Form 8-K Item 1.05 rule with the filings that report an
+incident, and February's biggest minute-bar movers beside their own 8-Ks. Each declares the `tools` it is expected
+to use, as the demo scenario picker's pills ([data packs](../../../docs/data-packs.md#sources-capabilities-and-questions)).
+The picker offers twelve of them (`examples`): the featured six, the five-session Kumo outlook, the peer network,
+the SIC divisions through Auto Ontology, the 1,000-stock scan, Schedules 13D and 13G, and the cyber attack
+headlines. Its first five rows show every tool. The others cover every tool and source:
 
 | Kind | Questions |
 |---|---|
-| Prices and returns (`market_scan`) | volatility ranking, peer-relative returns, the second half of 2025, the 500-stock scan |
-| Intraday, from the minute bars (`intraday_scan`) | drawdowns from the session high, the heaviest sessions and when their volume came |
-| Unusual sessions (`market_anomaly_scan`, PCA) | April 2025 against the first quarter, and the fourth quarter of 2025 across the 500 most liquid |
-| Peer network (`analyze_market_relationships`, PageRank) | the most central stocks' industries |
+| Prices and returns (`market_scan`) | volatility ranking, peer-relative returns, calendar 2025, the 1,000-stock scan |
+| Intraday, from the minute bars (`intraday_scan`) | the heaviest sessions and when their volume came |
+| Peer network (`analyze_market_relationships`, PageRank) | the most central stocks and their industries |
 | Kumo prediction (`predict_asset_outcomes`) | the five-session outlook, downside of more than 5%, five named stocks |
 | SQL with Auto Ontology (`ask_question`) | SIC divisions, listing exchanges, days with a move of more than 10% |
 | SEC filings | executive changes (Item 5.02), material agreements (1.01, 1.02), restructuring costs (2.05) |
 | Regulations (eCFR Title 17) | Schedules 13D and 13G, Rule 14a-8 shareholder proposals |
 | World headlines (GDELT, opt-in) | central banks, cyber attacks |
-| Two sources, kept apart | NVIDIA's prices and 8-Ks, five banks' January moves and results |
 
-Fifteen two-turn `conversations` follow up on an answer: price context then weekly with a third stock; four
-large stocks then the previous quarter, monthly; early-April 2025's steepest declines then the week after; the
-peer network then its central stocks' returns; the strongest peer links then the top pair; the leaders then their
-unusual sessions; minute-level volatility then inside the top sessions; a Kumo outlook then the returns that
-followed; SIC divisions then industries; 8-K incident filings then the Title 17 requirements; results 8-Ks then
-their figures; Regulation FD; Rule 10b5-1 trading plans; headlines that mention Nvidia then NVDA's prices; and
-Item 1.05 filers then their prices. With `DATA_CORPORA=sec_filings,market_regulations,world_news` and every
-profile, all 45 sessions can be recorded (`demo.sh record --all`). `eval/oracles/` computes the analytics answers
-from a build and `eval/retrieval.yaml` names the documents a retrieval answer should cite; the tests run the
-oracles on the fixture's schema only, since the data is never in the repository.
+The market questions are built so that the Benchmark tab can claim a GPU speedup. A stage claims one only when all
+five CPU/GPU pairs favor the GPU, and the GPU wins on data volume, not on a tool's name: over the 50 most liquid
+stocks the daily tools run faster on the CPU (0.4x to 0.9x), so the daily questions use the 1,000 most liquid
+stocks over 2025 and later, the minute-bar questions the 50 or 500 most liquid, and no question calls
+`price_context` for named stocks. Measured, with the choices behind them, in the
+[GPU speedup report](../../../docs/gpu-speedup-report.md). Two shapes cannot win and are kept honest: the peer
+network (a fixed small graph, 0.7x to 1.2x), and the anomaly scan, whose margin over a liquid universe is thin
+(1.0x to 1.4x).
+
+Eight two-turn `conversations` follow up on an answer: the leaders then their unusual sessions; 2025's laggards then
+the strongest returns since; minute-level volatility then the heaviest sessions of the same 500 stocks; SIC divisions
+then industries; 8-K incident filings then the Title 17 requirements; results 8-Ks then their figures; Regulation FD;
+and Rule 10b5-1 trading plans. With `DATA_CORPORA=sec_filings,market_regulations,world_news` and every profile, all
+34 sessions can be recorded (`demo.sh record --all`). `eval/oracles/` computes the analytics answers from a build
+and `eval/retrieval.yaml` names the documents a retrieval answer should cite; the tests run the oracles on the
+fixture's schema only, since the data is never in the repository.
 
 ### Recorded answers
 
-`recordings/` holds all 45 sessions, recorded on 2026-10-01 as the hosted demo runs (every profile,
+`recordings/` holds all 34 sessions. Most were recorded on 2026-10-01 as the hosted demo runs (every profile,
 `DATA_CORPORA=sec_filings,market_regulations,world_news`, Nemotron 3 Ultra escalating to GPT-6.1 Sol) and
 reviewed against `eval/oracles/` and the evidence. Eleven wrong answers were asked again, twice at most, and one
 question that failed outright (it ran out of Hermes' tool-call budget) succeeded the second time.
@@ -104,30 +108,32 @@ question that failed outright (it ran out of Hermes' tool-call budget) succeeded
 On 2026-10-02 nine of them were recorded again the same way, once every tool result was short enough for Hermes to
 read whole (it had cut long retrieval results to a preview) and the regulations source held the SEC's 2023
 cybersecurity rule: `cyber-disclosure-rules`, `large-universe-scan`, `sector-sql`, `executive-changes`,
-`filings-to-regulations`, `incidents-and-prices`, `material-agreements`, `nvidia-results-and-prices` and
-`restructuring-costs`. Four of them were asked again, twice at most, and the bundle keeps the best attempt.
+`filings-to-regulations`, `material-agreements` and `restructuring-costs` (and two sessions since retired). Four of them were asked again, twice at most, and the bundle keeps the best attempt.
 `trading-plans-follow-up` was asked three more times to check its follow-up citations live: none left a raw
 evidence id, but each new first turn cited the director and officer certification as (c)(1)(i)(C) rather than
 (c)(1)(ii)(C), so it keeps its earlier recording.
 
 Later on 2026-10-02 twelve were asked again the same way, once Auto Ontology's seed imported a changed model again
 (so the return convention in `ontology.yaml` reached its catalog) and filing searches stopped naming the form. Nine
-replaced their recordings: `sector-sql`, `peer-network-follow-up` (its second turn now answers through Auto
-Ontology), `cyber-disclosure-rules`, `executive-changes`, `incidents-and-prices`, `moves-and-filings`,
-`nvidia-results-and-prices`, `restructuring-costs` and `results-follow-up`. `bank-results`, `material-agreements`
-and `filings-to-regulations` keep their earlier recordings, because each new attempt was worse: one read the
-banks' results 8-Ks as Item 1.05 filings, one listed three agreements as the only ones, and one second turn on the
-rules lost its citations and another called Item 1.05 part of Regulation S-K. What remains:
+replaced their recordings: `sector-sql`, `cyber-disclosure-rules`, `executive-changes`, `restructuring-costs` and
+`results-follow-up` (and four sessions since retired). `material-agreements` and `filings-to-regulations` keep their
+earlier recordings, because each new attempt was worse: one listed three agreements as the only ones, and one second
+turn on the rules lost its citations and another called Item 1.05 part of Regulation S-K.
+
+On 2026-10-06 and 07 the market questions were rebuilt around calls the GPU wins (the
+[GPU speedup report](../../../docs/gpu-speedup-report.md)), and eleven sessions were recorded again on the Brev A100
+VM with the same models: `market-leaders`, `unusual-sessions`, `intraday-drawdowns` (500 stocks), `moves-and-filings`
+(February's minute-bar movers), `large-universe-scan`, `volatility-ranking`, `peer-relative-returns`, `calendar-2025`,
+`leaders-unusual-sessions`, `laggards-follow-up` and `intraday-volatility-follow-up`. The eval's oracle checks passed
+for `market-leaders`, `moves-and-filings`, `large-universe-scan`, `unusual-sessions` and `intraday-ranges`; the other
+six have no answer checks and were not read against the oracles line by line. `laggards-follow-up` needed three
+attempts (its second turn stopped on Hermes' idle budget twice). What remains:
 
 - `cyber-disclosure-rules` (featured) gives Item 1.05's content and its four-business-day deadline from Form 8-K
   General Instruction B.1 in the 2023 rule, and names five of the six Item 1.05 filings (Data I/O twice, Coupang,
   Coinbase, Conduent): it leaves out BayFirst while calling its list the corpus's Item 1.05 filings.
-- `large-universe-scan` matches the oracle's returns and volume z-scores, but calls the z-score one of dollar
-  volume; the volume is shares traded.
 - Smaller slips, a figure or label a viewer is unlikely to notice: an open-to-close move called close-to-close
-  (`intraday-ranges`), "9 of 10" for 8 of 10 (`second-half-2025`), CrowdStrike's results for the quarter ended
-  January 31, 2026 called its fiscal third quarter rather than its fourth (`moves-and-filings`), and "which
-  filings" lists that name only some of the in-window filings (`executive-changes`, eight companies;
+  (`intraday-ranges`), and "which filings" lists that name only some of the in-window filings (`executive-changes`, eight companies;
   `filings-to-regulations`, the two it compares; `material-agreements`, eight, which it says came from "32
   candidate filings", the passages its search ranked).
 
@@ -144,12 +150,13 @@ rules lost its citations and another called Item 1.05 part of Regulation S-K. Wh
   (ABPWW).
 - SEC's ticker list is today's, so issuers delisted or renamed after the price window are dropped as not listed.
 - The smallest stocks trade a few hundred dollars a day, and single trades give them extreme daily returns
-  (tens of thousands of percent). Whole-market scans need a liquidity floor, such as the `liquid_500` universe.
+  (tens of thousands of percent). Whole-market scans need a liquidity floor, such as the `liquid_1000` universe: over every stock the strongest return is
+  BVC's (+7,400%, liquidity rank 1,557), and its sessions filled all ten places of an every-stock anomaly scan.
 - Two corporate actions show in the prices as the dataset has them. ASST's reverse-split adjustment misses
   2026-02-05, its last session before the split, which stays unadjusted between two adjusted closes: a fall of
-  almost all its price and a rise back, and ASST sessions then fill an anomaly scan of `liquid_500` in 2026. AZN
+  almost all its price and a rise back, and ASST sessions then fill an anomaly scan of `liquid_500` or `liquid_1000` that scores February 2026. AZN
   jumps on 2026-02-02, when its listing moved from American depositary shares (half a share each) to ordinary
-  shares. The featured anomaly question scans `top_50`, which holds neither.
+  shares. The featured anomaly question scores July 2025 to January 30, 2026, before either.
 - Prices are split-adjusted, not dividend-adjusted: `adjusted_close` equals `close`.
 
 ## Files
@@ -163,4 +170,4 @@ rules lost its citations and another called Item 1.05 part of Regulation S-K. Wh
 | `corpus/*.manifest.json` | the pinned eCFR snapshot, Federal Register rule and EDGAR filings (URL and SHA-256 of every file) |
 | `corpus/select_filings.py` | selects the filings from the issuers' EDGAR submissions and writes their manifest |
 | `eval/` | SQL oracles for the analytics answers, the documents retrieval answers cite, the answer checks (`answers.yaml`) and the GPU guard's cases (`perf.yaml`) of the on-demand checks ([eval](../../../eval/README.md)); never read at runtime |
-| `recordings/` | the replay bundle of all 45 sessions, 30 questions and 15 conversations (`demo.sh record --all`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars. Private: the public repository ships `synthetic-market`'s recordings only |
+| `recordings/` | the replay bundle of all 34 sessions, 26 questions and 8 conversations (`demo.sh record --all`, [recordings](../../../docs/data-packs.md#recordings)); its figures and sample rows come from the external dataset, never the minute bars. Private: the public repository ships `synthetic-market`'s recordings only |
