@@ -543,7 +543,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 684
+          "duration_ms": 696
         },
         "assets": {
           "table": "assets",
@@ -710,7 +710,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 678
+          "duration_ms": 699
         },
         "daily_prices": {
           "table": "daily_prices",
@@ -857,7 +857,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 692
+          "duration_ms": 699
         },
         "ticker_history": {
           "table": "ticker_history",
@@ -934,7 +934,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 690
+          "duration_ms": 674
         },
         "trading_sessions": {
           "table": "trading_sessions",
@@ -1001,7 +1001,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 713
+          "duration_ms": 697
         },
         "prediction.asset_entities": {
           "table": "prediction.asset_entities",
@@ -1078,7 +1078,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 676
+          "duration_ms": 692
         },
         "prediction.price_events": {
           "table": "prediction.price_events",
@@ -1165,7 +1165,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 709
+          "duration_ms": 696
         },
         "prediction.return_outcomes": {
           "table": "prediction.return_outcomes",
@@ -1252,7 +1252,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 750
+          "duration_ms": 760
         },
         "prediction.top_50_population": {
           "table": "prediction.top_50_population",
@@ -1289,7 +1289,7 @@
             ]
           ],
           "truncated": true,
-          "duration_ms": 706
+          "duration_ms": 678
         }
       },
       "queries": [
@@ -1335,7 +1335,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 672
+            "duration_ms": 689
           }
         },
         {
@@ -1372,7 +1372,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 713
+            "duration_ms": 693
           }
         },
         {
@@ -1441,7 +1441,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 679
+            "duration_ms": 705
           }
         },
         {
@@ -1510,7 +1510,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 671
+            "duration_ms": 685
           }
         },
         {
@@ -1591,7 +1591,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 727
+            "duration_ms": 730
           }
         },
         {
@@ -1660,7 +1660,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 725
+            "duration_ms": 732
           }
         },
         {
@@ -1858,7 +1858,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 673
+            "duration_ms": 684
           }
         },
         {
@@ -2299,7 +2299,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 682
+            "duration_ms": 695
           }
         },
         {
@@ -2686,7 +2686,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 691
+            "duration_ms": 687
           }
         },
         {
@@ -2884,7 +2884,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 677
+            "duration_ms": 672
           }
         },
         {
@@ -3055,7 +3055,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 701
+            "duration_ms": 703
           }
         },
         {
@@ -3253,7 +3253,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 690
+            "duration_ms": 689
           }
         },
         {
@@ -3478,7 +3478,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 714
+            "duration_ms": 720
           }
         },
         {
@@ -3703,7 +3703,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 762
+            "duration_ms": 740
           }
         },
         {
@@ -3793,7 +3793,7 @@
               ]
             ],
             "truncated": false,
-            "duration_ms": 678
+            "duration_ms": 682
           }
         }
       ]

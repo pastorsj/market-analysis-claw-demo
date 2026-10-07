@@ -11,11 +11,12 @@
 #     ranking ran on the host (tools/market-analytics/README.md#daily-tools-on-us-equities);
 #   - 2026-10-06: POST /benchmark for the shapes the questions now use: the 1,000 most liquid stocks over 2025, every
 #     stock, and the 500 most liquid minute bars (whose CPU and GPU batch counts no longer count as a mismatch).
-#     The anomaly scan has no reliable GPU margin over a liquid universe (1.0x to 1.4x here, below 1x on a B200
-#     host with a faster CPU), so its floor only catches a fall back to pandas.
+#   - 2026-10-07: the anomaly scan once it ran on the device (tools/market-analytics/README.md#market_anomaly_scan-on-the-device);
+#     before, its margin over a liquid universe was 1.0x to 1.4x here and below 1x on a B200 host with a faster CPU.
 # A case fails below `min_speedup`, half its lowest recorded speedup rounded down to 0.05; a case recorded slower on
 # the GPU has none and is only reported. This pack's daily table is small (1,601 stocks, 452,837 daily rows): over 50
-# stocks the daily tools run faster on the CPU, and the GPU wins over every stock and on the minute bars.
+# stocks the daily scans run faster on the CPU (the anomaly scan ties), and the GPU wins over more stocks and on the
+# minute bars.
 profile: default
 
 market:
@@ -47,7 +48,7 @@ market:
     tool: market_anomaly_scan
     arguments: {universe_id: top_50, training_start: "2025-01-02T00:00:00Z", training_end: "2025-12-31T23:59:59Z",
       scoring_start: "2026-01-02T00:00:00Z", scoring_end: "2026-03-12T23:59:59Z", limit: 10}
-    recorded: [0.69, 0.73, 0.7, 0.73]
+    recorded: [1.14, 1.47, 1.02, 1.16]
     min_speedup: null
   - id: scan-all-stocks-full-history
     tool: market_scan
@@ -71,14 +72,14 @@ market:
     tool: market_anomaly_scan
     arguments: {universe_id: all_assets, training_start: "2025-01-02T00:00:00Z", training_end: "2025-12-31T23:59:59Z",
       scoring_start: "2026-01-02T00:00:00Z", scoring_end: "2026-03-12T23:59:59Z", limit: 10}
-    recorded: [1.81, 1.65, 1.9, 1.79]
-    min_speedup: 0.8
+    recorded: [8.42]
+    min_speedup: 4.2
   - id: anomalies-all-stocks-from-july
     tool: market_anomaly_scan
     arguments: {universe_id: all_assets, training_start: "2025-01-02T00:00:00Z", training_end: "2025-06-30T23:59:59Z",
       scoring_start: "2025-07-01T00:00:00Z", scoring_end: "2026-03-12T23:59:59Z", limit: 10}
-    recorded: [2.21, 1.79, 1.91, 1.94, 1.81, 2.32]
-    min_speedup: 0.85
+    recorded: [9.93]
+    min_speedup: 4.95
   - id: scan-1000-with-volume
     tool: market_scan
     arguments: {universe_id: liquid_1000, start: "2025-01-02T00:00:00Z", end: "2026-03-12T23:59:59Z",
@@ -95,8 +96,8 @@ market:
     tool: market_anomaly_scan
     arguments: {universe_id: liquid_1000, training_start: "2025-01-02T00:00:00Z", training_end: "2025-06-30T23:59:59Z",
       scoring_start: "2025-07-01T00:00:00Z", scoring_end: "2026-01-30T23:59:59Z", limit: 10}
-    recorded: [1.04, 1.35, 1.14]
-    min_speedup: 0.5
+    recorded: [4.4, 4.07, 4.28, 4.08]
+    min_speedup: 2.0
   - id: intraday-500-drawdowns
     tool: intraday_scan
     arguments: {universe_id: liquid_500, start: "2026-02-02T00:00:00Z", end: "2026-02-27T23:59:59Z",

@@ -4,7 +4,7 @@
     "id": "us-equities",
     "version": "0.1.0"
   },
-  "recordedAt": "2026-10-07T14:27:47.244910Z",
+  "recordedAt": "2026-10-07T15:24:02.171154Z",
   "sessions": [
     {
       "id": "market-leaders",
@@ -52,7 +52,7 @@
       "featured": true,
       "turns": [
         {
-          "jobId": "f08427e1-49c5-4758-ace1-09ae33cee0dd",
+          "jobId": "2309a038-1167-477e-b71f-73d81fd57159",
           "question": "Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through January 30, 2026 were the most unusual among the 1,000 most liquid US stocks, and which features made each one unusual? Anomaly scores are neither forecasts nor explanations."
         }
       ],
@@ -567,11 +567,11 @@
       "featured": false,
       "turns": [
         {
-          "jobId": "2aafaa2e-440f-4b3b-a7c2-dc41ceade209",
+          "jobId": "6fc6ad14-0ad3-4ceb-93a2-0bdd22b5e5a5",
           "question": "Among the 1,000 most liquid US stocks, which three had the strongest and which three the weakest returns from January 2, 2025 through March 12, 2026?"
         },
         {
-          "jobId": "bbb15e09-5131-4431-b7e5-2b21f0791197",
+          "jobId": "f80ded4c-ebef-4016-8746-7cbd006985b5",
           "question": "Using the first half of 2025 as the baseline, which 10 sessions from July 1, 2025 through January 30, 2026 were the most unusual among the same 1,000 stocks, and did any of them belong to those six stocks? Name the sessions and the features that made each one unusual. Anomaly scores are neither forecasts nor explanations."
         }
       ],

@@ -86,9 +86,9 @@ five CPU/GPU pairs favor the GPU, and the GPU wins on data volume, not on a tool
 stocks the daily tools run faster on the CPU (0.4x to 0.9x), so the daily questions use the 1,000 most liquid
 stocks over 2025 and later, the minute-bar questions the 50 or 500 most liquid, and no question calls
 `price_context` for named stocks. Measured, with the choices behind them, in the
-[GPU speedup report](../../../docs/gpu-speedup-report.md). Two shapes cannot win and are kept honest: the peer
-network (a fixed small graph, 0.7x to 1.2x), and the anomaly scan, whose margin over a liquid universe is thin
-(1.0x to 1.4x).
+[GPU speedup report](../../../docs/gpu-speedup-report.md). One shape cannot win and is kept honest: the peer
+network (a fixed 1,422-node graph, 0.7x to 1.2x). The anomaly scan wins since it stays on the device (4x to 5x over the
+1,000 most liquid).
 
 Eight two-turn `conversations` follow up on an answer: the leaders then their unusual sessions; 2025's laggards then
 the strongest returns since; minute-level volatility then the heaviest sessions of the same 500 stocks; SIC divisions
@@ -127,7 +127,9 @@ VM with the same models: `market-leaders`, `unusual-sessions`, `intraday-drawdow
 `leaders-unusual-sessions`, `laggards-follow-up` and `intraday-volatility-follow-up`. The eval's oracle checks passed
 for `market-leaders`, `moves-and-filings`, `large-universe-scan`, `unusual-sessions` and `intraday-ranges`; the other
 six have no answer checks and were not read against the oracles line by line. `laggards-follow-up` needed three
-attempts (its second turn stopped on Hermes' idle budget twice). What remains:
+attempts (its second turn stopped on Hermes' idle budget twice). `unusual-sessions` and `leaders-unusual-sessions` were
+recorded once more later on 2026-10-07, once the anomaly scan ran on the device (4x to 5x; its answers are the same
+sessions, now reported by cuML). What remains:
 
 - `cyber-disclosure-rules` (featured) gives Item 1.05's content and its four-business-day deadline from Form 8-K
   General Instruction B.1 in the 2023 rule, and names five of the six Item 1.05 filings (Data I/O twice, Coupang,
