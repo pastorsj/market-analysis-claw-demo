@@ -220,7 +220,7 @@ test.describe('live mode', () => {
         await expect(featured.getByRole('link')).toHaveCount(6)
 
         const logos = page.locator('main [data-brand] img')
-        await expect(logos).toHaveCount(14)
+        await expect(logos).toHaveCount(11)
         await expect
           .poll(() =>
             logos.evaluateAll((images: HTMLImageElement[]) => images.map((i) => i.complete))

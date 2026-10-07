@@ -41,7 +41,6 @@ describe('EcosystemLanding', () => {
         'LangChain',
         'Milvus',
         'NVIDIA NIM',
-        'RAPIDS',
         'OpenTelemetry',
         'Phoenix',
         'React',
@@ -64,12 +63,12 @@ describe('EcosystemLanding', () => {
       '/ecosystem-logos/langchain.svg'
     )
     expect(screen.queryByText('LC')).not.toBeInTheDocument()
+    // The CUDA-X libraries carry the NVIDIA mark, not the RAPIDS logo, under a title that names them
+    expect(screen.getByText('Market Analytics (using CUDA-X Libraries)')).toBeInTheDocument()
     for (const library of ['cuDF', 'cuGraph', 'cuML']) {
       const chip = screen.getByText(library).parentElement!
-      expect(chip.querySelector('[data-brand="RAPIDS"] img')).toHaveAttribute(
-        'src',
-        '/ecosystem-logos/rapids.svg'
-      )
+      expect(chip.querySelector('[data-brand="NVIDIA"]')).not.toBeNull()
+      expect(chip.querySelector('[data-brand="RAPIDS"]')).toBeNull()
     }
     for (const name of ['OpenShell', 'Switchyard', 'LangChain', 'DuckDB', 'FastAPI']) {
       expect(screen.getByText(name)).toBeInTheDocument()

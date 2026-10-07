@@ -36,7 +36,6 @@ const LOGOS = {
   nous: '/ecosystem-logos/nous.png',
   opentelemetry: '/ecosystem-logos/opentelemetry.png',
   phoenix: '/ecosystem-logos/phoenix.png',
-  rapids: '/ecosystem-logos/rapids.svg',
   react: '/ecosystem-logos/react.svg',
 } as const
 
@@ -216,20 +215,14 @@ export const EcosystemLanding = ({
               <div className={styles.capabilityHeader}>
                 <span className={styles.capabilityTitle}>
                   <NvidiaMark size="small" />
-                  Market Analytics
+                  Market Analytics (using CUDA-X Libraries)
                 </span>
                 <span className={styles.role}>Analyze</span>
               </div>
               <div className={styles.technologyRow}>
-                <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
-                  cuDF
-                </Technology>
-                <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
-                  cuGraph
-                </Technology>
-                <Technology mark={<BrandMark brand="RAPIDS" src={LOGOS.rapids} size="wide" />}>
-                  cuML
-                </Technology>
+                <Technology mark={<NvidiaMark size="small" />}>cuDF</Technology>
+                <Technology mark={<NvidiaMark size="small" />}>cuGraph</Technology>
+                <Technology mark={<NvidiaMark size="small" />}>cuML</Technology>
               </div>
             </article>
           </div>
